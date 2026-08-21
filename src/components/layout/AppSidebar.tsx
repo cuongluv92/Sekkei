@@ -51,13 +51,13 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
                   <Link
                     href={item.href}
                     onClick={onClose}
-                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[12.5px] transition-colors ${
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[12.5px] text-foreground transition-colors ${
                       active
-                        ? "bg-accent/15 font-semibold text-foreground"
-                        : "font-medium text-muted hover:bg-surface-2 hover:text-foreground"
+                        ? "bg-accent/15 font-semibold"
+                        : "font-medium hover:bg-surface-2"
                     }`}
                   >
-                    <Icon className={`h-4 w-4 shrink-0 ${active ? "text-accent" : ""}`} />
+                    <Icon className={`h-4 w-4 shrink-0 ${active ? "text-accent" : "text-muted"}`} />
                     <span className="truncate">{t(`nav.${item.key}`)}</span>
                   </Link>
                 </li>
