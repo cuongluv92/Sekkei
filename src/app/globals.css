@@ -36,7 +36,8 @@
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-info: var(--info);
-  --font-sans: var(--font-noto-sans-jp), "Hiragino Sans", "Yu Gothic UI", system-ui, sans-serif;
+  --font-sans: var(--font-plus-jakarta), var(--font-noto-sans-jp), "Hiragino Sans", "Yu Gothic UI",
+    system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
 }
 
@@ -85,24 +86,24 @@ body {
 @layer components {
   /* ---- Buttons ---- */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-md border px-3.5 py-2 text-[12.5px]
-      font-medium transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-[12.5px]
+      font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
       disabled:opacity-40 border-accent bg-accent text-accent-foreground shadow-[0_1px_2px_rgba(0,0,0,0.35)]
       hover:bg-accent-strong hover:border-accent-strong hover:shadow-[0_2px_10px_-2px_rgba(79,143,240,0.55)];
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-md border px-3.5 py-2 text-[12.5px]
-      font-medium transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-[12.5px]
+      font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
       disabled:opacity-40 border-border-strong bg-surface-2 text-foreground hover:bg-surface-hover hover:border-muted-2;
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-md border px-3.5 py-2 text-[12.5px]
-      font-medium transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-[12.5px]
+      font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
       disabled:opacity-40 border-transparent bg-transparent text-muted hover:bg-surface-2 hover:text-foreground;
   }
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-md border px-3.5 py-2 text-[12.5px]
-      font-medium transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-[12.5px]
+      font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
       disabled:opacity-40 border-danger/50 bg-transparent text-danger hover:bg-danger/10;
   }
   .btn-icon {
@@ -111,7 +112,7 @@ body {
 
   /* ---- Form controls ---- */
   .field-input {
-    @apply w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-[12.5px] text-foreground
+    @apply w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-[12.5px] text-foreground
       transition-colors placeholder:text-muted-2 outline-none focus:border-accent
       focus:ring-2 focus:ring-accent/25;
   }
@@ -130,7 +131,7 @@ body {
     @apply flex items-center justify-between gap-3 border-b border-border px-5 py-3.5;
   }
   .panel-title {
-    @apply text-[14px] font-semibold tracking-tight text-foreground;
+    @apply text-[14px] font-bold tracking-tight text-foreground;
   }
   .panel-body {
     @apply p-5;

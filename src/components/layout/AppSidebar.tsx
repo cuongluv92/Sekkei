@@ -30,10 +30,10 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
       >
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
           <Link href="/search" className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-accent text-[12px] font-bold text-accent-foreground shadow-[0_1px_4px_rgba(79,143,240,0.4)]">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-[12px] font-extrabold text-accent-foreground shadow-[0_1px_4px_rgba(79,143,240,0.4)]">
               S
             </span>
-            <span className="text-[14px] font-semibold tracking-tight text-foreground">
+            <span className="text-[14.5px] font-extrabold tracking-tight text-foreground">
               {t("app.name")}
             </span>
           </Link>
@@ -51,10 +51,10 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
                   <Link
                     href={item.href}
                     onClick={onClose}
-                    className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-[12.5px] transition-colors ${
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[12.5px] transition-colors ${
                       active
-                        ? "bg-accent/15 font-medium text-foreground"
-                        : "text-muted hover:bg-surface-2 hover:text-foreground"
+                        ? "bg-accent/15 font-semibold text-foreground"
+                        : "font-medium text-muted hover:bg-surface-2 hover:text-foreground"
                     }`}
                   >
                     <Icon className={`h-4 w-4 shrink-0 ${active ? "text-accent" : ""}`} />
