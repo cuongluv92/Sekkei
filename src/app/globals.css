@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0e1015;
-  --surface: #15181f;
-  --surface-2: #1b1f28;
-  --surface-hover: #232834;
-  --border: #262b35;
-  --border-strong: #383f4d;
-  --foreground: #f2f4f7;
-  --muted: #aab2c0;
-  --muted-2: #7d8492;
-  --accent: #4f8ff0;
-  --accent-strong: #6fa3f4;
-  --accent-foreground: #061021;
-  --success: #3fc989;
+  --background: #0a0b0d;
+  --surface: #111318;
+  --surface-2: #1b1f27;
+  --surface-hover: #242832;
+  --border: #23262d;
+  --border-strong: #383c46;
+  --foreground: #f5f6f8;
+  --muted: #9aa0ab;
+  --muted-2: #6b7280;
+  --accent: #f5a623;
+  --accent-strong: #ffb84d;
+  --accent-foreground: #14100a;
+  --success: #30d17f;
   --warning: #e7ac4c;
-  --danger: #ef6c62;
+  --danger: #f25c66;
   --info: #4f8ff0;
 }
 
@@ -89,7 +89,7 @@ body {
     @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-[12.5px]
       font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
       disabled:opacity-40 border-accent bg-accent text-accent-foreground shadow-[0_1px_2px_rgba(0,0,0,0.35)]
-      hover:bg-accent-strong hover:border-accent-strong hover:shadow-[0_2px_10px_-2px_rgba(79,143,240,0.55)];
+      hover:bg-accent-strong hover:border-accent-strong hover:shadow-[0_2px_10px_-2px_rgba(245,166,35,0.55)];
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-[12.5px]
