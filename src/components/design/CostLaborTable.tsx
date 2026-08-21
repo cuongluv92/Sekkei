@@ -150,15 +150,16 @@ export function CostLaborTable() {
       ) : (
         <div className="flex items-start gap-3 overflow-x-auto pb-1">
           {yearBlocks.map(({ year, cases }) => (
-            <div key={year} className="panel shrink-0" style={{ width: 780 }}>
+            <div key={year} className="panel shrink-0" style={{ width: 890 }}>
               <div className="panel-header-compact">
                 <span className="panel-title">{t("design.costLabor.yearBlockTitle", { year })}</span>
               </div>
               <div className="data-table-wrap">
-                <table className="data-table" style={{ minWidth: 760 }}>
+                <table className="data-table" style={{ minWidth: 870 }}>
                   <thead>
                     <tr>
                       <th style={{ width: "90px" }}>{t("design.costLabor.columns.drawingNumber")}</th>
+                      <th style={{ width: "110px" }}>{t("design.costLabor.columns.managementNumber")}</th>
                       <th>{t("design.costLabor.columns.projectName")}</th>
                       <th style={{ width: "120px" }}>{t("design.costLabor.columns.panelNames")}</th>
                       <th style={{ width: "90px" }}>{t("design.costLabor.columns.designEstimated")}</th>
@@ -178,6 +179,7 @@ export function CostLaborTable() {
                             {c.drawingNumber}
                           </Link>
                         </td>
+                        <td className="font-mono">{c.managementNumber}</td>
                         <td className="truncate">{c.projectName}</td>
                         <td className="truncate text-muted">
                           {panels

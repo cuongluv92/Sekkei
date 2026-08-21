@@ -6,7 +6,12 @@ import { useTranslation } from "@/lib/i18n";
 import { designCaseService } from "@/lib/services/design";
 import { SpecCombobox } from "@/components/design/SpecCombobox";
 import { Modal } from "@/components/common/Modal";
-import type { DesignCase } from "@/lib/types/design";
+import { INDEX_CATEGORY_VALUES, type DesignCase, type IndexCategory } from "@/lib/types/design";
+
+const INDEX_CATEGORY_LABEL_KEY: Record<IndexCategory, "keio" | "other"> = {
+  keio: "keio",
+  other: "other",
+};
 
 const currentYear = new Date().getFullYear();
 
@@ -32,6 +37,7 @@ export function NewCaseModal({ projectId, onClose, onCreated }: NewCaseModalProp
   const [orderer, setOrderer] = useState("");
   const [customerContact, setCustomerContact] = useState("");
   const [projectName, setProjectName] = useState("");
+  const [indexCategory, setIndexCategory] = useState<IndexCategory>("other");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -50,6 +56,7 @@ export function NewCaseModal({ projectId, onClose, onCreated }: NewCaseModalProp
       orderer,
       customerContact,
       projectName,
+      indexCategory,
     });
     setSubmitting(false);
     onCreated(created);
@@ -113,6 +120,20 @@ export function NewCaseModal({ projectId, onClose, onCreated }: NewCaseModalProp
               onChange={(e) => setProjectName(e.target.value)}
               className="field-input"
             />
+          </div>
+          <div>
+            <label className="field-label">{t("design.fields.indexCategory")}</label>
+            <select
+              value={indexCategory}
+              onChange={(e) => setIndexCategory(e.target.value as IndexCategory)}
+              className="field-input"
+            >
+              {INDEX_CATEGORY_VALUES.map((v) => (
+                <option key={v} value={v}>
+                  {t(`design.fields.indexCategoryOptions.${INDEX_CATEGORY_LABEL_KEY[v]}`)}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

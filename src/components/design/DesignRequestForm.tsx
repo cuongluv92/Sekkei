@@ -8,12 +8,14 @@ import { SpecCombobox } from "@/components/design/SpecCombobox";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import {
   CASE_STATUS_VALUES,
+  INDEX_CATEGORY_VALUES,
   PANEL_NUMBERS,
   SPEC_GROUPS,
   WIRING_SPEC_FIELDS,
   type CasePanel,
   type CaseStatus,
   type DesignCase,
+  type IndexCategory,
   type PanelNo,
   type SpecFieldKey,
   type SpecValues,
@@ -23,6 +25,11 @@ const CASE_STATUS_LABEL_KEY: Record<CaseStatus, "none" | "designPendingApproval"
   "": "none",
   design_pending_approval: "designPendingApproval",
   production_requested: "productionRequested",
+};
+
+const INDEX_CATEGORY_LABEL_KEY: Record<IndexCategory, "keio" | "other"> = {
+  keio: "keio",
+  other: "other",
 };
 
 const SPEC_GROUP_LABEL_KEY: Record<string, "groupBox" | "groupPaint" | "groupHandle" | "groupOther"> = {
@@ -266,6 +273,20 @@ export function DesignRequestForm({ caseId }: { caseId: string }) {
               value={designCase.assignee}
               onChange={(v) => updateField("assignee", v)}
             />
+          </div>
+          <div>
+            <label className="field-label">{t("design.fields.indexCategory")}</label>
+            <select
+              value={designCase.indexCategory}
+              onChange={(e) => updateField("indexCategory", e.target.value as IndexCategory)}
+              className="field-input"
+            >
+              {INDEX_CATEGORY_VALUES.map((v) => (
+                <option key={v} value={v}>
+                  {t(`design.fields.indexCategoryOptions.${INDEX_CATEGORY_LABEL_KEY[v]}`)}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="field-label">{t("design.fields.caseStatus")}</label>

@@ -6,6 +6,7 @@ import type {
   DesignCase,
   DesignCaseSearchQuery,
   DesignCaseWithPanels,
+  IndexCategory,
   PanelNo,
 } from "@/lib/types/design";
 
@@ -23,6 +24,7 @@ interface DesignCaseRow {
   project_name: string;
   specs: DesignCase["specs"];
   design_remarks: string;
+  index_category: IndexCategory;
   assignee: string;
   case_status: CaseStatus;
   manufacturing_complete: boolean;
@@ -66,6 +68,7 @@ function caseFromRow(row: DesignCaseRow): DesignCase {
     projectName: row.project_name,
     specs: row.specs ?? {},
     designRemarks: row.design_remarks,
+    indexCategory: row.index_category,
     assignee: row.assignee,
     caseStatus: row.case_status,
     manufacturingComplete: row.manufacturing_complete,
@@ -156,6 +159,7 @@ export interface CreateCaseInput {
   orderer: string;
   customerContact: string;
   projectName: string;
+  indexCategory: IndexCategory;
 }
 
 export const designCaseService = {
@@ -223,6 +227,7 @@ export const designCaseService = {
       p_orderer: input.orderer,
       p_customer_contact: input.customerContact,
       p_project_name: input.projectName,
+      p_index_category: input.indexCategory,
     });
     if (error) throw error;
     return caseFromRow(data as DesignCaseRow);
@@ -238,6 +243,7 @@ export const designCaseService = {
     if (patch.projectName !== undefined) row.project_name = patch.projectName;
     if (patch.specs !== undefined) row.specs = patch.specs;
     if (patch.designRemarks !== undefined) row.design_remarks = patch.designRemarks;
+    if (patch.indexCategory !== undefined) row.index_category = patch.indexCategory;
     if (patch.assignee !== undefined) row.assignee = patch.assignee;
     if (patch.caseStatus !== undefined) row.case_status = patch.caseStatus;
     if (patch.manufacturingComplete !== undefined) row.manufacturing_complete = patch.manufacturingComplete;

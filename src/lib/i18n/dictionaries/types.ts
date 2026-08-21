@@ -257,6 +257,11 @@ export interface Dictionary {
         productionRequested: string;
       };
       manufacturingComplete: string;
+      indexCategory: string;
+      indexCategoryOptions: {
+        keio: string;
+        other: string;
+      };
     };
     panels: {
       title: string;
@@ -317,8 +322,7 @@ export interface Dictionary {
     };
     ledger: {
       empty: string;
-      yearFilterLabel: string;
-      allYears: string;
+      yearBlockTitle: string;
       searchPlaceholder: string;
       noResults: string;
       columns: {
@@ -415,6 +419,7 @@ export interface Dictionary {
       searchPlaceholder: string;
       columns: {
         drawingNumber: string;
+        managementNumber: string;
         projectName: string;
         panelNames: string;
         panelCount: string;

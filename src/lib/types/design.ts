@@ -81,6 +81,10 @@ export type SpecValues = Partial<Record<SpecFieldKey, SpecEntry>>;
 export const CASE_STATUS_VALUES = ["", "design_pending_approval", "production_requested"] as const;
 export type CaseStatus = (typeof CASE_STATUS_VALUES)[number];
 
+/** Which 設計依頼書目次 (③京王 / ④その他) a 案件 is listed under — an explicit choice, never guessed from 注文先 text. */
+export const INDEX_CATEGORY_VALUES = ["keio", "other"] as const;
+export type IndexCategory = (typeof INDEX_CATEGORY_VALUES)[number];
+
 export interface DesignCase {
   id: string;
   projectId: string;
@@ -95,6 +99,7 @@ export interface DesignCase {
   projectName: string; // 件名
   specs: SpecValues;
   designRemarks: string; // 設計備考欄 (distinct from 製作注意事項)
+  indexCategory: IndexCategory; // 設計依頼書目次・京王 or ・その他
   assignee: string; // 担当 (③④設計依頼書目次)
   caseStatus: CaseStatus; // ②図面管理台帳 H1 legend row color
   manufacturingComplete: boolean; // 製造完了 (②図面管理台帳 column J, "完")

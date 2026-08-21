@@ -256,6 +256,11 @@ const vi: Dictionary = {
         productionRequested: "Đã gửi yêu cầu sản xuất",
       },
       manufacturingComplete: "Đã sản xuất xong (製造完了)",
+      indexCategory: "Nhóm mục lục (目次区分)",
+      indexCategoryOptions: {
+        keio: "京王",
+        other: "その他",
+      },
     },
     panels: {
       title: "盤①～⑦",
@@ -317,8 +322,7 @@ const vi: Dictionary = {
     },
     ledger: {
       empty: "Không có dữ liệu",
-      yearFilterLabel: "年",
-      allYears: "Tất cả các năm",
+      yearBlockTitle: "{year}年　図面管理台帳",
       searchPlaceholder: "Tìm theo 図面番号・管理番号・工事番号・注文先・件名・盤名称",
       noResults: "Không có dữ liệu phù hợp",
       columns: {
@@ -415,6 +419,7 @@ const vi: Dictionary = {
       searchPlaceholder: "Tìm theo 図面番号・管理番号・件名・盤名称",
       columns: {
         drawingNumber: "図面番号",
+        managementNumber: "管理番号",
         projectName: "件名",
         panelNames: "盤名称",
         panelCount: "Số盤",

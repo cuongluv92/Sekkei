@@ -256,6 +256,11 @@ const ja: Dictionary = {
         productionRequested: "製造依頼済み",
       },
       manufacturingComplete: "製造完了",
+      indexCategory: "目次区分",
+      indexCategoryOptions: {
+        keio: "京王",
+        other: "その他",
+      },
     },
     panels: {
       title: "盤①～⑦",
@@ -317,8 +322,7 @@ const ja: Dictionary = {
     },
     ledger: {
       empty: "データがありません",
-      yearFilterLabel: "年",
-      allYears: "すべての年",
+      yearBlockTitle: "{year}年　図面管理台帳",
       searchPlaceholder: "図面番号・管理番号・工事番号・注文先・件名・盤名称で検索",
       noResults: "条件に一致するデータがありません",
       columns: {
@@ -415,6 +419,7 @@ const ja: Dictionary = {
       searchPlaceholder: "図面番号・管理番号・件名・盤名称で検索",
       columns: {
         drawingNumber: "図面番号",
+        managementNumber: "管理番号",
         projectName: "件名",
         panelNames: "盤名称",
         panelCount: "盤数",

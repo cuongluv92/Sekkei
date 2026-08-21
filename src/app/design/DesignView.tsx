@@ -77,10 +77,10 @@ export function DesignView() {
 
       {tab === "drawingRegister" && <CaseLedgerTable />}
       {tab === "designIndexKeio" && (
-        <DesignRequestIndexTable filter={({ case: c }) => c.orderer.includes("京王")} />
+        <DesignRequestIndexTable filter={({ case: c }) => c.indexCategory === "keio"} />
       )}
       {tab === "designIndexOther" && (
-        <DesignRequestIndexTable filter={({ case: c }) => !c.orderer.includes("京王")} />
+        <DesignRequestIndexTable filter={({ case: c }) => c.indexCategory !== "keio"} />
       )}
       {tab === "schedule" && <ScheduleTimeline />}
       {tab === "costLabor" && <CostLaborTable />}
