@@ -2,7 +2,7 @@ import type { Dictionary } from "./types";
 
 const ja: Dictionary = {
   app: {
-    name: "Sekkei",
+    name: "Sekkei-Hub",
     tagline: "技術データ管理システム",
   },
   nav: {

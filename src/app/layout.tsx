@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sekkei",
+  title: "Sekkei-Hub",
   description: "技術データ管理システム",
 };
 
