@@ -1,0 +1,178 @@
+@import "tailwindcss";
+
+:root {
+  --background: #14161a;
+  --surface: #1a1d22;
+  --surface-2: #20242b;
+  --surface-hover: #262a32;
+  --border: #2a2e35;
+  --border-strong: #3a3f48;
+  --foreground: #e6e8eb;
+  --muted: #8b929e;
+  --muted-2: #5f6670;
+  --accent: #4d8fc9;
+  --accent-strong: #63a3dc;
+  --accent-foreground: #0c1116;
+  --success: #4f9d72;
+  --warning: #c99a4b;
+  --danger: #c9584f;
+  --info: #4d8fc9;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-2: var(--muted-2);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --font-sans: var(--font-noto-sans-jp), "Hiragino Sans", "Yu Gothic UI", system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Thin, low-contrast scrollbars to match the dense/technical look. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/*
+ * Tailwind v4's @apply only accepts real utility classes, not other
+ * @layer components classes, so each variant below repeats its shared base
+ * declarations instead of composing via `@apply btn` / `@apply badge`.
+ */
+@layer components {
+  /* ---- Buttons ---- */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border px-3 py-1.5 text-[12.5px]
+      font-medium transition-colors whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
+      disabled:opacity-40 border-accent bg-accent text-accent-foreground hover:bg-accent-strong hover:border-accent-strong;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border px-3 py-1.5 text-[12.5px]
+      font-medium transition-colors whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
+      disabled:opacity-40 border-border-strong bg-surface-2 text-foreground hover:bg-surface-hover;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border px-3 py-1.5 text-[12.5px]
+      font-medium transition-colors whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
+      disabled:opacity-40 border-transparent bg-transparent text-muted hover:bg-surface-2 hover:text-foreground;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border px-3 py-1.5 text-[12.5px]
+      font-medium transition-colors whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
+      disabled:opacity-40 border-danger/50 bg-transparent text-danger hover:bg-danger/10;
+  }
+  .btn-icon {
+    @apply !px-1.5;
+  }
+
+  /* ---- Form controls ---- */
+  .field-input {
+    @apply w-full rounded-sm border border-border-strong bg-surface px-2.5 py-1.5 text-[12.5px] text-foreground
+      placeholder:text-muted-2 outline-none focus:border-accent;
+  }
+  .field-label {
+    @apply mb-1 block text-[11px] font-medium tracking-wide text-muted uppercase;
+  }
+  .checkbox-row {
+    @apply flex items-center gap-2 text-[12.5px] text-foreground;
+  }
+
+  /* ---- Surfaces ---- */
+  .panel {
+    @apply rounded-sm border border-border bg-surface;
+  }
+  .panel-header {
+    @apply flex items-center justify-between border-b border-border px-4 py-2.5;
+  }
+  .panel-title {
+    @apply text-[13px] font-semibold text-foreground;
+  }
+  .panel-body {
+    @apply p-4;
+  }
+
+  /* ---- Tables ---- */
+  .data-table-wrap {
+    @apply w-full overflow-x-auto;
+  }
+  .data-table {
+    @apply w-full border-collapse text-[12.5px];
+  }
+  .data-table thead th {
+    @apply sticky top-0 z-10 border-b border-border-strong bg-surface-2 px-3 py-2 text-left text-[11px]
+      font-semibold tracking-wide text-muted uppercase whitespace-nowrap;
+  }
+  .data-table tbody td {
+    @apply border-b border-border px-3 py-2 align-middle text-foreground;
+  }
+  .data-table tbody tr {
+    @apply transition-colors;
+  }
+  .data-table tbody tr:hover {
+    @apply bg-surface-2;
+  }
+  .data-table tbody tr.is-selected {
+    @apply bg-accent/10;
+  }
+
+  /* ---- Badges ---- */
+  .badge-neutral {
+    @apply inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap
+      border-border-strong bg-surface-2 text-muted;
+  }
+  .badge-success {
+    @apply inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap
+      border-success/40 bg-success/10 text-success;
+  }
+  .badge-warning {
+    @apply inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap
+      border-warning/40 bg-warning/10 text-warning;
+  }
+  .badge-danger {
+    @apply inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap
+      border-danger/40 bg-danger/10 text-danger;
+  }
+  .badge-info {
+    @apply inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap
+      border-info/40 bg-info/10 text-info;
+  }
+}
