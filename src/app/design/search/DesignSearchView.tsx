@@ -52,7 +52,8 @@ export function DesignSearchView() {
     const found = await designCaseService.search(buildQuery());
     setLoading(false);
     if (found.length === 1) {
-      router.push(`/design/${found[0].case.projectId}/case/${found[0].case.id}`);
+      const c = found[0].case;
+      router.push(`/design?tab=designRequest&project=${c.projectId}&case=${c.id}`);
       return;
     }
     setResults(found);
@@ -184,8 +185,8 @@ export function DesignSearchView() {
               {results.map(({ case: c, panels }) => (
                 <li key={c.id}>
                   <Link
-                    href={`/design/${c.projectId}/case/${c.id}`}
-                    className="flex items-center justify-between gap-3 px-4 py-3 text-[12.5px] text-foreground transition-colors hover:bg-surface-2"
+                    href={`/design?tab=designRequest&project=${c.projectId}&case=${c.id}`}
+                    className="flex items-center justify-between gap-3 px-4 py-3 text-[14px] text-foreground transition-colors hover:bg-surface-2"
                   >
                     <span className="truncate font-mono">{buildCaseDisplayLabel(c, panels)}</span>
                   </Link>

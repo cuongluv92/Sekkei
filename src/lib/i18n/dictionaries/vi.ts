@@ -2,7 +2,7 @@ import type { Dictionary } from "./types";
 
 const vi: Dictionary = {
   app: {
-    name: "OKU pro",
+    name: "oku-pro",
     tagline: "Hệ thống quản lý dữ liệu kỹ thuật",
   },
   nav: {
@@ -204,20 +204,28 @@ const vi: Dictionary = {
   },
   design: {
     title: "Quản lý thiết kế",
-    projects: {
-      title: "Project",
-      newProject: "Project mới",
-      namePlaceholder: "Nhập tên Project",
-      createButton: "Tạo",
-      openButton: "Mở",
-      empty: "Chưa có Project nào. Hãy tạo mới.",
+    topTabs: {
+      designRequest: "設計依頼書",
+      productionRequest: "製作依頼書",
+      drawingRegister: "図面管理台帳",
+      designIndexKeio: "設計依頼書目次・京王",
+      designIndexOther: "設計依頼書目次・その他",
+      schedule: "工程表",
+      costLabor: "仕入原価・工数一覧表",
     },
-    cases: {
-      title: "Danh sách案件",
-      newCase: "案件 mới",
-      searchButton: "Tìm kiếm",
-      empty: "Chưa có案件 nào. Hãy tạo mới.",
-      backToProjects: "Về danh sách Project",
+    workspaceBar: {
+      projectLabel: "Project",
+      projectPlaceholder: "Chọn Project",
+      addProject: "Project追加",
+      projectNamePlaceholder: "Nhập tên Project",
+      caseLabel: "案件",
+      casePlaceholder: "Chọn案件",
+      newCase: "新規案件",
+      searchButton: "検索",
+      noProjects: "Chưa có Project nào",
+      noCases: "Chưa có案件 nào",
+      selectProjectFirst: "Hãy chọn Project trước",
+      selectCasePrompt: "Chọn案件 để xem chi tiết",
     },
     newCaseForm: {
       title: "Tạo案件 mới",
@@ -277,14 +285,9 @@ const vi: Dictionary = {
         terminalBlock: "端子台",
       },
     },
-    tabs: {
-      designRequest: "設計依頼",
-      productionRequest: "製作依頼",
-      schedule: "工程",
-      costLabor: "原価・工数",
-      history: "Lịch sử",
-    },
     comingSoon: "Chức năng này sẽ được triển khai ở giai đoạn sau (hiện chưa có).",
+    productionComingSoon:
+      "製作依頼書 sẽ được triển khai ở giai đoạn sau (hiện chưa có). Việc chọn Project・案件・盤 vẫn dùng chung với giai đoạn sau.",
     saveButton: "Lưu",
     savedMessage: "Đã lưu",
     search: {
@@ -297,6 +300,20 @@ const vi: Dictionary = {
       andHint: "Tìm案件 thỏa mãn tất cả điều kiện đã nhập (AND)",
       panelNameLabel: "盤名称",
       allProjects: "Tất cả Project",
+    },
+    ledger: {
+      empty: "Không có dữ liệu",
+      columns: {
+        year: "年",
+        drawingNumber: "図面番号",
+        managementNumber: "管理番号",
+        constructionNumber: "工事番号",
+        orderer: "注文先",
+        customerContact: "客先担当",
+        projectName: "件名",
+        panelNames: "盤名称",
+        updatedAt: "Cập nhật",
+      },
     },
   },
   designSettings: {

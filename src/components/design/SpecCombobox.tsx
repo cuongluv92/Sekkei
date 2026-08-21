@@ -69,7 +69,7 @@ export function SpecCombobox({ listKey, value, onChange }: SpecComboboxProps) {
             commit(draft);
           }
         }}
-        className="field-input py-1 text-[12px]"
+        className="field-input py-1.5 text-[13.5px]"
       />
       {open && filtered.length > 0 && (
         <ul className="absolute z-20 mt-1 max-h-40 w-full min-w-[140px] overflow-y-auto rounded-md border border-border-strong bg-surface-2 shadow-lg">
@@ -79,7 +79,7 @@ export function SpecCombobox({ listKey, value, onChange }: SpecComboboxProps) {
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => commit(opt)}
-                className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-[12px] text-foreground hover:bg-surface-hover"
+                className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-[13.5px] text-foreground hover:bg-surface-hover"
               >
                 {opt === draft && <Check className="h-3 w-3 shrink-0 text-accent" />}
                 <span className="truncate">{opt}</span>

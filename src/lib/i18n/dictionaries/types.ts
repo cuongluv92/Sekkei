@@ -205,20 +205,28 @@ export interface Dictionary {
   };
   design: {
     title: string;
-    projects: {
-      title: string;
-      newProject: string;
-      namePlaceholder: string;
-      createButton: string;
-      openButton: string;
-      empty: string;
+    topTabs: {
+      designRequest: string;
+      productionRequest: string;
+      drawingRegister: string;
+      designIndexKeio: string;
+      designIndexOther: string;
+      schedule: string;
+      costLabor: string;
     };
-    cases: {
-      title: string;
+    workspaceBar: {
+      projectLabel: string;
+      projectPlaceholder: string;
+      addProject: string;
+      projectNamePlaceholder: string;
+      caseLabel: string;
+      casePlaceholder: string;
       newCase: string;
       searchButton: string;
-      empty: string;
-      backToProjects: string;
+      noProjects: string;
+      noCases: string;
+      selectProjectFirst: string;
+      selectCasePrompt: string;
     };
     newCaseForm: {
       title: string;
@@ -278,14 +286,8 @@ export interface Dictionary {
         terminalBlock: string;
       };
     };
-    tabs: {
-      designRequest: string;
-      productionRequest: string;
-      schedule: string;
-      costLabor: string;
-      history: string;
-    };
     comingSoon: string;
+    productionComingSoon: string;
     saveButton: string;
     savedMessage: string;
     search: {
@@ -298,6 +300,20 @@ export interface Dictionary {
       andHint: string;
       panelNameLabel: string;
       allProjects: string;
+    };
+    ledger: {
+      empty: string;
+      columns: {
+        year: string;
+        drawingNumber: string;
+        managementNumber: string;
+        constructionNumber: string;
+        orderer: string;
+        customerContact: string;
+        projectName: string;
+        panelNames: string;
+        updatedAt: string;
+      };
     };
   };
   designSettings: {

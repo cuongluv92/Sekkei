@@ -155,6 +155,17 @@ export const designCaseService = {
     return delay(result, 200);
   },
 
+  /**
+   * All cases across every Project, for the system-wide ledger tables
+   * (図面管理台帳 and its 京王/その他 index views) — these are aggregate views
+   * of the whole database, not scoped to one Project.
+   */
+  async listAll(): Promise<DesignCaseWithPanels[]> {
+    const cases = loadCases().sort((a, b) => b.drawingNumber.localeCompare(a.drawingNumber));
+    const result = cases.map((c) => ({ case: c, panels: panelsForCase(c.id) }));
+    return delay(result, 200);
+  },
+
   async getDetail(caseId: string): Promise<DesignCaseWithPanels | null> {
     const found = loadCases().find((c) => c.id === caseId);
     if (!found) return delay(null, 100);

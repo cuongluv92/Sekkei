@@ -28,7 +28,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OKU pro",
+  title: "oku-pro",
   description: "技術データ管理システム",
 };
 

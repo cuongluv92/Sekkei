@@ -12,7 +12,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex h-full">
       <AppSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 md:px-6">
+        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 md:px-6">
           <button
             onClick={() => setSidebarOpen(true)}
             className="text-muted hover:text-foreground md:hidden"

@@ -53,7 +53,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  font-size: 13.5px;
+  font-size: 15px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
@@ -86,25 +86,25 @@ body {
 @layer components {
   /* ---- Buttons ---- */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-[12.5px]
-      font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-[14px]
+      font-bold transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
       disabled:opacity-40 border-accent bg-accent text-accent-foreground shadow-[0_1px_2px_rgba(0,0,0,0.35)]
       hover:bg-accent-strong hover:border-accent-strong hover:shadow-[0_2px_10px_-2px_rgba(79,143,240,0.55)];
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-[12.5px]
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-[14px]
       font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
       disabled:opacity-40 border-border-strong bg-surface-2 text-foreground hover:bg-surface-hover hover:border-muted-2;
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-[12.5px]
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-[13.5px]
       font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
       disabled:opacity-40 border-transparent bg-transparent text-muted hover:bg-surface-2 hover:text-foreground;
   }
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-[12.5px]
-      font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
-      disabled:opacity-40 border-danger/50 bg-transparent text-danger hover:bg-danger/10;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-[14px]
+      font-bold transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
+      disabled:opacity-40 border-danger/60 bg-danger/10 text-danger hover:bg-danger/20 hover:border-danger;
   }
   .btn-icon {
     @apply !px-2;
@@ -112,15 +112,15 @@ body {
 
   /* ---- Form controls ---- */
   .field-input {
-    @apply w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-[12.5px] text-foreground
+    @apply w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-[14px] text-foreground
       transition-colors placeholder:text-muted-2 outline-none focus:border-accent
-      focus:ring-2 focus:ring-accent/25;
+      focus:ring-2 focus:ring-accent/25 disabled:cursor-not-allowed disabled:opacity-50;
   }
   .field-label {
-    @apply mb-1.5 block text-[11px] font-semibold tracking-wide text-muted uppercase;
+    @apply mb-1.5 block text-[12.5px] font-semibold tracking-wide text-muted uppercase;
   }
   .checkbox-row {
-    @apply flex items-center gap-2 text-[12.5px] text-foreground;
+    @apply flex items-center gap-2 text-[14px] text-foreground;
   }
 
   /* ---- Surfaces ---- */
@@ -131,10 +131,20 @@ body {
     @apply flex items-center justify-between gap-3 border-b border-border px-5 py-3.5;
   }
   .panel-title {
-    @apply text-[14px] font-bold tracking-tight text-foreground;
+    @apply text-[17px] font-bold tracking-tight text-foreground;
   }
   .panel-body {
     @apply p-5;
+  }
+
+  /* Denser variants for data-entry forms (e.g. 設計依頼書) where many small
+     sections need to fit without the standard panel's generous whitespace.
+     Kept as opt-in modifiers so other pages are unaffected. */
+  .panel-header-compact {
+    @apply flex items-center justify-between gap-3 border-b border-border px-3.5 py-2;
+  }
+  .panel-body-compact {
+    @apply p-3.5;
   }
 
   /* ---- Tables ---- */
@@ -142,10 +152,10 @@ body {
     @apply w-full overflow-x-auto;
   }
   .data-table {
-    @apply w-full table-fixed border-collapse text-[12.5px];
+    @apply w-full table-fixed border-collapse text-[14px];
   }
   .data-table thead th {
-    @apply sticky top-0 z-10 border-b border-border-strong bg-surface-2 px-3.5 py-2.5 text-left text-[10.5px]
+    @apply sticky top-0 z-10 border-b border-border-strong bg-surface-2 px-3.5 py-2.5 text-left text-[12px]
       font-semibold tracking-wider text-muted uppercase whitespace-nowrap;
   }
   .data-table tbody td {

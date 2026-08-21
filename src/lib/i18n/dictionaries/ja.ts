@@ -2,7 +2,7 @@ import type { Dictionary } from "./types";
 
 const ja: Dictionary = {
   app: {
-    name: "OKU pro",
+    name: "oku-pro",
     tagline: "技術データ管理システム",
   },
   nav: {
@@ -204,20 +204,28 @@ const ja: Dictionary = {
   },
   design: {
     title: "設計管理",
-    projects: {
-      title: "Project",
-      newProject: "新規Project",
-      namePlaceholder: "Project名を入力",
-      createButton: "作成",
-      openButton: "開く",
-      empty: "Projectがありません。新規作成してください。",
+    topTabs: {
+      designRequest: "設計依頼書",
+      productionRequest: "製作依頼書",
+      drawingRegister: "図面管理台帳",
+      designIndexKeio: "設計依頼書目次・京王",
+      designIndexOther: "設計依頼書目次・その他",
+      schedule: "工程表",
+      costLabor: "仕入原価・工数一覧表",
     },
-    cases: {
-      title: "案件一覧",
+    workspaceBar: {
+      projectLabel: "Project",
+      projectPlaceholder: "Projectを選択",
+      addProject: "Project追加",
+      projectNamePlaceholder: "Project名を入力",
+      caseLabel: "案件",
+      casePlaceholder: "案件を選択",
       newCase: "新規案件",
       searchButton: "検索",
-      empty: "案件がありません。「新規案件」から作成してください。",
-      backToProjects: "Project一覧へ",
+      noProjects: "Projectがありません",
+      noCases: "案件がありません",
+      selectProjectFirst: "先にProjectを選択してください",
+      selectCasePrompt: "案件を選択すると詳細が表示されます",
     },
     newCaseForm: {
       title: "新規案件",
@@ -277,14 +285,9 @@ const ja: Dictionary = {
         terminalBlock: "端子台",
       },
     },
-    tabs: {
-      designRequest: "設計依頼",
-      productionRequest: "製作依頼",
-      schedule: "工程",
-      costLabor: "原価・工数",
-      history: "履歴",
-    },
     comingSoon: "この機能は次のフェーズで実装予定です（現在は未実装）。",
+    productionComingSoon:
+      "製作依頼書は次のフェーズで実装予定です（現在は未実装）。Project・案件・盤の選択はこのまま次フェーズでも使用します。",
     saveButton: "保存",
     savedMessage: "保存しました",
     search: {
@@ -297,6 +300,20 @@ const ja: Dictionary = {
       andHint: "入力した項目すべてに一致する案件を検索します（AND検索）",
       panelNameLabel: "盤名称",
       allProjects: "すべてのProject",
+    },
+    ledger: {
+      empty: "データがありません",
+      columns: {
+        year: "年",
+        drawingNumber: "図面番号",
+        managementNumber: "管理番号",
+        constructionNumber: "工事番号",
+        orderer: "注文先",
+        customerContact: "客先担当",
+        projectName: "件名",
+        panelNames: "盤名称",
+        updatedAt: "更新日",
+      },
     },
   },
   designSettings: {
