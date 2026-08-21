@@ -1,15 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-// Prefer Vercel/local environment variables when present. The fallback values
-// below are the public URL + anon key for this app's dedicated Supabase
-// project (`sekkei`). NEXT_PUBLIC values are public client configuration by
-// design; never place a service_role key here.
-const url =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ??
-  "https://gjcxztbhelpndkrahhjj.supabase.co";
-const anonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqY3h6dGJoZWxwbmRrcmFoaGpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczMjAyNjIsImV4cCI6MjEwMjg5NjI2Mn0.0jrAqXh86-7F-TSHIcE8_7uuCriDaEiIbvS4i4uHZDM";
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 /**
  * Single Supabase client for the whole app. No Auth is configured anywhere

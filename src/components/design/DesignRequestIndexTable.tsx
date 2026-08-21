@@ -14,8 +14,9 @@ interface DesignRequestIndexTableProps {
 
 /**
  * 設計依頼書目次・京王 / ・その他 (③④) — a different real template from
- * ②図面管理台帳, with only 5 columns (図番/管理番号(見積番号)/件名/担当/備考,
- * confirmed against the actual ③④ workbooks). The real workbook lays each
+ * ②図面管理台帳. Confirmed against the actual ③④ workbooks: 図番/管理番号(見積番号)/
+ * 件名/担当/備考, where 件名 is really a combined 件名／盤名称 field — shown here
+ * as a separate 盤名称 column for readability. The real workbook lays each
  * year out as its own titled block ("設計依頼書　目次　20XX年度") placed side by
  * side on the same sheet, oldest on the left — reproduced here as one panel
  * per year in a horizontally-scrolling row instead of a single table with a
@@ -46,8 +47,8 @@ export function DesignRequestIndexTable({ filter }: DesignRequestIndexTableProps
     if (!scoped) return null;
     const q = query.trim().toLowerCase();
     if (!q) return scoped;
-    return scoped.filter(({ case: c }) => {
-      const haystack = [c.drawingNumber, c.managementNumber, c.projectName, c.assignee]
+    return scoped.filter(({ case: c, panels }) => {
+      const haystack = [c.drawingNumber, c.managementNumber, c.projectName, c.assignee, ...panels.map((p) => p.panelName)]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -96,23 +97,24 @@ export function DesignRequestIndexTable({ filter }: DesignRequestIndexTableProps
       ) : (
         <div className="flex items-start gap-3 overflow-x-auto pb-1">
           {yearBlocks.map(({ year, cases }) => (
-            <div key={year} className="panel shrink-0" style={{ width: 560 }}>
+            <div key={year} className="panel shrink-0" style={{ width: 680 }}>
               <div className="panel-header-compact">
                 <span className="panel-title">{t("design.index.yearBlockTitle", { year })}</span>
               </div>
               <div className="data-table-wrap">
-                <table className="data-table" style={{ minWidth: 540 }}>
+                <table className="data-table" style={{ minWidth: 660 }}>
                   <thead>
                     <tr>
                       <th style={{ width: "90px" }}>{t("design.index.columns.drawingNumber")}</th>
                       <th style={{ width: "120px" }}>{t("design.index.columns.managementNumber")}</th>
                       <th>{t("design.index.columns.projectName")}</th>
+                      <th style={{ width: "110px" }}>{t("design.index.columns.panelNames")}</th>
                       <th style={{ width: "70px" }}>{t("design.index.columns.assignee")}</th>
                       <th style={{ width: "70px" }}>{t("design.index.columns.remarks")}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {cases.map(({ case: c }) => (
+                    {cases.map(({ case: c, panels }) => (
                       <tr
                         key={c.id}
                         onClick={() => router.push(`/design?tab=designRequest&project=${c.projectId}&case=${c.id}`)}
@@ -129,6 +131,12 @@ export function DesignRequestIndexTable({ filter }: DesignRequestIndexTableProps
                         </td>
                         <td className="font-mono">{c.managementNumber}</td>
                         <td className="truncate">{c.projectName}</td>
+                        <td className="truncate text-muted">
+                          {panels
+                            .map((p) => p.panelName)
+                            .filter(Boolean)
+                            .join("・")}
+                        </td>
                         <td>{c.assignee}</td>
                         <td className="truncate text-muted">{c.designRemarks}</td>
                       </tr>

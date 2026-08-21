@@ -342,6 +342,7 @@ export interface Dictionary {
         drawingNumber: string;
         managementNumber: string;
         projectName: string;
+        panelNames: string;
         assignee: string;
         remarks: string;
       };

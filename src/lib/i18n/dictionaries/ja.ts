@@ -342,6 +342,7 @@ const ja: Dictionary = {
         drawingNumber: "図番",
         managementNumber: "管理番号（見積番号）",
         projectName: "件名",
+        panelNames: "盤名称",
         assignee: "担当",
         remarks: "備考",
       },
