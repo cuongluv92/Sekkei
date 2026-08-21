@@ -98,7 +98,6 @@ export interface DesignCase {
   assignee: string; // 担当 (③④設計依頼書目次)
   caseStatus: CaseStatus; // ②図面管理台帳 H1 legend row color
   manufacturingComplete: boolean; // 製造完了 (②図面管理台帳 column J, "完")
-  ownerName: string; // 施主名 (②図面管理台帳 column M)
   createdAt: string;
   updatedAt: string;
 }

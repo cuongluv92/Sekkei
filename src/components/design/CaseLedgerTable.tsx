@@ -15,18 +15,17 @@ const CASE_STATUS_ROW_CLASS: Record<CaseStatus, string> = {
 };
 
 interface CaseLedgerTableProps {
-  /** Optional filter (e.g. orderer contains "京王") — the underlying data is always the whole system-wide ledger, never scoped to one Project. */
+  /** Optional filter — the underlying data is always the whole system-wide ledger, never scoped to one Project. */
   filter?: (item: DesignCaseWithPanels) => boolean;
 }
 
 /**
- * Read-only, database-driven ledger view shared by 図面管理台帳 /
- * 設計依頼書目次・京王 / 設計依頼書目次・その他 — these are aggregate views across
- * every Project (never require picking a Project first). Excel cell mapping
- * for the real ②/③/④ templates is intentionally not implemented yet; this
- * only reads the same DesignCase/CasePanel data already backing 設計依頼書,
- * with a 年 filter and free-text search, and each row opens the matching
- * 案件 directly.
+ * ②図面管理台帳 — read-only, database-driven aggregate view across every
+ * Project (never requires picking a Project first). Columns match the real
+ * template (図面番号/管理番号/工事番号/客先名/客先担当/件名/盤名称/製造完了); a 年
+ * filter and free-text search are added conveniences, and each row opens
+ * the matching 案件 directly. 設計依頼書目次・京王/その他 (③④) are a different
+ * template with different columns — see DesignRequestIndexTable.
  */
 export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
   const { t } = useTranslation();
@@ -106,7 +105,7 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
 
       <div className="panel">
         <div className="data-table-wrap">
-          <table className="data-table" style={{ minWidth: 1280 }}>
+          <table className="data-table" style={{ minWidth: 1120 }}>
             <thead>
               <tr>
                 <th style={{ width: "60px" }}>{t("design.ledger.columns.year")}</th>
@@ -116,9 +115,7 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                 <th>{t("design.ledger.columns.orderer")}</th>
                 <th style={{ width: "100px" }}>{t("design.ledger.columns.customerContact")}</th>
                 <th>{t("design.ledger.columns.projectName")}</th>
-                <th>{t("design.ledger.columns.ownerName")}</th>
                 <th>{t("design.ledger.columns.panelNames")}</th>
-                <th style={{ width: "90px" }}>{t("design.ledger.columns.assignee")}</th>
                 <th style={{ width: "80px" }} className="text-center">
                   {t("design.ledger.columns.manufacturingComplete")}
                 </th>
@@ -128,13 +125,13 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
             <tbody>
               {rows === null ? (
                 <tr>
-                  <td colSpan={12} className="py-8 text-center text-muted">
+                  <td colSpan={10} className="py-8 text-center text-muted">
                     {t("common.loading")}
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="py-8 text-center text-muted-2">
+                  <td colSpan={10} className="py-8 text-center text-muted-2">
                     {t("design.ledger.empty")}
                   </td>
                 </tr>
@@ -160,14 +157,12 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                     <td className="truncate">{c.orderer}</td>
                     <td>{c.customerContact}</td>
                     <td className="truncate">{c.projectName}</td>
-                    <td className="truncate">{c.ownerName}</td>
                     <td className="truncate text-muted">
                       {panels
                         .map((p) => p.panelName)
                         .filter(Boolean)
                         .join("・")}
                     </td>
-                    <td>{c.assignee}</td>
                     <td className="text-center">{c.manufacturingComplete ? "完" : ""}</td>
                     <td className="text-muted-2">{c.updatedAt}</td>
                   </tr>

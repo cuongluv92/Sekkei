@@ -260,14 +260,6 @@ export function DesignRequestForm({ caseId }: { caseId: string }) {
             />
           </div>
           <div>
-            <label className="field-label">{t("design.fields.ownerName")}</label>
-            <input
-              value={designCase.ownerName}
-              onChange={(e) => updateField("ownerName", e.target.value)}
-              className="field-input"
-            />
-          </div>
-          <div>
             <label className="field-label">{t("design.fields.assignee")}</label>
             <SpecCombobox
               listKey="assignee"

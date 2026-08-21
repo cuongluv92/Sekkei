@@ -256,7 +256,6 @@ const vi: Dictionary = {
         productionRequested: "Đã gửi yêu cầu sản xuất",
       },
       manufacturingComplete: "Đã sản xuất xong (製造完了)",
-      ownerName: "Chủ đầu tư (施主名)",
     },
     panels: {
       title: "盤①～⑦",
@@ -331,10 +330,21 @@ const vi: Dictionary = {
         customerContact: "客先担当",
         projectName: "件名",
         panelNames: "盤名称",
-        assignee: "担当",
-        ownerName: "施主名",
         manufacturingComplete: "製造完了",
         updatedAt: "Cập nhật",
+      },
+    },
+    index: {
+      empty: "Không có dữ liệu",
+      yearFilterLabel: "年",
+      allYears: "Tất cả các năm",
+      searchPlaceholder: "Tìm theo 図面番号・管理番号・件名・担当",
+      columns: {
+        drawingNumber: "図番",
+        managementNumber: "管理番号（見積番号）",
+        projectName: "件名",
+        assignee: "担当 (người phụ trách)",
+        remarks: "備考",
       },
     },
     production: {

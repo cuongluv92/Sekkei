@@ -9,6 +9,7 @@ import { CaseWorkspaceBar } from "@/components/design/CaseWorkspaceBar";
 import { DesignRequestForm } from "@/components/design/DesignRequestForm";
 import { ProductionRequestForm } from "@/components/design/ProductionRequestForm";
 import { CaseLedgerTable } from "@/components/design/CaseLedgerTable";
+import { DesignRequestIndexTable } from "@/components/design/DesignRequestIndexTable";
 import { ScheduleTimeline } from "@/components/design/ScheduleTimeline";
 import { CostLaborTable } from "@/components/design/CostLaborTable";
 
@@ -76,10 +77,10 @@ export function DesignView() {
 
       {tab === "drawingRegister" && <CaseLedgerTable />}
       {tab === "designIndexKeio" && (
-        <CaseLedgerTable filter={({ case: c }) => c.orderer.includes("京王")} />
+        <DesignRequestIndexTable filter={({ case: c }) => c.orderer.includes("京王")} />
       )}
       {tab === "designIndexOther" && (
-        <CaseLedgerTable filter={({ case: c }) => !c.orderer.includes("京王")} />
+        <DesignRequestIndexTable filter={({ case: c }) => !c.orderer.includes("京王")} />
       )}
       {tab === "schedule" && <ScheduleTimeline />}
       {tab === "costLabor" && <CostLaborTable />}

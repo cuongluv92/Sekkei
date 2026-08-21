@@ -256,7 +256,6 @@ const ja: Dictionary = {
         productionRequested: "製造依頼済み",
       },
       manufacturingComplete: "製造完了",
-      ownerName: "施主名",
     },
     panels: {
       title: "盤①～⑦",
@@ -331,10 +330,21 @@ const ja: Dictionary = {
         customerContact: "客先担当",
         projectName: "件名",
         panelNames: "盤名称",
-        assignee: "担当",
-        ownerName: "施主名",
         manufacturingComplete: "製造完了",
         updatedAt: "更新日",
+      },
+    },
+    index: {
+      empty: "データがありません",
+      yearFilterLabel: "年",
+      allYears: "すべての年",
+      searchPlaceholder: "図面番号・管理番号・件名・担当で検索",
+      columns: {
+        drawingNumber: "図番",
+        managementNumber: "管理番号（見積番号）",
+        projectName: "件名",
+        assignee: "担当",
+        remarks: "備考",
       },
     },
     production: {

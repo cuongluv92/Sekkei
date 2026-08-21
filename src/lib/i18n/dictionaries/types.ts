@@ -257,7 +257,6 @@ export interface Dictionary {
         productionRequested: string;
       };
       manufacturingComplete: string;
-      ownerName: string;
     };
     panels: {
       title: string;
@@ -331,10 +330,21 @@ export interface Dictionary {
         customerContact: string;
         projectName: string;
         panelNames: string;
-        assignee: string;
-        ownerName: string;
         manufacturingComplete: string;
         updatedAt: string;
+      };
+    };
+    index: {
+      empty: string;
+      yearFilterLabel: string;
+      allYears: string;
+      searchPlaceholder: string;
+      columns: {
+        drawingNumber: string;
+        managementNumber: string;
+        projectName: string;
+        assignee: string;
+        remarks: string;
       };
     };
     production: {
