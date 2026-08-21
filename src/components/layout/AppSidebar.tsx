@@ -61,8 +61,8 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
               O
             </span>
             <span className="flex items-baseline gap-1">
-              <span className="text-[16px] font-extrabold tracking-tight text-foreground">OKU</span>
-              <span className="text-[11px] font-semibold tracking-tight text-muted">pro</span>
+              <span className="text-[16px] font-extrabold tracking-tight text-accent">OKU</span>
+              <span className="text-[11px] font-semibold tracking-tight text-foreground">pro</span>
             </span>
           </Link>
           <button onClick={onClose} className="text-muted hover:text-foreground md:hidden">
