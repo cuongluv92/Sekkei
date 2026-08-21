@@ -303,6 +303,10 @@ export interface Dictionary {
     };
     ledger: {
       empty: string;
+      yearFilterLabel: string;
+      allYears: string;
+      searchPlaceholder: string;
+      noResults: string;
       columns: {
         year: string;
         drawingNumber: string;
@@ -313,6 +317,82 @@ export interface Dictionary {
         projectName: string;
         panelNames: string;
         updatedAt: string;
+      };
+    };
+    production: {
+      sharedInfoTitle: string;
+      sharedInfoHint: string;
+      panelsTitle: string;
+      caseFieldsTitle: string;
+      panelColumns: {
+        electricalMethod: string;
+        ratedVoltage: string;
+        ratedCurrent: string;
+        ratedBreakingCapacity: string;
+        frequency: string;
+        controlVoltage: string;
+        protectionRating: string;
+      };
+      fields: {
+        productionNotes: string;
+        inspectionSheet: string;
+        filmThickness: string;
+        earthLeakage: string;
+        earthLeakageAlarm: string;
+        withstandVoltage: string;
+      };
+    };
+    schedule: {
+      goToCurrentMonth: string;
+      yearLabel: string;
+      monthLabel: string;
+      milestonesTitle: string;
+      timelineTitle: string;
+      legendTitle: string;
+      milestones: {
+        sheetMetalOrder: string;
+        sheetMetalDelivery: string;
+        boxOrder: string;
+        boxDelivery: string;
+        accessoryOrder: string;
+        accessoryDelivery: string;
+        productionStart: string;
+        productionEnd: string;
+        inspectionStart: string;
+        inspectionEnd: string;
+        witnessStart: string;
+        witnessEnd: string;
+        shippingStart: string;
+        shippingEnd: string;
+        delivery: string;
+      };
+      categories: {
+        sheetMetal: string;
+        box: string;
+        accessory: string;
+        production: string;
+        inspection: string;
+        witness: string;
+        shipping: string;
+      };
+    };
+    costLabor: {
+      totalsTitle: string;
+      designEstimatedTotal: string;
+      designActualTotal: string;
+      productionEstimatedTotal: string;
+      productionActualTotal: string;
+      filterYear: string;
+      filterProject: string;
+      searchPlaceholder: string;
+      columns: {
+        drawingNumber: string;
+        projectName: string;
+        panelCount: string;
+        designEstimated: string;
+        designActual: string;
+        productionEstimated: string;
+        productionActual: string;
       };
     };
   };
@@ -352,6 +432,20 @@ export interface Dictionary {
       frequency: string;
       controlVoltage: string;
       protectionRating: string;
+    };
+  };
+  scheduleColorSettings: {
+    title: string;
+    description: string;
+    resetButton: string;
+    categories: {
+      sheetMetal: string;
+      box: string;
+      accessory: string;
+      production: string;
+      inspection: string;
+      witness: string;
+      shipping: string;
     };
   };
 }

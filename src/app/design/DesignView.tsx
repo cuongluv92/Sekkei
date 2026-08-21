@@ -7,8 +7,10 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { DesignTabBar, isDesignTopTab, type DesignTopTab } from "@/components/design/DesignTabBar";
 import { CaseWorkspaceBar } from "@/components/design/CaseWorkspaceBar";
 import { DesignRequestForm } from "@/components/design/DesignRequestForm";
-import { ProductionRequestPanel } from "@/components/design/ProductionRequestPanel";
+import { ProductionRequestForm } from "@/components/design/ProductionRequestForm";
 import { CaseLedgerTable } from "@/components/design/CaseLedgerTable";
+import { ScheduleTimeline } from "@/components/design/ScheduleTimeline";
+import { CostLaborTable } from "@/components/design/CostLaborTable";
 
 /**
  * 設計管理 entry point. A single page with a top-level tab strip (order fixed:
@@ -67,7 +69,7 @@ export function DesignView() {
           ) : tab === "designRequest" ? (
             <DesignRequestForm caseId={caseId} />
           ) : (
-            <ProductionRequestPanel caseId={caseId} />
+            <ProductionRequestForm caseId={caseId} />
           )}
         </>
       )}
@@ -79,13 +81,8 @@ export function DesignView() {
       {tab === "designIndexOther" && (
         <CaseLedgerTable filter={({ case: c }) => !c.orderer.includes("京王")} />
       )}
-      {(tab === "schedule" || tab === "costLabor") && (
-        <div className="panel">
-          <div className="panel-body py-12 text-center text-[13px] text-muted">
-            {t("design.comingSoon")}
-          </div>
-        </div>
-      )}
+      {tab === "schedule" && <ScheduleTimeline />}
+      {tab === "costLabor" && <CostLaborTable />}
     </div>
   );
 }

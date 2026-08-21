@@ -7,6 +7,7 @@ import { calculationDefinitions } from "@/lib/mock/calculationDefinitions";
 import { calculationTemplateService, partTemplateService } from "@/lib/services";
 import { LanguageSwitcher } from "@/components/settings/LanguageSwitcher";
 import { MasterListEditor } from "@/components/design/MasterListEditor";
+import { ScheduleColorSettings } from "@/components/design/ScheduleColorSettings";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { CalculationTemplate, PartTemplate, PartTemplateKind } from "@/lib/types";
@@ -65,6 +66,15 @@ export default function SettingsPage() {
         </div>
         <div className="panel-body">
           <MasterListEditor />
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-header">
+          <span className="panel-title">{t("scheduleColorSettings.title")}</span>
+        </div>
+        <div className="panel-body">
+          <ScheduleColorSettings />
         </div>
       </div>
 
