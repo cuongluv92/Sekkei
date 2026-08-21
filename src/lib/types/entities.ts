@@ -179,6 +179,16 @@ export interface CalculationTemplate {
   fileUrl?: string;
 }
 
+export type PartTemplateKind = "excel" | "dwg";
+
+/** An uploaded export template for 部品製作 (Excel出力 / DWG出力), independent of the calculation templates above. */
+export interface PartTemplate {
+  id: string;
+  kind: PartTemplateKind;
+  fileName: string;
+  uploadedAt?: string;
+}
+
 export type ImportFileType = "excel" | "dwg" | "pdf" | "image";
 export type ImportTargetCategory = "part-data" | "part-drawing" | "catalog";
 export type ImportRowStatus = "new" | "existing" | "skip" | "error";

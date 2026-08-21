@@ -3,33 +3,35 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
+import { navItems, type NavItem } from "@/lib/nav";
 import { useTranslation } from "@/lib/i18n";
-import { useNavSettings, type NavEntry } from "@/lib/store/NavSettingsProvider";
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function NavLink({
-  entry,
+  item,
+  label,
   active,
   onClick,
 }: {
-  entry: NavEntry;
+  item: NavItem;
+  label: string;
   active: boolean;
   onClick: () => void;
 }) {
-  const Icon = entry.Icon;
+  const Icon = item.icon;
   return (
     <Link
-      href={entry.href}
+      href={item.href}
       onClick={onClick}
       className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[12.5px] text-foreground transition-colors ${
         active ? "bg-accent/15 font-semibold" : "font-medium hover:bg-surface-2"
       }`}
     >
       <Icon className={`h-4 w-4 shrink-0 ${active ? "text-accent" : "text-muted"}`} />
-      <span className="truncate">{entry.label}</span>
+      <span className="truncate">{label}</span>
     </Link>
   );
 }
@@ -37,9 +39,8 @@ function NavLink({
 export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const { t } = useTranslation();
-  const { visibleEntries } = useNavSettings();
-  const settingsEntry = visibleEntries.find((e) => e.id === "settings");
-  const mainEntries = visibleEntries.filter((e) => e.id !== "settings");
+  const settingsItem = navItems.find((i) => i.key === "settings");
+  const mainItems = navItems.filter((i) => i.key !== "settings");
 
   return (
     <>
@@ -71,22 +72,24 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
         </div>
         <nav className="flex-1 overflow-y-auto px-3 py-3">
           <ul className="flex flex-col gap-0.5">
-            {mainEntries.map((entry) => (
-              <li key={entry.id}>
+            {mainItems.map((item) => (
+              <li key={item.key}>
                 <NavLink
-                  entry={entry}
-                  active={isActive(pathname, entry.href)}
+                  item={item}
+                  label={t(`nav.${item.key}`)}
+                  active={isActive(pathname, item.href)}
                   onClick={onClose}
                 />
               </li>
             ))}
           </ul>
         </nav>
-        {settingsEntry && (
+        {settingsItem && (
           <div className="border-t border-border px-3 py-3">
             <NavLink
-              entry={settingsEntry}
-              active={isActive(pathname, settingsEntry.href)}
+              item={settingsItem}
+              label={t(`nav.${settingsItem.key}`)}
+              active={isActive(pathname, settingsItem.href)}
               onClick={onClose}
             />
           </div>

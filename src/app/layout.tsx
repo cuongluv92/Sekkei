@@ -3,7 +3,6 @@ import { Plus_Jakarta_Sans, Noto_Sans_JP, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n";
 import { PartAssemblyProvider } from "@/lib/store/PartAssemblyProvider";
-import { NavSettingsProvider } from "@/lib/store/NavSettingsProvider";
 import { AppShell } from "@/components/layout/AppShell";
 
 // Primary UI font for Latin text/numbers — bolder, rounder letterforms.
@@ -41,11 +40,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="h-full antialiased">
         <LanguageProvider>
-          <NavSettingsProvider>
-            <PartAssemblyProvider>
-              <AppShell>{children}</AppShell>
-            </PartAssemblyProvider>
-          </NavSettingsProvider>
+          <PartAssemblyProvider>
+            <AppShell>{children}</AppShell>
+          </PartAssemblyProvider>
         </LanguageProvider>
       </body>
     </html>

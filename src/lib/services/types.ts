@@ -8,6 +8,8 @@ import type {
   Manufacturer,
   PartData,
   PartDrawing,
+  PartTemplate,
+  PartTemplateKind,
   SearchResultItem,
   SelectionInput,
   SelectionResultRow,
@@ -68,6 +70,12 @@ export interface CalculationTemplateRepository {
   list(): Promise<CalculationTemplate[]>;
   getByCalculationKey(calculationKey: string): Promise<CalculationTemplate | null>;
   upload(calculationKey: string, fileName: string): Promise<CalculationTemplate>;
+}
+
+export interface PartTemplateRepository {
+  list(): Promise<PartTemplate[]>;
+  getByKind(kind: PartTemplateKind): Promise<PartTemplate | null>;
+  upload(kind: PartTemplateKind, fileName: string): Promise<PartTemplate>;
 }
 
 export interface ImportRepository {

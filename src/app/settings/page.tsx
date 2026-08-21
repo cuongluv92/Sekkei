@@ -4,28 +4,43 @@ import { Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { calculationDefinitions } from "@/lib/mock/calculationDefinitions";
-import { calculationTemplateService } from "@/lib/services";
+import { calculationTemplateService, partTemplateService } from "@/lib/services";
 import { LanguageSwitcher } from "@/components/settings/LanguageSwitcher";
-import { MenuManagement } from "@/components/settings/MenuManagement";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
-import type { CalculationTemplate } from "@/lib/types";
+import type { CalculationTemplate, PartTemplate, PartTemplateKind } from "@/lib/types";
+
+const PART_TEMPLATE_KINDS: { kind: PartTemplateKind; accept: string }[] = [
+  { kind: "excel", accept: ".xlsx,.xls" },
+  { kind: "dwg", accept: ".dwg" },
+];
 
 export default function SettingsPage() {
   const { t, locale } = useTranslation();
   const [templates, setTemplates] = useState<Record<string, CalculationTemplate>>({});
+  const [partTemplates, setPartTemplates] = useState<Record<string, PartTemplate>>({});
   const { message, show } = useMockFeedback();
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
+  const partFileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     calculationTemplateService.list().then((list) => {
       setTemplates(Object.fromEntries(list.map((tpl) => [tpl.calculationKey, tpl])));
+    });
+    partTemplateService.list().then((list) => {
+      setPartTemplates(Object.fromEntries(list.map((tpl) => [tpl.kind, tpl])));
     });
   }, []);
 
   async function handleUpload(key: string, file: File) {
     const tpl = await calculationTemplateService.upload(key, file.name);
     setTemplates((prev) => ({ ...prev, [key]: tpl }));
+    show(`${file.name} を登録しました`);
+  }
+
+  async function handlePartUpload(kind: PartTemplateKind, file: File) {
+    const tpl = await partTemplateService.upload(kind, file.name);
+    setPartTemplates((prev) => ({ ...prev, [kind]: tpl }));
     show(`${file.name} を登録しました`);
   }
 
@@ -40,15 +55,6 @@ export default function SettingsPage() {
         <div className="panel-body flex flex-col gap-3">
           <p className="text-[12px] text-muted">{t("settings.languageDescription")}</p>
           <LanguageSwitcher />
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header">
-          <span className="panel-title">{t("settings.menuSection")}</span>
-        </div>
-        <div className="panel-body">
-          <MenuManagement />
         </div>
       </div>
 
@@ -132,6 +138,61 @@ export default function SettingsPage() {
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) handleUpload(def.key, file);
+                            e.target.value = "";
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-header">
+          <span className="panel-title">{t("settings.partTemplateSection")}</span>
+        </div>
+        <div className="panel-body flex flex-col gap-3">
+          <p className="text-[12px] text-muted">{t("settings.partTemplateDescription")}</p>
+          <div className="data-table-wrap">
+            <table className="data-table" style={{ minWidth: 480 }}>
+              <thead>
+                <tr>
+                  <th style={{ width: "100px" }}>{t("common.kind")}</th>
+                  <th>{t("settings.templateSection")}</th>
+                  <th style={{ width: "160px" }} />
+                </tr>
+              </thead>
+              <tbody>
+                {PART_TEMPLATE_KINDS.map(({ kind, accept }) => {
+                  const tpl = partTemplates[kind];
+                  return (
+                    <tr key={kind}>
+                      <td>{kind === "excel" ? t("settings.kindExcel") : t("settings.kindDwg")}</td>
+                      <td className={tpl ? "text-foreground" : "text-muted-2"}>
+                        {tpl ? tpl.fileName : t("settings.templateEmpty")}
+                      </td>
+                      <td>
+                        <button
+                          onClick={() => partFileInputs.current[kind]?.click()}
+                          className="btn-secondary"
+                        >
+                          <Upload className="h-3.5 w-3.5" />
+                          {t("settings.templateUpload")}
+                        </button>
+                        <input
+                          ref={(el) => {
+                            partFileInputs.current[kind] = el;
+                          }}
+                          type="file"
+                          accept={accept}
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handlePartUpload(kind, file);
                             e.target.value = "";
                           }}
                         />

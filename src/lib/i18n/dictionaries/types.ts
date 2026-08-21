@@ -189,19 +189,6 @@ export interface Dictionary {
     title: string;
     languageSection: string;
     languageDescription: string;
-    menuSection: string;
-    menuDescription: string;
-    menuOrderHint: string;
-    addMenuItem: string;
-    itemNamePlaceholder: string;
-    itemType: string;
-    typeBuiltIn: string;
-    typeCustom: string;
-    show: string;
-    hide: string;
-    rename: string;
-    save: string;
-    delete: string;
     calcSection: string;
     calcDescription: string;
     templateSection: string;
@@ -210,8 +197,9 @@ export interface Dictionary {
     templateEmpty: string;
     formulaEmpty: string;
     configureButton: string;
-  };
-  customPage: {
-    body: string;
+    partTemplateSection: string;
+    partTemplateDescription: string;
+    kindExcel: string;
+    kindDwg: string;
   };
 }
