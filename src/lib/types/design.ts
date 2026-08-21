@@ -1,0 +1,243 @@
+/**
+ * 設計管理 (Design Management) domain types.
+ *
+ * Architecture per spec: one 案件 (DesignCase) is the single central record.
+ * 設計依頼・製作依頼・工程・原価工数 are different *slices of data* on that same
+ * record (or its child 盤/panels) — never copies of the same fields spread
+ * across separate tables that need to be kept in sync. `DesignCase` itself
+ * holds every 設計依頼 field directly; 製作依頼/工程/原価工数 (Phase 2-4) will
+ * add their own child tables (`CaseSchedule`, `CaseCostLabor`) keyed by the
+ * same `caseId`, and per-panel production fields live directly on
+ * `CasePanel` — nothing here is denormalized data that must be re-synced.
+ */
+
+export interface Project {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+/**
+ * The 16 spec items from 設計依頼書 (外形仕様: 箱体/塗装/ハンドル/その他,
+ * 結線仕様: 電気方式/電源/電圧/端子台), confirmed against the real template.
+ * Each has independent 仕様Ⅰ・Ⅱ・Ⅲ values, and each key is also a
+ * `MasterListKey` — the candidate list for its comboboxes is *not*
+ * hard-coded in the component, it comes from `masterListService`.
+ */
+export const SPEC_FIELD_KEYS = [
+  "location",
+  "installation",
+  "structure",
+  "material",
+  "color",
+  "gloss",
+  "handleLocation",
+  "handleType",
+  "keyNo",
+  "wireEntry",
+  "opening",
+  "blankPlate",
+  "electricalMethod",
+  "powerSource",
+  "voltage",
+  "terminalBlock",
+] as const;
+
+export type SpecFieldKey = (typeof SPEC_FIELD_KEYS)[number];
+
+/** Visual grouping only (mirrors the real 設計依頼書 layout) — does not change the data shape. */
+export const SPEC_GROUPS: { group: string; fields: SpecFieldKey[] }[] = [
+  { group: "box", fields: ["location", "installation", "structure", "material"] },
+  { group: "paint", fields: ["color", "gloss"] },
+  { group: "handle", fields: ["handleLocation", "handleType", "keyNo"] },
+  { group: "other", fields: ["wireEntry", "opening", "blankPlate"] },
+];
+
+export const WIRING_SPEC_FIELDS: SpecFieldKey[] = [
+  "electricalMethod",
+  "powerSource",
+  "voltage",
+  "terminalBlock",
+];
+
+export interface SpecEntry {
+  spec1: string;
+  spec2: string;
+  spec3: string;
+}
+
+export type SpecValues = Partial<Record<SpecFieldKey, SpecEntry>>;
+
+/**
+ * 案件 — the one central record. Panels (`case_panels`) are a genuine 1-to-many
+ * relation (a case legitimately has multiple 盤), not duplicated data.
+ */
+export interface DesignCase {
+  id: string;
+  projectId: string;
+  year: number; // full 4-digit year, e.g. 2026
+  sequenceNo: number; // per-year sequence, e.g. 4 -> "26-004"
+  drawingNumber: string; // formatted cache of year+sequenceNo, immutable after creation
+  requestType: string; // 設計依頼区分
+  managementNumber: string; // 管理番号 = 見積番号
+  constructionNumber: string; // 工事番号
+  orderer: string; // 注文先
+  customerContact: string; // 客先担当
+  projectName: string; // 件名
+  specs: SpecValues;
+  designRemarks: string; // 設計備考欄 (distinct from 製作注意事項)
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const PANEL_NUMBERS = [1, 2, 3, 4, 5, 6, 7] as const;
+export type PanelNo = (typeof PANEL_NUMBERS)[number];
+
+/**
+ * 盤①～⑦. Design-side hour fields are filled from Phase 1 (設計依頼書 has one
+ * 見込時間/実動時間 pair). Production-side hours and the per-panel electrical
+ * spec fields (confirmed from 製作依頼書: 電気方式/定格電圧/定格電流/定格短絡遮断容量/
+ * 周波数/制御電圧/保護等級) are Phase 2 — the columns exist now so Phase 2 only
+ * needs UI, not a schema change.
+ */
+export interface CasePanel {
+  id: string;
+  caseId: string;
+  panelNo: PanelNo;
+  panelName: string; // 盤名称
+  panelStructure: string; // 盤構造
+  faceCount: number | null; // 面数
+  designDueDate: string | null; // 設計納期 (from 設計依頼書 panel row)
+  designEstimatedHours: number | null; // 見込時間 (設計依頼書)
+  designActualHours: number | null; // 実動時間 (設計依頼書)
+  // --- Phase 2 (製作依頼書) — schema ready, no UI yet ---
+  productionEstimatedHours: number | null; // 見込時間 (製作依頼書)
+  productionActualHours: number | null; // 実動時間 (製作依頼書)
+  electricalMethod: string;
+  ratedVoltage: string;
+  ratedCurrent: string;
+  ratedBreakingCapacity: string;
+  frequency: string;
+  controlVoltage: string;
+  protectionRating: string;
+}
+
+/**
+ * Case-level 製作依頼 fields (confirmed from the real form: these appear once
+ * per case, not once per panel, unlike the electrical fields above).
+ * Phase 2 — schema only.
+ */
+export interface ProductionRequest {
+  caseId: string;
+  productionNotes: string; // 製作注意事項
+  inspectionSheet: string; // 検査表
+  filmThickness: string; // 膜厚
+  earthLeakage: string; // 漏電
+  earthLeakageAlarm: string; // 漏電アラーム
+  withstandVoltage: string; // 耐圧
+}
+
+/** 工程 milestones. Phase 3 — schema only; dates are real `YYYY-MM-DD`, never 初旬/中旬/下旬 text. */
+export interface CaseSchedule {
+  caseId: string;
+  sheetMetalOrderDate: string | null;
+  sheetMetalDeliveryDate: string | null;
+  boxOrderDate: string | null;
+  boxDeliveryDate: string | null;
+  accessoryOrderDate: string | null;
+  accessoryDeliveryDate: string | null;
+  productionStartDate: string | null;
+  productionEndDate: string | null;
+  inspectionStartDate: string | null;
+  inspectionEndDate: string | null;
+  witnessStartDate: string | null;
+  witnessEndDate: string | null;
+  shippingStartDate: string | null;
+  shippingEndDate: string | null;
+  deliveryDate: string | null;
+}
+
+export type ScheduleCategoryKey =
+  | "sheetMetal"
+  | "box"
+  | "accessory"
+  | "production"
+  | "inspection"
+  | "witness"
+  | "shipping";
+
+/** Timeline color per category — must come from the real ⑤工程表 template once uploaded, never hard-coded RGB. Phase 3/5. */
+export interface ScheduleColorConfig {
+  category: ScheduleCategoryKey;
+  color: string; // hex, sourced from the uploaded template
+}
+
+/** 原価・工数. Computed totals (設計実動合計 / 製作実動合計) are derived from panels at read time, never stored. Phase 4 — schema only. */
+export interface CaseCostLabor {
+  caseId: string;
+  materialCost: number | null;
+  outsourcingCost: number | null;
+  otherCost: number | null;
+  notes: string;
+}
+
+/** 履歴/backup snapshot. Phase 7 — schema only. */
+export interface CaseVersion {
+  id: string;
+  caseId: string;
+  version: number;
+  snapshot: unknown;
+  timestamp: string;
+  user: string;
+  reason: string;
+}
+
+/**
+ * Master lists backing every dropdown/combobox in 設計管理 (設計依頼区分,
+ * 盤構造, all 16 spec fields, electrical fields, schedule colors, ...). Never
+ * hard-coded in a component — always read through `masterListService`.
+ */
+export interface MasterListItem {
+  id: string;
+  listKey: string;
+  value: string;
+  order: number;
+  enabled: boolean;
+}
+
+export interface DesignCaseSearchQuery {
+  projectId?: string;
+  year?: number;
+  drawingNumber?: string;
+  managementNumber?: string;
+  constructionNumber?: string;
+  orderer?: string;
+  customerContact?: string;
+  projectName?: string;
+  panelName?: string;
+}
+
+export interface DesignCaseWithPanels {
+  case: DesignCase;
+  panels: CasePanel[];
+}
+
+/** ②～⑧ Excel templates. Phase 5 — schema only (settings UI/versioning not built yet). */
+export type DesignTemplateKind =
+  | "drawingLedger" // ② 図面管理台帳 (one workbook, one sheet per year)
+  | "designRequestIndexKeio" // ③ 設計依頼書目次・京王 (one workbook)
+  | "designRequestIndexOther" // ④ 設計依頼書目次・その他 (one workbook)
+  | "scheduleSheet" // ⑤ 工程表 (one workbook, one sheet per year.month)
+  | "costLaborSheet" // ⑥ 仕入原価／工数一覧表 (one workbook)
+  | "designRequestForm" // ⑦ 設計依頼書 (one file per year)
+  | "productionRequestForm"; // ⑧ 製作依頼書 (one file per year)
+
+export interface DesignTemplateVersion {
+  id: string;
+  kind: DesignTemplateKind;
+  version: number;
+  fileName: string;
+  active: boolean;
+  uploadedAt: string;
+  uploadedBy?: string;
+}

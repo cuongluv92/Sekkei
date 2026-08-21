@@ -6,6 +6,7 @@ import { useTranslation } from "@/lib/i18n";
 import { calculationDefinitions } from "@/lib/mock/calculationDefinitions";
 import { calculationTemplateService, partTemplateService } from "@/lib/services";
 import { LanguageSwitcher } from "@/components/settings/LanguageSwitcher";
+import { MasterListEditor } from "@/components/design/MasterListEditor";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { CalculationTemplate, PartTemplate, PartTemplateKind } from "@/lib/types";
@@ -55,6 +56,15 @@ export default function SettingsPage() {
         <div className="panel-body flex flex-col gap-3">
           <p className="text-[12px] text-muted">{t("settings.languageDescription")}</p>
           <LanguageSwitcher />
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-header">
+          <span className="panel-title">{t("designSettings.title")}</span>
+        </div>
+        <div className="panel-body">
+          <MasterListEditor />
         </div>
       </div>
 

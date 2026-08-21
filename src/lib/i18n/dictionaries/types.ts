@@ -10,6 +10,7 @@ export interface Dictionary {
   nav: {
     search: string;
     selection: string;
+    designManagement: string;
     partAssembly: string;
     partData: string;
     partDrawing: string;
@@ -201,5 +202,140 @@ export interface Dictionary {
     partTemplateDescription: string;
     kindExcel: string;
     kindDwg: string;
+  };
+  design: {
+    title: string;
+    projects: {
+      title: string;
+      newProject: string;
+      namePlaceholder: string;
+      createButton: string;
+      openButton: string;
+      empty: string;
+    };
+    cases: {
+      title: string;
+      newCase: string;
+      searchButton: string;
+      empty: string;
+      backToProjects: string;
+    };
+    newCaseForm: {
+      title: string;
+      drawingNumberPreview: string;
+      submitButton: string;
+    };
+    fields: {
+      year: string;
+      requestType: string;
+      drawingNumber: string;
+      managementNumber: string;
+      constructionNumber: string;
+      orderer: string;
+      customerContact: string;
+      projectName: string;
+      designRemarks: string;
+    };
+    panels: {
+      title: string;
+      addPanel: string;
+      removePanel: string;
+      panelNo: string;
+      panelName: string;
+      panelStructure: string;
+      faceCount: string;
+      designDueDate: string;
+      designEstimatedHours: string;
+      designActualHours: string;
+      empty: string;
+    };
+    specs: {
+      exteriorTitle: string;
+      wiringTitle: string;
+      groupBox: string;
+      groupPaint: string;
+      groupHandle: string;
+      groupOther: string;
+      spec1: string;
+      spec2: string;
+      spec3: string;
+      fields: {
+        location: string;
+        installation: string;
+        structure: string;
+        material: string;
+        color: string;
+        gloss: string;
+        handleLocation: string;
+        handleType: string;
+        keyNo: string;
+        wireEntry: string;
+        opening: string;
+        blankPlate: string;
+        electricalMethod: string;
+        powerSource: string;
+        voltage: string;
+        terminalBlock: string;
+      };
+    };
+    tabs: {
+      designRequest: string;
+      productionRequest: string;
+      schedule: string;
+      costLabor: string;
+      history: string;
+    };
+    comingSoon: string;
+    saveButton: string;
+    savedMessage: string;
+    search: {
+      title: string;
+      description: string;
+      button: string;
+      clearButton: string;
+      resultTitle: string;
+      noResults: string;
+      andHint: string;
+      panelNameLabel: string;
+      allProjects: string;
+    };
+  };
+  designSettings: {
+    title: string;
+    description: string;
+    selectListLabel: string;
+    addValuePlaceholder: string;
+    addButton: string;
+    emptyList: string;
+    enableButton: string;
+    disableButton: string;
+    lists: {
+      requestType: string;
+      orderer: string;
+      customerContact: string;
+      panelStructure: string;
+      faceCount: string;
+      location: string;
+      installation: string;
+      structure: string;
+      material: string;
+      color: string;
+      gloss: string;
+      handleLocation: string;
+      handleType: string;
+      keyNo: string;
+      wireEntry: string;
+      opening: string;
+      blankPlate: string;
+      electricalMethod: string;
+      powerSource: string;
+      voltage: string;
+      terminalBlock: string;
+      current: string;
+      breakingCapacity: string;
+      frequency: string;
+      controlVoltage: string;
+      protectionRating: string;
+    };
   };
 }
