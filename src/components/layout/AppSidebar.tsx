@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
-import { navItems } from "@/lib/nav";
 import { useTranslation } from "@/lib/i18n";
+import { useNavSettings } from "@/lib/store/NavSettingsProvider";
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -13,6 +13,7 @@ function isActive(pathname: string, href: string) {
 export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const { t } = useTranslation();
+  const { visibleEntries } = useNavSettings();
 
   return (
     <>
@@ -43,13 +44,13 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
         </div>
         <nav className="flex-1 overflow-y-auto px-3 py-3">
           <ul className="flex flex-col gap-0.5">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = isActive(pathname, item.href);
+            {visibleEntries.map((entry) => {
+              const Icon = entry.Icon;
+              const active = isActive(pathname, entry.href);
               return (
-                <li key={item.href}>
+                <li key={entry.id}>
                   <Link
-                    href={item.href}
+                    href={entry.href}
                     onClick={onClose}
                     className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[12.5px] text-foreground transition-colors ${
                       active
@@ -58,7 +59,7 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
                     }`}
                   >
                     <Icon className={`h-4 w-4 shrink-0 ${active ? "text-accent" : "text-muted"}`} />
-                    <span className="truncate">{t(`nav.${item.key}`)}</span>
+                    <span className="truncate">{entry.label}</span>
                   </Link>
                 </li>
               );
