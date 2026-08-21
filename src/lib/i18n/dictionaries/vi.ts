@@ -2,7 +2,7 @@ import type { Dictionary } from "./types";
 
 const vi: Dictionary = {
   app: {
-    name: "Sekkei-Hub",
+    name: "OKU pro",
     tagline: "Hệ thống quản lý dữ liệu kỹ thuật",
   },
   nav: {

@@ -29,7 +29,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sekkei-Hub",
+  title: "OKU pro",
   description: "技術データ管理システム",
 };
 
