@@ -1,22 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --background: #14161a;
-  --surface: #1a1d22;
-  --surface-2: #20242b;
-  --surface-hover: #262a32;
-  --border: #2a2e35;
-  --border-strong: #3a3f48;
-  --foreground: #e6e8eb;
-  --muted: #8b929e;
-  --muted-2: #5f6670;
-  --accent: #4d8fc9;
-  --accent-strong: #63a3dc;
-  --accent-foreground: #0c1116;
-  --success: #4f9d72;
-  --warning: #c99a4b;
-  --danger: #c9584f;
-  --info: #4d8fc9;
+  --background: #0e1015;
+  --surface: #15181f;
+  --surface-2: #1b1f28;
+  --surface-hover: #232834;
+  --border: #262b35;
+  --border-strong: #383f4d;
+  --foreground: #f2f4f7;
+  --muted: #aab2c0;
+  --muted-2: #7d8492;
+  --accent: #4f8ff0;
+  --accent-strong: #6fa3f4;
+  --accent-foreground: #061021;
+  --success: #3fc989;
+  --warning: #e7ac4c;
+  --danger: #ef6c62;
+  --info: #4f8ff0;
 }
 
 @theme inline {
@@ -52,22 +52,26 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 13.5px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Thin, low-contrast scrollbars to match the dense/technical look. */
+/* Thin scrollbars, still visible against the darker background. */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
 }
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
 }
 *::-webkit-scrollbar-thumb {
   background: var(--border-strong);
-  border-radius: 4px;
+  border-radius: 5px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-2);
 }
 *::-webkit-scrollbar-track {
   background: transparent;
@@ -81,36 +85,38 @@ body {
 @layer components {
   /* ---- Buttons ---- */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border px-3 py-1.5 text-[12.5px]
-      font-medium transition-colors whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
-      disabled:opacity-40 border-accent bg-accent text-accent-foreground hover:bg-accent-strong hover:border-accent-strong;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md border px-3.5 py-2 text-[12.5px]
+      font-medium transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
+      disabled:opacity-40 border-accent bg-accent text-accent-foreground shadow-[0_1px_2px_rgba(0,0,0,0.35)]
+      hover:bg-accent-strong hover:border-accent-strong hover:shadow-[0_2px_10px_-2px_rgba(79,143,240,0.55)];
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border px-3 py-1.5 text-[12.5px]
-      font-medium transition-colors whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
-      disabled:opacity-40 border-border-strong bg-surface-2 text-foreground hover:bg-surface-hover;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md border px-3.5 py-2 text-[12.5px]
+      font-medium transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
+      disabled:opacity-40 border-border-strong bg-surface-2 text-foreground hover:bg-surface-hover hover:border-muted-2;
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border px-3 py-1.5 text-[12.5px]
-      font-medium transition-colors whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md border px-3.5 py-2 text-[12.5px]
+      font-medium transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
       disabled:opacity-40 border-transparent bg-transparent text-muted hover:bg-surface-2 hover:text-foreground;
   }
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border px-3 py-1.5 text-[12.5px]
-      font-medium transition-colors whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md border px-3.5 py-2 text-[12.5px]
+      font-medium transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
       disabled:opacity-40 border-danger/50 bg-transparent text-danger hover:bg-danger/10;
   }
   .btn-icon {
-    @apply !px-1.5;
+    @apply !px-2;
   }
 
   /* ---- Form controls ---- */
   .field-input {
-    @apply w-full rounded-sm border border-border-strong bg-surface px-2.5 py-1.5 text-[12.5px] text-foreground
-      placeholder:text-muted-2 outline-none focus:border-accent;
+    @apply w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-[12.5px] text-foreground
+      transition-colors placeholder:text-muted-2 outline-none focus:border-accent
+      focus:ring-2 focus:ring-accent/25;
   }
   .field-label {
-    @apply mb-1 block text-[11px] font-medium tracking-wide text-muted uppercase;
+    @apply mb-1.5 block text-[11px] font-semibold tracking-wide text-muted uppercase;
   }
   .checkbox-row {
     @apply flex items-center gap-2 text-[12.5px] text-foreground;
@@ -118,16 +124,16 @@ body {
 
   /* ---- Surfaces ---- */
   .panel {
-    @apply rounded-sm border border-border bg-surface;
+    @apply rounded-lg border border-border bg-surface shadow-[0_1px_3px_rgba(0,0,0,0.3)];
   }
   .panel-header {
-    @apply flex items-center justify-between border-b border-border px-4 py-2.5;
+    @apply flex items-center justify-between gap-3 border-b border-border px-5 py-3.5;
   }
   .panel-title {
-    @apply text-[13px] font-semibold text-foreground;
+    @apply text-[14px] font-semibold tracking-tight text-foreground;
   }
   .panel-body {
-    @apply p-4;
+    @apply p-5;
   }
 
   /* ---- Tables ---- */
@@ -135,44 +141,44 @@ body {
     @apply w-full overflow-x-auto;
   }
   .data-table {
-    @apply w-full border-collapse text-[12.5px];
+    @apply w-full table-fixed border-collapse text-[12.5px];
   }
   .data-table thead th {
-    @apply sticky top-0 z-10 border-b border-border-strong bg-surface-2 px-3 py-2 text-left text-[11px]
-      font-semibold tracking-wide text-muted uppercase whitespace-nowrap;
+    @apply sticky top-0 z-10 border-b border-border-strong bg-surface-2 px-3.5 py-2.5 text-left text-[10.5px]
+      font-semibold tracking-wider text-muted uppercase whitespace-nowrap;
   }
   .data-table tbody td {
-    @apply border-b border-border px-3 py-2 align-middle text-foreground;
+    @apply border-b border-border px-3.5 py-2.5 align-middle text-foreground;
   }
   .data-table tbody tr {
     @apply transition-colors;
   }
   .data-table tbody tr:hover {
-    @apply bg-surface-2;
+    @apply bg-surface-hover;
   }
   .data-table tbody tr.is-selected {
-    @apply bg-accent/10;
+    @apply bg-accent/15;
   }
 
   /* ---- Badges ---- */
   .badge-neutral {
-    @apply inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap
+    @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-semibold whitespace-nowrap
       border-border-strong bg-surface-2 text-muted;
   }
   .badge-success {
-    @apply inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap
-      border-success/40 bg-success/10 text-success;
+    @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-semibold whitespace-nowrap
+      border-success/40 bg-success/15 text-success;
   }
   .badge-warning {
-    @apply inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap
-      border-warning/40 bg-warning/10 text-warning;
+    @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-semibold whitespace-nowrap
+      border-warning/40 bg-warning/15 text-warning;
   }
   .badge-danger {
-    @apply inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap
-      border-danger/40 bg-danger/10 text-danger;
+    @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-semibold whitespace-nowrap
+      border-danger/40 bg-danger/15 text-danger;
   }
   .badge-info {
-    @apply inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap
-      border-info/40 bg-info/10 text-info;
+    @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-semibold whitespace-nowrap
+      border-info/40 bg-info/15 text-info;
   }
 }

@@ -28,12 +28,12 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
           transition-transform duration-150 md:static md:z-auto md:translate-x-0
           ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
-          <Link href="/search" className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-xs border border-accent text-[10px] font-bold text-accent">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
+          <Link href="/search" className="flex items-center gap-2.5">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-accent text-[12px] font-bold text-accent-foreground shadow-[0_1px_4px_rgba(79,143,240,0.4)]">
               S
             </span>
-            <span className="text-[13px] font-semibold tracking-wide text-foreground">
+            <span className="text-[14px] font-semibold tracking-tight text-foreground">
               {t("app.name")}
             </span>
           </Link>
@@ -41,8 +41,8 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
             <X className="h-4 w-4" />
           </button>
         </div>
-        <nav className="flex-1 overflow-y-auto py-2">
-          <ul className="flex flex-col gap-0.5 px-2">
+        <nav className="flex-1 overflow-y-auto px-3 py-3">
+          <ul className="flex flex-col gap-0.5">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(pathname, item.href);
@@ -51,13 +51,13 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
                   <Link
                     href={item.href}
                     onClick={onClose}
-                    className={`flex items-center gap-2.5 rounded-sm px-2.5 py-2 text-[12.5px] transition-colors ${
+                    className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-[12.5px] transition-colors ${
                       active
-                        ? "border-l-2 border-accent bg-surface-2 pl-[9px] font-medium text-foreground"
-                        : "border-l-2 border-transparent text-muted hover:bg-surface-2 hover:text-foreground"
+                        ? "bg-accent/15 font-medium text-foreground"
+                        : "text-muted hover:bg-surface-2 hover:text-foreground"
                     }`}
                   >
-                    <Icon className="h-4 w-4 shrink-0" />
+                    <Icon className={`h-4 w-4 shrink-0 ${active ? "text-accent" : ""}`} />
                     <span className="truncate">{t(`nav.${item.key}`)}</span>
                   </Link>
                 </li>
@@ -65,7 +65,7 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
             })}
           </ul>
         </nav>
-        <div className="border-t border-border px-4 py-2.5 text-[11px] text-muted-2">
+        <div className="border-t border-border px-4 py-3 text-[11px] text-muted-2">
           {t("app.tagline")}
         </div>
       </aside>

@@ -8,6 +8,7 @@ import { getManufacturerName } from "@/lib/mock/manufacturers";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
 import { FilePreview } from "@/components/common/FilePreview";
+import { PageHeader } from "@/components/common/PageHeader";
 import type { Catalog } from "@/lib/types";
 
 export default function CatalogPage() {
@@ -85,10 +86,7 @@ export default function CatalogPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-[15px] font-semibold text-foreground">{t("catalog.title")}</h1>
-        <p className="mt-0.5 text-[12px] text-muted">{t("catalog.description")}</p>
-      </div>
+      <PageHeader title={t("catalog.title")} description={t("catalog.description")} />
 
       <div className="flex flex-wrap gap-2">
         <div className="relative max-w-xs flex-1">

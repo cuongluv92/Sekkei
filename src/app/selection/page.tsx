@@ -6,6 +6,7 @@ import { useTranslation } from "@/lib/i18n";
 import { selectionService } from "@/lib/services";
 import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
 import { ExportActions } from "@/components/common/ExportActions";
+import { PageHeader } from "@/components/common/PageHeader";
 import type { SelectionOutputKey, SelectionResultRow } from "@/lib/types";
 
 const OUTPUT_KEYS: SelectionOutputKey[] = [
@@ -59,10 +60,7 @@ export default function SelectionPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-[15px] font-semibold text-foreground">{t("selection.title")}</h1>
-        <p className="mt-0.5 text-[12px] text-muted">{t("selection.description")}</p>
-      </div>
+      <PageHeader title={t("selection.title")} description={t("selection.description")} />
 
       <div className="panel">
         <div className="panel-header">

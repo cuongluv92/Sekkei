@@ -9,6 +9,7 @@ import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
 import { FileActions } from "@/components/common/FileActions";
 import { FilePreview } from "@/components/common/FilePreview";
+import { PageHeader } from "@/components/common/PageHeader";
 import type { FileAsset } from "@/lib/types";
 
 interface LibraryItem {
@@ -141,10 +142,7 @@ export function PartLibraryView<T extends LibraryItem>({
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-[15px] font-semibold text-foreground">{title}</h1>
-        <p className="mt-0.5 text-[12px] text-muted">{description}</p>
-      </div>
+      <PageHeader title={title} description={description} />
 
       <div className="flex flex-wrap gap-2">
         <div className="relative max-w-xs flex-1">

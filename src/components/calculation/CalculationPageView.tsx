@@ -7,6 +7,7 @@ import { calculationService, calculationTemplateService } from "@/lib/services";
 import { CalculationForm } from "@/components/calculation/CalculationForm";
 import { CalculationResult } from "@/components/calculation/CalculationResult";
 import { ExportActions } from "@/components/common/ExportActions";
+import { PageHeader } from "@/components/common/PageHeader";
 import type { CalculationDefinition, CalculationTemplate } from "@/lib/types";
 
 interface CalculationPageViewProps {
@@ -56,10 +57,7 @@ export function CalculationPageView({ calculationKey, title, description }: Calc
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-[15px] font-semibold text-foreground">{title}</h1>
-        <p className="mt-0.5 text-[12px] text-muted">{description}</p>
-      </div>
+      <PageHeader title={title} description={description} />
 
       <div className="panel">
         <div className="panel-header">

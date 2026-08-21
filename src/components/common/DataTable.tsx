@@ -38,10 +38,11 @@ export function DataTable<T>({
   emptyMessage,
 }: DataTableProps<T>) {
   const { t } = useTranslation();
+  const minWidth = columns.reduce((sum, col) => sum + (parseInt(col.width ?? "", 10) || 180), 0);
 
   return (
     <div className="data-table-wrap">
-      <table className="data-table">
+      <table className="data-table" style={{ minWidth }}>
         <thead>
           <tr>
             {columns.map((col) => (

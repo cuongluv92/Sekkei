@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { CalculationPageView } from "@/components/calculation/CalculationPageView";
+import { PageHeader } from "@/components/common/PageHeader";
 
 /**
  * Registry of 他計算 modules. Adding a new "other calculation" later means
@@ -21,10 +22,7 @@ export default function OtherCalculationPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-[15px] font-semibold text-foreground">{t("otherCalc.title")}</h1>
-        <p className="mt-0.5 text-[12px] text-muted">{t("otherCalc.description")}</p>
-      </div>
+      <PageHeader title={t("otherCalc.title")} description={t("otherCalc.description")} />
 
       <div className="flex flex-wrap items-center gap-2 border-b border-border pb-2">
         {OTHER_CALC_MODULES.map((m) => (
@@ -33,8 +31,8 @@ export default function OtherCalculationPage() {
             onClick={() => setActive(m.key)}
             className={
               active === m.key
-                ? "rounded-sm border border-accent bg-accent/10 px-3 py-1.5 text-[12.5px] font-medium text-accent"
-                : "rounded-sm border border-transparent px-3 py-1.5 text-[12.5px] text-muted hover:bg-surface-2 hover:text-foreground"
+                ? "rounded-md border border-accent bg-accent/10 px-3 py-1.5 text-[12.5px] font-medium text-accent"
+                : "rounded-md border border-transparent px-3 py-1.5 text-[12.5px] text-muted hover:bg-surface-2 hover:text-foreground"
             }
           >
             {t(m.labelKey)}

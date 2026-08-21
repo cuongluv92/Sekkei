@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { importService } from "@/lib/services";
 import { ImportPreview } from "@/components/import/ImportPreview";
+import { PageHeader } from "@/components/common/PageHeader";
 import type { ImportFileType, ImportRow, ImportTargetCategory } from "@/lib/types";
 
 const TARGET_OPTIONS: { value: ImportTargetCategory; labelKey: string }[] = [
@@ -56,10 +57,7 @@ export default function ImportPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-[15px] font-semibold text-foreground">{t("importPage.title")}</h1>
-        <p className="mt-0.5 text-[12px] text-muted">{t("importPage.description")}</p>
-      </div>
+      <PageHeader title={t("importPage.title")} description={t("importPage.description")} />
 
       <StepBar current={step} />
 
@@ -87,7 +85,7 @@ export default function ImportPage() {
           <button
             onClick={() => inputRef.current?.click()}
             disabled={step !== "select"}
-            className="flex flex-col items-center gap-2 rounded-sm border border-dashed border-border-strong bg-surface-2 px-6 py-8 text-center text-muted transition-colors hover:border-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex flex-col items-center gap-2 rounded-md border border-dashed border-border-strong bg-surface-2 px-6 py-8 text-center text-muted transition-colors hover:border-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Upload className="h-6 w-6" />
             <span className="text-[12.5px]">{file ? file.name : t("importPage.dropHint")}</span>
@@ -162,7 +160,7 @@ function StepBar({ current }: { current: Step }) {
       {steps.map((s, i) => (
         <span
           key={s.key}
-          className={`rounded-sm border px-2.5 py-1 ${
+          className={`rounded-md border px-2.5 py-1 ${
             i <= currentIndex
               ? "border-accent/50 bg-accent/10 text-accent"
               : "border-border text-muted-2"

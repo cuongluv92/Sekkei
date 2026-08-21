@@ -8,6 +8,7 @@ import { getManufacturerName } from "@/lib/mock/manufacturers";
 import { usePartAssembly } from "@/lib/store/PartAssemblyProvider";
 import { SearchResultList } from "@/components/common/SearchResultList";
 import { ExportActions } from "@/components/common/ExportActions";
+import { PageHeader } from "@/components/common/PageHeader";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { SearchResultItem } from "@/lib/types";
 
@@ -65,10 +66,7 @@ export default function PartAssemblyPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-[15px] font-semibold text-foreground">{t("partAssembly.title")}</h1>
-        <p className="mt-0.5 text-[12px] text-muted">{t("partAssembly.description")}</p>
-      </div>
+      <PageHeader title={t("partAssembly.title")} description={t("partAssembly.description")} />
 
       <div className="panel">
         <div className="panel-header">
@@ -121,7 +119,7 @@ export default function PartAssemblyPage() {
         </div>
 
         <div className="data-table-wrap">
-          <table className="data-table">
+          <table className="data-table" style={{ minWidth: 1048 }}>
             <thead>
               <tr>
                 <th style={{ width: "28px" }} />
@@ -129,7 +127,7 @@ export default function PartAssemblyPage() {
                 <th style={{ width: "160px" }}>{t("common.name")}</th>
                 <th style={{ width: "150px" }}>{t("common.manufacturer")}</th>
                 <th style={{ width: "130px" }}>{t("common.model")}</th>
-                <th>{t("common.specification")}</th>
+                <th style={{ width: "200px" }}>{t("common.specification")}</th>
                 <th style={{ width: "80px" }} className="text-right">
                   {t("common.quantity")}
                 </th>

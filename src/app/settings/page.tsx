@@ -6,6 +6,7 @@ import { useTranslation } from "@/lib/i18n";
 import { calculationDefinitions } from "@/lib/mock/calculationDefinitions";
 import { calculationTemplateService } from "@/lib/services";
 import { LanguageSwitcher } from "@/components/settings/LanguageSwitcher";
+import { PageHeader } from "@/components/common/PageHeader";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { CalculationTemplate } from "@/lib/types";
 
@@ -29,9 +30,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-[15px] font-semibold text-foreground">{t("settings.title")}</h1>
-      </div>
+      <PageHeader title={t("settings.title")} />
 
       <div className="panel">
         <div className="panel-header">
@@ -50,7 +49,7 @@ export default function SettingsPage() {
         <div className="panel-body flex flex-col gap-3">
           <p className="text-[12px] text-muted">{t("settings.calcDescription")}</p>
           <div className="data-table-wrap">
-            <table className="data-table">
+            <table className="data-table" style={{ minWidth: 500 }}>
               <thead>
                 <tr>
                   <th>{t("common.name")}</th>
@@ -88,7 +87,7 @@ export default function SettingsPage() {
         <div className="panel-body flex flex-col gap-3">
           <p className="text-[12px] text-muted">{t("settings.templateDescription")}</p>
           <div className="data-table-wrap">
-            <table className="data-table">
+            <table className="data-table" style={{ minWidth: 560 }}>
               <thead>
                 <tr>
                   <th>{t("common.name")}</th>

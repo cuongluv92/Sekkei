@@ -7,6 +7,7 @@ import { useTranslation } from "@/lib/i18n";
 import { searchService, exportService } from "@/lib/services";
 import { SearchResultList } from "@/components/common/SearchResultList";
 import { FilePreview } from "@/components/common/FilePreview";
+import { PageHeader } from "@/components/common/PageHeader";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { FileAsset, SearchResultItem } from "@/lib/types";
 
@@ -62,10 +63,7 @@ export function SearchView() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-[15px] font-semibold text-foreground">{t("search.title")}</h1>
-        <p className="mt-0.5 text-[12px] text-muted">{t("search.description")}</p>
-      </div>
+      <PageHeader title={t("search.title")} description={t("search.description")} />
 
       <div className="flex gap-2">
         <div className="relative max-w-md flex-1">

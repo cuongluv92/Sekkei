@@ -84,11 +84,11 @@ export function FilePreview({ selectedKey, title, files, onDownload }: FilePrevi
         )}
         {status === "ready" && (
           <div className="flex w-full flex-col items-center gap-3 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-sm border border-border-strong bg-surface-2 text-muted">
+            <div className="flex h-14 w-14 items-center justify-center rounded-md border border-border-strong bg-surface-2 text-muted">
               <FileText className="h-6 w-6" />
             </div>
             <p className="max-w-xs text-[12px] text-muted">{t("search.dwgNotice")}</p>
-            <ul className="w-full max-w-xs divide-y divide-border rounded-sm border border-border">
+            <ul className="w-full max-w-xs divide-y divide-border rounded-md border border-border">
               {files.map((f) => (
                 <li key={f.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5">
                   <span className="flex min-w-0 items-center gap-1.5 truncate text-[12px] text-foreground">
