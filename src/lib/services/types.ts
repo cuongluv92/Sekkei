@@ -28,22 +28,32 @@ export interface PartDataRepository {
   search(query: string): Promise<PartData[]>;
   list(): Promise<PartData[]>;
   getById(id: string): Promise<PartData | null>;
+  findByModel(model: string): Promise<PartData | null>;
+  create(input: Omit<PartData, "id" | "updatedAt">): Promise<PartData>;
+  update(id: string, patch: Partial<PartData>): Promise<PartData>;
 }
 
 export interface PartDrawingRepository {
   search(query: string): Promise<PartDrawing[]>;
   list(): Promise<PartDrawing[]>;
   getById(id: string): Promise<PartDrawing | null>;
+  findByModel(model: string): Promise<PartDrawing | null>;
+  create(input: Omit<PartDrawing, "id" | "updatedAt">): Promise<PartDrawing>;
+  update(id: string, patch: Partial<PartDrawing>): Promise<PartDrawing>;
 }
 
 export interface CatalogRepository {
   search(query: string): Promise<Catalog[]>;
   list(): Promise<Catalog[]>;
+  findByModel(model: string): Promise<Catalog | null>;
+  create(input: Omit<Catalog, "id" | "updatedAt">): Promise<Catalog>;
+  update(id: string, patch: Partial<Catalog>): Promise<Catalog>;
 }
 
 export interface ManufacturerRepository {
   list(): Promise<Manufacturer[]>;
   getById(id: string): Promise<Manufacturer | null>;
+  create(name: string): Promise<Manufacturer>;
 }
 
 export interface SearchRepository {
@@ -79,12 +89,13 @@ export interface PartTemplateRepository {
 }
 
 export interface ImportRepository {
-  /** Stub analyzer: in real life this parses Excel/DWG/PDF/image content. */
-  analyze(
-    fileName: string,
-    fileType: ImportFileType,
-    targetCategory: ImportTargetCategory,
-  ): Promise<ImportRow[]>;
+  /**
+   * Parses the real uploaded file (Excel/CSV rows via header matching;
+   * DWG/PDF/image register one row from the filename) and diffs it against
+   * the real part-data/part-drawing/catalog repositories. Never writes
+   * anything — that only happens in `confirmImport`.
+   */
+  analyze(file: File, fileType: ImportFileType, targetCategory: ImportTargetCategory): Promise<ImportRow[]>;
   confirmImport(rows: ImportRow[]): Promise<{ imported: number; skipped: number }>;
 }
 

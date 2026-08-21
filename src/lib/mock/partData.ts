@@ -1,6 +1,7 @@
 import type { PartData } from "@/lib/types";
 
-export const partDataList: PartData[] = [
+/** Seed data only — the live "database" is localStorage via `partDataService`, which starts from this on first load. */
+export const partDataSeed: PartData[] = [
   {
     id: "pd-001",
     category: "配線用遮断器",
@@ -104,13 +105,3 @@ export const partDataList: PartData[] = [
     updatedAt: "2025-11-09",
   },
 ];
-
-export function searchPartData(query: string): PartData[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return [];
-  return partDataList.filter((p) =>
-    [p.model, p.category, p.specification, p.remarks]
-      .filter(Boolean)
-      .some((field) => field!.toLowerCase().includes(q)),
-  );
-}

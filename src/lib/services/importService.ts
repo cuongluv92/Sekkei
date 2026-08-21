@@ -1,61 +1,252 @@
 import { delay } from "@/lib/utils/async";
+import { addManufacturer, findManufacturerByName } from "@/lib/mock/manufacturers";
+import { mapRowToRecord, parseTabularFile } from "@/lib/utils/importParsing";
+import { partDataService } from "./partDataService";
+import { partDrawingService } from "./partDrawingService";
+import { catalogService } from "./catalogService";
 import type { ImportFileType, ImportRow, ImportTargetCategory } from "@/lib/types";
 import type { ImportRepository } from "./types";
 
-/**
- * Mock import analyzer. A real implementation will parse the uploaded
- * Excel/DWG/PDF/image file and diff it against the existing 部品データ /
- * 部品図 / カタログ tables. For now it deterministically fabricates one row
- * of each status (新規 / 既存 / スキップ / エラー) so the review screen and
- * its dedupe messaging can be exercised end to end.
- */
-class MockImportRepository implements ImportRepository {
-  async analyze(
-    fileName: string,
-    _fileType: ImportFileType,
-    targetCategory: ImportTargetCategory,
-  ): Promise<ImportRow[]> {
-    const base = fileName.replace(/\.[^./]+$/, "") || "IMPORTED-ITEM";
+type ImportRecord = NonNullable<ImportRow["record"]>;
 
-    const rows: ImportRow[] = [
-      {
-        id: `imp-${base}-new`,
-        label: base,
-        targetCategory,
+function resolveManufacturerId(name: string | undefined): string {
+  if (!name) return "";
+  const existing = findManufacturerByName(name);
+  return existing ? existing.id : addManufacturer(name).id;
+}
+
+async function findExisting(target: ImportTargetCategory, model: string) {
+  if (target === "part-data") return partDataService.findByModel(model);
+  if (target === "part-drawing") return partDrawingService.findByModel(model);
+  return catalogService.findByModel(model);
+}
+
+function diffsFromExisting(record: ImportRecord, existing: Record<string, unknown>): boolean {
+  return Object.entries(record).some(([key, value]) => value !== undefined && existing[key] !== value);
+}
+
+async function analyzeTabular(file: File, target: ImportTargetCategory): Promise<ImportRow[]> {
+  const parsed = await parseTabularFile(file);
+  const seenKeys = new Set<string>();
+  const rows: ImportRow[] = [];
+
+  for (let i = 0; i < parsed.length; i++) {
+    const mapped = mapRowToRecord(parsed[i], target);
+    const rowNumber = i + 2; // header is row 1
+    if (!mapped.model) {
+      rows.push({
+        id: `imp-${i}-error`,
+        label: `#${rowNumber}`,
+        targetCategory: target,
+        status: "error",
+        detail: "型式を読み取れませんでした（列見出し「型式」が必要です）",
+      });
+      continue;
+    }
+
+    const key = mapped.model.trim().toLowerCase();
+    if (seenKeys.has(key)) {
+      rows.push({
+        id: `imp-${i}-dup`,
+        label: mapped.model,
+        targetCategory: target,
+        status: "duplicate",
+        detail: "このファイル内で型式が重複しています",
+      });
+      continue;
+    }
+    seenKeys.add(key);
+
+    const manufacturerId = resolveManufacturerId(mapped.manufacturer);
+    const record: ImportRecord = {
+      symbol: mapped.symbol,
+      category: mapped.category ?? "",
+      manufacturerId,
+      model: mapped.model,
+      specification: mapped.specification ?? "",
+      weight: mapped.weight,
+      quantity: mapped.quantity,
+      remarks: mapped.remarks,
+      fileName: mapped.fileName,
+    };
+
+    const existing = await findExisting(target, mapped.model);
+    if (!existing) {
+      rows.push({
+        id: `imp-${i}-new`,
+        label: mapped.model,
+        targetCategory: target,
         status: "new",
         detail: "新規データとして追加されます",
-      },
-      {
-        id: `imp-${base}-existing`,
-        label: "NF63-CV",
-        targetCategory,
+        record,
+      });
+      continue;
+    }
+
+    const existingRecord = existing as unknown as Record<string, unknown>;
+    if (diffsFromExisting(record, existingRecord)) {
+      rows.push({
+        id: `imp-${i}-update`,
+        label: mapped.model,
+        targetCategory: target,
+        status: "update",
+        action: "skip",
+        detail: "既存データと内容が異なります。更新する場合は選択してください",
+        record,
+        matchedId: (existing as { id: string }).id,
+      });
+    } else {
+      rows.push({
+        id: `imp-${i}-existing`,
+        label: mapped.model,
+        targetCategory: target,
         status: "existing",
-        detail: "同一型式が既存データに存在するため上書きされません",
-      },
+        detail: "既存データと同一のため変更はありません",
+        matchedId: (existing as { id: string }).id,
+      });
+    }
+  }
+  return rows;
+}
+
+/** DWG/PDF/image cannot be parsed for structured fields client-side — register one row from the filename (型式 candidate) instead of guessing content. */
+async function analyzeFile(file: File, target: ImportTargetCategory): Promise<ImportRow[]> {
+  const base = file.name.replace(/\.[^./]+$/, "").trim();
+  if (!base) {
+    return [
       {
-        id: `imp-${base}-skip`,
-        label: `${base}-DUPLICATE`,
-        targetCategory,
-        status: "skip",
-        detail: "ファイル内に重複する行があるためスキップされます",
-      },
-      {
-        id: `imp-${base}-error`,
-        label: `${base}-UNKNOWN`,
-        targetCategory,
+        id: "imp-file-error",
+        label: file.name,
+        targetCategory: target,
         status: "error",
-        detail: "必須項目（型式）を読み取れませんでした",
+        detail: "ファイル名から型式を判定できません",
       },
     ];
-
-    return delay(rows, 900);
   }
 
-  async confirmImport(rows: ImportRow[]) {
-    const imported = rows.filter((r) => r.status === "new").length;
-    const skipped = rows.length - imported;
-    return delay({ imported, skipped }, 600);
+  const record: ImportRecord = {
+    category: "",
+    manufacturerId: "",
+    model: base,
+    specification: "",
+    fileName: file.name,
+  };
+
+  const existing = await findExisting(target, base);
+  if (!existing) {
+    return [
+      {
+        id: "imp-file-new",
+        label: base,
+        targetCategory: target,
+        status: "new",
+        detail: "新規データとして追加されます（ファイル名から型式を推定）",
+        record,
+      },
+    ];
+  }
+  return [
+    {
+      id: "imp-file-existing",
+      label: base,
+      targetCategory: target,
+      status: "existing",
+      detail: "同一の型式が既存データに存在します",
+      matchedId: (existing as { id: string }).id,
+    },
+  ];
+}
+
+async function createRecord(target: ImportTargetCategory, record: ImportRecord) {
+  if (target === "part-data") {
+    await partDataService.create({
+      symbol: record.symbol as string | undefined,
+      category: (record.category as string) || "",
+      manufacturerId: (record.manufacturerId as string) || "",
+      model: record.model as string,
+      specification: (record.specification as string) || "",
+      weight: record.weight as number | undefined,
+      quantity: record.quantity as number | undefined,
+      remarks: record.remarks as string | undefined,
+      source: "インポート",
+      files: [],
+    });
+  } else if (target === "part-drawing") {
+    await partDrawingService.create({
+      category: (record.category as string) || "",
+      manufacturerId: (record.manufacturerId as string) || "",
+      model: record.model as string,
+      specification: (record.specification as string) || "",
+      remarks: record.remarks as string | undefined,
+      source: "インポート",
+      files: [],
+    });
+  } else {
+    await catalogService.create({
+      manufacturerId: (record.manufacturerId as string) || "",
+      category: (record.category as string) || "",
+      model: record.model as string,
+      fileName: (record.fileName as string) || `${record.model}.pdf`,
+      files: [],
+    });
   }
 }
 
-export const importService: ImportRepository = new MockImportRepository();
+async function updateRecord(target: ImportTargetCategory, id: string, record: ImportRecord) {
+  if (target === "part-data") {
+    await partDataService.update(id, {
+      symbol: record.symbol as string | undefined,
+      category: record.category as string | undefined,
+      manufacturerId: record.manufacturerId as string | undefined,
+      specification: record.specification as string | undefined,
+      weight: record.weight as number | undefined,
+      quantity: record.quantity as number | undefined,
+      remarks: record.remarks as string | undefined,
+    });
+  } else if (target === "part-drawing") {
+    await partDrawingService.update(id, {
+      category: record.category as string | undefined,
+      manufacturerId: record.manufacturerId as string | undefined,
+      specification: record.specification as string | undefined,
+      remarks: record.remarks as string | undefined,
+    });
+  } else {
+    await catalogService.update(id, {
+      category: record.category as string | undefined,
+      manufacturerId: record.manufacturerId as string | undefined,
+      fileName: record.fileName as string | undefined,
+    });
+  }
+}
+
+class RealImportRepository implements ImportRepository {
+  async analyze(
+    file: File,
+    fileType: ImportFileType,
+    targetCategory: ImportTargetCategory,
+  ): Promise<ImportRow[]> {
+    if (fileType === "excel") {
+      return analyzeTabular(file, targetCategory);
+    }
+    return analyzeFile(file, targetCategory);
+  }
+
+  async confirmImport(rows: ImportRow[]): Promise<{ imported: number; skipped: number }> {
+    let imported = 0;
+    let skipped = 0;
+    for (const row of rows) {
+      if (row.status === "new" && row.record) {
+        await createRecord(row.targetCategory, row.record);
+        imported++;
+      } else if (row.status === "update" && row.action === "update" && row.record && row.matchedId) {
+        await updateRecord(row.targetCategory, row.matchedId, row.record);
+        imported++;
+      } else {
+        skipped++;
+      }
+    }
+    return delay({ imported, skipped }, 300);
+  }
+}
+
+export const importService: ImportRepository = new RealImportRepository();

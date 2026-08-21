@@ -84,6 +84,7 @@ export interface Dictionary {
     resultCount: string;
     fromPartData: string;
     fromPartDrawing: string;
+    fromCatalog: string;
     previewTitle: string;
     previewEmpty: string;
     previewLoading: string;
@@ -180,9 +181,14 @@ export interface Dictionary {
     analyzing: string;
     statusNew: string;
     statusExisting: string;
+    statusUpdate: string;
+    statusDuplicate: string;
     statusSkip: string;
     statusError: string;
     dedupeNotice: string;
+    updateActionLabel: string;
+    applyUpdateOption: string;
+    skipOption: string;
     confirmButton: string;
     importDone: string;
   };
@@ -433,6 +439,55 @@ export interface Dictionary {
       controlVoltage: string;
       protectionRating: string;
     };
+  };
+  partSettings: {
+    title: string;
+    description: string;
+    selectListLabel: string;
+    addValuePlaceholder: string;
+    addButton: string;
+    emptyList: string;
+    enableButton: string;
+    disableButton: string;
+    lists: {
+      category: string;
+      symbol: string;
+    };
+    manufacturers: {
+      title: string;
+      description: string;
+      addPlaceholder: string;
+      addButton: string;
+      empty: string;
+    };
+  };
+  selectionSettings: {
+    title: string;
+    description: string;
+    addButton: string;
+    emptyList: string;
+    enableButton: string;
+    disableButton: string;
+    columns: {
+      outputKey: string;
+      unit: string;
+      minValue: string;
+      maxValue: string;
+      resultValue: string;
+      remarks: string;
+    };
+  };
+  backupSettings: {
+    title: string;
+    exportDescription: string;
+    createButton: string;
+    restoreDescription: string;
+    uploadHint: string;
+    previewTitle: string;
+    confirmRestoreButton: string;
+    restoreDone: string;
+    reloadButton: string;
+    invalidFile: string;
   };
   scheduleColorSettings: {
     title: string;

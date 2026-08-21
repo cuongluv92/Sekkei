@@ -1,10 +1,14 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { partAssemblyService } from "@/lib/services/partAssemblyService";
 import type { PartAssemblyRow } from "@/lib/types";
 
 interface PartAssemblyContextValue {
+  projectId: string;
+  setProjectId: (projectId: string) => void;
   rows: PartAssemblyRow[];
+  loading: boolean;
   addRow: (row: Omit<PartAssemblyRow, "id"> & { id?: string }) => void;
   removeRow: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
@@ -22,53 +26,135 @@ function nextId() {
 }
 
 /**
- * Holds the 部品製作 assembly table for the lifetime of the session (client
- * memory only for now). Keeping this above the router in the layout means
- * the list survives navigation between pages, which will matter once users
- * jump between 検索・部品データ・部品図 and 部品製作 to build one list.
+ * Holds the 部品製作 assembly table, scoped per Project (never mixed between
+ * Projects) and persisted so it survives reload/navigation — not just
+ * session memory. Kept above the router in the layout so switching pages
+ * doesn't lose the in-progress table, but every mutation is written through
+ * to `partAssemblyService` immediately.
  */
 export function PartAssemblyProvider({ children }: { children: ReactNode }) {
+  const [projectId, setProjectIdState] = useState("");
   const [rows, setRows] = useState<PartAssemblyRow[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const addRow = useCallback((row: Omit<PartAssemblyRow, "id"> & { id?: string }) => {
-    setRows((prev) => [...prev, { ...row, id: row.id ?? nextId() }]);
+  useEffect(() => {
+    const last = partAssemblyService.getLastActiveProjectId();
+    if (last) setProjectIdState(last);
   }, []);
 
-  const removeRow = useCallback((id: string) => {
-    setRows((prev) => prev.filter((r) => r.id !== id));
-  }, []);
-
-  const updateQuantity = useCallback((id: string, quantity: number) => {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, quantity } : r)));
-  }, []);
-
-  const updateRemarks = useCallback((id: string, remarks: string) => {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, remarks } : r)));
-  }, []);
-
-  const moveRow = useCallback((fromIndex: number, toIndex: number) => {
-    setRows((prev) => {
-      if (
-        fromIndex === toIndex ||
-        fromIndex < 0 ||
-        toIndex < 0 ||
-        fromIndex >= prev.length ||
-        toIndex >= prev.length
-      ) {
-        return prev;
+  useEffect(() => {
+    if (!projectId) {
+      setRows([]);
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    partAssemblyService.listByProject(projectId).then((list) => {
+      if (active) {
+        setRows(list);
+        setLoading(false);
       }
-      const next = [...prev];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      return next;
     });
+    return () => {
+      active = false;
+    };
+  }, [projectId]);
+
+  const persist = useCallback(
+    (next: PartAssemblyRow[]) => {
+      setRows(next);
+      if (projectId) partAssemblyService.saveRows(projectId, next);
+    },
+    [projectId],
+  );
+
+  const setProjectId = useCallback((id: string) => {
+    setProjectIdState(id);
+    partAssemblyService.setLastActiveProjectId(id);
   }, []);
 
-  const clear = useCallback(() => setRows([]), []);
+  const addRow = useCallback(
+    (row: Omit<PartAssemblyRow, "id"> & { id?: string }) => {
+      setRows((prev) => {
+        const next = [...prev, { ...row, id: row.id ?? nextId() }];
+        if (projectId) partAssemblyService.saveRows(projectId, next);
+        return next;
+      });
+    },
+    [projectId],
+  );
+
+  const removeRow = useCallback(
+    (id: string) => {
+      setRows((prev) => {
+        const next = prev.filter((r) => r.id !== id);
+        if (projectId) partAssemblyService.saveRows(projectId, next);
+        return next;
+      });
+    },
+    [projectId],
+  );
+
+  const updateQuantity = useCallback(
+    (id: string, quantity: number) => {
+      setRows((prev) => {
+        const next = prev.map((r) => (r.id === id ? { ...r, quantity } : r));
+        if (projectId) partAssemblyService.saveRows(projectId, next);
+        return next;
+      });
+    },
+    [projectId],
+  );
+
+  const updateRemarks = useCallback(
+    (id: string, remarks: string) => {
+      setRows((prev) => {
+        const next = prev.map((r) => (r.id === id ? { ...r, remarks } : r));
+        if (projectId) partAssemblyService.saveRows(projectId, next);
+        return next;
+      });
+    },
+    [projectId],
+  );
+
+  const moveRow = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      setRows((prev) => {
+        if (
+          fromIndex === toIndex ||
+          fromIndex < 0 ||
+          toIndex < 0 ||
+          fromIndex >= prev.length ||
+          toIndex >= prev.length
+        ) {
+          return prev;
+        }
+        const next = [...prev];
+        const [moved] = next.splice(fromIndex, 1);
+        next.splice(toIndex, 0, moved);
+        if (projectId) partAssemblyService.saveRows(projectId, next);
+        return next;
+      });
+    },
+    [projectId],
+  );
+
+  const clear = useCallback(() => persist([]), [persist]);
 
   const value = useMemo(
-    () => ({ rows, addRow, removeRow, updateQuantity, updateRemarks, moveRow, clear }),
-    [rows, addRow, removeRow, updateQuantity, updateRemarks, moveRow, clear],
+    () => ({
+      projectId,
+      setProjectId,
+      rows,
+      loading,
+      addRow,
+      removeRow,
+      updateQuantity,
+      updateRemarks,
+      moveRow,
+      clear,
+    }),
+    [projectId, setProjectId, rows, loading, addRow, removeRow, updateQuantity, updateRemarks, moveRow, clear],
   );
 
   return <PartAssemblyContext.Provider value={value}>{children}</PartAssemblyContext.Provider>;

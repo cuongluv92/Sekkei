@@ -22,7 +22,7 @@ function inferFileType(fileName: string): ImportFileType {
   return "image";
 }
 
-type Step = "select" | "analyzing" | "preview" | "done";
+type Step = "select" | "analyzing" | "preview" | "confirming" | "done";
 
 export default function ImportPage() {
   const { t } = useTranslation();
@@ -32,25 +32,40 @@ export default function ImportPage() {
   const [step, setStep] = useState<Step>("select");
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [result, setResult] = useState<{ imported: number; skipped: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleAnalyze() {
     if (!file) return;
     setStep("analyzing");
-    const analyzed = await importService.analyze(file.name, inferFileType(file.name), target);
-    setRows(analyzed);
-    setStep("preview");
+    setError(null);
+    try {
+      const analyzed = await importService.analyze(file, inferFileType(file.name), target);
+      setRows(analyzed);
+      setStep("preview");
+    } catch {
+      setError(t("common.error"));
+      setStep("select");
+    }
   }
 
   async function handleConfirm() {
-    const res = await importService.confirmImport(rows);
-    setResult(res);
-    setStep("done");
+    setStep("confirming");
+    setError(null);
+    try {
+      const res = await importService.confirmImport(rows);
+      setResult(res);
+      setStep("done");
+    } catch {
+      setError(t("common.error"));
+      setStep("preview");
+    }
   }
 
   function handleReset() {
     setFile(null);
     setRows([]);
     setResult(null);
+    setError(null);
     setStep("select");
     if (inputRef.current) inputRef.current.value = "";
   }
@@ -112,7 +127,9 @@ export default function ImportPage() {
         </div>
       </div>
 
-      {(step === "preview" || step === "done") && (
+      {error && <p className="text-[12.5px] text-danger">{error}</p>}
+
+      {(step === "preview" || step === "confirming" || step === "done") && (
         <div className="panel">
           <div className="panel-header">
             <span className="panel-title">{t("importPage.step3")}</span>
@@ -127,7 +144,12 @@ export default function ImportPage() {
                 </span>
               </div>
             ) : (
-              <ImportPreview rows={rows} onConfirm={handleConfirm} />
+              <ImportPreview
+                rows={rows}
+                onRowsChange={setRows}
+                onConfirm={handleConfirm}
+                confirming={step === "confirming"}
+              />
             )}
           </div>
         </div>
@@ -153,7 +175,7 @@ function StepBar({ current }: { current: Step }) {
     { key: "done", labelKey: "importPage.step4" },
   ];
   const order: Step[] = ["select", "analyzing", "preview", "done"];
-  const currentIndex = order.indexOf(current);
+  const currentIndex = order.indexOf(current === "confirming" ? "preview" : current);
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-[11.5px]">

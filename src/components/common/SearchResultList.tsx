@@ -36,8 +36,20 @@ export function SearchResultList({
       header: t("common.source"),
       width: "110px",
       render: (row) => (
-        <span className={row.source === "part-data" ? "badge-info" : "badge-neutral"}>
-          {row.source === "part-data" ? t("search.fromPartData") : t("search.fromPartDrawing")}
+        <span
+          className={
+            row.source === "part-data"
+              ? "badge-info"
+              : row.source === "part-drawing"
+                ? "badge-neutral"
+                : "badge-success"
+          }
+        >
+          {row.source === "part-data"
+            ? t("search.fromPartData")
+            : row.source === "part-drawing"
+              ? t("search.fromPartDrawing")
+              : t("search.fromCatalog")}
         </span>
       ),
     },

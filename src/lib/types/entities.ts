@@ -35,10 +35,12 @@ export interface Manufacturer {
 /** 部品データ */
 export interface PartData {
   id: string;
-  category: string; // 種類
+  symbol?: string; // 記号
+  category: string; // 種類・品名
   manufacturerId: string;
   model: string; // 型式
-  specification: string; // 走り・仕様
+  specification: string; // 定格・仕様
+  weight?: number; // 重量 (g)
   quantity?: number; // 数量
   remarks?: string; // 備考
   source: string; // データ source (社内DB, メーカーカタログ, etc.)
@@ -78,21 +80,26 @@ export interface PartAssemblyRow {
   manufacturerId: string;
   model: string; // 型式
   specification: string; // 走り・仕様
+  weight?: number; // 重量
   quantity: number; // 数量
   remarks?: string; // 備考
-  /** id of the PartData / PartDrawing this row originated from, if any. */
+  /** id of the PartData / PartDrawing / Catalog this row originated from, if any. */
   sourceRefId?: string;
-  sourceType?: "part-data" | "part-drawing";
+  sourceType?: "part-data" | "part-drawing" | "catalog";
+  /** Optional traceability back to 設計管理 (Phase 8 groundwork — not populated by any UI yet). */
+  caseId?: string;
+  panelId?: string;
 }
 
-/** A unified search hit combining 部品データ and 部品図. */
+/** A unified search hit combining 部品データ・部品図・カタログ. */
 export interface SearchResultItem {
   id: string;
-  source: "part-data" | "part-drawing";
+  source: "part-data" | "part-drawing" | "catalog";
   category: string;
   manufacturerId: string;
   model: string;
   specification: string;
+  weight?: number;
   quantity?: number;
   remarks?: string;
   sourceLabel: string;
@@ -123,15 +130,23 @@ export interface SelectionResultRow {
 }
 
 /**
- * Describes the selection logic for a given input/output combination. The
- * `evaluate` field is intentionally left as a stub — real formulas / lookup
- * tables will be provided later and plugged in without touching the UI.
+ * One row of the real 選定 rule table (SelectionEngine → RuleRepository).
+ * `minValue`/`maxValue` are the input range (inclusive) this rule covers for
+ * one output type + unit; `resultValue` is the real product/spec text the
+ * engine returns when the input falls in range. Nothing here is invented —
+ * this table starts empty and is populated only via 設定 > 選定設定 (manual
+ * entry or a future rule import), never hard-coded in a component.
  */
 export interface SelectionRule {
   id: string;
-  name: string;
-  inputPattern: RegExp;
-  supportedOutputs: SelectionOutputKey[];
+  outputKey: SelectionOutputKey;
+  unit: string; // e.g. "kW", "A" — matched case-insensitively against the parsed input unit
+  minValue: number;
+  maxValue: number;
+  resultValue: string;
+  remarks?: string;
+  order: number;
+  enabled: boolean;
 }
 
 /** Generic calculation field definition, used to render input forms. */
@@ -191,7 +206,15 @@ export interface PartTemplate {
 
 export type ImportFileType = "excel" | "dwg" | "pdf" | "image";
 export type ImportTargetCategory = "part-data" | "part-drawing" | "catalog";
-export type ImportRowStatus = "new" | "existing" | "skip" | "error";
+/**
+ * 新規 (new): key not found — will be created.
+ * 既存 (existing): key found and every mapped field already matches — no action needed.
+ * 更新 (update): key found but fields differ — needs the user to opt in (`action`), never auto-applied.
+ * 重複 (duplicate): the same key appears more than once inside this one uploaded file.
+ * スキップ (skip): user-excluded, or an unresolved "update" row (safe default).
+ * エラー (error): a required field (型式) could not be read from the row.
+ */
+export type ImportRowStatus = "new" | "existing" | "update" | "duplicate" | "skip" | "error";
 
 /** One row analyzed from an imported file, before the user confirms. */
 export interface ImportRow {
@@ -200,6 +223,12 @@ export interface ImportRow {
   targetCategory: ImportTargetCategory;
   status: ImportRowStatus;
   detail?: string;
+  /** Only meaningful when status === "update": the user's explicit choice, never inferred. */
+  action?: "update" | "skip";
+  /** The parsed record to write on confirm (status "new" / "update" only). */
+  record?: Record<string, string | number | undefined>;
+  /** Existing record id this row matches, when status is "existing" or "update". */
+  matchedId?: string;
 }
 
 export interface ImportedFile {

@@ -8,6 +8,9 @@ import { calculationTemplateService, partTemplateService } from "@/lib/services"
 import { LanguageSwitcher } from "@/components/settings/LanguageSwitcher";
 import { MasterListEditor } from "@/components/design/MasterListEditor";
 import { ScheduleColorSettings } from "@/components/design/ScheduleColorSettings";
+import { ManufacturerSettings } from "@/components/settings/ManufacturerSettings";
+import { BackupSettings } from "@/components/settings/BackupSettings";
+import { SelectionRuleSettings } from "@/components/settings/SelectionRuleSettings";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { CalculationTemplate, PartTemplate, PartTemplateKind } from "@/lib/types";
@@ -75,6 +78,39 @@ export default function SettingsPage() {
         </div>
         <div className="panel-body">
           <ScheduleColorSettings />
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-header">
+          <span className="panel-title">{t("partSettings.title")}</span>
+        </div>
+        <div className="panel-body flex flex-col gap-5">
+          <MasterListEditor keys={["category", "symbol"]} namespace="partSettings" />
+          <div className="border-t border-border pt-4">
+            <span className="mb-2 block text-[13px] font-bold text-foreground">
+              {t("partSettings.manufacturers.title")}
+            </span>
+            <ManufacturerSettings />
+          </div>
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-header">
+          <span className="panel-title">{t("selectionSettings.title")}</span>
+        </div>
+        <div className="panel-body">
+          <SelectionRuleSettings />
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-header">
+          <span className="panel-title">{t("backupSettings.title")}</span>
+        </div>
+        <div className="panel-body">
+          <BackupSettings />
         </div>
       </div>
 

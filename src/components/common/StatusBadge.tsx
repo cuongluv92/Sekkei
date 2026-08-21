@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, MinusCircle, SkipForward } from "lucide-react";
+import { AlertCircle, CheckCircle2, Copy, MinusCircle, RefreshCw, SkipForward } from "lucide-react";
 import type { ImportRowStatus } from "@/lib/types";
 
 const CONFIG: Record<
@@ -7,7 +7,9 @@ const CONFIG: Record<
 > = {
   new: { className: "badge-success", Icon: CheckCircle2 },
   existing: { className: "badge-info", Icon: MinusCircle },
-  skip: { className: "badge-warning", Icon: SkipForward },
+  update: { className: "badge-warning", Icon: RefreshCw },
+  duplicate: { className: "badge-warning", Icon: Copy },
+  skip: { className: "badge-neutral", Icon: SkipForward },
   error: { className: "badge-danger", Icon: AlertCircle },
 };
 

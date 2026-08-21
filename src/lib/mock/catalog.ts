@@ -1,6 +1,7 @@
 import type { Catalog } from "@/lib/types";
 
-export const catalogList: Catalog[] = [
+/** Seed data only — the live "database" is localStorage via `catalogService`. */
+export const catalogSeed: Catalog[] = [
   {
     id: "cat-001",
     manufacturerId: "mitsubishi",
@@ -38,11 +39,3 @@ export const catalogList: Catalog[] = [
     files: [{ id: "cat-004-img", kind: "image", fileName: "BJW_catalog_image.png" }],
   },
 ];
-
-export function searchCatalog(query: string): Catalog[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return catalogList;
-  return catalogList.filter((c) =>
-    [c.model, c.category, c.fileName].some((f) => f.toLowerCase().includes(q)),
-  );
-}

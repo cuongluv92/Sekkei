@@ -1,4 +1,6 @@
 import { delay } from "@/lib/utils/async";
+import { selectionRuleService } from "./selectionRuleService";
+import { evaluateSelection } from "@/lib/utils/selectionEngine";
 import type { SelectionInput, SelectionResultRow, SelectionOutputKey } from "@/lib/types";
 import type { SelectionRepository } from "./types";
 
@@ -12,23 +14,23 @@ const OUTPUT_LABELS: Record<SelectionOutputKey, string> = {
 };
 
 /**
- * Mock selection engine. No real selection rules/formulas exist yet, so this
- * only echoes back one placeholder row per requested output item. Once real
- * `SelectionRule`s are registered (via 設定), this class's `evaluate` method
- * is the only place that needs to change — every page consuming
- * `selectionService` stays untouched.
+ * SelectionService → RuleRepository (selectionRuleService) → SelectionEngine
+ * (evaluateSelection). No breaker/wire/contactor values are hard-coded here
+ * — every result comes from a real `SelectionRule` row entered via 設定 >
+ * 選定設定. With no matching rule (the rule table starts empty), this
+ * returns the same explicit "未登録" row it always has, never a guess.
  */
-class MockSelectionRepository implements SelectionRepository {
+class RealSelectionRepository implements SelectionRepository {
   async evaluate(input: SelectionInput): Promise<SelectionResultRow[]> {
-    const rows: SelectionResultRow[] = input.outputs.map((key) => ({
-      id: `${key}-${input.rawValue}`,
-      outputKey: key,
-      label: OUTPUT_LABELS[key],
-      value: "— (未設定)",
-      remarks: `入力値「${input.rawValue}」に対する選定ルールは未登録です`,
-    }));
-    return delay(rows, 400);
+    const rules = await selectionRuleService.list();
+    const rows = evaluateSelection(
+      input,
+      rules,
+      OUTPUT_LABELS,
+      (rawValue) => `入力値「${rawValue}」に対する選定ルールは未登録です`,
+    );
+    return delay(rows, 300);
   }
 }
 
-export const selectionService: SelectionRepository = new MockSelectionRepository();
+export const selectionService: SelectionRepository = new RealSelectionRepository();

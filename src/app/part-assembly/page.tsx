@@ -1,26 +1,37 @@
 "use client";
 
 import { GripVertical, Plus, Search as SearchIcon, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { searchService, exportService } from "@/lib/services";
+import { projectService } from "@/lib/services/design";
 import { getManufacturerName } from "@/lib/mock/manufacturers";
 import { usePartAssembly } from "@/lib/store/PartAssemblyProvider";
 import { SearchResultList } from "@/components/common/SearchResultList";
 import { ExportActions } from "@/components/common/ExportActions";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
-import type { SearchResultItem } from "@/lib/types";
+import type { Project, SearchResultItem } from "@/lib/types";
 
 export default function PartAssemblyPage() {
   const { t, locale } = useTranslation();
-  const { rows, addRow, removeRow, updateQuantity, updateRemarks, moveRow, clear } =
+  const { projectId, setProjectId, rows, loading: rowsLoading, addRow, removeRow, updateQuantity, updateRemarks, moveRow, clear } =
     usePartAssembly();
+  const [projects, setProjects] = useState<Project[]>([]);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const { message, show } = useMockFeedback();
+
+  useEffect(() => {
+    projectService.list().then((list) => {
+      setProjects(list);
+      if (!projectId && list.length > 0) setProjectId(list[0].id);
+    });
+    // Only run once on mount — projectId changes afterwards come from the user or persisted state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function runSearch() {
     if (!query.trim()) {
@@ -68,6 +79,36 @@ export default function PartAssemblyPage() {
     <div className="flex flex-col gap-4">
       <PageHeader title={t("partAssembly.title")} description={t("partAssembly.description")} />
 
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2.5">
+        <label className="whitespace-nowrap text-[12.5px] font-semibold text-muted">
+          {t("design.workspaceBar.projectLabel")}
+        </label>
+        <select
+          value={projectId}
+          onChange={(e) => setProjectId(e.target.value)}
+          className="field-input w-auto min-w-[180px] py-1.5"
+        >
+          <option value="">
+            {projects.length === 0
+              ? t("design.workspaceBar.noProjects")
+              : t("design.workspaceBar.projectPlaceholder")}
+          </option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {!projectId ? (
+        <div className="panel">
+          <div className="panel-body py-12 text-center text-[13px] text-muted-2">
+            {t("design.workspaceBar.selectProjectFirst")}
+          </div>
+        </div>
+      ) : (
+        <>
       <div className="panel">
         <div className="panel-header">
           <span className="panel-title">{t("common.search")}</span>
@@ -136,7 +177,13 @@ export default function PartAssemblyPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.length === 0 ? (
+              {rowsLoading ? (
+                <tr>
+                  <td colSpan={9} className="py-8 text-center text-muted">
+                    {t("common.loading")}
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-8 text-center text-muted-2">
                     {t("partAssembly.tableEmpty")}
@@ -199,6 +246,8 @@ export default function PartAssemblyPage() {
           <ExportActions context="部品製作リスト" formats={["dwg", "excel", "pdf"]} />
         </div>
       </div>
+        </>
+      )}
       {message && <div className="text-[12px] text-success">{message}</div>}
     </div>
   );

@@ -1,6 +1,7 @@
 import type { PartDrawing } from "@/lib/types";
 
-export const partDrawingList: PartDrawing[] = [
+/** Seed data only — the live "database" is localStorage via `partDrawingService`. */
+export const partDrawingSeed: PartDrawing[] = [
   {
     id: "dw-001",
     category: "配線用遮断器",
@@ -60,13 +61,3 @@ export const partDrawingList: PartDrawing[] = [
     updatedAt: "2026-01-30",
   },
 ];
-
-export function searchPartDrawing(query: string): PartDrawing[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return [];
-  return partDrawingList.filter((p) =>
-    [p.model, p.category, p.specification, p.remarks]
-      .filter(Boolean)
-      .some((field) => field!.toLowerCase().includes(q)),
-  );
-}

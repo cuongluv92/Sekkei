@@ -6,7 +6,7 @@ import { useTranslation } from "@/lib/i18n";
 import { masterListService } from "@/lib/services/design";
 import type { MasterListItem } from "@/lib/types/design";
 
-const MASTER_LIST_KEYS = [
+const DESIGN_MASTER_LIST_KEYS = [
   "requestType",
   "orderer",
   "customerContact",
@@ -35,15 +35,22 @@ const MASTER_LIST_KEYS = [
   "protectionRating",
 ] as const;
 
+interface MasterListEditorProps {
+  /** Which master lists to expose in the dropdown. Defaults to every 設計管理 list. */
+  keys?: readonly string[];
+  /** i18n namespace holding `${namespace}.lists.${key}` labels. Defaults to "designSettings". */
+  namespace?: string;
+}
+
 /**
- * Generic editor for every 設計管理 master list (dropdown/combobox candidate
- * values). Nothing here is specific to one field — pick a list, then
- * add/rename/reorder/enable-disable its values. Used by every SpecCombobox
- * and select in 設計管理 via `masterListService`.
+ * Generic editor for master lists (dropdown/combobox candidate values)
+ * backed by the same key-value `masterListService` regardless of which
+ * feature owns the list — 設計管理 (default) and 部品設定 (メーカー/カテゴリ/記号)
+ * both reuse this one component instead of duplicating the CRUD UI.
  */
-export function MasterListEditor() {
+export function MasterListEditor({ keys = DESIGN_MASTER_LIST_KEYS, namespace = "designSettings" }: MasterListEditorProps) {
   const { t } = useTranslation();
-  const [selectedKey, setSelectedKey] = useState<string>(MASTER_LIST_KEYS[0]);
+  const [selectedKey, setSelectedKey] = useState<string>(keys[0]);
   const [items, setItems] = useState<MasterListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [newValue, setNewValue] = useState("");
@@ -93,18 +100,18 @@ export function MasterListEditor() {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-[12px] text-muted">{t("designSettings.description")}</p>
+      <p className="text-[12px] text-muted">{t(`${namespace}.description`)}</p>
 
       <div className="max-w-xs">
-        <label className="field-label">{t("designSettings.selectListLabel")}</label>
+        <label className="field-label">{t(`${namespace}.selectListLabel`)}</label>
         <select
           value={selectedKey}
           onChange={(e) => setSelectedKey(e.target.value)}
           className="field-input"
         >
-          {MASTER_LIST_KEYS.map((key) => (
+          {keys.map((key) => (
             <option key={key} value={key}>
-              {t(`designSettings.lists.${key}`)}
+              {t(`${namespace}.lists.${key}`)}
             </option>
           ))}
         </select>
@@ -129,7 +136,7 @@ export function MasterListEditor() {
             ) : items.length === 0 ? (
               <tr>
                 <td colSpan={3} className="py-6 text-center text-muted-2">
-                  {t("designSettings.emptyList")}
+                  {t(`${namespace}.emptyList`)}
                 </td>
               </tr>
             ) : (
@@ -191,8 +198,8 @@ export function MasterListEditor() {
                       )}
                       <button onClick={() => handleToggle(item.id)} className="btn-ghost">
                         {item.enabled
-                          ? t("designSettings.disableButton")
-                          : t("designSettings.enableButton")}
+                          ? t(`${namespace}.disableButton`)
+                          : t(`${namespace}.enableButton`)}
                       </button>
                       <button
                         onClick={() => handleRemove(item.id)}
@@ -216,12 +223,12 @@ export function MasterListEditor() {
           onKeyDown={(e) => {
             if (e.key === "Enter") handleAdd();
           }}
-          placeholder={t("designSettings.addValuePlaceholder")}
+          placeholder={t(`${namespace}.addValuePlaceholder`)}
           className="field-input max-w-xs"
         />
         <button onClick={handleAdd} disabled={!newValue.trim()} className="btn-secondary">
           <Plus className="h-3.5 w-3.5" />
-          {t("designSettings.addButton")}
+          {t(`${namespace}.addButton`)}
         </button>
       </div>
     </div>
