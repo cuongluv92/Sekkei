@@ -5,7 +5,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { designCaseService } from "@/lib/services/design";
-import type { DesignCaseWithPanels } from "@/lib/types/design";
+import type { CaseStatus, DesignCaseWithPanels } from "@/lib/types/design";
+
+/** Row background per ②図面管理台帳 H1 legend — real colors from the template, not invented. */
+const CASE_STATUS_ROW_CLASS: Record<CaseStatus, string> = {
+  "": "",
+  design_pending_approval: "bg-warning/10",
+  production_requested: "bg-accent/10",
+};
 
 interface CaseLedgerTableProps {
   /** Optional filter (e.g. orderer contains "京王") — the underlying data is always the whole system-wide ledger, never scoped to one Project. */
@@ -99,7 +106,7 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
 
       <div className="panel">
         <div className="data-table-wrap">
-          <table className="data-table" style={{ minWidth: 980 }}>
+          <table className="data-table" style={{ minWidth: 1280 }}>
             <thead>
               <tr>
                 <th style={{ width: "60px" }}>{t("design.ledger.columns.year")}</th>
@@ -109,20 +116,25 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                 <th>{t("design.ledger.columns.orderer")}</th>
                 <th style={{ width: "100px" }}>{t("design.ledger.columns.customerContact")}</th>
                 <th>{t("design.ledger.columns.projectName")}</th>
+                <th>{t("design.ledger.columns.ownerName")}</th>
                 <th>{t("design.ledger.columns.panelNames")}</th>
+                <th style={{ width: "90px" }}>{t("design.ledger.columns.assignee")}</th>
+                <th style={{ width: "80px" }} className="text-center">
+                  {t("design.ledger.columns.manufacturingComplete")}
+                </th>
                 <th style={{ width: "100px" }}>{t("design.ledger.columns.updatedAt")}</th>
               </tr>
             </thead>
             <tbody>
               {rows === null ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-muted">
+                  <td colSpan={12} className="py-8 text-center text-muted">
                     {t("common.loading")}
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-muted-2">
+                  <td colSpan={12} className="py-8 text-center text-muted-2">
                     {t("design.ledger.empty")}
                   </td>
                 </tr>
@@ -131,7 +143,7 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                   <tr
                     key={c.id}
                     onClick={() => router.push(`/design?tab=designRequest&project=${c.projectId}&case=${c.id}`)}
-                    className="cursor-pointer"
+                    className={`cursor-pointer ${CASE_STATUS_ROW_CLASS[c.caseStatus]}`}
                   >
                     <td>{c.year}</td>
                     <td className="font-mono">
@@ -148,12 +160,15 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                     <td className="truncate">{c.orderer}</td>
                     <td>{c.customerContact}</td>
                     <td className="truncate">{c.projectName}</td>
+                    <td className="truncate">{c.ownerName}</td>
                     <td className="truncate text-muted">
                       {panels
                         .map((p) => p.panelName)
                         .filter(Boolean)
                         .join("・")}
                     </td>
+                    <td>{c.assignee}</td>
+                    <td className="text-center">{c.manufacturingComplete ? "完" : ""}</td>
                     <td className="text-muted-2">{c.updatedAt}</td>
                   </tr>
                 ))

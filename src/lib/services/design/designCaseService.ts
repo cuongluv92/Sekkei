@@ -2,6 +2,7 @@ import { requireSupabase } from "@/lib/supabase/client";
 import { formatDrawingNumber, getNextSequenceForYear } from "@/lib/utils/designNumbering";
 import type {
   CasePanel,
+  CaseStatus,
   DesignCase,
   DesignCaseSearchQuery,
   DesignCaseWithPanels,
@@ -22,6 +23,10 @@ interface DesignCaseRow {
   project_name: string;
   specs: DesignCase["specs"];
   design_remarks: string;
+  assignee: string;
+  case_status: CaseStatus;
+  manufacturing_complete: boolean;
+  owner_name: string;
   created_at: string;
   updated_at: string;
 }
@@ -62,6 +67,10 @@ function caseFromRow(row: DesignCaseRow): DesignCase {
     projectName: row.project_name,
     specs: row.specs ?? {},
     designRemarks: row.design_remarks,
+    assignee: row.assignee,
+    caseStatus: row.case_status,
+    manufacturingComplete: row.manufacturing_complete,
+    ownerName: row.owner_name,
     createdAt: row.created_at.slice(0, 10),
     updatedAt: row.updated_at.slice(0, 10),
   };
@@ -231,6 +240,10 @@ export const designCaseService = {
     if (patch.projectName !== undefined) row.project_name = patch.projectName;
     if (patch.specs !== undefined) row.specs = patch.specs;
     if (patch.designRemarks !== undefined) row.design_remarks = patch.designRemarks;
+    if (patch.assignee !== undefined) row.assignee = patch.assignee;
+    if (patch.caseStatus !== undefined) row.case_status = patch.caseStatus;
+    if (patch.manufacturingComplete !== undefined) row.manufacturing_complete = patch.manufacturingComplete;
+    if (patch.ownerName !== undefined) row.owner_name = patch.ownerName;
     row.updated_at = new Date().toISOString();
 
     const { data, error } = await requireSupabase()

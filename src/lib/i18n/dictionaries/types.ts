@@ -249,6 +249,15 @@ export interface Dictionary {
       customerContact: string;
       projectName: string;
       designRemarks: string;
+      assignee: string;
+      caseStatus: string;
+      caseStatusOptions: {
+        none: string;
+        designPendingApproval: string;
+        productionRequested: string;
+      };
+      manufacturingComplete: string;
+      ownerName: string;
     };
     panels: {
       title: string;
@@ -322,6 +331,9 @@ export interface Dictionary {
         customerContact: string;
         projectName: string;
         panelNames: string;
+        assignee: string;
+        ownerName: string;
+        manufacturingComplete: string;
         updatedAt: string;
       };
     };

@@ -7,15 +7,23 @@ import { designCaseService } from "@/lib/services/design";
 import { SpecCombobox } from "@/components/design/SpecCombobox";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import {
+  CASE_STATUS_VALUES,
   PANEL_NUMBERS,
   SPEC_GROUPS,
   WIRING_SPEC_FIELDS,
   type CasePanel,
+  type CaseStatus,
   type DesignCase,
   type PanelNo,
   type SpecFieldKey,
   type SpecValues,
 } from "@/lib/types/design";
+
+const CASE_STATUS_LABEL_KEY: Record<CaseStatus, "none" | "designPendingApproval" | "productionRequested"> = {
+  "": "none",
+  design_pending_approval: "designPendingApproval",
+  production_requested: "productionRequested",
+};
 
 const SPEC_GROUP_LABEL_KEY: Record<string, "groupBox" | "groupPaint" | "groupHandle" | "groupOther"> = {
   box: "groupBox",
@@ -250,6 +258,47 @@ export function DesignRequestForm({ caseId }: { caseId: string }) {
               onChange={(e) => updateField("projectName", e.target.value)}
               className="field-input"
             />
+          </div>
+          <div>
+            <label className="field-label">{t("design.fields.ownerName")}</label>
+            <input
+              value={designCase.ownerName}
+              onChange={(e) => updateField("ownerName", e.target.value)}
+              className="field-input"
+            />
+          </div>
+          <div>
+            <label className="field-label">{t("design.fields.assignee")}</label>
+            <SpecCombobox
+              listKey="assignee"
+              value={designCase.assignee}
+              onChange={(v) => updateField("assignee", v)}
+            />
+          </div>
+          <div>
+            <label className="field-label">{t("design.fields.caseStatus")}</label>
+            <select
+              value={designCase.caseStatus}
+              onChange={(e) => updateField("caseStatus", e.target.value as CaseStatus)}
+              className="field-input"
+            >
+              {CASE_STATUS_VALUES.map((s) => (
+                <option key={s} value={s}>
+                  {t(`design.fields.caseStatusOptions.${CASE_STATUS_LABEL_KEY[s]}`)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-end pb-1.5">
+            <label className="flex items-center gap-1.5 text-[13px] text-foreground">
+              <input
+                type="checkbox"
+                checked={designCase.manufacturingComplete}
+                onChange={(e) => updateField("manufacturingComplete", e.target.checked)}
+                className="h-3.5 w-3.5"
+              />
+              {t("design.fields.manufacturingComplete")}
+            </label>
           </div>
         </div>
       </div>

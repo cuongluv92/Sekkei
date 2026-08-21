@@ -72,6 +72,15 @@ export type SpecValues = Partial<Record<SpecFieldKey, SpecEntry>>;
  * 案件 — the one central record. Panels (`case_panels`) are a genuine 1-to-many
  * relation (a case legitimately has multiple 盤), not duplicated data.
  */
+/**
+ * Row-color legend from the real ②図面管理台帳 template (cell H1): two states
+ * get a background color, a third ("完", manufacturing complete) is a plain
+ * text marker tracked separately via `manufacturingComplete`. "" means no
+ * color yet (design still in progress).
+ */
+export const CASE_STATUS_VALUES = ["", "design_pending_approval", "production_requested"] as const;
+export type CaseStatus = (typeof CASE_STATUS_VALUES)[number];
+
 export interface DesignCase {
   id: string;
   projectId: string;
@@ -86,6 +95,10 @@ export interface DesignCase {
   projectName: string; // 件名
   specs: SpecValues;
   designRemarks: string; // 設計備考欄 (distinct from 製作注意事項)
+  assignee: string; // 担当 (③④設計依頼書目次)
+  caseStatus: CaseStatus; // ②図面管理台帳 H1 legend row color
+  manufacturingComplete: boolean; // 製造完了 (②図面管理台帳 column J, "完")
+  ownerName: string; // 施主名 (②図面管理台帳 column M)
   createdAt: string;
   updatedAt: string;
 }
