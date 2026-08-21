@@ -30,7 +30,7 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
       >
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
           <Link href="/search" className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-[12px] font-extrabold text-accent-foreground shadow-[0_1px_4px_rgba(245,166,35,0.4)]">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-[12px] font-extrabold text-accent-foreground shadow-[0_1px_4px_rgba(79,143,240,0.4)]">
               S
             </span>
             <span className="text-[14.5px] font-extrabold tracking-tight text-foreground">

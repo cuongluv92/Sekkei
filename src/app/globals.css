@@ -10,9 +10,9 @@
   --foreground: #ffffff;
   --muted: #cbd0d8;
   --muted-2: #9aa1ac;
-  --accent: #f5a623;
-  --accent-strong: #ffb84d;
-  --accent-foreground: #14100a;
+  --accent: #4f8ff0;
+  --accent-strong: #74a6f4;
+  --accent-foreground: #0a0e16;
   --success: #30d17f;
   --warning: #e7ac4c;
   --danger: #f25c66;
@@ -89,7 +89,7 @@ body {
     @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-[12.5px]
       font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed
       disabled:opacity-40 border-accent bg-accent text-accent-foreground shadow-[0_1px_2px_rgba(0,0,0,0.35)]
-      hover:bg-accent-strong hover:border-accent-strong hover:shadow-[0_2px_10px_-2px_rgba(245,166,35,0.55)];
+      hover:bg-accent-strong hover:border-accent-strong hover:shadow-[0_2px_10px_-2px_rgba(79,143,240,0.55)];
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-[12.5px]
