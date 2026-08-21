@@ -4,16 +4,42 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
-import { useNavSettings } from "@/lib/store/NavSettingsProvider";
+import { useNavSettings, type NavEntry } from "@/lib/store/NavSettingsProvider";
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function NavLink({
+  entry,
+  active,
+  onClick,
+}: {
+  entry: NavEntry;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const Icon = entry.Icon;
+  return (
+    <Link
+      href={entry.href}
+      onClick={onClick}
+      className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[12.5px] text-foreground transition-colors ${
+        active ? "bg-accent/15 font-semibold" : "font-medium hover:bg-surface-2"
+      }`}
+    >
+      <Icon className={`h-4 w-4 shrink-0 ${active ? "text-accent" : "text-muted"}`} />
+      <span className="truncate">{entry.label}</span>
+    </Link>
+  );
 }
 
 export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const { t } = useTranslation();
   const { visibleEntries } = useNavSettings();
+  const settingsEntry = visibleEntries.find((e) => e.id === "settings");
+  const mainEntries = visibleEntries.filter((e) => e.id !== "settings");
 
   return (
     <>
@@ -45,28 +71,26 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
         </div>
         <nav className="flex-1 overflow-y-auto px-3 py-3">
           <ul className="flex flex-col gap-0.5">
-            {visibleEntries.map((entry) => {
-              const Icon = entry.Icon;
-              const active = isActive(pathname, entry.href);
-              return (
-                <li key={entry.id}>
-                  <Link
-                    href={entry.href}
-                    onClick={onClose}
-                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[12.5px] text-foreground transition-colors ${
-                      active
-                        ? "bg-accent/15 font-semibold"
-                        : "font-medium hover:bg-surface-2"
-                    }`}
-                  >
-                    <Icon className={`h-4 w-4 shrink-0 ${active ? "text-accent" : "text-muted"}`} />
-                    <span className="truncate">{entry.label}</span>
-                  </Link>
-                </li>
-              );
-            })}
+            {mainEntries.map((entry) => (
+              <li key={entry.id}>
+                <NavLink
+                  entry={entry}
+                  active={isActive(pathname, entry.href)}
+                  onClick={onClose}
+                />
+              </li>
+            ))}
           </ul>
         </nav>
+        {settingsEntry && (
+          <div className="border-t border-border px-3 py-3">
+            <NavLink
+              entry={settingsEntry}
+              active={isActive(pathname, settingsEntry.href)}
+              onClick={onClose}
+            />
+          </div>
+        )}
         <div className="border-t border-border px-4 py-3 text-[11px] text-muted-2">
           {t("app.tagline")}
         </div>
