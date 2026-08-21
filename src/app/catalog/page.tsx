@@ -4,7 +4,7 @@ import { Download, Eye, Search as SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { catalogService, exportService } from "@/lib/services";
-import { getManufacturerName } from "@/lib/mock/manufacturers";
+import { getManufacturerName, preloadManufacturers } from "@/lib/mock/manufacturers";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
 import { FilePreview } from "@/components/common/FilePreview";
@@ -22,7 +22,7 @@ export default function CatalogPage() {
 
   useEffect(() => {
     let active = true;
-    catalogService.list().then((res) => {
+    Promise.all([preloadManufacturers(), catalogService.list()]).then(([, res]) => {
       if (!active) return;
       setItems(res);
       setLoading(false);

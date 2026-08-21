@@ -1,51 +1,92 @@
-import { catalogSeed } from "@/lib/mock/catalog";
-import { delay } from "@/lib/utils/async";
-import { loadFromStorage, saveToStorage } from "@/lib/utils/localStore";
+import { requireSupabase } from "@/lib/supabase/client";
+import { fetchFileAssets, fetchFileAssetsByOwners } from "./fileAssetService";
 import { rankBySearch } from "@/lib/utils/searchRanking";
 import type { Catalog } from "@/lib/types";
 import type { CatalogRepository } from "./types";
 
-const KEY = "sekkei.catalog";
-
-function loadAll(): Catalog[] {
-  return loadFromStorage<Catalog[]>(KEY, catalogSeed);
+interface CatalogRow {
+  id: string;
+  manufacturer_id: string | null;
+  category: string;
+  model: string;
+  file_name: string;
+  updated_at: string;
 }
-function saveAll(list: Catalog[]) {
-  saveToStorage(KEY, list);
+
+function rowToCatalog(row: CatalogRow, files: Catalog["files"]): Catalog {
+  return {
+    id: row.id,
+    manufacturerId: row.manufacturer_id ?? "",
+    category: row.category,
+    model: row.model,
+    fileName: row.file_name,
+    files,
+    updatedAt: row.updated_at.slice(0, 10),
+  };
 }
 
-class LocalCatalogRepository implements CatalogRepository {
+async function fromRow(row: CatalogRow): Promise<Catalog> {
+  const files = await fetchFileAssets("catalog", row.id);
+  return rowToCatalog(row, files);
+}
+
+async function attachFiles(rows: CatalogRow[]): Promise<Catalog[]> {
+  const fileMap = await fetchFileAssetsByOwners("catalog", rows.map((r) => r.id));
+  return rows.map((r) => rowToCatalog(r, fileMap.get(r.id) ?? []));
+}
+
+class SupabaseCatalogRepository implements CatalogRepository {
   async search(query: string) {
-    if (!query.trim()) return delay(loadAll(), 200);
-    return delay(rankBySearch(loadAll(), query, (c) => [c.model, c.category, c.fileName]), 250);
+    const { data, error } = await requireSupabase().from("catalogs").select("*");
+    if (error) throw error;
+    const all = await attachFiles((data ?? []) as CatalogRow[]);
+    if (!query.trim()) return all;
+    return rankBySearch(all, query, (c) => [c.model, c.category, c.fileName]);
   }
+
   async list() {
-    return delay(loadAll(), 150);
+    const { data, error } = await requireSupabase().from("catalogs").select("*").order("updated_at", { ascending: false });
+    if (error) throw error;
+    return attachFiles((data ?? []) as CatalogRow[]);
   }
+
   async findByModel(model: string) {
-    const q = model.trim().toLowerCase();
-    return loadAll().find((c) => c.model.trim().toLowerCase() === q) ?? null;
+    const { data, error } = await requireSupabase()
+      .from("catalogs")
+      .select("*")
+      .ilike("model", model.trim())
+      .maybeSingle();
+    if (error) throw error;
+    return data ? fromRow(data as CatalogRow) : null;
   }
+
   async create(input: Omit<Catalog, "id" | "updatedAt">): Promise<Catalog> {
-    const all = loadAll();
-    const created: Catalog = {
-      ...input,
-      id: `cat-${Date.now()}-${all.length}`,
-      updatedAt: new Date().toISOString().slice(0, 10),
-    };
-    all.push(created);
-    saveAll(all);
-    return delay(created, 200);
+    const { data, error } = await requireSupabase()
+      .from("catalogs")
+      .insert({
+        manufacturer_id: input.manufacturerId || null,
+        category: input.category,
+        model: input.model,
+        file_name: input.fileName,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return fromRow(data as CatalogRow);
   }
+
   async update(id: string, patch: Partial<Catalog>): Promise<Catalog> {
-    const all = loadAll();
-    const idx = all.findIndex((c) => c.id === id);
-    if (idx === -1) throw new Error(`Catalog not found: ${id}`);
-    const updated: Catalog = { ...all[idx], ...patch, id, updatedAt: new Date().toISOString().slice(0, 10) };
-    all[idx] = updated;
-    saveAll(all);
-    return delay(updated, 200);
+    const row: Record<string, unknown> = {};
+    if (patch.category !== undefined) row.category = patch.category;
+    if (patch.manufacturerId !== undefined) row.manufacturer_id = patch.manufacturerId || null;
+    if (patch.model !== undefined) row.model = patch.model;
+    if (patch.fileName !== undefined) row.file_name = patch.fileName;
+    row.updated_at = new Date().toISOString();
+
+    const { data, error } = await requireSupabase().from("catalogs").update(row).eq("id", id).select().single();
+    if (error) throw error;
+    return fromRow(data as CatalogRow);
   }
 }
 
-export const catalogService: CatalogRepository = new LocalCatalogRepository();
+export const catalogService: CatalogRepository = new SupabaseCatalogRepository();

@@ -1,39 +1,40 @@
-import { delay } from "@/lib/utils/async";
+import { requireSupabase } from "@/lib/supabase/client";
 import type { Project } from "@/lib/types/design";
-import { loadFromStorage, saveToStorage } from "@/lib/utils/localStore";
 
-const STORAGE_KEY = "sekkei.design.projects";
-
-let idCounter = 0;
-function nextId() {
-  idCounter += 1;
-  return `proj-${Date.now()}-${idCounter}`;
+interface ProjectRow {
+  id: string;
+  name: string;
+  created_at: string;
 }
 
-function loadAll(): Project[] {
-  return loadFromStorage<Project[]>(STORAGE_KEY, [
-    { id: "proj-sample", name: "サンプルプロジェクト", createdAt: "2026-01-06" },
-  ]);
+function fromRow(row: ProjectRow): Project {
+  return { id: row.id, name: row.name, createdAt: row.created_at.slice(0, 10) };
 }
 
 export const projectService = {
   async list(): Promise<Project[]> {
-    return delay([...loadAll()].sort((a, b) => a.name.localeCompare(b.name, "ja")), 150);
+    const { data, error } = await requireSupabase().from("projects").select("*").order("name");
+    if (error) throw error;
+    return (data ?? []).map(fromRow);
   },
 
   async getById(id: string): Promise<Project | null> {
-    return delay(loadAll().find((p) => p.id === id) ?? null, 100);
+    const { data, error } = await requireSupabase()
+      .from("projects")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? fromRow(data as ProjectRow) : null;
   },
 
   async create(name: string): Promise<Project> {
-    const all = loadAll();
-    const project: Project = {
-      id: nextId(),
-      name: name.trim(),
-      createdAt: new Date().toISOString().slice(0, 10),
-    };
-    all.push(project);
-    saveToStorage(STORAGE_KEY, all);
-    return delay(project, 200);
+    const { data, error } = await requireSupabase()
+      .from("projects")
+      .insert({ name: name.trim() })
+      .select()
+      .single();
+    if (error) throw error;
+    return fromRow(data as ProjectRow);
   },
 };

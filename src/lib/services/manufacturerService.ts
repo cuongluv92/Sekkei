@@ -1,17 +1,17 @@
-import { addManufacturer, getManufacturerById, listManufacturers } from "@/lib/mock/manufacturers";
-import { delay } from "@/lib/utils/async";
+import { addManufacturer, getManufacturerById, preloadManufacturers } from "@/lib/mock/manufacturers";
 import type { ManufacturerRepository } from "./types";
 
-class LocalManufacturerRepository implements ManufacturerRepository {
+class SupabaseManufacturerRepository implements ManufacturerRepository {
   async list() {
-    return delay(listManufacturers());
+    return preloadManufacturers();
   }
   async getById(id: string) {
-    return delay(getManufacturerById(id) ?? null);
+    await preloadManufacturers();
+    return getManufacturerById(id) ?? null;
   }
   async create(name: string) {
-    return delay(addManufacturer(name), 150);
+    return addManufacturer(name);
   }
 }
 
-export const manufacturerService: ManufacturerRepository = new LocalManufacturerRepository();
+export const manufacturerService: ManufacturerRepository = new SupabaseManufacturerRepository();

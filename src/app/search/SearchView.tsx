@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { searchService, exportService } from "@/lib/services";
+import { preloadManufacturers } from "@/lib/mock/manufacturers";
 import { SearchResultList } from "@/components/common/SearchResultList";
 import { FilePreview } from "@/components/common/FilePreview";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -37,7 +38,7 @@ export function SearchView() {
     }
     let active = true;
     setLoading(true);
-    searchService.search(query).then((res) => {
+    Promise.all([preloadManufacturers(), searchService.search(query)]).then(([, res]) => {
       if (!active) return;
       setResults(res);
       setSelected(null);

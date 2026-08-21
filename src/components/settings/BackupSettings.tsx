@@ -101,8 +101,8 @@ export function BackupSettings() {
             </span>
             <ul className="flex flex-col gap-1 text-[12.5px] text-foreground">
               {preview.map((entry) => (
-                <li key={entry.key} className="flex justify-between gap-3">
-                  <span className="truncate font-mono text-muted">{entry.key}</span>
+                <li key={entry.table} className="flex justify-between gap-3">
+                  <span className="truncate font-mono text-muted">{entry.table}</span>
                   <span>{entry.count}</span>
                 </li>
               ))}

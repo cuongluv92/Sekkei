@@ -1,5 +1,5 @@
 import { delay } from "@/lib/utils/async";
-import { addManufacturer, findManufacturerByName } from "@/lib/mock/manufacturers";
+import { addManufacturer, findManufacturerByName, preloadManufacturers } from "@/lib/mock/manufacturers";
 import { mapRowToRecord, parseTabularFile } from "@/lib/utils/importParsing";
 import { partDataService } from "./partDataService";
 import { partDrawingService } from "./partDrawingService";
@@ -9,10 +9,12 @@ import type { ImportRepository } from "./types";
 
 type ImportRecord = NonNullable<ImportRow["record"]>;
 
-function resolveManufacturerId(name: string | undefined): string {
+async function resolveManufacturerId(name: string | undefined): Promise<string> {
   if (!name) return "";
   const existing = findManufacturerByName(name);
-  return existing ? existing.id : addManufacturer(name).id;
+  if (existing) return existing.id;
+  const created = await addManufacturer(name);
+  return created.id;
 }
 
 async function findExisting(target: ImportTargetCategory, model: string) {
@@ -26,6 +28,7 @@ function diffsFromExisting(record: ImportRecord, existing: Record<string, unknow
 }
 
 async function analyzeTabular(file: File, target: ImportTargetCategory): Promise<ImportRow[]> {
+  await preloadManufacturers();
   const parsed = await parseTabularFile(file);
   const seenKeys = new Set<string>();
   const rows: ImportRow[] = [];
@@ -57,7 +60,7 @@ async function analyzeTabular(file: File, target: ImportTargetCategory): Promise
     }
     seenKeys.add(key);
 
-    const manufacturerId = resolveManufacturerId(mapped.manufacturer);
+    const manufacturerId = await resolveManufacturerId(mapped.manufacturer);
     const record: ImportRecord = {
       symbol: mapped.symbol,
       category: mapped.category ?? "",

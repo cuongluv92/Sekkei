@@ -3,7 +3,7 @@
 import { Search as SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
-import { getManufacturerName } from "@/lib/mock/manufacturers";
+import { getManufacturerName, preloadManufacturers } from "@/lib/mock/manufacturers";
 import { exportService } from "@/lib/services";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
@@ -63,7 +63,7 @@ export function PartLibraryView<T extends LibraryItem>({
   useEffect(() => {
     let active = true;
     setLoading(true);
-    fetchAllOnce().then((res) => {
+    Promise.all([preloadManufacturers(), fetchAllOnce()]).then(([, res]) => {
       if (!active) return;
       setItems(res);
       setLoading(false);

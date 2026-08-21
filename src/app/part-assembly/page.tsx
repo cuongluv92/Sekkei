@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { searchService, exportService } from "@/lib/services";
 import { projectService } from "@/lib/services/design";
-import { getManufacturerName } from "@/lib/mock/manufacturers";
+import { getManufacturerName, preloadManufacturers } from "@/lib/mock/manufacturers";
 import { usePartAssembly } from "@/lib/store/PartAssemblyProvider";
 import { SearchResultList } from "@/components/common/SearchResultList";
 import { ExportActions } from "@/components/common/ExportActions";
@@ -22,9 +22,11 @@ export default function PartAssemblyPage() {
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [, forceRerender] = useState(0);
   const { message, show } = useMockFeedback();
 
   useEffect(() => {
+    preloadManufacturers().then(() => forceRerender((v) => v + 1));
     projectService.list().then((list) => {
       setProjects(list);
       if (!projectId && list.length > 0) setProjectId(list[0].id);

@@ -1,4 +1,5 @@
-import { delay } from "@/lib/utils/async";
+import { requireSupabase } from "@/lib/supabase/client";
+import { formatDrawingNumber, getNextSequenceForYear } from "@/lib/utils/designNumbering";
 import type {
   CasePanel,
   DesignCase,
@@ -6,133 +7,137 @@ import type {
   DesignCaseWithPanels,
   PanelNo,
 } from "@/lib/types/design";
-import { formatDrawingNumber, getNextSequenceForYear } from "@/lib/utils/designNumbering";
-import { loadFromStorage, saveToStorage } from "@/lib/utils/localStore";
 
-const CASES_KEY = "sekkei.design.cases";
-const PANELS_KEY = "sekkei.design.panels";
+interface DesignCaseRow {
+  id: string;
+  project_id: string;
+  year: number;
+  sequence_no: number;
+  drawing_number: string;
+  request_type: string;
+  management_number: string;
+  construction_number: string;
+  orderer: string;
+  customer_contact: string;
+  project_name: string;
+  specs: DesignCase["specs"];
+  design_remarks: string;
+  created_at: string;
+  updated_at: string;
+}
 
-function emptyPanel(caseId: string, panelNo: PanelNo): CasePanel {
+interface CasePanelRow {
+  id: string;
+  case_id: string;
+  panel_no: number;
+  panel_name: string;
+  panel_structure: string;
+  face_count: number | null;
+  design_due_date: string | null;
+  design_estimated_hours: number | null;
+  design_actual_hours: number | null;
+  production_estimated_hours: number | null;
+  production_actual_hours: number | null;
+  electrical_method: string;
+  rated_voltage: string;
+  rated_current: string;
+  rated_breaking_capacity: string;
+  frequency: string;
+  control_voltage: string;
+  protection_rating: string;
+}
+
+function caseFromRow(row: DesignCaseRow): DesignCase {
   return {
-    id: `panel-${caseId}-${panelNo}`,
-    caseId,
-    panelNo,
-    panelName: "",
-    panelStructure: "",
-    faceCount: null,
-    designDueDate: null,
-    designEstimatedHours: null,
-    designActualHours: null,
-    productionEstimatedHours: null,
-    productionActualHours: null,
-    electricalMethod: "",
-    ratedVoltage: "",
-    ratedCurrent: "",
-    ratedBreakingCapacity: "",
-    frequency: "",
-    controlVoltage: "",
-    protectionRating: "",
+    id: row.id,
+    projectId: row.project_id,
+    year: row.year,
+    sequenceNo: row.sequence_no,
+    drawingNumber: row.drawing_number,
+    requestType: row.request_type,
+    managementNumber: row.management_number,
+    constructionNumber: row.construction_number,
+    orderer: row.orderer,
+    customerContact: row.customer_contact,
+    projectName: row.project_name,
+    specs: row.specs ?? {},
+    designRemarks: row.design_remarks,
+    createdAt: row.created_at.slice(0, 10),
+    updatedAt: row.updated_at.slice(0, 10),
   };
 }
 
-const SEED_CASES: DesignCase[] = [
-  {
-    id: "case-seed-1",
-    projectId: "proj-sample",
-    year: 2026,
-    sequenceNo: 1,
-    drawingNumber: "26-001",
-    requestType: "新規",
-    managementNumber: "A260101",
-    constructionNumber: "R123456",
-    orderer: "サンプル電機株式会社",
-    customerContact: "山田",
-    projectName: "本社ビル電気設備改修",
-    specs: {},
-    designRemarks: "",
-    createdAt: "2026-01-06",
-    updatedAt: "2026-01-06",
-  },
-  {
-    id: "case-seed-2",
-    projectId: "proj-sample",
-    year: 2026,
-    sequenceNo: 2,
-    drawingNumber: "26-002",
-    requestType: "新規",
-    managementNumber: "A260102",
-    constructionNumber: "V1123456",
-    orderer: "サンプル電機株式会社",
-    customerContact: "鈴木",
-    projectName: "工場ライン増設",
-    specs: {},
-    designRemarks: "",
-    createdAt: "2026-02-10",
-    updatedAt: "2026-02-10",
-  },
-  {
-    id: "case-seed-3",
-    projectId: "proj-sample",
-    year: 2026,
-    sequenceNo: 3,
-    drawingNumber: "26-003",
-    requestType: "変更",
-    managementNumber: "A260103",
-    constructionNumber: "R223344",
-    orderer: "サンプル電機株式会社",
-    customerContact: "山田",
-    projectName: "倉庫照明更新",
-    specs: {},
-    designRemarks: "",
-    createdAt: "2026-03-02",
-    updatedAt: "2026-03-02",
-  },
-];
-
-const SEED_PANELS: CasePanel[] = [
-  {
-    ...emptyPanel("case-seed-1", 1),
-    panelName: "動力盤",
-    panelStructure: "自立盤",
-    faceCount: 1,
-    designEstimatedHours: 8,
-    designActualHours: 6,
-  },
-  {
-    ...emptyPanel("case-seed-2", 1),
-    panelName: "制御盤",
-    panelStructure: "壁掛盤",
-    faceCount: 1,
-    designEstimatedHours: 5,
-    designActualHours: null,
-  },
-  {
-    ...emptyPanel("case-seed-3", 1),
-    panelName: "照明盤",
-    panelStructure: "壁掛盤",
-    faceCount: 1,
-    designEstimatedHours: 3,
-    designActualHours: 3,
-  },
-];
-
-function loadCases(): DesignCase[] {
-  return loadFromStorage(CASES_KEY, SEED_CASES);
-}
-function saveCases(cases: DesignCase[]) {
-  saveToStorage(CASES_KEY, cases);
-}
-function loadPanels(): CasePanel[] {
-  return loadFromStorage(PANELS_KEY, SEED_PANELS);
-}
-function savePanelsAll(panels: CasePanel[]) {
-  saveToStorage(PANELS_KEY, panels);
+function panelFromRow(row: CasePanelRow): CasePanel {
+  return {
+    id: row.id,
+    caseId: row.case_id,
+    panelNo: row.panel_no as PanelNo,
+    panelName: row.panel_name,
+    panelStructure: row.panel_structure,
+    faceCount: row.face_count,
+    designDueDate: row.design_due_date,
+    designEstimatedHours: row.design_estimated_hours,
+    designActualHours: row.design_actual_hours,
+    productionEstimatedHours: row.production_estimated_hours,
+    productionActualHours: row.production_actual_hours,
+    electricalMethod: row.electrical_method,
+    ratedVoltage: row.rated_voltage,
+    ratedCurrent: row.rated_current,
+    ratedBreakingCapacity: row.rated_breaking_capacity,
+    frequency: row.frequency,
+    controlVoltage: row.control_voltage,
+    protectionRating: row.protection_rating,
+  };
 }
 
-function panelsForCase(caseId: string): CasePanel[] {
-  return loadPanels()
-    .filter((p) => p.caseId === caseId)
-    .sort((a, b) => a.panelNo - b.panelNo);
+function panelToRow(caseId: string, panel: CasePanel) {
+  return {
+    case_id: caseId,
+    panel_no: panel.panelNo,
+    panel_name: panel.panelName,
+    panel_structure: panel.panelStructure,
+    face_count: panel.faceCount,
+    design_due_date: panel.designDueDate,
+    design_estimated_hours: panel.designEstimatedHours,
+    design_actual_hours: panel.designActualHours,
+    production_estimated_hours: panel.productionEstimatedHours,
+    production_actual_hours: panel.productionActualHours,
+    electrical_method: panel.electricalMethod,
+    rated_voltage: panel.ratedVoltage,
+    rated_current: panel.ratedCurrent,
+    rated_breaking_capacity: panel.ratedBreakingCapacity,
+    frequency: panel.frequency,
+    control_voltage: panel.controlVoltage,
+    protection_rating: panel.protectionRating,
+  };
+}
+
+async function panelsForCase(caseId: string): Promise<CasePanel[]> {
+  const { data, error } = await requireSupabase()
+    .from("case_panels")
+    .select("*")
+    .eq("case_id", caseId)
+    .order("panel_no", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(panelFromRow);
+}
+
+async function panelsForCases(caseIds: string[]): Promise<Map<string, CasePanel[]>> {
+  const map = new Map<string, CasePanel[]>();
+  if (caseIds.length === 0) return map;
+  const { data, error } = await requireSupabase()
+    .from("case_panels")
+    .select("*")
+    .in("case_id", caseIds)
+    .order("panel_no", { ascending: true });
+  if (error) throw error;
+  for (const row of (data ?? []) as CasePanelRow[]) {
+    const panel = panelFromRow(row);
+    const list = map.get(panel.caseId) ?? [];
+    list.push(panel);
+    map.set(panel.caseId, list);
+  }
+  return map;
 }
 
 export interface CreateCaseInput {
@@ -148,131 +153,144 @@ export interface CreateCaseInput {
 
 export const designCaseService = {
   async listByProject(projectId: string): Promise<DesignCaseWithPanels[]> {
-    const cases = loadCases()
-      .filter((c) => c.projectId === projectId)
-      .sort((a, b) => b.drawingNumber.localeCompare(a.drawingNumber));
-    const result = cases.map((c) => ({ case: c, panels: panelsForCase(c.id) }));
-    return delay(result, 200);
+    const { data, error } = await requireSupabase()
+      .from("design_cases")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("drawing_number", { ascending: false });
+    if (error) throw error;
+    const cases = (data ?? []).map(caseFromRow);
+    const panelMap = await panelsForCases(cases.map((c) => c.id));
+    return cases.map((c) => ({ case: c, panels: panelMap.get(c.id) ?? [] }));
   },
 
-  /**
-   * All cases across every Project, for the system-wide ledger tables
-   * (図面管理台帳 and its 京王/その他 index views) — these are aggregate views
-   * of the whole database, not scoped to one Project.
-   */
+  /** All cases across every Project — for the system-wide ledger tables (図面管理台帳/目次/工程表/原価工数), never scoped to one Project. */
   async listAll(): Promise<DesignCaseWithPanels[]> {
-    const cases = loadCases().sort((a, b) => b.drawingNumber.localeCompare(a.drawingNumber));
-    const result = cases.map((c) => ({ case: c, panels: panelsForCase(c.id) }));
-    return delay(result, 200);
+    const { data, error } = await requireSupabase()
+      .from("design_cases")
+      .select("*")
+      .order("drawing_number", { ascending: false });
+    if (error) throw error;
+    const cases = (data ?? []).map(caseFromRow);
+    const panelMap = await panelsForCases(cases.map((c) => c.id));
+    return cases.map((c) => ({ case: c, panels: panelMap.get(c.id) ?? [] }));
   },
 
   async getDetail(caseId: string): Promise<DesignCaseWithPanels | null> {
-    const found = loadCases().find((c) => c.id === caseId);
-    if (!found) return delay(null, 100);
-    return delay({ case: found, panels: panelsForCase(caseId) }, 150);
+    const { data, error } = await requireSupabase()
+      .from("design_cases")
+      .select("*")
+      .eq("id", caseId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const panels = await panelsForCase(caseId);
+    return { case: caseFromRow(data as DesignCaseRow), panels };
   },
 
-  /** Preview only — does not reserve the number. The real number is assigned atomically in `create`. */
+  /** Preview only — does not reserve the number. The real number is assigned atomically by the `create_design_case` DB function. */
   async previewNextDrawingNumber(year: number): Promise<string> {
-    const seq = getNextSequenceForYear(loadCases(), year);
-    return delay(formatDrawingNumber(year, seq), 100);
+    const { data, error } = await requireSupabase()
+      .from("design_cases")
+      .select("sequence_no")
+      .eq("year", year);
+    if (error) throw error;
+    const cases = (data ?? []).map((r) => ({ year, sequenceNo: r.sequence_no })) as DesignCase[];
+    const seq = getNextSequenceForYear(cases, year);
+    return formatDrawingNumber(year, seq);
   },
 
+  /**
+   * Atomic create via the `create_design_case` Postgres function: the next
+   * sequence_no is computed and inserted inside one transaction, serialized
+   * per-year with an advisory lock, so two concurrent creates for the same
+   * year can never collide — the mock's known limitation, now closed.
+   */
   async create(input: CreateCaseInput): Promise<DesignCase> {
-    const cases = loadCases();
-    // Computed and persisted in the same step so there is no window where a
-    // second create() could read the same "next" number — the best this
-    // mock (single browser tab) can offer. A real backend needs a DB unique
-    // constraint on (year, sequence_no) + a transaction for true safety
-    // across concurrent users.
-    const sequenceNo = getNextSequenceForYear(cases, input.year);
-    const now = new Date().toISOString().slice(0, 10);
-    const created: DesignCase = {
-      id: `case-${Date.now()}`,
-      projectId: input.projectId,
-      year: input.year,
-      sequenceNo,
-      drawingNumber: formatDrawingNumber(input.year, sequenceNo),
-      requestType: input.requestType,
-      managementNumber: input.managementNumber,
-      constructionNumber: input.constructionNumber,
-      orderer: input.orderer,
-      customerContact: input.customerContact,
-      projectName: input.projectName,
-      specs: {},
-      designRemarks: "",
-      createdAt: now,
-      updatedAt: now,
-    };
-    cases.push(created);
-    saveCases(cases);
-    return delay(created, 250);
+    const { data, error } = await requireSupabase().rpc("create_design_case", {
+      p_project_id: input.projectId,
+      p_year: input.year,
+      p_request_type: input.requestType,
+      p_management_number: input.managementNumber,
+      p_construction_number: input.constructionNumber,
+      p_orderer: input.orderer,
+      p_customer_contact: input.customerContact,
+      p_project_name: input.projectName,
+    });
+    if (error) throw error;
+    return caseFromRow(data as DesignCaseRow);
   },
 
   async update(caseId: string, patch: Partial<DesignCase>): Promise<DesignCase> {
-    const cases = loadCases();
-    const index = cases.findIndex((c) => c.id === caseId);
-    if (index === -1) throw new Error(`Design case not found: ${caseId}`);
-    const updated: DesignCase = {
-      ...cases[index],
-      ...patch,
-      id: cases[index].id,
-      updatedAt: new Date().toISOString().slice(0, 10),
-    };
-    cases[index] = updated;
-    saveCases(cases);
-    return delay(updated, 200);
+    const row: Record<string, unknown> = {};
+    if (patch.requestType !== undefined) row.request_type = patch.requestType;
+    if (patch.managementNumber !== undefined) row.management_number = patch.managementNumber;
+    if (patch.constructionNumber !== undefined) row.construction_number = patch.constructionNumber;
+    if (patch.orderer !== undefined) row.orderer = patch.orderer;
+    if (patch.customerContact !== undefined) row.customer_contact = patch.customerContact;
+    if (patch.projectName !== undefined) row.project_name = patch.projectName;
+    if (patch.specs !== undefined) row.specs = patch.specs;
+    if (patch.designRemarks !== undefined) row.design_remarks = patch.designRemarks;
+    row.updated_at = new Date().toISOString();
+
+    const { data, error } = await requireSupabase()
+      .from("design_cases")
+      .update(row)
+      .eq("id", caseId)
+      .select()
+      .single();
+    if (error) throw error;
+    return caseFromRow(data as DesignCaseRow);
   },
 
-  /** Replaces the full panel set for a case (盤①～⑦ are edited together as one form). */
+  /** Replaces the full panel set for a case (盤①～⑦ are edited together as one form): upsert every row in the new set, then delete any panel_no no longer present. */
   async savePanels(caseId: string, panels: CasePanel[]): Promise<CasePanel[]> {
-    const all = loadPanels().filter((p) => p.caseId !== caseId);
-    const next = [...all, ...panels];
-    savePanelsAll(next);
-    return delay(panels, 200);
+    const client = requireSupabase();
+    if (panels.length > 0) {
+      const { error } = await client
+        .from("case_panels")
+        .upsert(
+          panels.map((p) => panelToRow(caseId, p)),
+          { onConflict: "case_id,panel_no" },
+        );
+      if (error) throw error;
+    }
+    const keepNos = panels.map((p) => p.panelNo);
+    const deleteQuery = client.from("case_panels").delete().eq("case_id", caseId);
+    const { error: deleteError } =
+      keepNos.length > 0 ? await deleteQuery.not("panel_no", "in", `(${keepNos.join(",")})`) : await deleteQuery;
+    if (deleteError) throw deleteError;
+    return panelsForCase(caseId);
   },
 
   async search(query: DesignCaseSearchQuery): Promise<DesignCaseWithPanels[]> {
-    const cases = loadCases();
-    const panels = loadPanels();
+    const client = requireSupabase();
+    let request = client.from("design_cases").select("*");
 
-    const matches = cases.filter((c) => {
-      if (query.projectId && c.projectId !== query.projectId) return false;
-      if (query.year && c.year !== query.year) return false;
-      if (query.drawingNumber && !c.drawingNumber.includes(query.drawingNumber.trim())) return false;
-      if (
-        query.managementNumber &&
-        !c.managementNumber.toLowerCase().includes(query.managementNumber.trim().toLowerCase())
-      )
-        return false;
-      if (
-        query.constructionNumber &&
-        !c.constructionNumber.toLowerCase().includes(query.constructionNumber.trim().toLowerCase())
-      )
-        return false;
-      if (query.orderer && !c.orderer.toLowerCase().includes(query.orderer.trim().toLowerCase()))
-        return false;
-      if (
-        query.customerContact &&
-        !c.customerContact.toLowerCase().includes(query.customerContact.trim().toLowerCase())
-      )
-        return false;
-      if (
-        query.projectName &&
-        !c.projectName.toLowerCase().includes(query.projectName.trim().toLowerCase())
-      )
-        return false;
-      if (query.panelName) {
-        const casePanels = panels.filter((p) => p.caseId === c.id);
-        const hasMatch = casePanels.some((p) =>
-          p.panelName.toLowerCase().includes(query.panelName!.trim().toLowerCase()),
-        );
-        if (!hasMatch) return false;
-      }
-      return true;
-    });
+    if (query.projectId) request = request.eq("project_id", query.projectId);
+    if (query.year) request = request.eq("year", query.year);
+    if (query.drawingNumber) request = request.ilike("drawing_number", `%${query.drawingNumber}%`);
+    if (query.managementNumber) request = request.ilike("management_number", `%${query.managementNumber}%`);
+    if (query.constructionNumber) request = request.ilike("construction_number", `%${query.constructionNumber}%`);
+    if (query.orderer) request = request.ilike("orderer", `%${query.orderer}%`);
+    if (query.customerContact) request = request.ilike("customer_contact", `%${query.customerContact}%`);
+    if (query.projectName) request = request.ilike("project_name", `%${query.projectName}%`);
 
-    const result = matches.map((c) => ({ case: c, panels: panelsForCase(c.id) }));
-    return delay(result, 250);
+    if (query.panelName) {
+      const { data: matchingPanels, error: panelError } = await client
+        .from("case_panels")
+        .select("case_id")
+        .ilike("panel_name", `%${query.panelName}%`);
+      if (panelError) throw panelError;
+      const caseIds = Array.from(new Set((matchingPanels ?? []).map((r) => r.case_id as string)));
+      if (caseIds.length === 0) return [];
+      request = request.in("id", caseIds);
+    }
+
+    const { data, error } = await request;
+    if (error) throw error;
+    const cases = (data ?? []).map(caseFromRow);
+    const panelMap = await panelsForCases(cases.map((c) => c.id));
+    return cases.map((c) => ({ case: c, panels: panelMap.get(c.id) ?? [] }));
   },
 };

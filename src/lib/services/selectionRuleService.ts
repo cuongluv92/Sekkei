@@ -1,56 +1,111 @@
-import { delay } from "@/lib/utils/async";
-import { loadFromStorage, saveToStorage } from "@/lib/utils/localStore";
+import { requireSupabase } from "@/lib/supabase/client";
 import type { SelectionRule, SelectionOutputKey } from "@/lib/types";
 
-const KEY = "sekkei.selectionRules";
-
-function loadAll(): SelectionRule[] {
-  return loadFromStorage<SelectionRule[]>(KEY, []);
+interface SelectionRuleRow {
+  id: string;
+  output_key: SelectionOutputKey;
+  unit: string;
+  min_value: number;
+  max_value: number;
+  result_value: string;
+  remarks: string | null;
+  sort_order: number;
+  enabled: boolean;
 }
-function saveAll(rules: SelectionRule[]) {
-  saveToStorage(KEY, rules);
+
+function fromRow(row: SelectionRuleRow): SelectionRule {
+  return {
+    id: row.id,
+    outputKey: row.output_key,
+    unit: row.unit,
+    minValue: row.min_value,
+    maxValue: row.max_value,
+    resultValue: row.result_value,
+    remarks: row.remarks ?? undefined,
+    order: row.sort_order,
+    enabled: row.enabled,
+  };
 }
 
 /** RuleRepository — starts empty on purpose; every row is entered via 設定 > 選定設定 (or a future rule import), never seeded with invented breaker/wire values. */
 export const selectionRuleService = {
   async list(): Promise<SelectionRule[]> {
-    return delay([...loadAll()].sort((a, b) => a.order - b.order), 150);
+    const { data, error } = await requireSupabase()
+      .from("selection_rules")
+      .select("*")
+      .order("sort_order", { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map(fromRow);
   },
 
   async create(input: Omit<SelectionRule, "id" | "order">): Promise<SelectionRule> {
-    const all = loadAll();
-    const maxOrder = all.reduce((max, r) => Math.max(max, r.order), -1);
-    const created: SelectionRule = { ...input, id: `rule-${Date.now()}`, order: maxOrder + 1 };
-    all.push(created);
-    saveAll(all);
-    return delay(created, 150);
+    const client = requireSupabase();
+    const { data: maxRow } = await client
+      .from("selection_rules")
+      .select("sort_order")
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextOrder = maxRow ? (maxRow.sort_order as number) + 1 : 0;
+
+    const { data, error } = await client
+      .from("selection_rules")
+      .insert({
+        output_key: input.outputKey,
+        unit: input.unit,
+        min_value: input.minValue,
+        max_value: input.maxValue,
+        result_value: input.resultValue,
+        remarks: input.remarks ?? null,
+        sort_order: nextOrder,
+        enabled: input.enabled,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return fromRow(data as SelectionRuleRow);
   },
 
   async update(id: string, patch: Partial<SelectionRule>): Promise<SelectionRule> {
-    const all = loadAll();
-    const idx = all.findIndex((r) => r.id === id);
-    if (idx === -1) throw new Error(`SelectionRule not found: ${id}`);
-    const updated = { ...all[idx], ...patch, id };
-    all[idx] = updated;
-    saveAll(all);
-    return delay(updated, 150);
+    const row: Record<string, unknown> = {};
+    if (patch.outputKey !== undefined) row.output_key = patch.outputKey;
+    if (patch.unit !== undefined) row.unit = patch.unit;
+    if (patch.minValue !== undefined) row.min_value = patch.minValue;
+    if (patch.maxValue !== undefined) row.max_value = patch.maxValue;
+    if (patch.resultValue !== undefined) row.result_value = patch.resultValue;
+    if (patch.remarks !== undefined) row.remarks = patch.remarks;
+    if (patch.enabled !== undefined) row.enabled = patch.enabled;
+
+    const { data, error } = await requireSupabase()
+      .from("selection_rules")
+      .update(row)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return fromRow(data as SelectionRuleRow);
   },
 
   async remove(id: string): Promise<void> {
-    saveAll(loadAll().filter((r) => r.id !== id));
+    const { error } = await requireSupabase().from("selection_rules").delete().eq("id", id);
+    if (error) throw error;
   },
 
   async toggleEnabled(id: string): Promise<void> {
-    const all = loadAll();
-    const idx = all.findIndex((r) => r.id === id);
-    if (idx === -1) return;
-    all[idx] = { ...all[idx], enabled: !all[idx].enabled };
-    saveAll(all);
+    const client = requireSupabase();
+    const { data } = await client.from("selection_rules").select("enabled").eq("id", id).maybeSingle();
+    if (!data) return;
+    const { error } = await client.from("selection_rules").update({ enabled: !data.enabled }).eq("id", id);
+    if (error) throw error;
   },
 
   async listByOutput(outputKey: SelectionOutputKey): Promise<SelectionRule[]> {
-    return loadAll()
-      .filter((r) => r.outputKey === outputKey)
-      .sort((a, b) => a.order - b.order);
+    const { data, error } = await requireSupabase()
+      .from("selection_rules")
+      .select("*")
+      .eq("output_key", outputKey)
+      .order("sort_order", { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map(fromRow);
   },
 };

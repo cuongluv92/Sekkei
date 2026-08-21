@@ -1,35 +1,36 @@
 import ExcelJS from "exceljs";
+import { requireSupabase } from "@/lib/supabase/client";
 
 /**
- * Backs up / restores the whole app's data by dumping every `sekkei.*`
- * localStorage key (Projects, 案件, 盤, 製作依頼, 工程, master lists, 部品データ/
- * 部品図/カタログ, 部品製作 rows, ...) — nothing is hand-picked or hardcoded per
- * entity, so a new module's storage key is automatically included without
- * touching this file. Each backup is one real, downloadable .xlsx (not a
- * screenshot or fake export); restoring never writes anything until every
- * row has been parsed successfully (all-or-nothing).
+ * Backs up / restores the whole Supabase database (every table below) as
+ * one real, downloadable .xlsx — not localStorage. Each backup is a new
+ * timestamped file; restoring never writes anything until every table's
+ * rows have been parsed successfully (all-or-nothing), and always deletes
+ * child tables before parents / inserts parents before children so foreign
+ * keys never fail mid-restore.
  */
 
 const DATA_SHEET = "Data";
 const SUMMARY_SHEET = "Summary";
 
-function getAllSekkeiKeys(): string[] {
-  const keys: string[] = [];
-  for (let i = 0; i < window.localStorage.length; i++) {
-    const k = window.localStorage.key(i);
-    if (k && k.startsWith("sekkei.")) keys.push(k);
-  }
-  return keys.sort();
-}
-
-function countOf(json: string): number {
-  try {
-    const parsed = JSON.parse(json);
-    return Array.isArray(parsed) ? parsed.length : 1;
-  } catch {
-    return 0;
-  }
-}
+// Parent -> child order for INSERT during restore (and DELETE runs in the
+// reverse of this order). Keep in sync with supabase/migrations/0001_init.sql.
+const TABLES_IN_DEPENDENCY_ORDER = [
+  "projects",
+  "manufacturers",
+  "design_cases",
+  "case_panels",
+  "production_requests",
+  "case_schedules",
+  "schedule_colors",
+  "master_list_items",
+  "part_data",
+  "part_drawings",
+  "catalogs",
+  "file_assets",
+  "selection_rules",
+  "part_assembly_rows",
+] as const;
 
 function backupFileName(date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -39,33 +40,35 @@ function backupFileName(date = new Date()): string {
 }
 
 export interface RestorePreviewEntry {
-  key: string;
+  table: string;
   count: number;
 }
 
 export const backupService = {
-  /** Builds the backup workbook and triggers a real browser download — a new file every time, never overwriting a previous backup. */
+  /** Reads every table and triggers a real browser download — a new file every time, never overwriting a previous backup. */
   async createBackup(): Promise<{ fileName: string }> {
+    const client = requireSupabase();
     const workbook = new ExcelJS.Workbook();
     workbook.creator = "oku-pro";
     workbook.created = new Date();
 
     const summarySheet = workbook.addWorksheet(SUMMARY_SHEET);
     summarySheet.columns = [
-      { header: "Storage Key", key: "key", width: 42 },
+      { header: "Table", key: "table", width: 30 },
       { header: "Records", key: "count", width: 12 },
     ];
-
     const dataSheet = workbook.addWorksheet(DATA_SHEET);
     dataSheet.columns = [
-      { header: "Storage Key", key: "key", width: 42 },
+      { header: "Table", key: "table", width: 30 },
       { header: "JSON", key: "json", width: 120 },
     ];
 
-    for (const key of getAllSekkeiKeys()) {
-      const json = window.localStorage.getItem(key) ?? "null";
-      summarySheet.addRow({ key, count: countOf(json) });
-      dataSheet.addRow({ key, json });
+    for (const table of TABLES_IN_DEPENDENCY_ORDER) {
+      const { data, error } = await client.from(table).select("*");
+      if (error) throw error;
+      const rows = data ?? [];
+      summarySheet.addRow({ table, count: rows.length });
+      dataSheet.addRow({ table, json: JSON.stringify(rows) });
     }
 
     const buffer = await workbook.xlsx.writeBuffer();
@@ -96,17 +99,18 @@ export const backupService = {
     const entries: RestorePreviewEntry[] = [];
     sheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return;
-      const key = String(row.getCell(1).value ?? "").trim();
+      const table = String(row.getCell(1).value ?? "").trim();
       const json = String(row.getCell(2).value ?? "");
-      if (!key) return;
-      JSON.parse(json); // throws on malformed data, failing the whole preview
-      entries.push({ key, count: countOf(json) });
+      if (!table) return;
+      const parsed = JSON.parse(json); // throws on malformed data, failing the whole preview
+      if (!Array.isArray(parsed)) throw new Error("invalid-backup-file");
+      entries.push({ table, count: parsed.length });
     });
     if (entries.length === 0) throw new Error("invalid-backup-file");
     return entries;
   },
 
-  /** Re-validates every row, then writes them all — never partially applies a restore. */
+  /** Re-validates every table, then deletes (children→parents) and re-inserts (parents→children) — never partially applies a restore. */
   async confirmRestore(file: File): Promise<void> {
     const buffer = await file.arrayBuffer();
     const workbook = new ExcelJS.Workbook();
@@ -114,19 +118,39 @@ export const backupService = {
     const sheet = workbook.getWorksheet(DATA_SHEET);
     if (!sheet) throw new Error("invalid-backup-file");
 
-    const pending: { key: string; json: string }[] = [];
+    const rowsByTable = new Map<string, Record<string, unknown>[]>();
     sheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return;
-      const key = String(row.getCell(1).value ?? "").trim();
+      const table = String(row.getCell(1).value ?? "").trim();
       const json = String(row.getCell(2).value ?? "");
-      if (!key) return;
-      JSON.parse(json); // validate before any write
-      pending.push({ key, json });
+      if (!table) return;
+      const parsed = JSON.parse(json);
+      if (!Array.isArray(parsed)) throw new Error("invalid-backup-file");
+      rowsByTable.set(table, parsed);
     });
-    if (pending.length === 0) throw new Error("invalid-backup-file");
+    if (rowsByTable.size === 0) throw new Error("invalid-backup-file");
 
-    for (const { key, json } of pending) {
-      window.localStorage.setItem(key, json);
+    const client = requireSupabase();
+
+    // Most tables use `id` as their primary key; these three don't (see 0001_init.sql).
+    const DELETE_KEY_COLUMN: Partial<Record<(typeof TABLES_IN_DEPENDENCY_ORDER)[number], string>> = {
+      production_requests: "case_id",
+      case_schedules: "case_id",
+      schedule_colors: "category",
+    };
+
+    for (const table of [...TABLES_IN_DEPENDENCY_ORDER].reverse()) {
+      if (!rowsByTable.has(table)) continue;
+      const keyColumn = DELETE_KEY_COLUMN[table] ?? "id";
+      const { error } = await client.from(table).delete().not(keyColumn, "is", null);
+      if (error) throw error;
+    }
+
+    for (const table of TABLES_IN_DEPENDENCY_ORDER) {
+      const rows = rowsByTable.get(table);
+      if (!rows || rows.length === 0) continue;
+      const { error } = await client.from(table).insert(rows);
+      if (error) throw error;
     }
   },
 };
