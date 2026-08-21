@@ -336,8 +336,7 @@ export interface Dictionary {
     };
     index: {
       empty: string;
-      yearFilterLabel: string;
-      allYears: string;
+      yearBlockTitle: string;
       searchPlaceholder: string;
       columns: {
         drawingNumber: string;
@@ -410,12 +409,13 @@ export interface Dictionary {
       designActualTotal: string;
       productionEstimatedTotal: string;
       productionActualTotal: string;
-      filterYear: string;
+      yearBlockTitle: string;
       filterProject: string;
       searchPlaceholder: string;
       columns: {
         drawingNumber: string;
         projectName: string;
+        panelNames: string;
         panelCount: string;
         designEstimated: string;
         designActual: string;

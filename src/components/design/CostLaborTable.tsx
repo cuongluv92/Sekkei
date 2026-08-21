@@ -11,16 +11,19 @@ function sumHours(panels: CasePanel[], key: keyof CasePanel): number {
 }
 
 /**
- * 仕入原価・工数一覧表 — system-wide, computed at read time from
+ * 仕入原価・工数一覧表 (⑥) — system-wide, computed at read time from
  * DesignCase/CasePanel (設計実動合計/製作実動合計/... are sums over panels,
  * never stored as their own duplicated field). Project is a filter here, not
- * a required parent — matches 図面管理台帳/目次/工程表.
+ * a required parent — matches 図面管理台帳/目次/工程表. The real 工数データ sheet
+ * has one tab per year with a combined 件名／盤名称 column (no per-part 単価/
+ * 合計 — pricing was explicitly excluded from this app, only hours are
+ * tracked); reproduced here as one panel per year, oldest on the left,
+ * matching 設計依頼書目次's layout.
  */
 export function CostLaborTable() {
   const { t } = useTranslation();
   const [items, setItems] = useState<DesignCaseWithPanels[] | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [year, setYear] = useState("");
   const [projectId, setProjectId] = useState("");
   const [query, setQuery] = useState("");
 
@@ -36,27 +39,19 @@ export function CostLaborTable() {
     };
   }, []);
 
-  const years = useMemo(() => {
-    if (!items) return [];
-    return Array.from(new Set(items.map((i) => i.case.year))).sort((a, b) => b - a);
-  }, [items]);
-
   const rows = useMemo(() => {
     if (!items) return null;
     const q = query.trim().toLowerCase();
-    return items.filter(({ case: c }) => {
-      if (year && c.year !== Number(year)) return false;
+    return items.filter(({ case: c, panels }) => {
       if (projectId && c.projectId !== projectId) return false;
-      if (
-        q &&
-        !c.drawingNumber.toLowerCase().includes(q) &&
-        !c.managementNumber.toLowerCase().includes(q) &&
-        !c.projectName.toLowerCase().includes(q)
-      )
-        return false;
-      return true;
+      if (!q) return true;
+      const haystack = [c.drawingNumber, c.managementNumber, c.projectName, ...panels.map((p) => p.panelName)]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
     });
-  }, [items, year, projectId, query]);
+  }, [items, projectId, query]);
 
   const grandTotals = useMemo(() => {
     if (!rows) return null;
@@ -71,21 +66,26 @@ export function CostLaborTable() {
     );
   }, [rows]);
 
+  const yearBlocks = useMemo(() => {
+    if (!rows) return null;
+    const byYear = new Map<number, DesignCaseWithPanels[]>();
+    for (const item of rows) {
+      const list = byYear.get(item.case.year) ?? [];
+      list.push(item);
+      byYear.set(item.case.year, list);
+    }
+    return Array.from(byYear.entries())
+      .sort(([a], [b]) => a - b) // oldest first (left), newest last (right)
+      .map(([year, cases]) => ({
+        year,
+        cases: cases.sort((a, b) => a.case.sequenceNo - b.case.sequenceNo),
+      }));
+  }, [rows]);
+
   return (
     <div className="flex flex-col gap-3">
       <div className="panel">
         <div className="panel-body-compact flex flex-wrap items-end gap-2.5">
-          <div>
-            <label className="field-label">{t("design.costLabor.filterYear")}</label>
-            <select value={year} onChange={(e) => setYear(e.target.value)} className="field-input w-auto py-1.5">
-              <option value="">{t("design.ledger.allYears")}</option>
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
           <div>
             <label className="field-label">{t("design.costLabor.filterProject")}</label>
             <select
@@ -139,57 +139,65 @@ export function CostLaborTable() {
         </div>
       )}
 
-      <div className="panel">
-        <div className="data-table-wrap">
-          <table className="data-table" style={{ minWidth: 900 }}>
-            <thead>
-              <tr>
-                <th style={{ width: "110px" }}>{t("design.costLabor.columns.drawingNumber")}</th>
-                <th>{t("design.costLabor.columns.projectName")}</th>
-                <th style={{ width: "70px" }}>{t("design.costLabor.columns.panelCount")}</th>
-                <th style={{ width: "100px" }}>{t("design.costLabor.columns.designEstimated")}</th>
-                <th style={{ width: "100px" }}>{t("design.costLabor.columns.designActual")}</th>
-                <th style={{ width: "110px" }}>{t("design.costLabor.columns.productionEstimated")}</th>
-                <th style={{ width: "110px" }}>{t("design.costLabor.columns.productionActual")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows === null ? (
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-muted">
-                    {t("common.loading")}
-                  </td>
-                </tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-muted-2">
-                    {t("design.ledger.noResults")}
-                  </td>
-                </tr>
-              ) : (
-                rows.map(({ case: c, panels }) => (
-                  <tr key={c.id}>
-                    <td className="font-mono">
-                      <Link
-                        href={`/design?tab=designRequest&project=${c.projectId}&case=${c.id}`}
-                        className="text-accent hover:underline"
-                      >
-                        {c.drawingNumber}
-                      </Link>
-                    </td>
-                    <td className="truncate">{c.projectName}</td>
-                    <td>{panels.length}</td>
-                    <td>{sumHours(panels, "designEstimatedHours")}</td>
-                    <td>{sumHours(panels, "designActualHours")}</td>
-                    <td>{sumHours(panels, "productionEstimatedHours")}</td>
-                    <td>{sumHours(panels, "productionActualHours")}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {yearBlocks === null ? (
+        <div className="panel">
+          <div className="panel-body py-8 text-center text-[13px] text-muted">{t("common.loading")}</div>
         </div>
-      </div>
+      ) : yearBlocks.length === 0 ? (
+        <div className="panel">
+          <div className="panel-body py-8 text-center text-[13px] text-muted-2">{t("design.ledger.noResults")}</div>
+        </div>
+      ) : (
+        <div className="flex items-start gap-3 overflow-x-auto pb-1">
+          {yearBlocks.map(({ year, cases }) => (
+            <div key={year} className="panel shrink-0" style={{ width: 780 }}>
+              <div className="panel-header-compact">
+                <span className="panel-title">{t("design.costLabor.yearBlockTitle", { year })}</span>
+              </div>
+              <div className="data-table-wrap">
+                <table className="data-table" style={{ minWidth: 760 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: "90px" }}>{t("design.costLabor.columns.drawingNumber")}</th>
+                      <th>{t("design.costLabor.columns.projectName")}</th>
+                      <th style={{ width: "120px" }}>{t("design.costLabor.columns.panelNames")}</th>
+                      <th style={{ width: "90px" }}>{t("design.costLabor.columns.designEstimated")}</th>
+                      <th style={{ width: "90px" }}>{t("design.costLabor.columns.designActual")}</th>
+                      <th style={{ width: "90px" }}>{t("design.costLabor.columns.productionEstimated")}</th>
+                      <th style={{ width: "90px" }}>{t("design.costLabor.columns.productionActual")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cases.map(({ case: c, panels }) => (
+                      <tr key={c.id}>
+                        <td className="font-mono">
+                          <Link
+                            href={`/design?tab=designRequest&project=${c.projectId}&case=${c.id}`}
+                            className="text-accent hover:underline"
+                          >
+                            {c.drawingNumber}
+                          </Link>
+                        </td>
+                        <td className="truncate">{c.projectName}</td>
+                        <td className="truncate text-muted">
+                          {panels
+                            .map((p) => p.panelName)
+                            .filter(Boolean)
+                            .join("・")}
+                        </td>
+                        <td>{sumHours(panels, "designEstimatedHours")}</td>
+                        <td>{sumHours(panels, "designActualHours")}</td>
+                        <td>{sumHours(panels, "productionEstimatedHours")}</td>
+                        <td>{sumHours(panels, "productionActualHours")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

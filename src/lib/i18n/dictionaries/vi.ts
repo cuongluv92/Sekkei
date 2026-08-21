@@ -336,8 +336,7 @@ const vi: Dictionary = {
     },
     index: {
       empty: "Không có dữ liệu",
-      yearFilterLabel: "年",
-      allYears: "Tất cả các năm",
+      yearBlockTitle: "設計依頼書　目次　{year}年度",
       searchPlaceholder: "Tìm theo 図面番号・管理番号・件名・担当",
       columns: {
         drawingNumber: "図番",
@@ -410,12 +409,13 @@ const vi: Dictionary = {
       designActualTotal: "設計実動合計",
       productionEstimatedTotal: "製作見積合計",
       productionActualTotal: "製作実動合計",
-      filterYear: "年",
+      yearBlockTitle: "{year}年　工数データ",
       filterProject: "Project",
-      searchPlaceholder: "Tìm theo 図面番号・管理番号・件名",
+      searchPlaceholder: "Tìm theo 図面番号・管理番号・件名・盤名称",
       columns: {
         drawingNumber: "図面番号",
         projectName: "件名",
+        panelNames: "盤名称",
         panelCount: "Số盤",
         designEstimated: "設計見積",
         designActual: "設計実動",

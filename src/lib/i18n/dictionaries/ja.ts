@@ -336,8 +336,7 @@ const ja: Dictionary = {
     },
     index: {
       empty: "データがありません",
-      yearFilterLabel: "年",
-      allYears: "すべての年",
+      yearBlockTitle: "設計依頼書　目次　{year}年度",
       searchPlaceholder: "図面番号・管理番号・件名・担当で検索",
       columns: {
         drawingNumber: "図番",
@@ -410,12 +409,13 @@ const ja: Dictionary = {
       designActualTotal: "設計実動合計",
       productionEstimatedTotal: "製作見積合計",
       productionActualTotal: "製作実動合計",
-      filterYear: "年",
+      yearBlockTitle: "{year}年　工数データ",
       filterProject: "Project",
-      searchPlaceholder: "図面番号・管理番号・件名で検索",
+      searchPlaceholder: "図面番号・管理番号・件名・盤名称で検索",
       columns: {
         drawingNumber: "図面番号",
         projectName: "件名",
+        panelNames: "盤名称",
         panelCount: "盤数",
         designEstimated: "設計見積",
         designActual: "設計実動",
