@@ -207,6 +207,32 @@ const vi: Dictionary = {
       "Tải lên template dùng cho Xuất Excel / Xuất DWG của 部品製作 (hiện chưa có).",
     kindExcel: "Excel",
     kindDwg: "DWG",
+    templateManagement: {
+      title: "Quản lý template 設計管理",
+      description:
+        "Quản lý các file template thật mà nút xuất ②〜⑧ đang dùng. Upload xong là dùng ngay, các bản cũ không bị xoá, có thể quay lại bất cứ lúc nào.",
+      dwgNote:
+        "Template DWG hiện chưa gắn với nút xuất nào (DWG không thể điền dữ liệu vào từng ô như Excel). Chỉ dùng để upload/tải về.",
+      versionColumn: "Phiên bản",
+      versionHistory: "Lịch sử",
+      downloadActive: "Tải file đang dùng",
+      noHistory: "Chưa có lịch sử upload",
+      activeLabel: "đang dùng",
+      activateButton: "Dùng bản này",
+      uploadedMessage: "Đã upload {fileName}",
+      activatedMessage: "Đã chuyển sang bản này",
+      uploadError: "Upload thất bại, thử lại.",
+      kinds: {
+        designRequestForm: "⑦ 設計依頼書",
+        productionRequestForm: "⑧ 製作依頼書",
+        drawingLedger: "② 図面管理台帳",
+        designRequestIndexKeio: "③ 設計依頼書目次・京王",
+        designRequestIndexOther: "④ 設計依頼書目次・その他",
+        scheduleSheet: "⑤ 工程表",
+        costLaborSheet: "⑥ 仕入原価・工数一覧表",
+        dwgTemplate: "Template DWG",
+      },
+    },
   },
   design: {
     title: "Quản lý thiết kế",

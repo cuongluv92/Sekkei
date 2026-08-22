@@ -207,6 +207,32 @@ const ja: Dictionary = {
       "部品製作のExcel出力・DWG出力で使うテンプレートをアップロードできます（現在は未設定）。",
     kindExcel: "Excel",
     kindDwg: "DWG",
+    templateManagement: {
+      title: "設計管理テンプレート管理",
+      description:
+        "②〜⑧の各出力ボタンが使う実テンプレートをここで管理します。アップロードすると即座に有効になり、以降の出力はすべて新しいテンプレートを使います。過去のバージョンは削除されず、いつでも戻せます。",
+      dwgNote:
+        "DWGテンプレートは現時点でどの出力ボタンにも紐付いていません（DWGはExcelのようにセルへデータを差し込めないため）。アップロード・ダウンロードのみ可能です。",
+      versionColumn: "バージョン",
+      versionHistory: "履歴",
+      downloadActive: "現在のファイルをダウンロード",
+      noHistory: "アップロード履歴がありません",
+      activeLabel: "使用中",
+      activateButton: "このバージョンを使う",
+      uploadedMessage: "{fileName} をアップロードしました",
+      activatedMessage: "このバージョンを有効にしました",
+      uploadError: "アップロードに失敗しました。もう一度お試しください。",
+      kinds: {
+        designRequestForm: "⑦ 設計依頼書",
+        productionRequestForm: "⑧ 製作依頼書",
+        drawingLedger: "② 図面管理台帳",
+        designRequestIndexKeio: "③ 設計依頼書目次・京王",
+        designRequestIndexOther: "④ 設計依頼書目次・その他",
+        scheduleSheet: "⑤ 工程表",
+        costLaborSheet: "⑥ 仕入原価・工数一覧表",
+        dwgTemplate: "DWGテンプレート",
+      },
+    },
   },
   design: {
     title: "設計管理",

@@ -11,6 +11,7 @@ import { ScheduleColorSettings } from "@/components/design/ScheduleColorSettings
 import { ManufacturerSettings } from "@/components/settings/ManufacturerSettings";
 import { BackupSettings } from "@/components/settings/BackupSettings";
 import { SelectionRuleSettings } from "@/components/settings/SelectionRuleSettings";
+import { TemplateManagementSettings } from "@/components/settings/TemplateManagementSettings";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { CalculationTemplate, PartTemplate, PartTemplateKind } from "@/lib/types";
@@ -111,6 +112,15 @@ export default function SettingsPage() {
         </div>
         <div className="panel-body">
           <BackupSettings />
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-header">
+          <span className="panel-title">{t("settings.templateManagement.title")}</span>
+        </div>
+        <div className="panel-body">
+          <TemplateManagementSettings />
         </div>
       </div>
 

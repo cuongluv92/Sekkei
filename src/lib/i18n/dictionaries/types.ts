@@ -208,6 +208,30 @@ export interface Dictionary {
     partTemplateDescription: string;
     kindExcel: string;
     kindDwg: string;
+    templateManagement: {
+      title: string;
+      description: string;
+      dwgNote: string;
+      versionColumn: string;
+      versionHistory: string;
+      downloadActive: string;
+      noHistory: string;
+      activeLabel: string;
+      activateButton: string;
+      uploadedMessage: string;
+      activatedMessage: string;
+      uploadError: string;
+      kinds: {
+        designRequestForm: string;
+        productionRequestForm: string;
+        drawingLedger: string;
+        designRequestIndexKeio: string;
+        designRequestIndexOther: string;
+        scheduleSheet: string;
+        costLaborSheet: string;
+        dwgTemplate: string;
+      };
+    };
   };
   design: {
     title: string;

@@ -257,14 +257,28 @@ export type DesignTemplateKind =
   | "scheduleSheet" // ⑤ 工程表 (one workbook, one sheet per year.month)
   | "costLaborSheet" // ⑥ 仕入原価／工数一覧表 (one workbook)
   | "designRequestForm" // ⑦ 設計依頼書 (one file per year)
-  | "productionRequestForm"; // ⑧ 製作依頼書 (one file per year)
+  | "productionRequestForm" // ⑧ 製作依頼書 (one file per year)
+  | "dwgTemplate"; // generic DWG starter template
 
+export const DESIGN_TEMPLATE_KINDS: DesignTemplateKind[] = [
+  "designRequestForm",
+  "productionRequestForm",
+  "drawingLedger",
+  "designRequestIndexKeio",
+  "designRequestIndexOther",
+  "scheduleSheet",
+  "costLaborSheet",
+  "dwgTemplate",
+];
+
+/** Stored in Supabase Storage (templates/<kind>/...), never bundled in the app — see designTemplateService. */
 export interface DesignTemplateVersion {
   id: string;
   kind: DesignTemplateKind;
   version: number;
   fileName: string;
+  storagePath: string;
+  sizeBytes: number | null;
   active: boolean;
   uploadedAt: string;
-  uploadedBy?: string;
 }

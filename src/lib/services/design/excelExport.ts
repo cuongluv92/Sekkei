@@ -1,6 +1,7 @@
-import ExcelJS from "exceljs";
+import type ExcelJS from "exceljs";
 import { SPEC_GROUPS, WIRING_SPEC_FIELDS, type SpecFieldKey } from "@/lib/types/design";
 import { formatShortDate, loadDesignRequestPrintFields, loadProductionRequestPrintFields } from "./printFields";
+import { loadActiveTemplate, downloadWorkbook } from "./excelWorkbook";
 
 /**
  * Cell coordinates below were confirmed by inspecting the real templates
@@ -12,31 +13,10 @@ import { formatShortDate, loadDesignRequestPrintFields, loadProductionRequestPri
  * in the schema yet, and not guessed. Row 35/36 (営業/受付/担当/検図/... + 印)
  * is the paper stamp/approval row — deliberately left blank, per the
  * confirmed instruction that it's print-only and needs no DB field.
+ *
+ * The template itself is fetched from Supabase Storage (設定 > テンプレート管理),
+ * never bundled in the app — see excelWorkbook.ts / designTemplateService.ts.
  */
-
-async function loadTemplate(path: string): Promise<ExcelJS.Workbook> {
-  const res = await fetch(path);
-  if (!res.ok) throw new Error(`template-fetch-failed:${path}`);
-  const buffer = await res.arrayBuffer();
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
-  return workbook;
-}
-
-async function downloadWorkbook(workbook: ExcelJS.Workbook, fileName: string): Promise<void> {
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
 
 const EXTERIOR_SPEC_ROW: Record<string, number> = {
   location: 17,
@@ -89,7 +69,7 @@ function fillSpecs(ws: ExcelJS.Worksheet, specs: Record<string, { spec1: string;
 export async function exportDesignRequestExcel(caseId: string): Promise<{ fileName: string }> {
   const fields = await loadDesignRequestPrintFields(caseId);
   const c = fields.case;
-  const workbook = await loadTemplate("/templates/designRequestForm.xlsx");
+  const workbook = await loadActiveTemplate("designRequestForm");
   const ws = workbook.worksheets[0];
 
   ws.getCell("C2").value = c.projectName;
@@ -125,7 +105,7 @@ export async function exportDesignRequestExcel(caseId: string): Promise<{ fileNa
 export async function exportProductionRequestExcel(caseId: string): Promise<{ fileName: string }> {
   const fields = await loadProductionRequestPrintFields(caseId);
   const c = fields.case;
-  const workbook = await loadTemplate("/templates/productionRequestForm.xlsx");
+  const workbook = await loadActiveTemplate("productionRequestForm");
   const ws = workbook.worksheets[0];
 
   ws.getCell("C2").value = c.projectName;

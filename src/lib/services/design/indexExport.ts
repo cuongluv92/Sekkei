@@ -1,6 +1,6 @@
-import ExcelJS from "exceljs";
 import { PdfCanvas, downloadPdf } from "./pdfCanvas";
-import type { DesignCaseWithPanels } from "@/lib/types/design";
+import { loadActiveTemplate, downloadWorkbook } from "./excelWorkbook";
+import type { DesignCaseWithPanels, DesignTemplateKind } from "@/lib/types/design";
 
 /**
  * 設計依頼書目次・京王(③)/その他(④) — real templates lay multiple years out as
@@ -14,43 +14,21 @@ import type { DesignCaseWithPanels } from "@/lib/types/design";
  * one-sheet-per-year export. 盤名称 (column N) is an addition beyond the
  * real template, reasonable for search/management per the agreed policy of
  * allowing extra app columns as long as no real template field is dropped.
+ * The template itself is fetched from Supabase Storage (設定 > テンプレート管理),
+ * never bundled in the app.
  */
 
-const TEMPLATE_PATH: Record<"keio" | "other", string> = {
-  keio: "/templates/designRequestIndexKeio.xlsx",
-  other: "/templates/designRequestIndexOther.xlsx",
+const TEMPLATE_KIND: Record<"keio" | "other", DesignTemplateKind> = {
+  keio: "designRequestIndexKeio",
+  other: "designRequestIndexOther",
 };
-
-async function loadTemplate(path: string): Promise<ExcelJS.Workbook> {
-  const res = await fetch(path);
-  if (!res.ok) throw new Error(`template-fetch-failed:${path}`);
-  const buffer = await res.arrayBuffer();
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
-  return workbook;
-}
-
-async function downloadWorkbook(workbook: ExcelJS.Workbook, fileName: string): Promise<void> {
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
 
 export async function exportDesignRequestIndexExcel(
   kind: "keio" | "other",
   year: number,
   cases: DesignCaseWithPanels[],
 ): Promise<{ fileName: string }> {
-  const workbook = await loadTemplate(TEMPLATE_PATH[kind]);
+  const workbook = await loadActiveTemplate(TEMPLATE_KIND[kind]);
   const ws = workbook.worksheets[0];
   ws.getCell("I1").value = `設計依頼書　目次　${year}年度`;
 

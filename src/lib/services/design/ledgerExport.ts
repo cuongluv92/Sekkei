@@ -1,6 +1,6 @@
-import ExcelJS from "exceljs";
 import { scheduleService } from "./scheduleService";
 import { PdfCanvas, downloadPdf } from "./pdfCanvas";
+import { loadActiveTemplate, downloadWorkbook } from "./excelWorkbook";
 import type { DesignCaseWithPanels } from "@/lib/types/design";
 
 /**
@@ -8,32 +8,10 @@ import type { DesignCaseWithPanels } from "@/lib/types/design";
  * (one sheet per year; A1="２０２６年" title, header row 2, data from row 3):
  * A=年(2桁), B=連番, C=管理番号, D=工事番号, E=客先名, F=客先担当, G=件名,
  * H=盤名称, I=面数, J=製造完了, K=出荷日. 決定金額(L)/施主名(M) are intentionally
- * skipped (confirmed out of scope), as is column N (confirmed not real).
+ * skipped (confirmed out of scope), as is column N (confirmed not real). The
+ * template itself is fetched from Supabase Storage (設定 > テンプレート管理),
+ * never bundled in the app.
  */
-
-async function loadTemplate(path: string): Promise<ExcelJS.Workbook> {
-  const res = await fetch(path);
-  if (!res.ok) throw new Error(`template-fetch-failed:${path}`);
-  const buffer = await res.arrayBuffer();
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
-  return workbook;
-}
-
-async function downloadWorkbook(workbook: ExcelJS.Workbook, fileName: string): Promise<void> {
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
 
 async function loadDeliveryDates(): Promise<Map<string, string | null>> {
   const schedules = await scheduleService.listAll();
@@ -46,7 +24,7 @@ export async function exportDrawingLedgerExcel(
 ): Promise<{ fileName: string }> {
   const deliveryByCase = await loadDeliveryDates();
 
-  const workbook = await loadTemplate("/templates/drawingLedger.xlsx");
+  const workbook = await loadActiveTemplate("drawingLedger");
   const ws = workbook.worksheets[0];
   ws.getCell("A1").value = `${year}年`;
 
