@@ -164,7 +164,7 @@ export function renderWorksheetHtml(ws: Worksheet): string {
 
   const colgroup = colWidthsPx.map((w) => `<col style="width:${w}px" />`).join("");
   return (
-    `<table style="border-collapse:collapse;table-layout:fixed;font-family:'Yu Gothic','Meiryo',sans-serif">` +
+    `<table style="border-collapse:collapse;table-layout:fixed;font-family:'Yu Gothic','Meiryo',sans-serif;background:#ffffff;color:#000000">` +
     `<colgroup>${colgroup}</colgroup><tbody>${rowsHtml.join("")}</tbody></table>`
   );
 }
@@ -177,6 +177,7 @@ export function printWorksheet(ws: Worksheet): void {
   const orientation = ws.pageSetup?.orientation === "portrait" ? "portrait" : "landscape";
   const root = document.createElement("div");
   root.id = PRINT_ROOT_ID;
+  root.style.cssText = "background:#ffffff;color:#000000;color-scheme:light";
   root.innerHTML = renderWorksheetHtml(ws);
   document.body.appendChild(root);
 
@@ -185,8 +186,13 @@ export function printWorksheet(ws: Worksheet): void {
   style.textContent = `
     @media print {
       @page { size: A4 ${orientation}; margin: 8mm; }
+      html, body { background: #ffffff !important; }
       body > *:not(#${PRINT_ROOT_ID}) { display: none !important; }
-      #${PRINT_ROOT_ID} { display: block !important; }
+      #${PRINT_ROOT_ID} { display: block !important; color-scheme: light; }
+      #${PRINT_ROOT_ID}, #${PRINT_ROOT_ID} * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
     }
     @media screen {
       #${PRINT_ROOT_ID} { display: none; }
