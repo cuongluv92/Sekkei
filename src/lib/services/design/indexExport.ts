@@ -1,5 +1,6 @@
-import { PdfCanvas, downloadPdf } from "./pdfCanvas";
+import type ExcelJS from "exceljs";
 import { loadActiveTemplate, downloadWorkbook } from "./excelWorkbook";
+import { printWorksheet } from "./excelPrintView";
 import type { DesignCaseWithPanels, DesignTemplateKind } from "@/lib/types/design";
 
 /**
@@ -23,11 +24,11 @@ const TEMPLATE_KIND: Record<"keio" | "other", DesignTemplateKind> = {
   other: "designRequestIndexOther",
 };
 
-export async function exportDesignRequestIndexExcel(
+async function buildIndexWorkbook(
   kind: "keio" | "other",
   year: number,
   cases: DesignCaseWithPanels[],
-): Promise<{ fileName: string }> {
+): Promise<ExcelJS.Workbook> {
   const workbook = await loadActiveTemplate(TEMPLATE_KIND[kind]);
   const ws = workbook.worksheets[0];
   ws.getCell("I1").value = `設計依頼書　目次　${year}年度`;
@@ -46,40 +47,27 @@ export async function exportDesignRequestIndexExcel(
       .join("・");
   });
 
+  return workbook;
+}
+
+export async function exportDesignRequestIndexExcel(
+  kind: "keio" | "other",
+  year: number,
+  cases: DesignCaseWithPanels[],
+): Promise<{ fileName: string }> {
+  const workbook = await buildIndexWorkbook(kind, year, cases);
   const kindLabel = kind === "keio" ? "京王" : "その他";
   const fileName = `設計依頼書目次_${kindLabel}_${year}.xlsx`;
   await downloadWorkbook(workbook, fileName);
   return { fileName };
 }
 
-export async function exportDesignRequestIndexPdf(
+/** Prints ③④設計依頼書目次 in the exact layout of the currently active template. */
+export async function printDesignRequestIndex(
   kind: "keio" | "other",
   year: number,
   cases: DesignCaseWithPanels[],
-): Promise<{ fileName: string }> {
-  const kindLabel = kind === "keio" ? "京王" : "その他";
-  const canvas = await PdfCanvas.create();
-  canvas.title(`設計依頼書　目次　${kindLabel}　${year}年度`);
-
-  const sorted = cases.slice().sort((a, b) => a.case.sequenceNo - b.case.sequenceNo);
-  canvas.table(
-    ["図番", "管理番号", "件名", "盤名称", "担当", "備考"],
-    [55, 70, 110, 90, 50, 100],
-    sorted.map(({ case: c, panels }) => [
-      c.drawingNumber,
-      c.managementNumber,
-      c.projectName,
-      panels
-        .map((p) => p.panelName)
-        .filter(Boolean)
-        .join("・"),
-      c.assignee,
-      c.designRemarks,
-    ]),
-  );
-
-  const bytes = await canvas.save();
-  const fileName = `設計依頼書目次_${kindLabel}_${year}.pdf`;
-  downloadPdf(bytes, fileName);
-  return { fileName };
+): Promise<void> {
+  const workbook = await buildIndexWorkbook(kind, year, cases);
+  printWorksheet(workbook.worksheets[0]);
 }

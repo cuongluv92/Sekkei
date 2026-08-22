@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileSpreadsheet, FileText, Loader2 } from "lucide-react";
+import { FileSpreadsheet, Loader2, Printer } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
-import { designCaseService, exportDrawingLedgerExcel, exportDrawingLedgerPdf } from "@/lib/services/design";
+import { designCaseService, exportDrawingLedgerExcel, printDrawingLedger } from "@/lib/services/design";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { CaseStatus, DesignCaseWithPanels } from "@/lib/types/design";
 
@@ -102,11 +102,10 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
     }
   }
 
-  async function handleExportPdf(year: number, cases: DesignCaseWithPanels[]) {
-    setExportingKey(`${year}-pdf`);
+  async function handlePrint(year: number, cases: DesignCaseWithPanels[]) {
+    setExportingKey(`${year}-print`);
     try {
-      const { fileName } = await exportDrawingLedgerPdf(year, cases);
-      show(t("design.exportedMessage", { fileName }));
+      await printDrawingLedger(year, cases);
     } catch {
       show(t("design.exportError"));
     } finally {
@@ -156,16 +155,16 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                     {t("design.exportExcelButton")}
                   </button>
                   <button
-                    onClick={() => handleExportPdf(year, cases)}
-                    disabled={exportingKey === `${year}-pdf`}
+                    onClick={() => handlePrint(year, cases)}
+                    disabled={exportingKey === `${year}-print`}
                     className="btn-ghost"
                   >
-                    {exportingKey === `${year}-pdf` ? (
+                    {exportingKey === `${year}-print` ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
-                      <FileText className="h-3.5 w-3.5" />
+                      <Printer className="h-3.5 w-3.5" />
                     )}
-                    {t("design.exportPdfButton")}
+                    {t("design.printButton")}
                   </button>
                 </div>
               </div>

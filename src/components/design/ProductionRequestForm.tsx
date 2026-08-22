@@ -1,12 +1,12 @@
 "use client";
 
-import { FileSpreadsheet, FileText, Loader2 } from "lucide-react";
+import { FileSpreadsheet, Loader2, Printer } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import {
   designCaseService,
   exportProductionRequestExcel,
-  exportProductionRequestPdf,
+  printProductionRequestForm,
   productionRequestService,
   scheduleService,
 } from "@/lib/services/design";
@@ -83,7 +83,7 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [exportingExcel, setExportingExcel] = useState(false);
-  const [exportingPdf, setExportingPdf] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -163,16 +163,15 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
     }
   }
 
-  async function handleExportPdf() {
+  async function handlePrint() {
     setExportError(null);
-    setExportingPdf(true);
+    setPrinting(true);
     try {
-      const { fileName } = await exportProductionRequestPdf(caseId);
-      show(t("design.exportedMessage", { fileName }));
+      await printProductionRequestForm(caseId);
     } catch {
       setExportError(t("design.exportError"));
     } finally {
-      setExportingPdf(false);
+      setPrinting(false);
     }
   }
 
@@ -203,9 +202,9 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
             )}
             {t("design.exportExcelButton")}
           </button>
-          <button onClick={handleExportPdf} disabled={exportingPdf} className="btn-secondary">
-            {exportingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
-            {t("design.exportPdfButton")}
+          <button onClick={handlePrint} disabled={printing} className="btn-secondary">
+            {printing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
+            {t("design.printButton")}
           </button>
           <button onClick={handleSave} disabled={saving} className="btn-primary">
             {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}

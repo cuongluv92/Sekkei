@@ -336,7 +336,7 @@ const ja: Dictionary = {
     saveButton: "保存",
     savedMessage: "保存しました",
     exportExcelButton: "Excel出力",
-    exportPdfButton: "PDF出力",
+    printButton: "印刷",
     exportedMessage: "{fileName} を出力しました",
     exportError: "出力に失敗しました。もう一度お試しください。",
     search: {

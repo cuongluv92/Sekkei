@@ -1,6 +1,7 @@
+import type ExcelJS from "exceljs";
 import { scheduleService } from "./scheduleService";
-import { PdfCanvas, downloadPdf } from "./pdfCanvas";
 import { loadActiveTemplate, downloadWorkbook } from "./excelWorkbook";
+import { printWorksheet } from "./excelPrintView";
 import type { DesignCaseWithPanels } from "@/lib/types/design";
 
 /**
@@ -18,10 +19,7 @@ async function loadDeliveryDates(): Promise<Map<string, string | null>> {
   return new Map(schedules.map((s) => [s.caseId, s.deliveryDate]));
 }
 
-export async function exportDrawingLedgerExcel(
-  year: number,
-  cases: DesignCaseWithPanels[],
-): Promise<{ fileName: string }> {
+async function buildLedgerWorkbook(year: number, cases: DesignCaseWithPanels[]): Promise<ExcelJS.Workbook> {
   const deliveryByCase = await loadDeliveryDates();
 
   const workbook = await loadActiveTemplate("drawingLedger");
@@ -49,44 +47,21 @@ export async function exportDrawingLedgerExcel(
     ws.getCell(`K${row}`).value = delivery ? new Date(delivery) : "";
   });
 
+  return workbook;
+}
+
+export async function exportDrawingLedgerExcel(
+  year: number,
+  cases: DesignCaseWithPanels[],
+): Promise<{ fileName: string }> {
+  const workbook = await buildLedgerWorkbook(year, cases);
   const fileName = `図面管理台帳_${year}.xlsx`;
   await downloadWorkbook(workbook, fileName);
   return { fileName };
 }
 
-export async function exportDrawingLedgerPdf(
-  year: number,
-  cases: DesignCaseWithPanels[],
-): Promise<{ fileName: string }> {
-  const deliveryByCase = await loadDeliveryDates();
-  const canvas = await PdfCanvas.create();
-  canvas.title(`図面管理台帳　${year}年`);
-
-  const sorted = cases.slice().sort((a, b) => a.case.sequenceNo - b.case.sequenceNo);
-  canvas.table(
-    ["図面番号", "管理番号", "工事番号", "客先名", "客先担当", "件名", "盤名称", "製造完了", "出荷日"],
-    [45, 55, 55, 70, 45, 70, 70, 40, 55],
-    sorted.map(({ case: c, panels }) => {
-      const delivery = deliveryByCase.get(c.id);
-      return [
-        c.drawingNumber,
-        c.managementNumber,
-        c.constructionNumber,
-        c.orderer,
-        c.customerContact,
-        c.projectName,
-        panels
-          .map((p) => p.panelName)
-          .filter(Boolean)
-          .join("・"),
-        c.manufacturingComplete ? "完" : "",
-        delivery ?? "",
-      ];
-    }),
-  );
-
-  const bytes = await canvas.save();
-  const fileName = `図面管理台帳_${year}.pdf`;
-  downloadPdf(bytes, fileName);
-  return { fileName };
+/** Prints ②図面管理台帳 in the exact layout of the currently active template. */
+export async function printDrawingLedger(year: number, cases: DesignCaseWithPanels[]): Promise<void> {
+  const workbook = await buildLedgerWorkbook(year, cases);
+  printWorksheet(workbook.worksheets[0]);
 }

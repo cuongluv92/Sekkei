@@ -1,12 +1,12 @@
 "use client";
 
-import { FileSpreadsheet, FileText, Loader2 } from "lucide-react";
+import { FileSpreadsheet, Loader2, Printer } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import {
   designCaseService,
   exportScheduleExcel,
-  exportSchedulePdf,
+  printSchedule,
   scheduleColorService,
   scheduleService,
 } from "@/lib/services/design";
@@ -65,7 +65,7 @@ export function ScheduleTimeline() {
   const { t } = useTranslation();
   const { message, show } = useMockFeedback();
   const [exportingExcel, setExportingExcel] = useState(false);
-  const [exportingPdf, setExportingPdf] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const now = new Date();
   const [focus, setFocus] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 });
   const [cases, setCases] = useState<DesignCaseWithPanels[]>([]);
@@ -179,15 +179,14 @@ export function ScheduleTimeline() {
     }
   }
 
-  async function handleExportPdf() {
-    setExportingPdf(true);
+  async function handlePrint() {
+    setPrinting(true);
     try {
-      const { fileName } = await exportSchedulePdf(cases, schedules);
-      show(t("design.exportedMessage", { fileName }));
+      await printSchedule(cases, schedules);
     } catch {
       show(t("design.exportError"));
     } finally {
-      setExportingPdf(false);
+      setPrinting(false);
     }
   }
 
@@ -282,9 +281,9 @@ export function ScheduleTimeline() {
               )}
               {t("design.exportExcelButton")}
             </button>
-            <button onClick={handleExportPdf} disabled={exportingPdf} className="btn-ghost">
-              {exportingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
-              {t("design.exportPdfButton")}
+            <button onClick={handlePrint} disabled={printing} className="btn-ghost">
+              {printing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
+              {t("design.printButton")}
             </button>
           </div>
         </div>

@@ -336,7 +336,7 @@ const vi: Dictionary = {
     saveButton: "Lưu",
     savedMessage: "Đã lưu",
     exportExcelButton: "Xuất Excel",
-    exportPdfButton: "Xuất PDF",
+    printButton: "In",
     exportedMessage: "Đã xuất {fileName}",
     exportError: "Xuất file thất bại, thử lại.",
     search: {

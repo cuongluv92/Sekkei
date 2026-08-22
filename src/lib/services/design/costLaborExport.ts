@@ -1,5 +1,6 @@
+import type ExcelJS from "exceljs";
 import { loadActiveTemplate, downloadWorkbook } from "./excelWorkbook";
-import { PdfCanvas, downloadPdf } from "./pdfCanvas";
+import { printWorksheet } from "./excelPrintView";
 import type { DesignCaseWithPanels, CasePanel } from "@/lib/types/design";
 
 /**
@@ -10,18 +11,15 @@ import type { DesignCaseWithPanels, CasePanel } from "@/lib/types/design";
  * same "no pricing in this app" decision as everywhere else. The sheet has
  * one 工数(H) value per category, not separate 見積/実動 like this app tracks
  * per panel — exported as 実動 (actual) hours, since 仕入原価・工数一覧表 reads as
- * an actual-cost/labor record rather than an estimate; flagged for
- * confirmation, not silently assumed to be final.
+ * an actual-cost/labor record rather than an estimate; confirmed correct by
+ * the user.
  */
 
 function sumHours(panels: CasePanel[], key: keyof CasePanel): number {
   return panels.reduce((total, p) => total + (typeof p[key] === "number" ? (p[key] as number) : 0), 0);
 }
 
-export async function exportCostLaborExcel(
-  year: number,
-  cases: DesignCaseWithPanels[],
-): Promise<{ fileName: string }> {
+async function buildCostLaborWorkbook(cases: DesignCaseWithPanels[]): Promise<ExcelJS.Workbook> {
   const workbook = await loadActiveTemplate("costLaborSheet");
   const ws = workbook.worksheets[0];
 
@@ -44,42 +42,21 @@ export async function exportCostLaborExcel(
     ws.getCell(`I${row}`).value = sumHours(panels, "productionActualHours");
   });
 
+  return workbook;
+}
+
+export async function exportCostLaborExcel(
+  year: number,
+  cases: DesignCaseWithPanels[],
+): Promise<{ fileName: string }> {
+  const workbook = await buildCostLaborWorkbook(cases);
   const fileName = `仕入原価・工数一覧表_${year}.xlsx`;
   await downloadWorkbook(workbook, fileName);
   return { fileName };
 }
 
-export async function exportCostLaborPdf(
-  year: number,
-  cases: DesignCaseWithPanels[],
-): Promise<{ fileName: string }> {
-  const canvas = await PdfCanvas.create();
-  canvas.title(`仕入原価・工数一覧表　${year}年`);
-
-  const sorted = cases.slice().sort((a, b) => a.case.sequenceNo - b.case.sequenceNo);
-  canvas.table(
-    ["図面番号", "管理番号", "工事番号", "件名／盤名称", "設計工数(H)", "製造工数(H)"],
-    [55, 65, 65, 160, 65, 65],
-    sorted.map(({ case: c, panels }) => [
-      c.drawingNumber,
-      c.managementNumber,
-      c.constructionNumber,
-      [
-        c.projectName,
-        panels
-          .map((p) => p.panelName)
-          .filter(Boolean)
-          .join("・"),
-      ]
-        .filter(Boolean)
-        .join("／"),
-      String(sumHours(panels, "designActualHours")),
-      String(sumHours(panels, "productionActualHours")),
-    ]),
-  );
-
-  const bytes = await canvas.save();
-  const fileName = `仕入原価・工数一覧表_${year}.pdf`;
-  downloadPdf(bytes, fileName);
-  return { fileName };
+/** Prints ⑥仕入原価・工数一覧表 in the exact layout of the currently active template. */
+export async function printCostLabor(cases: DesignCaseWithPanels[]): Promise<void> {
+  const workbook = await buildCostLaborWorkbook(cases);
+  printWorksheet(workbook.worksheets[0]);
 }

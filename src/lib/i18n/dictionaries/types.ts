@@ -334,7 +334,7 @@ export interface Dictionary {
     saveButton: string;
     savedMessage: string;
     exportExcelButton: string;
-    exportPdfButton: string;
+    printButton: string;
     exportedMessage: string;
     exportError: string;
     search: {

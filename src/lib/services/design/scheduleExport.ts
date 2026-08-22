@@ -1,7 +1,7 @@
-import type { Cell } from "exceljs";
+import type { Cell, Worksheet } from "exceljs";
 import { loadActiveTemplate, downloadWorkbook } from "./excelWorkbook";
 import { scheduleColorService } from "./scheduleColorService";
-import { PdfCanvas, downloadPdf } from "./pdfCanvas";
+import { printWorksheet } from "./excelPrintView";
 import { computeColoredSegments } from "@/lib/utils/scheduleColoring";
 import { buildCaseDisplayLabel } from "@/lib/utils/designNumbering";
 import type { CaseSchedule, DesignCaseWithPanels, ScheduleCategoryKey } from "@/lib/types/design";
@@ -64,10 +64,10 @@ const EXPORT_CATEGORY_COLOR: Partial<Record<ScheduleCategoryKey, ScheduleCategor
   box: "sheetMetal", // real template's legend has one combined "板金・BOX納入" swatch
 };
 
-export async function exportScheduleExcel(
+async function buildScheduleWorkbook(
   cases: DesignCaseWithPanels[],
   schedules: Record<string, CaseSchedule>,
-): Promise<{ fileName: string }> {
+): Promise<Worksheet> {
   const [workbook, colorConfigs] = await Promise.all([
     loadActiveTemplate("scheduleSheet"),
     scheduleColorService.list(),
@@ -95,40 +95,24 @@ export async function exportScheduleExcel(
     }
   });
 
-  const fileName = "工程表.xlsx";
-  await downloadWorkbook(workbook, fileName);
-  return { fileName };
+  return ws;
 }
 
-export async function exportSchedulePdf(
+export async function exportScheduleExcel(
   cases: DesignCaseWithPanels[],
   schedules: Record<string, CaseSchedule>,
 ): Promise<{ fileName: string }> {
-  const canvas = await PdfCanvas.create();
-  canvas.title("製作依頼～出荷　工程表");
-
-  canvas.table(
-    ["図面番号", "件名／盤名", "板金・BOX納入", "アクセサリー納入", "製作", "検査", "立会", "出荷"],
-    [55, 130, 65, 65, 60, 55, 55, 55],
-    cases.map(({ case: c, panels }) => {
-      const s = schedules[c.id];
-      const range = (start: string | null | undefined, end: string | null | undefined) =>
-        start || end ? `${start ?? ""}~${end ?? start ?? ""}` : "";
-      return [
-        c.drawingNumber,
-        buildCaseDisplayLabel(c, panels),
-        range(s?.sheetMetalOrderDate ?? s?.boxOrderDate, s?.sheetMetalDeliveryDate ?? s?.boxDeliveryDate),
-        range(s?.accessoryOrderDate, s?.accessoryDeliveryDate),
-        range(s?.productionStartDate, s?.productionEndDate),
-        range(s?.inspectionStartDate, s?.inspectionEndDate),
-        range(s?.witnessStartDate, s?.witnessEndDate),
-        range(s?.shippingStartDate, s?.shippingEndDate),
-      ];
-    }),
-  );
-
-  const bytes = await canvas.save();
-  const fileName = "工程表.pdf";
-  downloadPdf(bytes, fileName);
+  const ws = await buildScheduleWorkbook(cases, schedules);
+  const fileName = "工程表.xlsx";
+  await downloadWorkbook(ws.workbook, fileName);
   return { fileName };
+}
+
+/** Prints ⑤工程表 in the exact layout of the currently active template (same colored Gantt as the Excel download). */
+export async function printSchedule(
+  cases: DesignCaseWithPanels[],
+  schedules: Record<string, CaseSchedule>,
+): Promise<void> {
+  const ws = await buildScheduleWorkbook(cases, schedules);
+  printWorksheet(ws);
 }

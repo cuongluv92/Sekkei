@@ -1,9 +1,9 @@
 "use client";
 
-import { FileSpreadsheet, FileText, Loader2, Plus, Trash2 } from "lucide-react";
+import { FileSpreadsheet, Loader2, Plus, Printer, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
-import { designCaseService, exportDesignRequestExcel, exportDesignRequestPdf } from "@/lib/services/design";
+import { designCaseService, exportDesignRequestExcel, printDesignRequestForm } from "@/lib/services/design";
 import { SpecCombobox } from "@/components/design/SpecCombobox";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import {
@@ -125,7 +125,7 @@ export function DesignRequestForm({ caseId }: { caseId: string }) {
   const [panels, setPanels] = useState<CasePanel[]>([]);
   const [saving, setSaving] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
-  const [exportingPdf, setExportingPdf] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -195,16 +195,15 @@ export function DesignRequestForm({ caseId }: { caseId: string }) {
     }
   }
 
-  async function handleExportPdf() {
+  async function handlePrint() {
     setExportError(null);
-    setExportingPdf(true);
+    setPrinting(true);
     try {
-      const { fileName } = await exportDesignRequestPdf(caseId);
-      show(t("design.exportedMessage", { fileName }));
+      await printDesignRequestForm(caseId);
     } catch {
       setExportError(t("design.exportError"));
     } finally {
-      setExportingPdf(false);
+      setPrinting(false);
     }
   }
 
@@ -235,9 +234,9 @@ export function DesignRequestForm({ caseId }: { caseId: string }) {
             )}
             {t("design.exportExcelButton")}
           </button>
-          <button onClick={handleExportPdf} disabled={exportingPdf} className="btn-secondary">
-            {exportingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
-            {t("design.exportPdfButton")}
+          <button onClick={handlePrint} disabled={printing} className="btn-secondary">
+            {printing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
+            {t("design.printButton")}
           </button>
           <button onClick={handleSave} disabled={saving} className="btn-primary">
             {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}

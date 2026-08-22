@@ -2,6 +2,7 @@ import type ExcelJS from "exceljs";
 import { SPEC_GROUPS, WIRING_SPEC_FIELDS, type SpecFieldKey } from "@/lib/types/design";
 import { formatShortDate, loadDesignRequestPrintFields, loadProductionRequestPrintFields } from "./printFields";
 import { loadActiveTemplate, downloadWorkbook } from "./excelWorkbook";
+import { printWorksheet } from "./excelPrintView";
 
 /**
  * Cell coordinates below were confirmed by inspecting the real templates
@@ -66,7 +67,7 @@ function fillSpecs(ws: ExcelJS.Worksheet, specs: Record<string, { spec1: string;
   }
 }
 
-export async function exportDesignRequestExcel(caseId: string): Promise<{ fileName: string }> {
+async function buildDesignRequestWorkbook(caseId: string): Promise<{ workbook: ExcelJS.Workbook; drawingNumber: string }> {
   const fields = await loadDesignRequestPrintFields(caseId);
   const c = fields.case;
   const workbook = await loadActiveTemplate("designRequestForm");
@@ -97,12 +98,23 @@ export async function exportDesignRequestExcel(caseId: string): Promise<{ fileNa
   fillSpecs(ws, c.specs);
   ws.getCell("B31").value = c.designRemarks;
 
-  const fileName = `設計依頼書_${c.drawingNumber}.xlsx`;
+  return { workbook, drawingNumber: c.drawingNumber };
+}
+
+export async function exportDesignRequestExcel(caseId: string): Promise<{ fileName: string }> {
+  const { workbook, drawingNumber } = await buildDesignRequestWorkbook(caseId);
+  const fileName = `設計依頼書_${drawingNumber}.xlsx`;
   await downloadWorkbook(workbook, fileName);
   return { fileName };
 }
 
-export async function exportProductionRequestExcel(caseId: string): Promise<{ fileName: string }> {
+/** Prints ⑦設計依頼書 in the exact layout of the currently active template (same filled workbook as the Excel download). */
+export async function printDesignRequestForm(caseId: string): Promise<void> {
+  const { workbook } = await buildDesignRequestWorkbook(caseId);
+  printWorksheet(workbook.worksheets[0]);
+}
+
+async function buildProductionRequestWorkbook(caseId: string): Promise<{ workbook: ExcelJS.Workbook; drawingNumber: string }> {
   const fields = await loadProductionRequestPrintFields(caseId);
   const c = fields.case;
   const workbook = await loadActiveTemplate("productionRequestForm");
@@ -157,7 +169,18 @@ export async function exportProductionRequestExcel(caseId: string): Promise<{ fi
   ws.getCell("L33").value = fields.request.earthLeakageAlarm;
   ws.getCell("O33").value = fields.request.withstandVoltage;
 
-  const fileName = `製作依頼書_${c.drawingNumber}.xlsx`;
+  return { workbook, drawingNumber: c.drawingNumber };
+}
+
+export async function exportProductionRequestExcel(caseId: string): Promise<{ fileName: string }> {
+  const { workbook, drawingNumber } = await buildProductionRequestWorkbook(caseId);
+  const fileName = `製作依頼書_${drawingNumber}.xlsx`;
   await downloadWorkbook(workbook, fileName);
   return { fileName };
+}
+
+/** Prints ⑧製作依頼書 in the exact layout of the currently active template (same filled workbook as the Excel download). */
+export async function printProductionRequestForm(caseId: string): Promise<void> {
+  const { workbook } = await buildProductionRequestWorkbook(caseId);
+  printWorksheet(workbook.worksheets[0]);
 }
