@@ -13,6 +13,7 @@ export default function PartDrawingPage() {
       emptyMessage={t("partDrawing.tableEmpty")}
       fetchAll={() => partDrawingService.list()}
       ownerType="part_drawing"
+      onDelete={(id) => partDrawingService.moveToTrash(id)}
     />
   );
 }

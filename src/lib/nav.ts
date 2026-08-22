@@ -11,6 +11,7 @@ import {
   Activity,
   Grid2x2,
   FolderInput,
+  Trash2,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -30,6 +31,7 @@ export interface NavItem {
     | "seismicCalc"
     | "otherCalc"
     | "import"
+    | "trash"
     | "settings";
   href: string;
   icon: LucideIcon;
@@ -48,5 +50,6 @@ export const navItems: NavItem[] = [
   { key: "seismicCalc", href: "/calculations/seismic", icon: Activity },
   { key: "otherCalc", href: "/calculations/other", icon: Grid2x2 },
   { key: "import", href: "/import", icon: FolderInput },
+  { key: "trash", href: "/trash", icon: Trash2 },
   { key: "settings", href: "/settings", icon: Settings },
 ];

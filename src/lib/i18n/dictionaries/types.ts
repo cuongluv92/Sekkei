@@ -20,6 +20,7 @@ export interface Dictionary {
     seismicCalc: string;
     otherCalc: string;
     import: string;
+    trash: string;
     settings: string;
   };
   common: {
@@ -61,6 +62,10 @@ export interface Dictionary {
     selectFile: string;
     fileUploaded: string;
     uploadError: string;
+    moveToTrash: string;
+    movedToTrash: string;
+    deleteToTrashConfirm: string;
+    deleteError: string;
     analyze: string;
     import: string;
     close: string;
@@ -136,6 +141,21 @@ export interface Dictionary {
   catalog: {
     title: string;
     description: string;
+    tableEmpty: string;
+  };
+  trash: {
+    title: string;
+    description: string;
+    partDataSection: string;
+    partDrawingSection: string;
+    deletedAt: string;
+    restore: string;
+    purge: string;
+    purgeConfirm: string;
+    restored: string;
+    purged: string;
+    restoreError: string;
+    purgeError: string;
     tableEmpty: string;
   };
   calculation: {

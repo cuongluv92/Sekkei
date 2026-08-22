@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Search as SearchIcon, Upload } from "lucide-react";
+import { Loader2, Search as SearchIcon, Trash2, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { uploadPartFile } from "@/lib/services";
@@ -36,6 +36,8 @@ interface PartLibraryViewProps<T extends LibraryItem> {
   fetchAll: () => Promise<T[]>;
   /** Which owner_type file_assets rows uploaded here get attached under. */
   ownerType: FileAssetOwnerType;
+  /** Moves a row to ゴミ箱 (soft delete) — recoverable from the trash screen. */
+  onDelete: (id: string) => Promise<void>;
   showQuantity?: boolean;
   /** 部品データ only: 記号・重量 columns/detail fields (部品図 has neither field). */
   showPartDataFields?: boolean;
@@ -53,6 +55,7 @@ export function PartLibraryView<T extends LibraryItem>({
   emptyMessage,
   fetchAll,
   ownerType,
+  onDelete,
   showQuantity,
   showPartDataFields,
 }: PartLibraryViewProps<T>) {
@@ -63,6 +66,7 @@ export function PartLibraryView<T extends LibraryItem>({
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selected, setSelected] = useState<T | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { message, show } = useMockFeedback();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -119,6 +123,21 @@ export function PartLibraryView<T extends LibraryItem>({
       show(t("common.uploadError"));
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleDelete(item: T) {
+    if (!window.confirm(t("common.deleteToTrashConfirm", { model: item.model }))) return;
+    setDeletingId(item.id);
+    try {
+      await onDelete(item.id);
+      setItems((prev) => prev.filter((i) => i.id !== item.id));
+      setSelected((prev) => (prev?.id === item.id ? null : prev));
+      show(t("common.movedToTrash"));
+    } catch {
+      show(t("common.deleteError"));
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -179,13 +198,27 @@ export function PartLibraryView<T extends LibraryItem>({
     {
       key: "actions",
       header: t("common.actions"),
-      width: "220px",
+      width: "260px",
       render: (r) => (
-        <FileActions
-          files={r.files}
-          onView={() => setSelected(r)}
-          onDownload={(kind) => handleDownload(r, kind)}
-        />
+        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <FileActions
+            files={r.files}
+            onView={() => setSelected(r)}
+            onDownload={(kind) => handleDownload(r, kind)}
+          />
+          <button
+            onClick={() => handleDelete(r)}
+            disabled={deletingId === r.id}
+            title={t("common.moveToTrash")}
+            className="btn-ghost btn-icon text-danger hover:bg-danger/10"
+          >
+            {deletingId === r.id ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" />
+            )}
+          </button>
+        </div>
       ),
     },
   ];

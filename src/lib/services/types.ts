@@ -42,6 +42,14 @@ export interface PartDataRepository {
   }): Promise<PartData | null>;
   create(input: Omit<PartData, "id" | "updatedAt">): Promise<PartData>;
   update(id: string, patch: Partial<PartData>): Promise<PartData>;
+  /** Moves a row to ゴミ箱 (sets deleted_at) — recoverable via restore(), not a hard delete. */
+  moveToTrash(id: string): Promise<void>;
+  /** Lists only trashed rows (deleted_at is not null), newest deletion first. */
+  listTrashed(): Promise<PartData[]>;
+  /** Clears deleted_at, returning the row to normal listing. */
+  restore(id: string): Promise<void>;
+  /** Permanently deletes a trashed row — cannot be undone. */
+  purge(id: string): Promise<void>;
 }
 
 export interface PartDrawingRepository {
@@ -51,6 +59,14 @@ export interface PartDrawingRepository {
   findByModel(model: string): Promise<PartDrawing | null>;
   create(input: Omit<PartDrawing, "id" | "updatedAt">): Promise<PartDrawing>;
   update(id: string, patch: Partial<PartDrawing>): Promise<PartDrawing>;
+  /** Moves a row to ゴミ箱 (sets deleted_at) — recoverable via restore(), not a hard delete. */
+  moveToTrash(id: string): Promise<void>;
+  /** Lists only trashed rows (deleted_at is not null), newest deletion first. */
+  listTrashed(): Promise<PartDrawing[]>;
+  /** Clears deleted_at, returning the row to normal listing. */
+  restore(id: string): Promise<void>;
+  /** Permanently deletes a trashed row — cannot be undone. */
+  purge(id: string): Promise<void>;
 }
 
 export interface CatalogRepository {

@@ -13,6 +13,7 @@ interface PartDrawingRow {
   remarks: string | null;
   source: string;
   updated_at: string;
+  deleted_at: string | null;
 }
 
 function rowToDrawing(row: PartDrawingRow, files: PartDrawing["files"]): PartDrawing {
@@ -26,6 +27,7 @@ function rowToDrawing(row: PartDrawingRow, files: PartDrawing["files"]): PartDra
     source: row.source,
     files,
     updatedAt: row.updated_at.slice(0, 10),
+    deletedAt: row.deleted_at ? row.deleted_at.slice(0, 10) : undefined,
   };
 }
 
@@ -41,7 +43,7 @@ async function attachFiles(rows: PartDrawingRow[]): Promise<PartDrawing[]> {
 
 class SupabasePartDrawingRepository implements PartDrawingRepository {
   async search(query: string) {
-    const { data, error } = await requireSupabase().from("part_drawings").select("*");
+    const { data, error } = await requireSupabase().from("part_drawings").select("*").is("deleted_at", null);
     if (error) throw error;
     const all = await attachFiles((data ?? []) as PartDrawingRow[]);
     return rankBySearch(all, query, (p) => [p.model, p.category, p.specification, p.remarks]);
@@ -51,6 +53,7 @@ class SupabasePartDrawingRepository implements PartDrawingRepository {
     const { data, error } = await requireSupabase()
       .from("part_drawings")
       .select("*")
+      .is("deleted_at", null)
       .order("updated_at", { ascending: false });
     if (error) throw error;
     return attachFiles((data ?? []) as PartDrawingRow[]);
@@ -66,6 +69,7 @@ class SupabasePartDrawingRepository implements PartDrawingRepository {
     const { data, error } = await requireSupabase()
       .from("part_drawings")
       .select("*")
+      .is("deleted_at", null)
       .ilike("model", model.trim())
       .maybeSingle();
     if (error) throw error;
@@ -106,6 +110,34 @@ class SupabasePartDrawingRepository implements PartDrawingRepository {
       .single();
     if (error) throw error;
     return fromRow(data as PartDrawingRow);
+  }
+
+  async moveToTrash(id: string): Promise<void> {
+    const { error } = await requireSupabase()
+      .from("part_drawings")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) throw error;
+  }
+
+  async listTrashed() {
+    const { data, error } = await requireSupabase()
+      .from("part_drawings")
+      .select("*")
+      .not("deleted_at", "is", null)
+      .order("deleted_at", { ascending: false });
+    if (error) throw error;
+    return attachFiles((data ?? []) as PartDrawingRow[]);
+  }
+
+  async restore(id: string): Promise<void> {
+    const { error } = await requireSupabase().from("part_drawings").update({ deleted_at: null }).eq("id", id);
+    if (error) throw error;
+  }
+
+  async purge(id: string): Promise<void> {
+    const { error } = await requireSupabase().from("part_drawings").delete().eq("id", id);
+    if (error) throw error;
   }
 }
 

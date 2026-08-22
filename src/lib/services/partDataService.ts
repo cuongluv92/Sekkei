@@ -16,6 +16,7 @@ interface PartDataRow {
   remarks: string | null;
   source: string;
   updated_at: string;
+  deleted_at: string | null;
 }
 
 async function fromRow(row: PartDataRow): Promise<PartData> {
@@ -37,6 +38,7 @@ function rowToPart(row: PartDataRow, files: PartData["files"]): PartData {
     source: row.source,
     files,
     updatedAt: row.updated_at.slice(0, 10),
+    deletedAt: row.deleted_at ? row.deleted_at.slice(0, 10) : undefined,
   };
 }
 
@@ -47,14 +49,18 @@ async function attachFiles(rows: PartDataRow[]): Promise<PartData[]> {
 
 class SupabasePartDataRepository implements PartDataRepository {
   async search(query: string) {
-    const { data, error } = await requireSupabase().from("part_data").select("*");
+    const { data, error } = await requireSupabase().from("part_data").select("*").is("deleted_at", null);
     if (error) throw error;
     const all = await attachFiles((data ?? []) as PartDataRow[]);
     return rankBySearch(all, query, (p) => [p.model, p.symbol, p.category, p.specification, p.remarks]);
   }
 
   async list() {
-    const { data, error } = await requireSupabase().from("part_data").select("*").order("updated_at", { ascending: false });
+    const { data, error } = await requireSupabase()
+      .from("part_data")
+      .select("*")
+      .is("deleted_at", null)
+      .order("updated_at", { ascending: false });
     if (error) throw error;
     return attachFiles((data ?? []) as PartDataRow[]);
   }
@@ -79,6 +85,7 @@ class SupabasePartDataRepository implements PartDataRepository {
     let query = requireSupabase()
       .from("part_data")
       .select("*")
+      .is("deleted_at", null)
       .ilike("model", model.trim())
       .ilike("specification", specification.trim())
       .ilike("category", category.trim());
@@ -123,6 +130,34 @@ class SupabasePartDataRepository implements PartDataRepository {
     const { data, error } = await requireSupabase().from("part_data").update(row).eq("id", id).select().single();
     if (error) throw error;
     return fromRow(data as PartDataRow);
+  }
+
+  async moveToTrash(id: string): Promise<void> {
+    const { error } = await requireSupabase()
+      .from("part_data")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) throw error;
+  }
+
+  async listTrashed() {
+    const { data, error } = await requireSupabase()
+      .from("part_data")
+      .select("*")
+      .not("deleted_at", "is", null)
+      .order("deleted_at", { ascending: false });
+    if (error) throw error;
+    return attachFiles((data ?? []) as PartDataRow[]);
+  }
+
+  async restore(id: string): Promise<void> {
+    const { error } = await requireSupabase().from("part_data").update({ deleted_at: null }).eq("id", id);
+    if (error) throw error;
+  }
+
+  async purge(id: string): Promise<void> {
+    const { error } = await requireSupabase().from("part_data").delete().eq("id", id);
+    if (error) throw error;
   }
 }
 

@@ -13,6 +13,7 @@ export default function PartDataPage() {
       emptyMessage={t("partData.tableEmpty")}
       fetchAll={() => partDataService.list()}
       ownerType="part_data"
+      onDelete={(id) => partDataService.moveToTrash(id)}
       showQuantity
       showPartDataFields
     />

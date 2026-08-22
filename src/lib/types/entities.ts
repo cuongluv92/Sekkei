@@ -46,6 +46,8 @@ export interface PartData {
   source: string; // データ source (社内DB, メーカーカタログ, etc.)
   files: FileAsset[];
   updatedAt: string;
+  /** Set only on rows returned by listTrashed() — when this part was moved to ゴミ箱. */
+  deletedAt?: string;
 }
 
 /** 部品図 */
@@ -59,6 +61,8 @@ export interface PartDrawing {
   source: string;
   files: FileAsset[];
   updatedAt: string;
+  /** Set only on rows returned by listTrashed() — when this drawing was moved to ゴミ箱. */
+  deletedAt?: string;
 }
 
 /** カタログ */
