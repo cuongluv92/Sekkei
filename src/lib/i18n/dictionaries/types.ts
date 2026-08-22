@@ -39,6 +39,7 @@ export interface Dictionary {
     edit: string;
     quantity: string;
     remarks: string;
+    weight: string;
     source: string;
     kind: string;
     manufacturer: string;

@@ -40,7 +40,7 @@ export interface PartData {
   manufacturerId: string;
   model: string; // 型式
   specification: string; // 定格・仕様
-  weight?: number; // 重量 (g)
+  weight?: number; // 重量 (kg)
   quantity?: number; // 数量
   remarks?: string; // 備考
   source: string; // データ source (社内DB, メーカーカタログ, etc.)
@@ -95,6 +95,7 @@ export interface PartAssemblyRow {
 export interface SearchResultItem {
   id: string;
   source: "part-data" | "part-drawing" | "catalog";
+  symbol?: string;
   category: string;
   manufacturerId: string;
   model: string;

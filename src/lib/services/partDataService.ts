@@ -65,12 +65,25 @@ class SupabasePartDataRepository implements PartDataRepository {
     return data ? fromRow(data as PartDataRow) : null;
   }
 
-  async findByModel(model: string) {
-    const { data, error } = await requireSupabase()
+  async findExisting({
+    manufacturerId,
+    category,
+    model,
+    specification,
+  }: {
+    manufacturerId: string;
+    category: string;
+    model: string;
+    specification: string;
+  }) {
+    let query = requireSupabase()
       .from("part_data")
       .select("*")
       .ilike("model", model.trim())
-      .maybeSingle();
+      .ilike("specification", specification.trim())
+      .ilike("category", category.trim());
+    query = manufacturerId ? query.eq("manufacturer_id", manufacturerId) : query.is("manufacturer_id", null);
+    const { data, error } = await query.maybeSingle();
     if (error) throw error;
     return data ? fromRow(data as PartDataRow) : null;
   }

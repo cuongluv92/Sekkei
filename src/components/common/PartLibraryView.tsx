@@ -16,10 +16,12 @@ import type { FileAsset } from "@/lib/types";
 
 interface LibraryItem {
   id: string;
+  symbol?: string;
   category: string;
   manufacturerId: string;
   model: string;
   specification: string;
+  weight?: number;
   remarks?: string;
   quantity?: number;
   source: string;
@@ -35,6 +37,8 @@ interface PartLibraryViewProps<T extends LibraryItem> {
   /** Which owner_type file_assets rows uploaded here get attached under. */
   ownerType: FileAssetOwnerType;
   showQuantity?: boolean;
+  /** 部品データ only: 記号・重量 columns/detail fields (部品図 has neither field). */
+  showPartDataFields?: boolean;
 }
 
 /**
@@ -50,6 +54,7 @@ export function PartLibraryView<T extends LibraryItem>({
   fetchAll,
   ownerType,
   showQuantity,
+  showPartDataFields,
 }: PartLibraryViewProps<T>) {
   const { t, locale } = useTranslation();
   const [items, setItems] = useState<T[]>([]);
@@ -87,7 +92,7 @@ export function PartLibraryView<T extends LibraryItem>({
     return items.filter((i) => {
       const matchesKeyword =
         !q ||
-        [i.model, i.category, i.specification, i.remarks]
+        [i.symbol, i.model, i.category, i.specification, i.remarks]
           .filter(Boolean)
           .some((f) => f!.toLowerCase().includes(q));
       const matchesCategory = categoryFilter === "all" || i.category === categoryFilter;
@@ -118,6 +123,16 @@ export function PartLibraryView<T extends LibraryItem>({
   }
 
   const columns: DataTableColumn<T>[] = [
+    ...(showPartDataFields
+      ? [
+          {
+            key: "symbol",
+            header: t("common.symbol"),
+            width: "90px",
+            render: (r: T) => r.symbol || "—",
+          },
+        ]
+      : []),
     { key: "category", header: t("common.kind"), width: "140px" },
     {
       key: "manufacturer",
@@ -149,6 +164,17 @@ export function PartLibraryView<T extends LibraryItem>({
       width: "150px",
       render: (r) => r.remarks || "—",
     },
+    ...(showPartDataFields
+      ? [
+          {
+            key: "weight",
+            header: t("common.weight"),
+            width: "90px",
+            align: "right" as const,
+            render: (r: T) => (r.weight !== undefined ? `${r.weight} kg` : "—"),
+          },
+        ]
+      : []),
     { key: "updatedAt", header: t("common.updatedAt"), width: "110px" },
     {
       key: "actions",
@@ -230,6 +256,9 @@ export function PartLibraryView<T extends LibraryItem>({
             </div>
           </div>
           <div className="panel-body grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {showPartDataFields && (
+              <DetailField label={t("common.symbol")} value={selected.symbol || "—"} />
+            )}
             <DetailField label={t("common.kind")} value={selected.category} />
             <DetailField
               label={t("common.manufacturer")}
@@ -244,6 +273,12 @@ export function PartLibraryView<T extends LibraryItem>({
               />
             )}
             <DetailField label={t("common.remarks")} value={selected.remarks || "—"} />
+            {showPartDataFields && (
+              <DetailField
+                label={t("common.weight")}
+                value={selected.weight !== undefined ? `${selected.weight} kg` : "—"}
+              />
+            )}
             <DetailField label={t("common.source")} value={selected.source} />
             <DetailField label={t("common.updatedAt")} value={selected.updatedAt} />
           </div>

@@ -23,6 +23,7 @@ class RealSearchRepository implements SearchRepository {
     const fromData: SearchResultItem[] = dataHits.map((p) => ({
       id: p.id,
       source: "part-data",
+      symbol: p.symbol,
       category: p.category,
       manufacturerId: p.manufacturerId,
       model: p.model,

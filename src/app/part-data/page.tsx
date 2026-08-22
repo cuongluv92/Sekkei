@@ -14,6 +14,7 @@ export default function PartDataPage() {
       fetchAll={() => partDataService.list()}
       ownerType="part_data"
       showQuantity
+      showPartDataFields
     />
   );
 }

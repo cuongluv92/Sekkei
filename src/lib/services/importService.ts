@@ -1,6 +1,6 @@
 import { delay } from "@/lib/utils/async";
 import { addManufacturer, findManufacturerByName, preloadManufacturers } from "@/lib/mock/manufacturers";
-import { mapRowToRecord, parseTabularFile } from "@/lib/utils/importParsing";
+import { mapRowToRecord, parseTabularFile, type MappedImportRecord } from "@/lib/utils/importParsing";
 import { partDataService } from "./partDataService";
 import { partDrawingService } from "./partDrawingService";
 import { catalogService } from "./catalogService";
@@ -17,10 +17,31 @@ async function resolveManufacturerId(name: string | undefined): Promise<string> 
   return created.id;
 }
 
-async function findExisting(target: ImportTargetCategory, model: string) {
-  if (target === "part-data") return partDataService.findByModel(model);
-  if (target === "part-drawing") return partDrawingService.findByModel(model);
-  return catalogService.findByModel(model);
+async function findExisting(target: ImportTargetCategory, mapped: MappedImportRecord, manufacturerId: string) {
+  if (target === "part-data") {
+    return partDataService.findExisting({
+      manufacturerId,
+      category: mapped.category ?? "",
+      model: mapped.model as string,
+      specification: mapped.specification ?? "",
+    });
+  }
+  if (target === "part-drawing") return partDrawingService.findByModel(mapped.model as string);
+  return catalogService.findByModel(mapped.model as string);
+}
+
+/**
+ * 型式 alone is not a unique key for 部品データ — the same 型式 legitimately
+ * repeats with different 定格・仕様 (e.g. NF32-CVF at 3AT vs 5AT vs 30AT are
+ * different parts), so its in-file dedupe key also folds in メーカー・品名・
+ * 定格・仕様. 部品図/カタログ keep the simpler 型式-only key (unchanged).
+ */
+function dedupeKey(target: ImportTargetCategory, mapped: MappedImportRecord, manufacturerId: string): string {
+  const model = (mapped.model as string).trim().toLowerCase();
+  if (target !== "part-data") return model;
+  const category = (mapped.category ?? "").trim().toLowerCase();
+  const specification = (mapped.specification ?? "").trim().toLowerCase();
+  return [manufacturerId, category, model, specification].join("␟");
 }
 
 function diffsFromExisting(record: ImportRecord, existing: Record<string, unknown>): boolean {
@@ -47,20 +68,23 @@ async function analyzeTabular(file: File, target: ImportTargetCategory): Promise
       continue;
     }
 
-    const key = mapped.model.trim().toLowerCase();
+    const manufacturerId = await resolveManufacturerId(mapped.manufacturer);
+    const key = dedupeKey(target, mapped, manufacturerId);
     if (seenKeys.has(key)) {
       rows.push({
         id: `imp-${i}-dup`,
         label: mapped.model,
         targetCategory: target,
         status: "duplicate",
-        detail: "このファイル内で型式が重複しています",
+        detail:
+          target === "part-data"
+            ? "このファイル内でメーカー・品名・型式・定格仕様の組み合わせが重複しています"
+            : "このファイル内で型式が重複しています",
       });
       continue;
     }
     seenKeys.add(key);
 
-    const manufacturerId = await resolveManufacturerId(mapped.manufacturer);
     const record: ImportRecord = {
       symbol: mapped.symbol,
       category: mapped.category ?? "",
@@ -73,7 +97,7 @@ async function analyzeTabular(file: File, target: ImportTargetCategory): Promise
       fileName: mapped.fileName,
     };
 
-    const existing = await findExisting(target, mapped.model);
+    const existing = await findExisting(target, mapped, manufacturerId);
     if (!existing) {
       rows.push({
         id: `imp-${i}-new`,
@@ -135,7 +159,7 @@ async function analyzeFile(file: File, target: ImportTargetCategory): Promise<Im
     fileName: file.name,
   };
 
-  const existing = await findExisting(target, base);
+  const existing = await findExisting(target, { model: base, category: "", specification: "" }, "");
   if (!existing) {
     return [
       {

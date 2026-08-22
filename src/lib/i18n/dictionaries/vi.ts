@@ -37,6 +37,7 @@ const vi: Dictionary = {
     edit: "Sửa",
     quantity: "Số lượng",
     remarks: "Ghi chú",
+    weight: "Trọng lượng",
     source: "Nguồn dữ liệu",
     kind: "Loại",
     manufacturer: "Nhà sản xuất",

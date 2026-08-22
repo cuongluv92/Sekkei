@@ -28,7 +28,18 @@ export interface PartDataRepository {
   search(query: string): Promise<PartData[]>;
   list(): Promise<PartData[]>;
   getById(id: string): Promise<PartData | null>;
-  findByModel(model: string): Promise<PartData | null>;
+  /**
+   * Looks up an existing 部品データ row by identity, not by 型式 alone — the
+   * same 型式 legitimately repeats with different 定格・仕様 (e.g. NF32-CVF
+   * at 3AT vs 5AT vs 30AT are different parts), so メーカー・品名・型式・
+   * 定格・仕様 together form the match key.
+   */
+  findExisting(criteria: {
+    manufacturerId: string;
+    category: string;
+    model: string;
+    specification: string;
+  }): Promise<PartData | null>;
   create(input: Omit<PartData, "id" | "updatedAt">): Promise<PartData>;
   update(id: string, patch: Partial<PartData>): Promise<PartData>;
 }

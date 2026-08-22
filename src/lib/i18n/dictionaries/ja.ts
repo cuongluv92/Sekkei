@@ -37,6 +37,7 @@ const ja: Dictionary = {
     edit: "編集",
     quantity: "数量",
     remarks: "備考",
+    weight: "重量",
     source: "ソース",
     kind: "種類",
     manufacturer: "メーカー",

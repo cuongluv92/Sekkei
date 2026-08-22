@@ -118,6 +118,22 @@ export interface MappedImportRecord {
   fileName?: string;
 }
 
+/**
+ * Parses a 重量 cell into kg. Real catalog exports write this as "0.18kg",
+ * not a bare number — `Number("0.18kg")` is NaN, so a plain Number() cast
+ * would silently corrupt every weight on import. A "g" suffix is converted
+ * to kg; a bare number is assumed already kg. Anything that doesn't parse
+ * returns undefined rather than NaN, so an unrecognized cell just leaves
+ * 重量 blank instead of poisoning it with garbage.
+ */
+function parseWeightKg(raw: string): number | undefined {
+  const match = /^([\d.]+)\s*(kg|g)?$/i.exec(raw.trim());
+  if (!match) return undefined;
+  const value = Number(match[1]);
+  if (!Number.isFinite(value)) return undefined;
+  return match[2]?.toLowerCase() === "g" ? value / 1000 : value;
+}
+
 /** Maps one parsed spreadsheet row to normalized fields for the given target category, based only on recognized header text. */
 export function mapRowToRecord(record: ParsedRow, target: ImportTargetCategory): MappedImportRecord {
   const weightRaw = findField(record, "weight");
@@ -128,7 +144,7 @@ export function mapRowToRecord(record: ParsedRow, target: ImportTargetCategory):
     manufacturer: findField(record, "manufacturer"),
     model: findField(record, "model"),
     specification: findField(record, "specification"),
-    weight: weightRaw ? Number(weightRaw) : undefined,
+    weight: weightRaw ? parseWeightKg(weightRaw) : undefined,
     quantity: quantityRaw ? Number(quantityRaw) : undefined,
     remarks: findField(record, "remarks"),
     fileName: target === "catalog" ? findField(record, "fileName") : undefined,

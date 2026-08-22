@@ -45,15 +45,20 @@ export default function PartAssemblyPage() {
     setLoading(false);
   }
 
+  // 数量・備考 are per-project and entered by hand here — 部品データ's own
+  // 数量・備考 (if any) describe the master part record, not this project,
+  // so they intentionally aren't copied in. 重量 isn't copied in either
+  // (not used or shown in 部品製作); sourceRefId keeps the link back to
+  // 部品データ so 盤重量計算 can look weight up from there later.
   function handleAdd(item: SearchResultItem) {
     addRow({
-      symbol: "",
+      symbol: item.symbol ?? "",
       name: item.category,
       manufacturerId: item.manufacturerId,
       model: item.model,
       specification: item.specification,
-      quantity: item.quantity ?? 1,
-      remarks: item.remarks,
+      quantity: 1,
+      remarks: "",
       sourceRefId: item.id,
       sourceType: item.source,
     });
