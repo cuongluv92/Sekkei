@@ -345,6 +345,7 @@ export interface Dictionary {
       quickSearchPlaceholder: string;
       quickSearchNoResults: string;
       changeProject: string;
+      deselectProject: string;
       newProjectButton: string;
       newProjectModalTitle: string;
       projectSearchPlaceholder: string;

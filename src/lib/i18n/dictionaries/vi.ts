@@ -382,6 +382,7 @@ const vi: Dictionary = {
       quickSearchPlaceholder: "Tìm theo 件名・図面番号・管理番号・盤名称",
       quickSearchNoResults: "Không tìm thấy案件 phù hợp",
       changeProject: "Đổi",
+      deselectProject: "Bỏ chọn",
       newProjectButton: "＋ Project mới",
       newProjectModalTitle: "Project mới",
       projectSearchPlaceholder:

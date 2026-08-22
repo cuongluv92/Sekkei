@@ -381,6 +381,7 @@ const ja: Dictionary = {
       quickSearchPlaceholder: "件名・図面番号・管理番号・盤名称で検索",
       quickSearchNoResults: "該当する案件が見つかりません",
       changeProject: "変更",
+      deselectProject: "選択解除",
       newProjectButton: "＋ 新規Project",
       newProjectModalTitle: "新規Project",
       projectSearchPlaceholder:
