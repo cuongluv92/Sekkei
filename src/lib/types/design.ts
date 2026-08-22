@@ -154,13 +154,23 @@ export interface ProductionRequest {
   withstandVoltage: string; // 耐圧
 }
 
-/** 工程 milestones. Phase 3 — schema only; dates are real `YYYY-MM-DD`, never 初旬/中旬/下旬 text. */
+/**
+ * 工程 milestones. Phase 3 — schema only; dates are real `YYYY-MM-DD`, never
+ * 初旬/中旬/下旬 text. Also the single source of truth for the real ⑧製作依頼書
+ * template's ＢＯＸ/鈑金/部材/完成/出荷/納品/立会 date row (confirmed: those cells
+ * are the same "予定日" concept as the matching end-date here — edited from
+ * either 工程表 or 製作依頼書, never a separate copy) — boxManufacturer /
+ * sheetMetalManufacturer are the vendor name shown above the date in that
+ * template's BOX/鈑金 cells specifically.
+ */
 export interface CaseSchedule {
   caseId: string;
   sheetMetalOrderDate: string | null;
   sheetMetalDeliveryDate: string | null;
+  sheetMetalManufacturer: string;
   boxOrderDate: string | null;
   boxDeliveryDate: string | null;
+  boxManufacturer: string;
   accessoryOrderDate: string | null;
   accessoryDeliveryDate: string | null;
   productionStartDate: string | null;

@@ -1,6 +1,7 @@
 import { designCaseService } from "./designCaseService";
 import { productionRequestService } from "./productionRequestService";
-import type { CasePanel, DesignCase, ProductionRequest } from "@/lib/types/design";
+import { scheduleService } from "./scheduleService";
+import type { CasePanel, CaseSchedule, DesignCase, ProductionRequest } from "@/lib/types/design";
 
 /**
  * Single source of field data for BOTH the real-template Excel export and
@@ -27,17 +28,28 @@ export interface ProductionRequestPrintFields {
   case: DesignCase;
   panels: CasePanel[];
   request: ProductionRequest;
+  schedule: CaseSchedule;
+}
+
+/** "2026-08-08" -> "8/8", matching the real ⑧製作依頼書 template's own m/d cell format. */
+export function formatShortDate(iso: string | null): string {
+  if (!iso) return "";
+  const [, month, day] = iso.split("-");
+  if (!month || !day) return iso;
+  return `${Number(month)}/${Number(day)}`;
 }
 
 export async function loadProductionRequestPrintFields(caseId: string): Promise<ProductionRequestPrintFields> {
-  const [detail, request] = await Promise.all([
+  const [detail, request, schedule] = await Promise.all([
     designCaseService.getDetail(caseId),
     productionRequestService.getByCase(caseId),
+    scheduleService.getByCase(caseId),
   ]);
   if (!detail) throw new Error("case-not-found");
   return {
     case: detail.case,
     panels: detail.panels.slice().sort((a, b) => a.panelNo - b.panelNo),
     request,
+    schedule,
   };
 }

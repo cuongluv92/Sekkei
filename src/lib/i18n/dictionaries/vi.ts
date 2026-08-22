@@ -360,6 +360,18 @@ const vi: Dictionary = {
       sharedInfoHint: "Nội dung này lấy từ cùng案件 với 設計依頼書, không chỉnh sửa ở đây.",
       panelsTitle: "盤①～⑦ (thông số 製作)",
       caseFieldsTitle: "製作注意事項・検査項目",
+      scheduleTitle: "工程日程 (ngày dự kiến)",
+      scheduleHint: "Cùng dữ liệu với 工程表 — sửa ở màn nào cũng cập nhật cả hai.",
+      manufacturerPlaceholder: "Tên nhà cung cấp",
+      scheduleColumns: {
+        box: "ＢＯＸ",
+        sheetMetal: "鈑金",
+        accessory: "部材",
+        productionEnd: "完成",
+        shipping: "出荷",
+        delivery: "納品",
+        witness: "立会",
+      },
       panelColumns: {
         electricalMethod: "電気方式",
         ratedVoltage: "定格電圧",

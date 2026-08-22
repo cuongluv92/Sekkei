@@ -360,6 +360,18 @@ export interface Dictionary {
       sharedInfoHint: string;
       panelsTitle: string;
       caseFieldsTitle: string;
+      scheduleTitle: string;
+      scheduleHint: string;
+      manufacturerPlaceholder: string;
+      scheduleColumns: {
+        box: string;
+        sheetMetal: string;
+        accessory: string;
+        productionEnd: string;
+        shipping: string;
+        delivery: string;
+        witness: string;
+      };
       panelColumns: {
         electricalMethod: string;
         ratedVoltage: string;

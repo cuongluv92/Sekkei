@@ -1,5 +1,5 @@
 import { SPEC_GROUPS, WIRING_SPEC_FIELDS, type SpecFieldKey } from "@/lib/types/design";
-import { loadDesignRequestPrintFields, loadProductionRequestPrintFields } from "./printFields";
+import { formatShortDate, loadDesignRequestPrintFields, loadProductionRequestPrintFields } from "./printFields";
 import { PdfCanvas, downloadPdf } from "./pdfCanvas";
 
 /**
@@ -138,6 +138,24 @@ export async function exportProductionRequestPdf(caseId: string): Promise<{ file
       p.controlVoltage,
       p.protectionRating,
     ]),
+  );
+
+  canvas.sectionHeading("工程日程（予定日）");
+  const s = fields.schedule;
+  canvas.table(
+    ["ＢＯＸ", "鈑金", "部材", "完成", "出荷", "納品", "立会"],
+    [70, 70, 65, 65, 65, 65, 65],
+    [
+      [
+        [s.boxManufacturer, formatShortDate(s.boxDeliveryDate)].filter(Boolean).join(" "),
+        [s.sheetMetalManufacturer, formatShortDate(s.sheetMetalDeliveryDate)].filter(Boolean).join(" "),
+        formatShortDate(s.accessoryDeliveryDate),
+        formatShortDate(s.productionEndDate),
+        formatShortDate(s.shippingEndDate),
+        formatShortDate(s.deliveryDate),
+        formatShortDate(s.witnessEndDate),
+      ],
+    ],
   );
 
   canvas.sectionHeading("検査項目");

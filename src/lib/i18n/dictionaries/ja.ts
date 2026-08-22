@@ -360,6 +360,18 @@ const ja: Dictionary = {
       sharedInfoHint: "この内容は設計依頼書と同じ案件データです。ここでは編集できません。",
       panelsTitle: "盤①～⑦（製作仕様）",
       caseFieldsTitle: "製作注意事項・検査項目",
+      scheduleTitle: "工程日程（予定日）",
+      scheduleHint: "工程表と同じデータです。どちらの画面で編集しても両方に反映されます。",
+      manufacturerPlaceholder: "メーカー名",
+      scheduleColumns: {
+        box: "ＢＯＸ",
+        sheetMetal: "鈑金",
+        accessory: "部材",
+        productionEnd: "完成",
+        shipping: "出荷",
+        delivery: "納品",
+        witness: "立会",
+      },
       panelColumns: {
         electricalMethod: "電気方式",
         ratedVoltage: "定格電圧",

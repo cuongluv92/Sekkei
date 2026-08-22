@@ -1,16 +1,17 @@
 import ExcelJS from "exceljs";
 import { SPEC_GROUPS, WIRING_SPEC_FIELDS, type SpecFieldKey } from "@/lib/types/design";
-import { loadDesignRequestPrintFields, loadProductionRequestPrintFields } from "./printFields";
+import { formatShortDate, loadDesignRequestPrintFields, loadProductionRequestPrintFields } from "./printFields";
 
 /**
  * Cell coordinates below were confirmed by inspecting the real templates
  * cell-by-cell (⑦設計依頼書_2026.xlsx / ⑧製作依頼書_2026.xlsx, sheet "管理番号"),
- * not guessed. Two areas in ⑧ are intentionally left unfilled because their
- * real meaning isn't confirmed yet: the ＢＯＸ/鈑金/部材/完成/出荷/納品/立会
- * date-matrix row (15-16) and the 製造者 column (L6:M12) on 盤①〜⑦, which has
- * no corresponding field in the current schema. Row 35/36 (営業/受付/担当/
- * 検図/... + 印) is the paper stamp/approval row — deliberately left blank,
- * per the confirmed instruction that it's print-only and needs no DB field.
+ * not guessed. The ＢＯＸ/鈑金/部材/完成/出荷/納品/立会 date row (15-16) is
+ * confirmed to be the same "予定日" as the matching case_schedules end-date
+ * (shared with 工程表, never a separate copy) — see printFields.ts. The 製造者
+ * column (L6:M12) on 盤①〜⑦ is still left unfilled — no corresponding field
+ * in the schema yet, and not guessed. Row 35/36 (営業/受付/担当/検図/... + 印)
+ * is the paper stamp/approval row — deliberately left blank, per the
+ * confirmed instruction that it's print-only and needs no DB field.
  */
 
 async function loadTemplate(path: string): Promise<ExcelJS.Workbook> {
@@ -58,6 +59,13 @@ const WIRING_SPEC_ROW: Record<string, number> = {
   voltage: 20,
   terminalBlock: 24,
 };
+
+/** BOX/鈑金 cells combine a vendor name with the date on the next line (template cells are wrap-text enabled). */
+function formatVendorDate(manufacturer: string, iso: string | null): string {
+  const date = formatShortDate(iso);
+  if (manufacturer && date) return `${manufacturer}\n${date}`;
+  return manufacturer || date;
+}
 
 function fillSpecs(ws: ExcelJS.Worksheet, specs: Record<string, { spec1: string; spec2: string; spec3: string } | undefined>) {
   for (const group of SPEC_GROUPS) {
@@ -140,6 +148,15 @@ export async function exportProductionRequestExcel(caseId: string): Promise<{ fi
   }
   ws.getCell("N13").value = sumEstimated;
   ws.getCell("P13").value = sumActual;
+
+  const s = fields.schedule;
+  ws.getCell("B16").value = formatVendorDate(s.boxManufacturer, s.boxDeliveryDate);
+  ws.getCell("D16").value = formatVendorDate(s.sheetMetalManufacturer, s.sheetMetalDeliveryDate);
+  ws.getCell("F16").value = formatShortDate(s.accessoryDeliveryDate);
+  ws.getCell("J16").value = formatShortDate(s.productionEndDate);
+  ws.getCell("L16").value = formatShortDate(s.shippingEndDate);
+  ws.getCell("N16").value = formatShortDate(s.deliveryDate);
+  ws.getCell("P16").value = formatShortDate(s.witnessEndDate);
 
   ws.getCell("B18").value = fields.request.productionNotes;
 

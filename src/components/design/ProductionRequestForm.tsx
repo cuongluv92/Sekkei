@@ -8,10 +8,36 @@ import {
   exportProductionRequestExcel,
   exportProductionRequestPdf,
   productionRequestService,
+  scheduleService,
 } from "@/lib/services/design";
 import { SpecCombobox } from "@/components/design/SpecCombobox";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
-import type { CasePanel, DesignCase, ProductionRequest } from "@/lib/types/design";
+import type { CasePanel, CaseSchedule, DesignCase, ProductionRequest } from "@/lib/types/design";
+
+type ScheduleDateKey =
+  | "boxDeliveryDate"
+  | "sheetMetalDeliveryDate"
+  | "accessoryDeliveryDate"
+  | "productionEndDate"
+  | "shippingEndDate"
+  | "deliveryDate"
+  | "witnessEndDate";
+type ScheduleManufacturerKey = "boxManufacturer" | "sheetMetalManufacturer";
+
+/** ＢＯＸ/鈑金/部材/完成/出荷/納品/立会 — same case_schedules end-date fields 工程表 edits, never a separate copy (confirmed). */
+const SCHEDULE_DATE_FIELDS: {
+  key: ScheduleDateKey;
+  manufacturerKey?: ScheduleManufacturerKey;
+  labelKey: "box" | "sheetMetal" | "accessory" | "productionEnd" | "shipping" | "delivery" | "witness";
+}[] = [
+  { key: "boxDeliveryDate", manufacturerKey: "boxManufacturer", labelKey: "box" },
+  { key: "sheetMetalDeliveryDate", manufacturerKey: "sheetMetalManufacturer", labelKey: "sheetMetal" },
+  { key: "accessoryDeliveryDate", labelKey: "accessory" },
+  { key: "productionEndDate", labelKey: "productionEnd" },
+  { key: "shippingEndDate", labelKey: "shipping" },
+  { key: "deliveryDate", labelKey: "delivery" },
+  { key: "witnessEndDate", labelKey: "witness" },
+];
 
 const PANEL_ELECTRICAL_FIELDS: {
   key: keyof CasePanel;
@@ -53,6 +79,7 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
   const [designCase, setDesignCase] = useState<DesignCase | null>(null);
   const [panels, setPanels] = useState<CasePanel[]>([]);
   const [request, setRequest] = useState<ProductionRequest | null>(null);
+  const [schedule, setSchedule] = useState<CaseSchedule | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [exportingExcel, setExportingExcel] = useState(false);
@@ -63,8 +90,12 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
     let active = true;
     setLoading(true);
     setError(null);
-    Promise.all([designCaseService.getDetail(caseId), productionRequestService.getByCase(caseId)])
-      .then(([detail, req]) => {
+    Promise.all([
+      designCaseService.getDetail(caseId),
+      productionRequestService.getByCase(caseId),
+      scheduleService.getByCase(caseId),
+    ])
+      .then(([detail, req, sched]) => {
         if (!active) return;
         if (!detail) {
           setError(t("common.error"));
@@ -74,6 +105,7 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
         setDesignCase(detail.case);
         setPanels(detail.panels);
         setRequest(req);
+        setSchedule(sched);
         setLoading(false);
       })
       .catch(() => {
@@ -95,8 +127,12 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
     setRequest((prev) => (prev ? { ...prev, [key]: value } : prev));
   }
 
+  function updateSchedule<K extends keyof CaseSchedule>(key: K, value: CaseSchedule[K]) {
+    setSchedule((prev) => (prev ? { ...prev, [key]: value } : prev));
+  }
+
   async function handleSave() {
-    if (!designCase || !request || panels.length === 0) {
+    if (!designCase || !request || !schedule || panels.length === 0) {
       setSaveError(t("design.panels.empty"));
       return;
     }
@@ -105,6 +141,7 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
     try {
       await designCaseService.savePanels(designCase.id, panels);
       await productionRequestService.save(request);
+      await scheduleService.save(schedule);
       show(t("design.savedMessage"));
     } catch {
       setSaveError(t("common.error"));
@@ -142,7 +179,7 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
   if (loading) {
     return <p className="p-6 text-center text-[13px] text-muted">{t("common.loading")}</p>;
   }
-  if (error || !designCase || !request) {
+  if (error || !designCase || !request || !schedule) {
     return <p className="p-6 text-center text-[13px] text-danger">{error ?? t("common.error")}</p>;
   }
 
@@ -258,6 +295,36 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-header-compact">
+          <span className="panel-title">{t("design.production.scheduleTitle")}</span>
+        </div>
+        <div className="panel-body-compact">
+          <p className="mb-2.5 text-[12px] text-muted-2">{t("design.production.scheduleHint")}</p>
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-7">
+            {SCHEDULE_DATE_FIELDS.map((f) => (
+              <div key={f.key} className="flex flex-col gap-1.5">
+                <label className="field-label">{t(`design.production.scheduleColumns.${f.labelKey}`)}</label>
+                {f.manufacturerKey && (
+                  <input
+                    value={schedule[f.manufacturerKey]}
+                    onChange={(e) => updateSchedule(f.manufacturerKey as ScheduleManufacturerKey, e.target.value)}
+                    placeholder={t("design.production.manufacturerPlaceholder")}
+                    className="field-input py-1.5"
+                  />
+                )}
+                <input
+                  type="date"
+                  value={schedule[f.key] ?? ""}
+                  onChange={(e) => updateSchedule(f.key, e.target.value || null)}
+                  className="field-input py-1.5"
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

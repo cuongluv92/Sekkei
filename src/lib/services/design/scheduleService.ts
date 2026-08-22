@@ -18,6 +18,8 @@ interface CaseScheduleRow {
   shipping_start_date: string | null;
   shipping_end_date: string | null;
   delivery_date: string | null;
+  box_manufacturer: string;
+  sheet_metal_manufacturer: string;
 }
 
 function emptySchedule(caseId: string): CaseSchedule {
@@ -38,6 +40,8 @@ function emptySchedule(caseId: string): CaseSchedule {
     shippingStartDate: null,
     shippingEndDate: null,
     deliveryDate: null,
+    boxManufacturer: "",
+    sheetMetalManufacturer: "",
   };
 }
 
@@ -59,6 +63,8 @@ function fromRow(row: CaseScheduleRow): CaseSchedule {
     shippingStartDate: row.shipping_start_date,
     shippingEndDate: row.shipping_end_date,
     deliveryDate: row.delivery_date,
+    boxManufacturer: row.box_manufacturer,
+    sheetMetalManufacturer: row.sheet_metal_manufacturer,
   };
 }
 
@@ -80,6 +86,8 @@ function toRow(schedule: CaseSchedule) {
     shipping_start_date: schedule.shippingStartDate,
     shipping_end_date: schedule.shippingEndDate,
     delivery_date: schedule.deliveryDate,
+    box_manufacturer: schedule.boxManufacturer,
+    sheet_metal_manufacturer: schedule.sheetMetalManufacturer,
   };
 }
 
