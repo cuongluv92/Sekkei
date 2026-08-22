@@ -4,6 +4,7 @@ const ja: Dictionary = {
   app: {
     name: "oku-pro",
     tagline: "技術データ管理システム",
+    welcomeTitle: "OKU Proへようこそ",
   },
   nav: {
     search: "検索",

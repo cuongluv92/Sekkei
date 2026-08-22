@@ -4,6 +4,7 @@ import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n";
 import { PartAssemblyProvider } from "@/lib/store/PartAssemblyProvider";
 import { AppShell } from "@/components/layout/AppShell";
+import { WelcomeIntro } from "@/components/layout/WelcomeIntro";
 
 // Primary UI font for Latin text/numbers — bolder, rounder letterforms.
 // Japanese glyphs (not covered by this font) fall through to Noto Sans JP
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="h-full antialiased">
         <LanguageProvider>
+          <WelcomeIntro />
           <PartAssemblyProvider>
             <AppShell>{children}</AppShell>
           </PartAssemblyProvider>

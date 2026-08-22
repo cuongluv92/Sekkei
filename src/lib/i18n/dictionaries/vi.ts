@@ -4,6 +4,7 @@ const vi: Dictionary = {
   app: {
     name: "oku-pro",
     tagline: "Hệ thống quản lý dữ liệu kỹ thuật",
+    welcomeTitle: "Chào mừng đến với OKU Pro",
   },
   nav: {
     search: "Tra cứu",

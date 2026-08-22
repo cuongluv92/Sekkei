@@ -6,6 +6,7 @@ export interface Dictionary {
   app: {
     name: string;
     tagline: string;
+    welcomeTitle: string;
   };
   nav: {
     search: string;
