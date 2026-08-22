@@ -10,3 +10,4 @@ export { exportDesignRequestPdf, exportProductionRequestPdf } from "./pdfExport"
 export { exportDrawingLedgerExcel, exportDrawingLedgerPdf } from "./ledgerExport";
 export { exportDesignRequestIndexExcel, exportDesignRequestIndexPdf } from "./indexExport";
 export { designTemplateService } from "./designTemplateService";
+export { exportCostLaborExcel, exportCostLaborPdf } from "./costLaborExport";
