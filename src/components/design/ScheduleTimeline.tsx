@@ -1,9 +1,15 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { FileSpreadsheet, FileText, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
-import { designCaseService, scheduleColorService, scheduleService } from "@/lib/services/design";
+import {
+  designCaseService,
+  exportScheduleExcel,
+  exportSchedulePdf,
+  scheduleColorService,
+  scheduleService,
+} from "@/lib/services/design";
 import { buildCaseDisplayLabel } from "@/lib/utils/designNumbering";
 import { SCHEDULE_SEGMENTS } from "@/lib/utils/schedule";
 import {
@@ -12,6 +18,7 @@ import {
   computeColoredSegments,
   segmentCellKey,
 } from "@/lib/utils/scheduleColoring";
+import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { CaseSchedule, DesignCaseWithPanels, ScheduleColorConfig } from "@/lib/types/design";
 
 const MILESTONE_FIELDS: { key: keyof CaseSchedule; labelKey: string }[] = [
@@ -56,6 +63,9 @@ const LABEL_COL_WIDTH = 260;
  */
 export function ScheduleTimeline() {
   const { t } = useTranslation();
+  const { message, show } = useMockFeedback();
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const now = new Date();
   const [focus, setFocus] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 });
   const [cases, setCases] = useState<DesignCaseWithPanels[]>([]);
@@ -157,6 +167,30 @@ export function ScheduleTimeline() {
 
   const colorByCategory = useMemo(() => new Map(colors.map((c) => [c.category, c.color])), [colors]);
 
+  async function handleExportExcel() {
+    setExportingExcel(true);
+    try {
+      const { fileName } = await exportScheduleExcel(cases, schedules);
+      show(t("design.exportedMessage", { fileName }));
+    } catch {
+      show(t("design.exportError"));
+    } finally {
+      setExportingExcel(false);
+    }
+  }
+
+  async function handleExportPdf() {
+    setExportingPdf(true);
+    try {
+      const { fileName } = await exportSchedulePdf(cases, schedules);
+      show(t("design.exportedMessage", { fileName }));
+    } catch {
+      show(t("design.exportError"));
+    } finally {
+      setExportingPdf(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <div className="panel">
@@ -239,6 +273,18 @@ export function ScheduleTimeline() {
             </select>
             <button onClick={goToCurrentMonth} className="btn-secondary">
               {t("design.schedule.goToCurrentMonth")}
+            </button>
+            <button onClick={handleExportExcel} disabled={exportingExcel} className="btn-ghost">
+              {exportingExcel ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+              )}
+              {t("design.exportExcelButton")}
+            </button>
+            <button onClick={handleExportPdf} disabled={exportingPdf} className="btn-ghost">
+              {exportingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+              {t("design.exportPdfButton")}
             </button>
           </div>
         </div>
@@ -341,6 +387,7 @@ export function ScheduleTimeline() {
           </div>
         )}
       </div>
+      {message && <div className="text-[12px] text-success">{message}</div>}
     </div>
   );
 }
