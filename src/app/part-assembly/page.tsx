@@ -1,18 +1,15 @@
 "use client";
 
 import {
-  Check,
   CornerLeftDown,
   CornerLeftUp,
   GripVertical,
   Plus,
   Trash2,
-  X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { searchService } from "@/lib/services";
-import { projectService } from "@/lib/services/design";
 import {
   listManufacturers,
   preloadManufacturers,
@@ -24,8 +21,9 @@ import { InsertPartModal } from "@/components/common/InsertPartModal";
 import { PartMasterSearch } from "@/components/common/PartMasterSearch";
 import { ExportActions } from "@/components/common/ExportActions";
 import { PageHeader } from "@/components/common/PageHeader";
+import { ProjectSelector } from "@/components/common/ProjectSelector";
 import { Toast } from "@/components/common/Toast";
-import type { PartAssemblyRow, Project, SearchResultItem } from "@/lib/types";
+import type { PartAssemblyRow, SearchResultItem } from "@/lib/types";
 
 const BLANK_ROW: Omit<PartAssemblyRow, "id"> = {
   symbol: "",
@@ -66,6 +64,7 @@ export default function PartAssemblyPage() {
   const {
     projectId,
     setProjectId,
+    projectLoading,
     rows,
     loading: rowsLoading,
     addRow,
@@ -75,50 +74,21 @@ export default function PartAssemblyPage() {
     moveRow,
     clear,
   } = usePartAssembly();
-  const [projects, setProjects] = useState<Project[]>([]);
   const [masterItems, setMasterItems] = useState<SearchResultItem[]>([]);
   const [masterLoading, setMasterLoading] = useState(true);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [insertAt, setInsertAt] = useState<number | null>(null);
-  const [addingProject, setAddingProject] = useState(false);
-  const [newProjectName, setNewProjectName] = useState("");
-  const projectInputRef = useRef<HTMLInputElement>(null);
   const [, forceRerender] = useState(0);
   const { toast, showToast } = useToast();
   const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null);
 
   useEffect(() => {
     preloadManufacturers().then(() => forceRerender((v) => v + 1));
-    projectService.list().then((list) => {
-      setProjects(list);
-      if (!projectId && list.length > 0) setProjectId(list[0].id);
-    });
     searchService.listAll().then((list) => {
       setMasterItems(list);
       setMasterLoading(false);
     });
-    // Only run once on mount — projectId changes afterwards come from the user or persisted state.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (addingProject) projectInputRef.current?.focus();
-  }, [addingProject]);
-
-  async function handleAddProject() {
-    const name = newProjectName.trim();
-    if (!name) {
-      setAddingProject(false);
-      return;
-    }
-    const created = await projectService.create(name);
-    setProjects((prev) =>
-      [...prev, created].sort((a, b) => a.name.localeCompare(b.name, "ja")),
-    );
-    setNewProjectName("");
-    setAddingProject(false);
-    setProjectId(created.id);
-  }
 
   function handleDownload(item: SearchResultItem, kind: "dwg" | "pdf") {
     const file = findFileByKind(item.files, kind);
@@ -194,65 +164,15 @@ export default function PartAssemblyPage() {
         description={t("partAssembly.description")}
       />
 
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2.5">
-        <label className="whitespace-nowrap text-[12.5px] font-semibold text-muted">
-          {t("design.workspaceBar.projectLabel")}
-        </label>
-        <select
-          value={projectId}
-          onChange={(e) => setProjectId(e.target.value)}
-          className="field-input w-auto min-w-[180px] py-1.5"
-        >
-          <option value="">
-            {projects.length === 0
-              ? t("design.workspaceBar.noProjects")
-              : t("design.workspaceBar.projectPlaceholder")}
-          </option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+      <ProjectSelector projectId={projectId} onProjectChange={setProjectId} />
 
-        {addingProject ? (
-          <div className="flex items-center gap-1">
-            <input
-              ref={projectInputRef}
-              value={newProjectName}
-              onChange={(e) => setNewProjectName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleAddProject();
-                if (e.key === "Escape") {
-                  setNewProjectName("");
-                  setAddingProject(false);
-                }
-              }}
-              placeholder={t("design.workspaceBar.projectNamePlaceholder")}
-              className="field-input w-auto min-w-[140px] py-1.5"
-            />
-            <button onClick={handleAddProject} className="btn-ghost btn-icon">
-              <Check className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={() => {
-                setNewProjectName("");
-                setAddingProject(false);
-              }}
-              className="btn-ghost btn-icon"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
+      {projectLoading ? (
+        <div className="panel">
+          <div className="panel-body py-12 text-center text-[13px] text-muted-2">
+            {t("common.loading")}
           </div>
-        ) : (
-          <button onClick={() => setAddingProject(true)} className="btn-ghost">
-            <Plus className="h-3.5 w-3.5" />
-            {t("design.workspaceBar.addProject")}
-          </button>
-        )}
-      </div>
-
-      {!projectId ? (
+        </div>
+      ) : !projectId ? (
         <div className="panel">
           <div className="panel-body py-12 text-center text-[13px] text-muted-2">
             {t("design.workspaceBar.selectProjectFirst")}

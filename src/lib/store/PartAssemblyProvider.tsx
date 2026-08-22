@@ -10,11 +10,14 @@ import {
   type ReactNode,
 } from "react";
 import { partAssemblyService } from "@/lib/services/partAssemblyService";
+import { useActiveProject } from "@/lib/store/ActiveProjectProvider";
 import type { PartAssemblyRow } from "@/lib/types";
 
 interface PartAssemblyContextValue {
   projectId: string;
   setProjectId: (projectId: string) => void;
+  /** True until the shared active-Project selection has been restored/verified — see `ActiveProjectProvider`. */
+  projectLoading: boolean;
   rows: PartAssemblyRow[];
   loading: boolean;
   /** Resolves once the new row is persisted, rejects if `partAssemblyService.saveRows` fails — lets the caller show a success/error toast. The row is added to local state either way (no rollback on failure). Resolves with the new row's id. */
@@ -51,14 +54,13 @@ function nextId() {
  * to `partAssemblyService` immediately.
  */
 export function PartAssemblyProvider({ children }: { children: ReactNode }) {
-  const [projectId, setProjectIdState] = useState("");
+  const {
+    projectId,
+    setProjectId,
+    loading: projectLoading,
+  } = useActiveProject();
   const [rows, setRows] = useState<PartAssemblyRow[]>([]);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const last = partAssemblyService.getLastActiveProjectId();
-    if (last) setProjectIdState(last);
-  }, []);
 
   useEffect(() => {
     if (!projectId) {
@@ -85,11 +87,6 @@ export function PartAssemblyProvider({ children }: { children: ReactNode }) {
     },
     [projectId],
   );
-
-  const setProjectId = useCallback((id: string) => {
-    setProjectIdState(id);
-    partAssemblyService.setLastActiveProjectId(id);
-  }, []);
 
   const addRow = useCallback(
     (row: Omit<PartAssemblyRow, "id"> & { id?: string }) => {
@@ -171,6 +168,7 @@ export function PartAssemblyProvider({ children }: { children: ReactNode }) {
     () => ({
       projectId,
       setProjectId,
+      projectLoading,
       rows,
       loading,
       addRow,
@@ -183,6 +181,7 @@ export function PartAssemblyProvider({ children }: { children: ReactNode }) {
     [
       projectId,
       setProjectId,
+      projectLoading,
       rows,
       loading,
       addRow,

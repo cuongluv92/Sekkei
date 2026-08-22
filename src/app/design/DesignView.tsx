@@ -1,10 +1,15 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useTranslation } from "@/lib/i18n";
+import { useActiveProject } from "@/lib/store/ActiveProjectProvider";
 import { PageHeader } from "@/components/common/PageHeader";
-import { DesignTabBar, isDesignTopTab, type DesignTopTab } from "@/components/design/DesignTabBar";
+import {
+  DesignTabBar,
+  isDesignTopTab,
+  type DesignTopTab,
+} from "@/components/design/DesignTabBar";
 import { CaseWorkspaceBar } from "@/components/design/CaseWorkspaceBar";
 import { DesignRequestForm } from "@/components/design/DesignRequestForm";
 import { ProductionRequestForm } from "@/components/design/ProductionRequestForm";
@@ -27,8 +32,18 @@ export function DesignView() {
   const searchParams = useSearchParams();
 
   const tabParam = searchParams.get("tab");
-  const tab: DesignTopTab = isDesignTopTab(tabParam) ? tabParam : "designRequest";
-  const projectId = searchParams.get("project") ?? "";
+  const tab: DesignTopTab = isDesignTopTab(tabParam)
+    ? tabParam
+    : "designRequest";
+  const { projectId: activeProjectId, setProjectId: setActiveProjectId } =
+    useActiveProject();
+  // The URL is still the source of truth when it names a Project (deep
+  // links / 案件検索's "open this case" navigation keep working exactly as
+  // before) — it only falls back to the app-wide active Project when the
+  // URL doesn't say one, so switching 設計管理 → 部品製作 → 重量計算 → ... → back
+  // to 設計管理 keeps the same Project active instead of starting blank.
+  const projectIdParam = searchParams.get("project") ?? "";
+  const projectId = projectIdParam || activeProjectId;
   const caseId = searchParams.get("case") ?? "";
 
   const setParams = useCallback(
@@ -46,19 +61,31 @@ export function DesignView() {
     [router, searchParams, tab, projectId, caseId],
   );
 
+  // Broadcast the effective Project (URL-provided or restored) upward so it
+  // stays active when the user leaves 設計管理 for another module.
+  useEffect(() => {
+    if (projectId && projectId !== activeProjectId)
+      setActiveProjectId(projectId);
+  }, [projectId, activeProjectId, setActiveProjectId]);
+
   const usesWorkspace = tab === "designRequest" || tab === "productionRequest";
 
   return (
     <div className="flex flex-col gap-3">
       <PageHeader title={t("design.title")} />
-      <DesignTabBar active={tab} onChange={(nextTab) => setParams({ tab: nextTab })} />
+      <DesignTabBar
+        active={tab}
+        onChange={(nextTab) => setParams({ tab: nextTab })}
+      />
 
       {usesWorkspace && (
         <>
           <CaseWorkspaceBar
             projectId={projectId}
             caseId={caseId}
-            onProjectChange={(nextProject) => setParams({ project: nextProject, case: "" })}
+            onProjectChange={(nextProject) =>
+              setParams({ project: nextProject, case: "" })
+            }
             onCaseChange={(nextCase) => setParams({ case: nextCase })}
             allowCreate={tab === "designRequest"}
           />
@@ -78,10 +105,16 @@ export function DesignView() {
 
       {tab === "drawingRegister" && <CaseLedgerTable />}
       {tab === "designIndexKeio" && (
-        <DesignRequestIndexTable kind="keio" filter={({ case: c }) => c.indexCategory === "keio"} />
+        <DesignRequestIndexTable
+          kind="keio"
+          filter={({ case: c }) => c.indexCategory === "keio"}
+        />
       )}
       {tab === "designIndexOther" && (
-        <DesignRequestIndexTable kind="other" filter={({ case: c }) => c.indexCategory !== "keio"} />
+        <DesignRequestIndexTable
+          kind="other"
+          filter={({ case: c }) => c.indexCategory !== "keio"}
+        />
       )}
       {tab === "schedule" && <ScheduleTimeline />}
       {tab === "costLabor" && <CostLaborTable />}

@@ -333,9 +333,6 @@ export interface Dictionary {
     };
     workspaceBar: {
       currentProjectLabel: string;
-      projectLabel: string;
-      projectPlaceholder: string;
-      addProject: string;
       projectNamePlaceholder: string;
       caseLabel: string;
       casePlaceholder: string;
@@ -347,6 +344,12 @@ export interface Dictionary {
       selectCasePrompt: string;
       quickSearchPlaceholder: string;
       quickSearchNoResults: string;
+      changeProject: string;
+      newProjectButton: string;
+      newProjectModalTitle: string;
+      projectSearchPlaceholder: string;
+      projectNotFound: string;
+      createButton: string;
     };
     newCaseForm: {
       title: string;

@@ -369,9 +369,6 @@ const ja: Dictionary = {
     },
     workspaceBar: {
       currentProjectLabel: "現在のProject",
-      projectLabel: "Project",
-      projectPlaceholder: "Projectを選択",
-      addProject: "Project追加",
       projectNamePlaceholder: "Project名を入力",
       caseLabel: "案件",
       casePlaceholder: "案件を選択",
@@ -383,6 +380,13 @@ const ja: Dictionary = {
       selectCasePrompt: "案件を選択すると詳細が表示されます",
       quickSearchPlaceholder: "件名・図面番号・管理番号・盤名称で検索",
       quickSearchNoResults: "該当する案件が見つかりません",
+      changeProject: "変更",
+      newProjectButton: "＋ 新規Project",
+      newProjectModalTitle: "新規Project",
+      projectSearchPlaceholder:
+        "図面番号・管理番号・工事番号・件名・盤名称で検索",
+      projectNotFound: "選択したProjectが見つかりません",
+      createButton: "作成",
     },
     newCaseForm: {
       title: "新規案件",

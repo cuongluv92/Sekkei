@@ -1,8 +1,5 @@
 import { requireSupabase } from "@/lib/supabase/client";
-import { loadFromStorage, saveToStorage } from "@/lib/utils/localStore";
 import type { PartAssemblyRow } from "@/lib/types";
-
-const ACTIVE_PROJECT_KEY = "sekkei.partAssembly.activeProject";
 
 interface PartAssemblyRow_DB {
   id: string;
@@ -79,20 +76,15 @@ export const partAssemblyService = {
 
   async saveRows(projectId: string, rows: PartAssemblyRow[]): Promise<void> {
     const client = requireSupabase();
-    const { error: deleteError } = await client.from("part_assembly_rows").delete().eq("project_id", projectId);
+    const { error: deleteError } = await client
+      .from("part_assembly_rows")
+      .delete()
+      .eq("project_id", projectId);
     if (deleteError) throw deleteError;
     if (rows.length === 0) return;
     const { error: insertError } = await client
       .from("part_assembly_rows")
       .insert(rows.map((r, i) => toRow(projectId, i, r)));
     if (insertError) throw insertError;
-  },
-
-  getLastActiveProjectId(): string {
-    return loadFromStorage<string>(ACTIVE_PROJECT_KEY, "");
-  },
-
-  setLastActiveProjectId(projectId: string): void {
-    saveToStorage(ACTIVE_PROJECT_KEY, projectId);
   },
 };

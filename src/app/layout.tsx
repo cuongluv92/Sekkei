@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Noto_Sans_JP, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n";
+import { ActiveProjectProvider } from "@/lib/store/ActiveProjectProvider";
 import { PartAssemblyProvider } from "@/lib/store/PartAssemblyProvider";
 import { AppShell } from "@/components/layout/AppShell";
 import { WelcomeIntro } from "@/components/layout/WelcomeIntro";
@@ -42,9 +43,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="h-full antialiased">
         <LanguageProvider>
           <WelcomeIntro />
-          <PartAssemblyProvider>
-            <AppShell>{children}</AppShell>
-          </PartAssemblyProvider>
+          <ActiveProjectProvider>
+            <PartAssemblyProvider>
+              <AppShell>{children}</AppShell>
+            </PartAssemblyProvider>
+          </ActiveProjectProvider>
         </LanguageProvider>
       </body>
     </html>

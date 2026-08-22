@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { PageHeader } from "@/components/common/PageHeader";
 import { ProjectSelector } from "@/components/common/ProjectSelector";
-import { useCalculationProject } from "@/lib/store/CalculationProjectProvider";
+import { useActiveProject } from "@/lib/store/ActiveProjectProvider";
 import { BasicWeightCalc } from "@/components/calculation/BasicWeightCalc";
 import { PanelWeightCalc } from "@/components/calculation/PanelWeightCalc";
 
@@ -27,7 +27,11 @@ export function WeightCalculationView() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const tab: WeightTopTab = isWeightTopTab(tabParam) ? tabParam : "basic";
-  const { projectId, setProjectId } = useCalculationProject();
+  const {
+    projectId,
+    setProjectId,
+    loading: projectLoading,
+  } = useActiveProject();
 
   function setTab(next: WeightTopTab) {
     const params = new URLSearchParams(searchParams.toString());
@@ -65,7 +69,13 @@ export function WeightCalculationView() {
         </div>
       </div>
 
-      {!projectId ? (
+      {projectLoading ? (
+        <div className="panel">
+          <div className="panel-body py-12 text-center text-[13px] text-muted-2">
+            {t("common.loading")}
+          </div>
+        </div>
+      ) : !projectId ? (
         <div className="panel">
           <div className="panel-body py-12 text-center text-[13px] text-muted-2">
             {t("design.workspaceBar.selectProjectFirst")}

@@ -370,9 +370,6 @@ const vi: Dictionary = {
     },
     workspaceBar: {
       currentProjectLabel: "現在のProject",
-      projectLabel: "Project",
-      projectPlaceholder: "Chọn Project",
-      addProject: "Project追加",
       projectNamePlaceholder: "Nhập tên Project",
       caseLabel: "案件",
       casePlaceholder: "Chọn案件",
@@ -384,6 +381,13 @@ const vi: Dictionary = {
       selectCasePrompt: "Chọn案件 để xem chi tiết",
       quickSearchPlaceholder: "Tìm theo 件名・図面番号・管理番号・盤名称",
       quickSearchNoResults: "Không tìm thấy案件 phù hợp",
+      changeProject: "Đổi",
+      newProjectButton: "＋ Project mới",
+      newProjectModalTitle: "Project mới",
+      projectSearchPlaceholder:
+        "Tìm theo 図面番号・管理番号・工事番号・件名・盤名称",
+      projectNotFound: "Không tìm thấy Project đã chọn",
+      createButton: "Tạo",
     },
     newCaseForm: {
       title: "Tạo案件 mới",

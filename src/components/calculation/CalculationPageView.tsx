@@ -13,7 +13,7 @@ import { CalculationResult } from "@/components/calculation/CalculationResult";
 import { ExportActions } from "@/components/common/ExportActions";
 import { PageHeader } from "@/components/common/PageHeader";
 import { ProjectSelector } from "@/components/common/ProjectSelector";
-import { useCalculationProject } from "@/lib/store/CalculationProjectProvider";
+import { useActiveProject } from "@/lib/store/ActiveProjectProvider";
 import type { CalculationDefinition, CalculationTemplate } from "@/lib/types";
 
 interface CalculationPageViewProps {
@@ -38,7 +38,11 @@ export function CalculationPageView({
   description,
 }: CalculationPageViewProps) {
   const { t } = useTranslation();
-  const { projectId, setProjectId } = useCalculationProject();
+  const {
+    projectId,
+    setProjectId,
+    loading: projectLoading,
+  } = useActiveProject();
   const [definition, setDefinition] = useState<CalculationDefinition | null>(
     null,
   );
@@ -119,7 +123,13 @@ export function CalculationPageView({
 
       <ProjectSelector projectId={projectId} onProjectChange={setProjectId} />
 
-      {!projectId ? (
+      {projectLoading ? (
+        <div className="panel">
+          <div className="panel-body py-12 text-center text-[13px] text-muted-2">
+            {t("common.loading")}
+          </div>
+        </div>
+      ) : !projectId ? (
         <div className="panel">
           <div className="panel-body py-12 text-center text-[13px] text-muted-2">
             {t("design.workspaceBar.selectProjectFirst")}
