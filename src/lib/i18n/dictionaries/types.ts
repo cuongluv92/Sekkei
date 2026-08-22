@@ -19,6 +19,7 @@ export interface Dictionary {
     weightCalc: string;
     ventilationCalc: string;
     seismicCalc: string;
+    busbarCalc: string;
     otherCalc: string;
     import: string;
     trash: string;
@@ -238,11 +239,59 @@ export interface Dictionary {
     title: string;
     description: string;
   };
+  busbarCalc: {
+    title: string;
+    description: string;
+    modeAuto: string;
+    modeManual: string;
+    ratedCurrentLabel: string;
+    requiredAreaLabel: string;
+    densityLabel: string;
+    recommendedLabel: string;
+    actualAreaLabel: string;
+    actualDensityLabel: string;
+    marginLabel: string;
+    judgmentLabel: string;
+    judgmentOk: string;
+    judgmentCaution: string;
+    judgmentNg: string;
+    ngMessage: string;
+    cautionMessage: string;
+    outOfRangeTitle: string;
+    outOfRangeDescription: string;
+    highCurrentModeTitle: string;
+    highCurrentNotAvailable: string;
+    thicknessLabel: string;
+    widthLabel: string;
+    barsLabel: string;
+    barsUnit: string;
+    manualTargetCurrentLabel: string;
+    manualHint: string;
+    formulaSectionTitle: string;
+    areaFormula: string;
+    densityFormula: string;
+    requiredAreaFormula: string;
+    basisSectionTitle: string;
+    standardLabel: string;
+    editionLabel: string;
+    referenceLabel: string;
+    applicabilityLabel: string;
+    materialStandardLabel: string;
+    verifiedBadge: string;
+    unverifiedBadge: string;
+    candidatesTitle: string;
+    noCandidates: string;
+    noSizesConfigured: string;
+    enterCurrentPrompt: string;
+    adoptButton: string;
+    adoptedLabel: string;
+    adoptedAt: string;
+    saved: string;
+  };
   otherCalc: {
     title: string;
     description: string;
     modules: {
-      busbar: string;
       earthWire: string;
     };
     addModuleHint: string;
@@ -648,6 +697,16 @@ export interface Dictionary {
     columns: {
       name: string;
       density: string;
+    };
+  };
+  busbarSizeSettings: {
+    title: string;
+    description: string;
+    addButton: string;
+    emptyList: string;
+    columns: {
+      thickness: string;
+      width: string;
     };
   };
   backupSettings: {

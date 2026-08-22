@@ -9,6 +9,7 @@ export { calculationService } from "./calculationService";
 export { calculationTemplateService } from "./calculationTemplateService";
 export { partTemplateService } from "./partTemplateService";
 export { weightMaterialService } from "./weightMaterialService";
+export { busbarSizeService } from "./busbarSizeService";
 export { weightShapeImageService } from "./weightShapeImageService";
 export { calculationRecordService } from "./calculationRecordService";
 export { uploadPartFile } from "./fileUploadService";

@@ -4,7 +4,10 @@ import { Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { calculationDefinitions } from "@/lib/mock/calculationDefinitions";
-import { calculationTemplateService, partTemplateService } from "@/lib/services";
+import {
+  calculationTemplateService,
+  partTemplateService,
+} from "@/lib/services";
 import { getPublicUrl } from "@/lib/supabase/storage";
 import { LanguageSwitcher } from "@/components/settings/LanguageSwitcher";
 import { MasterListEditor } from "@/components/design/MasterListEditor";
@@ -14,9 +17,14 @@ import { BackupSettings } from "@/components/settings/BackupSettings";
 import { SelectionRuleSettings } from "@/components/settings/SelectionRuleSettings";
 import { TemplateManagementSettings } from "@/components/settings/TemplateManagementSettings";
 import { WeightMaterialSettings } from "@/components/settings/WeightMaterialSettings";
+import { BusbarSizeSettings } from "@/components/settings/BusbarSizeSettings";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
-import type { CalculationTemplate, PartTemplate, PartTemplateKind } from "@/lib/types";
+import type {
+  CalculationTemplate,
+  PartTemplate,
+  PartTemplateKind,
+} from "@/lib/types";
 
 const PART_TEMPLATE_KINDS: { kind: PartTemplateKind; accept: string }[] = [
   { kind: "excel", accept: ".xlsx,.xls" },
@@ -25,15 +33,21 @@ const PART_TEMPLATE_KINDS: { kind: PartTemplateKind; accept: string }[] = [
 
 export default function SettingsPage() {
   const { t, locale } = useTranslation();
-  const [templates, setTemplates] = useState<Record<string, CalculationTemplate>>({});
-  const [partTemplates, setPartTemplates] = useState<Record<string, PartTemplate>>({});
+  const [templates, setTemplates] = useState<
+    Record<string, CalculationTemplate>
+  >({});
+  const [partTemplates, setPartTemplates] = useState<
+    Record<string, PartTemplate>
+  >({});
   const { message, show } = useMockFeedback();
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const partFileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     calculationTemplateService.list().then((list) => {
-      setTemplates(Object.fromEntries(list.map((tpl) => [tpl.calculationKey, tpl])));
+      setTemplates(
+        Object.fromEntries(list.map((tpl) => [tpl.calculationKey, tpl])),
+      );
     });
     partTemplateService.list().then((list) => {
       setPartTemplates(Object.fromEntries(list.map((tpl) => [tpl.kind, tpl])));
@@ -61,7 +75,9 @@ export default function SettingsPage() {
           <span className="panel-title">{t("settings.languageSection")}</span>
         </div>
         <div className="panel-body flex flex-col gap-3">
-          <p className="text-[12px] text-muted">{t("settings.languageDescription")}</p>
+          <p className="text-[12px] text-muted">
+            {t("settings.languageDescription")}
+          </p>
           <LanguageSwitcher />
         </div>
       </div>
@@ -77,7 +93,9 @@ export default function SettingsPage() {
 
       <div className="panel">
         <div className="panel-header">
-          <span className="panel-title">{t("scheduleColorSettings.title")}</span>
+          <span className="panel-title">
+            {t("scheduleColorSettings.title")}
+          </span>
         </div>
         <div className="panel-body">
           <ScheduleColorSettings />
@@ -89,7 +107,10 @@ export default function SettingsPage() {
           <span className="panel-title">{t("partSettings.title")}</span>
         </div>
         <div className="panel-body flex flex-col gap-5">
-          <MasterListEditor keys={["category", "symbol"]} namespace="partSettings" />
+          <MasterListEditor
+            keys={["category", "symbol"]}
+            namespace="partSettings"
+          />
           <div className="border-t border-border pt-4">
             <span className="mb-2 block text-[13px] font-bold text-foreground">
               {t("partSettings.manufacturers.title")}
@@ -110,10 +131,21 @@ export default function SettingsPage() {
 
       <div className="panel">
         <div className="panel-header">
-          <span className="panel-title">{t("weightMaterialSettings.title")}</span>
+          <span className="panel-title">
+            {t("weightMaterialSettings.title")}
+          </span>
         </div>
         <div className="panel-body">
           <WeightMaterialSettings />
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-header">
+          <span className="panel-title">{t("busbarSizeSettings.title")}</span>
+        </div>
+        <div className="panel-body">
+          <BusbarSizeSettings />
         </div>
       </div>
 
@@ -128,7 +160,9 @@ export default function SettingsPage() {
 
       <div className="panel">
         <div className="panel-header">
-          <span className="panel-title">{t("settings.templateManagement.title")}</span>
+          <span className="panel-title">
+            {t("settings.templateManagement.title")}
+          </span>
         </div>
         <div className="panel-body">
           <TemplateManagementSettings />
@@ -137,48 +171,12 @@ export default function SettingsPage() {
 
       <div className="panel">
         <div className="panel-header">
-          <span className="panel-title">{t("settings.calcSection")}</span>
-        </div>
-        <div className="panel-body flex flex-col gap-3">
-          <p className="text-[12px] text-muted">{t("settings.calcDescription")}</p>
-          <div className="data-table-wrap">
-            <table className="data-table" style={{ minWidth: 500 }}>
-              <thead>
-                <tr>
-                  <th>{t("common.name")}</th>
-                  <th style={{ width: "130px" }}>{t("common.status")}</th>
-                  <th style={{ width: "120px" }} />
-                </tr>
-              </thead>
-              <tbody>
-                {calculationDefinitions.map((def) => (
-                  <tr key={def.id}>
-                    <td>{locale === "vi" && def.nameVi ? def.nameVi : def.name}</td>
-                    <td>
-                      <span className="badge-warning">{t("settings.formulaEmpty")}</span>
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => show(t("common.notImplemented"))}
-                        className="btn-ghost"
-                      >
-                        {t("settings.configureButton")}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header">
           <span className="panel-title">{t("settings.templateSection")}</span>
         </div>
         <div className="panel-body flex flex-col gap-3">
-          <p className="text-[12px] text-muted">{t("settings.templateDescription")}</p>
+          <p className="text-[12px] text-muted">
+            {t("settings.templateDescription")}
+          </p>
           <div className="data-table-wrap">
             <table className="data-table" style={{ minWidth: 560 }}>
               <thead>
@@ -193,7 +191,9 @@ export default function SettingsPage() {
                   const tpl = templates[def.key];
                   return (
                     <tr key={def.id}>
-                      <td>{locale === "vi" && def.nameVi ? def.nameVi : def.name}</td>
+                      <td>
+                        {locale === "vi" && def.nameVi ? def.nameVi : def.name}
+                      </td>
                       <td className={tpl ? "text-foreground" : "text-muted-2"}>
                         {tpl ? tpl.fileName : t("settings.templateEmpty")}
                       </td>
@@ -230,10 +230,14 @@ export default function SettingsPage() {
 
       <div className="panel">
         <div className="panel-header">
-          <span className="panel-title">{t("settings.partTemplateSection")}</span>
+          <span className="panel-title">
+            {t("settings.partTemplateSection")}
+          </span>
         </div>
         <div className="panel-body flex flex-col gap-3">
-          <p className="text-[12px] text-muted">{t("settings.partTemplateDescription")}</p>
+          <p className="text-[12px] text-muted">
+            {t("settings.partTemplateDescription")}
+          </p>
           <div className="data-table-wrap">
             <table className="data-table" style={{ minWidth: 480 }}>
               <thead>
@@ -248,7 +252,11 @@ export default function SettingsPage() {
                   const tpl = partTemplates[kind];
                   return (
                     <tr key={kind}>
-                      <td>{kind === "excel" ? t("settings.kindExcel") : t("settings.kindDwg")}</td>
+                      <td>
+                        {kind === "excel"
+                          ? t("settings.kindExcel")
+                          : t("settings.kindDwg")}
+                      </td>
                       <td className={tpl ? "text-foreground" : "text-muted-2"}>
                         {tpl ? (
                           <a

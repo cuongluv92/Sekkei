@@ -1,10 +1,17 @@
 import type { CalculationDefinition } from "@/lib/types";
 
 /**
- * Placeholder input/output shape for each calculation module. None of these
- * carry real formulas yet (`hasFormula: false`) — they only exist so the
- * generic calculation UI has something to render. Real fields, formulas and
- * result columns will be registered from 設定 > 計算設定 later.
+ * Placeholder input/output shape for calculation modules that still use the
+ * generic Project→入力→計算→保存 shell (`CalculationPageView`). None of
+ * these carry real formulas (`hasFormula: false` — this generic mock
+ * `calculate()` never computes anything real; see calculationService.ts).
+ * A module with a real, standard-backed formula (計算式/計算過程/根拠規格)
+ * graduates out of this registry into its own bespoke component instead —
+ * see 重量計算 (`BasicWeightCalc`/`WeightShapeCalcSection`) and 母線銅帯
+ * (`src/components/calculation/busbar/*`, `src/lib/calc/busbar/*`) for that
+ * pattern. There is no Settings UI to "register a formula" here — technical
+ * formulas are implemented in code with tests and a cited standard/source,
+ * never user-entered (see `src/lib/calc/technicalSource.ts`).
  */
 export const calculationDefinitions: CalculationDefinition[] = [
   {
@@ -54,27 +61,6 @@ export const calculationDefinitions: CalculationDefinition[] = [
     hasFormula: false,
   },
   {
-    id: "calc-busbar",
-    key: "busbar",
-    name: "母線銅帯",
-    nameVi: "Thanh cái đồng",
-    description: "母線銅帯のサイズを計算します。",
-    descriptionVi: "Tính kích thước thanh cái đồng.",
-    inputFields: [
-      { key: "current", label: "定格電流", unit: "A", type: "number" },
-      { key: "phase", label: "相数", type: "select", options: [
-        { label: "単相", labelVi: "1 pha", value: "1p" },
-        { label: "三相", labelVi: "3 pha", value: "3p" },
-      ] },
-    ],
-    resultColumns: [
-      { key: "size", label: "銅帯サイズ" },
-      { key: "count", label: "本数" },
-      { key: "remarks", label: "備考" },
-    ],
-    hasFormula: false,
-  },
-  {
     id: "calc-earth-wire",
     key: "earth-wire",
     name: "アース電線サイズ",
@@ -82,8 +68,18 @@ export const calculationDefinitions: CalculationDefinition[] = [
     description: "アース電線サイズを計算します。",
     descriptionVi: "Tính kích thước dây tiếp đất.",
     inputFields: [
-      { key: "breakerCapacity", label: "遮断器定格", unit: "A", type: "number" },
-      { key: "wireMaterial", label: "電線材質", type: "text", placeholder: "例）IV" },
+      {
+        key: "breakerCapacity",
+        label: "遮断器定格",
+        unit: "A",
+        type: "number",
+      },
+      {
+        key: "wireMaterial",
+        label: "電線材質",
+        type: "text",
+        placeholder: "例）IV",
+      },
     ],
     resultColumns: [
       { key: "size", label: "電線サイズ" },
@@ -93,6 +89,8 @@ export const calculationDefinitions: CalculationDefinition[] = [
   },
 ];
 
-export function getCalculationDefinition(key: string): CalculationDefinition | undefined {
+export function getCalculationDefinition(
+  key: string,
+): CalculationDefinition | undefined {
   return calculationDefinitions.find((c) => c.key === key);
 }

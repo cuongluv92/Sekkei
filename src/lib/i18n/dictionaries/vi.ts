@@ -17,6 +17,7 @@ const vi: Dictionary = {
     weightCalc: "Tính trọng lượng",
     ventilationCalc: "Tính thông gió",
     seismicCalc: "Tính chống động đất",
+    busbarCalc: "Tính thanh cái đồng",
     otherCalc: "Tính toán khác",
     import: "Nhập dữ liệu",
     trash: "Thùng rác",
@@ -266,11 +267,65 @@ const vi: Dictionary = {
     title: "Tính chống động đất",
     description: "Tính cường độ chịu động đất và phương án cố định.",
   },
+  busbarCalc: {
+    title: "Tính thanh cái đồng",
+    description:
+      "Tự động chọn hoặc kiểm tra thủ công kích thước thanh cái đồng (busbar).",
+    modeAuto: "自動選定",
+    modeManual: "手動検証",
+    ratedCurrentLabel: "定格電流 I",
+    requiredAreaLabel: "必要断面積",
+    densityLabel: "電流密度",
+    recommendedLabel: "推奨銅帯",
+    actualAreaLabel: "実断面積",
+    actualDensityLabel: "実電流密度",
+    marginLabel: "余裕率",
+    judgmentLabel: "判定",
+    judgmentOk: "OK",
+    judgmentCaution: "注意",
+    judgmentNg: "NG",
+    ngMessage: "必要電流{current}Aに対して許容電流が不足しています",
+    cautionMessage: "使用可能ですが過大です",
+    outOfRangeTitle: "JIS C 8480 の簡易選定範囲外",
+    outOfRangeDescription:
+      "定格電流が630Aを超えているため、簡易電流密度法（JIS C 8480）は適用できません。高電流選定が必要です。",
+    highCurrentModeTitle: "高電流選定",
+    highCurrentNotAvailable:
+      "JSIA-T1006等の原資料が未入手・未検証のため、630A超の計算はこのシステムでは現在実装されていません（Phase 3で対応予定）。数値を捏造しての表示は行いません。",
+    thicknessLabel: "厚さ t (mm)",
+    widthLabel: "幅 W (mm)",
+    barsLabel: "本数 n",
+    barsUnit: "本",
+    manualTargetCurrentLabel: "検証対象の定格電流（任意）",
+    manualHint:
+      "厚さ・幅・本数を入力すると、その構成が要件を満たすかすぐに確認できます。",
+    formulaSectionTitle: "計算式",
+    areaFormula: "総断面積　A = t × W × n",
+    densityFormula: "電流密度　J = I / A",
+    requiredAreaFormula: "必要断面積 = 定格電流 / 電流密度",
+    basisSectionTitle: "計算根拠",
+    standardLabel: "規格",
+    editionLabel: "版",
+    referenceLabel: "項目",
+    applicabilityLabel: "適用範囲",
+    materialStandardLabel: "材料規格",
+    verifiedBadge: "確認済み",
+    unverifiedBadge: "要確認",
+    candidatesTitle: "候補",
+    noCandidates:
+      "条件を満たす候補が見つかりません。並列本数や銅帯選定マスタを見直してください。",
+    noSizesConfigured:
+      "銅帯選定マスタにサイズが登録されていません。設定 > 銅帯選定マスタ から登録してください。",
+    enterCurrentPrompt: "Nhập 定格電流 để hiện候補",
+    adoptButton: "この構成を採用",
+    adoptedLabel: "採用済み",
+    adoptedAt: "採用日時",
+    saved: "保存済み",
+  },
   otherCalc: {
     title: "Tính toán khác",
     description: "Các module tính toán khác.",
     modules: {
-      busbar: "Thanh cái đồng",
       earthWire: "Kích thước dây tiếp đất",
     },
     addModuleHint:
@@ -694,6 +749,17 @@ const vi: Dictionary = {
     columns: {
       name: "材質名",
       density: "比重",
+    },
+  },
+  busbarSizeSettings: {
+    title: "銅帯選定マスタ",
+    description:
+      "Quản lý các kích thước銅帯 (厚さ・幅) công ty thường dùng, phục vụ tìm kiếm candidate ở 母線銅帯 > 自動選定. Đây là selection master của công ty, không phải giá trị tiêu chuẩn kỹ thuật.",
+    addButton: "Thêm kích thước",
+    emptyList: "Chưa có kích thước銅帯 nào",
+    columns: {
+      thickness: "厚さ t (mm)",
+      width: "幅 W (mm)",
     },
   },
   backupSettings: {

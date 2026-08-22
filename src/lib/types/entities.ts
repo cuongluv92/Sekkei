@@ -211,6 +211,21 @@ export interface WeightMaterial {
   order: number;
 }
 
+/**
+ * 銅帯選定マスタ — company-preferred copper busbar dimensions (社内選定マスタ,
+ * see spec: this is company preference data, not a technical/standard
+ * value, so it starts empty and is entered via 設定 > 銅帯選定マスタ, same
+ * policy as WeightMaterial above). 母線銅帯's Auto mode searches this list
+ * at 1..N parallel bars per phase to propose candidates — the master only
+ * stores one bar's own dimensions, never a fixed 本数.
+ */
+export interface BusbarSize {
+  id: string;
+  thicknessMm: number; // 厚さ t (mm)
+  widthMm: number; // 幅 W (mm)
+  order: number;
+}
+
 export type PartTemplateKind = "excel" | "dwg";
 
 /** An uploaded export template for 部品製作 (Excel出力 / DWG出力), independent of the calculation templates above. Stored in Supabase Storage (part-templates/<kind>.<ext>), never bundled in the app. */
@@ -244,7 +259,13 @@ export interface ImportFallback {
  * スキップ (skip): user-excluded, or an unresolved "update" row (safe default).
  * エラー (error): a required field (型式) could not be read from the row.
  */
-export type ImportRowStatus = "new" | "existing" | "update" | "duplicate" | "skip" | "error";
+export type ImportRowStatus =
+  | "new"
+  | "existing"
+  | "update"
+  | "duplicate"
+  | "skip"
+  | "error";
 
 /** One row analyzed from an imported file, before the user confirms. */
 export interface ImportRow {

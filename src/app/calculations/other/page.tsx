@@ -6,23 +6,30 @@ import { CalculationPageView } from "@/components/calculation/CalculationPageVie
 import { PageHeader } from "@/components/common/PageHeader";
 
 /**
- * Registry of 他計算 modules. Adding a new "other calculation" later means
+ * Registry of 他計算 modules still on the generic mock calculation shell.
+ * 母線銅帯 graduated out of this registry into its own real module (see
+ * `/calculations/busbar`) — this now only holds modules without a real,
+ * standard-backed formula yet. Adding another placeholder module means
  * appending one entry here plus a matching `CalculationDefinition` in
- * `lib/mock/calculationDefinitions.ts` — no other code changes.
+ * `lib/mock/calculationDefinitions.ts`; a module with a real formula should
+ * follow 母線銅帯/重量計算's bespoke-component pattern instead.
  */
 const OTHER_CALC_MODULES = [
-  { key: "busbar", labelKey: "otherCalc.modules.busbar" as const },
   { key: "earth-wire", labelKey: "otherCalc.modules.earthWire" as const },
 ];
 
 export default function OtherCalculationPage() {
   const { t } = useTranslation();
   const [active, setActive] = useState(OTHER_CALC_MODULES[0].key);
-  const activeModule = OTHER_CALC_MODULES.find((m) => m.key === active) ?? OTHER_CALC_MODULES[0];
+  const activeModule =
+    OTHER_CALC_MODULES.find((m) => m.key === active) ?? OTHER_CALC_MODULES[0];
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title={t("otherCalc.title")} description={t("otherCalc.description")} />
+      <PageHeader
+        title={t("otherCalc.title")}
+        description={t("otherCalc.description")}
+      />
 
       <div className="flex flex-wrap items-center gap-2 border-b border-border pb-2">
         {OTHER_CALC_MODULES.map((m) => (
@@ -38,7 +45,9 @@ export default function OtherCalculationPage() {
             {t(m.labelKey)}
           </button>
         ))}
-        <span className="ml-auto text-[11px] text-muted-2">{t("otherCalc.addModuleHint")}</span>
+        <span className="ml-auto text-[11px] text-muted-2">
+          {t("otherCalc.addModuleHint")}
+        </span>
       </div>
 
       <CalculationPageView
