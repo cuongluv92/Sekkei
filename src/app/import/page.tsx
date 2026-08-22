@@ -1,9 +1,12 @@
 "use client";
 
 import { CheckCircle2, Loader2, Upload } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
-import { importService } from "@/lib/services";
+import { importService, partDataService, partDrawingService, catalogService } from "@/lib/services";
+import { listManufacturers, preloadManufacturers } from "@/lib/mock/manufacturers";
+import { distinctCategories } from "@/lib/utils/partSearch";
+import { Combobox } from "@/components/common/Combobox";
 import { ImportPreview } from "@/components/import/ImportPreview";
 import { PageHeader } from "@/components/common/PageHeader";
 import type { ImportFileType, ImportRow, ImportTargetCategory } from "@/lib/types";
@@ -29,17 +32,33 @@ export default function ImportPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [target, setTarget] = useState<ImportTargetCategory>("part-data");
+  const [fallbackManufacturer, setFallbackManufacturer] = useState("");
+  const [fallbackCategory, setFallbackCategory] = useState("");
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [step, setStep] = useState<Step>("select");
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [result, setResult] = useState<{ imported: number; skipped: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [, forceRerender] = useState(0);
+
+  useEffect(() => {
+    preloadManufacturers().then(() => forceRerender((v) => v + 1));
+    Promise.all([partDataService.list(), partDrawingService.list(), catalogService.list()]).then(
+      ([dataRows, drawingRows, catalogRows]) => {
+        setCategoryOptions(distinctCategories([...dataRows, ...drawingRows, ...catalogRows]));
+      },
+    );
+  }, []);
 
   async function handleAnalyze() {
     if (!file) return;
     setStep("analyzing");
     setError(null);
     try {
-      const analyzed = await importService.analyze(file, inferFileType(file.name), target);
+      const analyzed = await importService.analyze(file, inferFileType(file.name), target, {
+        manufacturer: fallbackManufacturer || undefined,
+        category: fallbackCategory || undefined,
+      });
       setRows(analyzed);
       setStep("preview");
     } catch {
@@ -95,6 +114,30 @@ export default function ImportPage() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="rounded-md border border-border bg-surface-2 p-3">
+            <p className="mb-2.5 text-[12px] text-muted">{t("importPage.fallbackSectionTitle")}</p>
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <div>
+                <label className="field-label">{t("common.manufacturer")}</label>
+                <Combobox
+                  options={listManufacturers().map((m) => m.name)}
+                  value={fallbackManufacturer}
+                  onChange={setFallbackManufacturer}
+                  placeholder={t("importPage.fallbackManufacturerPlaceholder")}
+                />
+              </div>
+              <div>
+                <label className="field-label">{t("common.categoryFilterLabel")}</label>
+                <Combobox
+                  options={categoryOptions}
+                  value={fallbackCategory}
+                  onChange={setFallbackCategory}
+                  placeholder={t("importPage.fallbackCategoryPlaceholder")}
+                />
+              </div>
+            </div>
           </div>
 
           <button

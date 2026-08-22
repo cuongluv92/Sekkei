@@ -2,6 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { getManufacturerName } from "@/lib/mock/manufacturers";
 import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import type { ImportRow, ImportRowStatus } from "@/lib/types";
@@ -15,12 +16,6 @@ const STATUS_LABEL_KEY: Record<ImportRowStatus, string> = {
   error: "importPage.statusError",
 };
 
-const TARGET_LABEL_KEY = {
-  "part-data": "importPage.targets.partData",
-  "part-drawing": "importPage.targets.partDrawing",
-  catalog: "importPage.targets.catalog",
-} as const;
-
 interface ImportPreviewProps {
   rows: ImportRow[];
   onRowsChange: (rows: ImportRow[]) => void;
@@ -32,10 +27,13 @@ interface ImportPreviewProps {
  * Every row here is a proposal, not a write — nothing reaches the database
  * until 確定. "更新候補" rows default to `action: "skip"` (never auto-applied);
  * the user must explicitly flip each one to 更新する before confirming,
- * matching "conflict → the user chooses, never guessed".
+ * matching "conflict → the user chooses, never guessed". Shows the fully
+ * resolved 記号・品名・メーカー・型式・定格・仕様・重量 (Excel value, or the
+ * Import screen's fallback, or 未設定/未分類) so the user can see up front
+ * whether the auto-classification landed correctly, per spec item 6.
  */
 export function ImportPreview({ rows, onRowsChange, onConfirm, confirming }: ImportPreviewProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   const counts = rows.reduce(
     (acc, r) => ({ ...acc, [r.status]: acc[r.status] + 1 }),
@@ -50,19 +48,55 @@ export function ImportPreview({ rows, onRowsChange, onConfirm, confirming }: Imp
     onRowsChange(rows.map((r) => (r.id === id ? { ...r, action } : r)));
   }
 
+  function field(row: ImportRow, key: string): string {
+    const v = row.record?.[key];
+    return v === undefined || v === "" ? "" : String(v);
+  }
+
   const columns: DataTableColumn<ImportRow>[] = [
-    { key: "label", header: t("common.model") },
-    { key: "target", header: t("importPage.targetLabel"), render: (r) => t(TARGET_LABEL_KEY[r.targetCategory]) },
+    { key: "symbol", header: t("common.symbol"), width: "90px", render: (r) => field(r, "symbol") || "—" },
+    {
+      key: "category",
+      header: t("common.categoryFilterLabel"),
+      width: "130px",
+      render: (r) => field(r, "category") || t("common.uncategorized"),
+    },
+    {
+      key: "manufacturer",
+      header: t("common.manufacturer"),
+      width: "130px",
+      render: (r) => {
+        const id = field(r, "manufacturerId");
+        return id ? getManufacturerName(id, locale) : t("common.unsetManufacturer");
+      },
+    },
+    {
+      key: "model",
+      header: t("common.model"),
+      width: "120px",
+      render: (r) => <span className="font-mono text-[12px]">{r.label}</span>,
+    },
+    { key: "specification", header: t("common.specification"), width: "160px", render: (r) => field(r, "specification") || "—" },
+    {
+      key: "weight",
+      header: t("common.weight"),
+      width: "80px",
+      align: "right",
+      render: (r) => {
+        const w = field(r, "weight");
+        return w ? `${w} kg` : "—";
+      },
+    },
     {
       key: "status",
       header: t("common.status"),
-      width: "130px",
+      width: "110px",
       render: (r) => <StatusBadge status={r.status} label={t(STATUS_LABEL_KEY[r.status])} />,
     },
     {
       key: "action",
       header: t("importPage.updateActionLabel"),
-      width: "140px",
+      width: "130px",
       render: (r) =>
         r.status === "update" ? (
           <select

@@ -10,9 +10,11 @@ interface PartAssemblyContextValue {
   rows: PartAssemblyRow[];
   loading: boolean;
   addRow: (row: Omit<PartAssemblyRow, "id"> & { id?: string }) => void;
+  /** Inserts at an exact position (clamped to [0, length]) instead of always appending — for 上に追加/下に追加 and "insert from master here". */
+  insertRowAt: (index: number, row: Omit<PartAssemblyRow, "id"> & { id?: string }) => void;
   removeRow: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
-  updateRemarks: (id: string, remarks: string) => void;
+  /** Project-side override of any editable field (記号/品名/メーカー/型式/定格・仕様/数量/備考) — never writes back to 部品データ master. */
+  updateField: (id: string, patch: Partial<PartAssemblyRow>) => void;
   moveRow: (fromIndex: number, toIndex: number) => void;
   clear: () => void;
 }
@@ -84,6 +86,19 @@ export function PartAssemblyProvider({ children }: { children: ReactNode }) {
     [projectId],
   );
 
+  const insertRowAt = useCallback(
+    (index: number, row: Omit<PartAssemblyRow, "id"> & { id?: string }) => {
+      setRows((prev) => {
+        const clamped = Math.max(0, Math.min(index, prev.length));
+        const next = [...prev];
+        next.splice(clamped, 0, { ...row, id: row.id ?? nextId() });
+        if (projectId) partAssemblyService.saveRows(projectId, next);
+        return next;
+      });
+    },
+    [projectId],
+  );
+
   const removeRow = useCallback(
     (id: string) => {
       setRows((prev) => {
@@ -95,21 +110,10 @@ export function PartAssemblyProvider({ children }: { children: ReactNode }) {
     [projectId],
   );
 
-  const updateQuantity = useCallback(
-    (id: string, quantity: number) => {
+  const updateField = useCallback(
+    (id: string, patch: Partial<PartAssemblyRow>) => {
       setRows((prev) => {
-        const next = prev.map((r) => (r.id === id ? { ...r, quantity } : r));
-        if (projectId) partAssemblyService.saveRows(projectId, next);
-        return next;
-      });
-    },
-    [projectId],
-  );
-
-  const updateRemarks = useCallback(
-    (id: string, remarks: string) => {
-      setRows((prev) => {
-        const next = prev.map((r) => (r.id === id ? { ...r, remarks } : r));
+        const next = prev.map((r) => (r.id === id ? { ...r, ...patch } : r));
         if (projectId) partAssemblyService.saveRows(projectId, next);
         return next;
       });
@@ -148,13 +152,13 @@ export function PartAssemblyProvider({ children }: { children: ReactNode }) {
       rows,
       loading,
       addRow,
+      insertRowAt,
       removeRow,
-      updateQuantity,
-      updateRemarks,
+      updateField,
       moveRow,
       clear,
     }),
-    [projectId, setProjectId, rows, loading, addRow, removeRow, updateQuantity, updateRemarks, moveRow, clear],
+    [projectId, setProjectId, rows, loading, addRow, insertRowAt, removeRow, updateField, moveRow, clear],
   );
 
   return <PartAssemblyContext.Provider value={value}>{children}</PartAssemblyContext.Provider>;

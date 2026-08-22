@@ -1,16 +1,18 @@
 "use client";
 
-import { Loader2, Search as SearchIcon, Trash2, Upload } from "lucide-react";
+import { Loader2, Trash2, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { uploadPartFile } from "@/lib/services";
-import { getManufacturerName, preloadManufacturers } from "@/lib/mock/manufacturers";
+import { getManufacturerName, listManufacturers, preloadManufacturers } from "@/lib/mock/manufacturers";
 import { findFileByKind, openFileAsset } from "@/lib/utils/fileDownload";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
 import { FileActions } from "@/components/common/FileActions";
 import { FilePreview } from "@/components/common/FilePreview";
 import { PageHeader } from "@/components/common/PageHeader";
+import { PartFilterBar, type PartFilterBarValue } from "@/components/common/PartFilterBar";
+import { distinctCategories, matchesPartFilters } from "@/lib/utils/partSearch";
 import type { FileAssetOwnerType } from "@/lib/services/fileAssetService";
 import type { FileAsset } from "@/lib/types";
 
@@ -62,8 +64,12 @@ export function PartLibraryView<T extends LibraryItem>({
   const { t, locale } = useTranslation();
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
-  const [keyword, setKeyword] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [filters, setFilters] = useState<PartFilterBarValue>({
+    manufacturerId: "",
+    category: "",
+    keyword: "",
+    specification: "",
+  });
   const [selected, setSelected] = useState<T | null>(null);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -89,20 +95,12 @@ export function PartLibraryView<T extends LibraryItem>({
     };
   }, [fetchAllOnce]);
 
-  const categories = useMemo(() => Array.from(new Set(items.map((i) => i.category))), [items]);
+  const categories = useMemo(() => distinctCategories(items), [items]);
 
-  const filtered = useMemo(() => {
-    const q = keyword.trim().toLowerCase();
-    return items.filter((i) => {
-      const matchesKeyword =
-        !q ||
-        [i.symbol, i.model, i.category, i.specification, i.remarks]
-          .filter(Boolean)
-          .some((f) => f!.toLowerCase().includes(q));
-      const matchesCategory = categoryFilter === "all" || i.category === categoryFilter;
-      return matchesKeyword && matchesCategory;
-    });
-  }, [items, keyword, categoryFilter]);
+  const filtered = useMemo(
+    () => items.filter((i) => matchesPartFilters(i, filters)),
+    [items, filters],
+  );
 
   function handleDownload(item: T, kind: FileAsset["kind"]) {
     const file = findFileByKind(item.files, kind);
@@ -152,12 +150,17 @@ export function PartLibraryView<T extends LibraryItem>({
           },
         ]
       : []),
-    { key: "category", header: t("common.kind"), width: "140px" },
+    {
+      key: "category",
+      header: t("common.kind"),
+      width: "140px",
+      render: (r) => r.category || t("common.uncategorized"),
+    },
     {
       key: "manufacturer",
       header: t("common.manufacturer"),
       width: "150px",
-      render: (r) => getManufacturerName(r.manufacturerId, locale),
+      render: (r) => (r.manufacturerId ? getManufacturerName(r.manufacturerId, locale) : t("common.unsetManufacturer")),
     },
     {
       key: "model",
@@ -227,29 +230,13 @@ export function PartLibraryView<T extends LibraryItem>({
     <div className="flex flex-col gap-4">
       <PageHeader title={title} description={description} />
 
-      <div className="flex flex-wrap gap-2">
-        <div className="relative max-w-xs flex-1">
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-2" />
-          <input
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder={t("common.search")}
-            className="field-input pl-8"
-          />
-        </div>
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="field-input max-w-[180px]"
-        >
-          <option value="all">{t("common.all")}</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-      </div>
+      <PartFilterBar
+        value={filters}
+        onChange={setFilters}
+        manufacturers={listManufacturers()}
+        categories={categories}
+        locale={locale}
+      />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="panel overflow-hidden">
@@ -292,10 +279,14 @@ export function PartLibraryView<T extends LibraryItem>({
             {showPartDataFields && (
               <DetailField label={t("common.symbol")} value={selected.symbol || "—"} />
             )}
-            <DetailField label={t("common.kind")} value={selected.category} />
+            <DetailField label={t("common.kind")} value={selected.category || t("common.uncategorized")} />
             <DetailField
               label={t("common.manufacturer")}
-              value={getManufacturerName(selected.manufacturerId, locale)}
+              value={
+                selected.manufacturerId
+                  ? getManufacturerName(selected.manufacturerId, locale)
+                  : t("common.unsetManufacturer")
+              }
             />
             <DetailField label={t("common.model")} value={selected.model} />
             <DetailField label={t("common.specification")} value={selected.specification} />

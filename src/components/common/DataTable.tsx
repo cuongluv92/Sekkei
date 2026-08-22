@@ -17,6 +17,7 @@ export interface DataTableProps<T> {
   rows: T[];
   rowKey: (row: T) => string;
   onRowClick?: (row: T) => void;
+  onRowDoubleClick?: (row: T) => void;
   selectedRowKey?: string | null;
   loading?: boolean;
   emptyMessage?: string;
@@ -33,6 +34,7 @@ export function DataTable<T>({
   rows,
   rowKey,
   onRowClick,
+  onRowDoubleClick,
   selectedRowKey,
   loading,
   emptyMessage,
@@ -75,6 +77,7 @@ export function DataTable<T>({
                 <tr
                   key={key}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  onDoubleClick={onRowDoubleClick ? () => onRowDoubleClick(row) : undefined}
                   className={`${onRowClick ? "cursor-pointer" : ""} ${
                     selectedRowKey === key ? "is-selected" : ""
                   }`}

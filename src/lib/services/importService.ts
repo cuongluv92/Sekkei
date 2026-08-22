@@ -1,10 +1,10 @@
 import { delay } from "@/lib/utils/async";
 import { addManufacturer, findManufacturerByName, preloadManufacturers } from "@/lib/mock/manufacturers";
-import { mapRowToRecord, parseTabularFile, type MappedImportRecord } from "@/lib/utils/importParsing";
+import { mapRowToRecord, parseTabularFile } from "@/lib/utils/importParsing";
 import { partDataService } from "./partDataService";
 import { partDrawingService } from "./partDrawingService";
 import { catalogService } from "./catalogService";
-import type { ImportFileType, ImportRow, ImportTargetCategory } from "@/lib/types";
+import type { ImportFallback, ImportFileType, ImportRow, ImportTargetCategory } from "@/lib/types";
 import type { ImportRepository } from "./types";
 
 type ImportRecord = NonNullable<ImportRow["record"]>;
@@ -17,17 +17,18 @@ async function resolveManufacturerId(name: string | undefined): Promise<string> 
   return created.id;
 }
 
-async function findExisting(target: ImportTargetCategory, mapped: MappedImportRecord, manufacturerId: string) {
+async function findExisting(
+  target: ImportTargetCategory,
+  model: string,
+  category: string,
+  specification: string,
+  manufacturerId: string,
+) {
   if (target === "part-data") {
-    return partDataService.findExisting({
-      manufacturerId,
-      category: mapped.category ?? "",
-      model: mapped.model as string,
-      specification: mapped.specification ?? "",
-    });
+    return partDataService.findExisting({ manufacturerId, category, model, specification });
   }
-  if (target === "part-drawing") return partDrawingService.findByModel(mapped.model as string);
-  return catalogService.findByModel(mapped.model as string);
+  if (target === "part-drawing") return partDrawingService.findByModel(model);
+  return catalogService.findByModel(model);
 }
 
 /**
@@ -36,19 +37,35 @@ async function findExisting(target: ImportTargetCategory, mapped: MappedImportRe
  * different parts), so its in-file dedupe key also folds in メーカー・品名・
  * 定格・仕様. 部品図/カタログ keep the simpler 型式-only key (unchanged).
  */
-function dedupeKey(target: ImportTargetCategory, mapped: MappedImportRecord, manufacturerId: string): string {
-  const model = (mapped.model as string).trim().toLowerCase();
-  if (target !== "part-data") return model;
-  const category = (mapped.category ?? "").trim().toLowerCase();
-  const specification = (mapped.specification ?? "").trim().toLowerCase();
-  return [manufacturerId, category, model, specification].join("␟");
+function dedupeKey(
+  target: ImportTargetCategory,
+  model: string,
+  category: string,
+  specification: string,
+  manufacturerId: string,
+): string {
+  const m = model.trim().toLowerCase();
+  if (target !== "part-data") return m;
+  return [manufacturerId, category.trim().toLowerCase(), m, specification.trim().toLowerCase()].join("␟");
 }
 
 function diffsFromExisting(record: ImportRecord, existing: Record<string, unknown>): boolean {
   return Object.entries(record).some(([key, value]) => value !== undefined && existing[key] !== value);
 }
 
-async function analyzeTabular(file: File, target: ImportTargetCategory): Promise<ImportRow[]> {
+/**
+ * メーカー/分類 priority per row: the file's own value always wins when
+ * present; `fallback` (chosen/typed once on the Import screen) only fills
+ * in rows the file left blank; if both are blank it's simply 未設定/未分類
+ * ("" — the UI renders that as 未設定/未分類, not an error). This is what
+ * lets a fully-tagged file import with zero clicks while a bare 型式・仕様
+ * file still gets sensibly bucketed via one fallback choice.
+ */
+async function analyzeTabular(
+  file: File,
+  target: ImportTargetCategory,
+  fallback?: ImportFallback,
+): Promise<ImportRow[]> {
   await preloadManufacturers();
   const parsed = await parseTabularFile(file);
   const seenKeys = new Set<string>();
@@ -68,8 +85,11 @@ async function analyzeTabular(file: File, target: ImportTargetCategory): Promise
       continue;
     }
 
-    const manufacturerId = await resolveManufacturerId(mapped.manufacturer);
-    const key = dedupeKey(target, mapped, manufacturerId);
+    const manufacturerId = await resolveManufacturerId(mapped.manufacturer || fallback?.manufacturer);
+    const category = mapped.category || fallback?.category || "";
+    const specification = mapped.specification ?? "";
+
+    const key = dedupeKey(target, mapped.model, category, specification, manufacturerId);
     if (seenKeys.has(key)) {
       rows.push({
         id: `imp-${i}-dup`,
@@ -87,17 +107,17 @@ async function analyzeTabular(file: File, target: ImportTargetCategory): Promise
 
     const record: ImportRecord = {
       symbol: mapped.symbol,
-      category: mapped.category ?? "",
+      category,
       manufacturerId,
       model: mapped.model,
-      specification: mapped.specification ?? "",
+      specification,
       weight: mapped.weight,
       quantity: mapped.quantity,
       remarks: mapped.remarks,
       fileName: mapped.fileName,
     };
 
-    const existing = await findExisting(target, mapped, manufacturerId);
+    const existing = await findExisting(target, mapped.model, category, specification, manufacturerId);
     if (!existing) {
       rows.push({
         id: `imp-${i}-new`,
@@ -136,8 +156,12 @@ async function analyzeTabular(file: File, target: ImportTargetCategory): Promise
   return rows;
 }
 
-/** DWG/PDF/image cannot be parsed for structured fields client-side — register one row from the filename (型式 candidate) instead of guessing content. */
-async function analyzeFile(file: File, target: ImportTargetCategory): Promise<ImportRow[]> {
+/** DWG/PDF/image cannot be parsed for structured fields client-side — register one row from the filename (型式 candidate) instead of guessing content; メーカー/分類 come entirely from the Import screen's fallback since there's no per-row source data at all. */
+async function analyzeFile(
+  file: File,
+  target: ImportTargetCategory,
+  fallback?: ImportFallback,
+): Promise<ImportRow[]> {
   const base = file.name.replace(/\.[^./]+$/, "").trim();
   if (!base) {
     return [
@@ -151,15 +175,19 @@ async function analyzeFile(file: File, target: ImportTargetCategory): Promise<Im
     ];
   }
 
+  await preloadManufacturers();
+  const manufacturerId = await resolveManufacturerId(fallback?.manufacturer);
+  const category = fallback?.category || "";
+
   const record: ImportRecord = {
-    category: "",
-    manufacturerId: "",
+    category,
+    manufacturerId,
     model: base,
     specification: "",
     fileName: file.name,
   };
 
-  const existing = await findExisting(target, { model: base, category: "", specification: "" }, "");
+  const existing = await findExisting(target, base, category, "", manufacturerId);
   if (!existing) {
     return [
       {
@@ -251,11 +279,12 @@ class RealImportRepository implements ImportRepository {
     file: File,
     fileType: ImportFileType,
     targetCategory: ImportTargetCategory,
+    fallback?: ImportFallback,
   ): Promise<ImportRow[]> {
     if (fileType === "excel") {
-      return analyzeTabular(file, targetCategory);
+      return analyzeTabular(file, targetCategory, fallback);
     }
-    return analyzeFile(file, targetCategory);
+    return analyzeFile(file, targetCategory, fallback);
   }
 
   async confirmImport(rows: ImportRow[]): Promise<{ imported: number; skipped: number }> {

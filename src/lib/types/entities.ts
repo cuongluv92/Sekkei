@@ -224,6 +224,18 @@ export interface PartTemplate {
 
 export type ImportFileType = "excel" | "dwg" | "pdf" | "image";
 export type ImportTargetCategory = "part-data" | "part-drawing" | "catalog";
+
+/**
+ * User-chosen メーカー/分類 applied to a row only when the source file
+ * doesn't supply that field itself — Excel's own per-row value always wins
+ * when present. Both are plain names (not ids): メーカー gets resolved to a
+ * manufacturer id (creating one if it's new) the same way an in-file value
+ * would be; 分類/品名 has no master table, it's just text on the record.
+ */
+export interface ImportFallback {
+  manufacturer?: string;
+  category?: string;
+}
 /**
  * 新規 (new): key not found — will be created.
  * 既存 (existing): key found and every mapped field already matches — no action needed.

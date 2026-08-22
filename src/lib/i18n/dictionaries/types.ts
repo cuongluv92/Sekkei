@@ -77,6 +77,14 @@ export interface Dictionary {
     preview: string;
     detail: string;
     filter: string;
+    allManufacturers: string;
+    allCategories: string;
+    categoryFilterLabel: string;
+    unsetManufacturer: string;
+    uncategorized: string;
+    specificationFilterPlaceholder: string;
+    keywordFilterPlaceholder: string;
+    newCategoryPlaceholder: string;
     all: string;
     status: string;
     result: string;
@@ -128,6 +136,13 @@ export interface Dictionary {
     tableEmpty: string;
     addRow: string;
     reorderHint: string;
+    addedToList: string;
+    doubleClickHint: string;
+    insertAbove: string;
+    insertBelow: string;
+    insertBlankOption: string;
+    insertFromMasterOption: string;
+    selectPartModalTitle: string;
   };
   partData: {
     title: string;
@@ -237,6 +252,9 @@ export interface Dictionary {
     step4: string;
     dropHint: string;
     targetLabel: string;
+    fallbackSectionTitle: string;
+    fallbackManufacturerPlaceholder: string;
+    fallbackCategoryPlaceholder: string;
     targets: {
       partData: string;
       partDrawing: string;

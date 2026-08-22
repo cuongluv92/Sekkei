@@ -10,7 +10,10 @@ interface SearchResultListProps {
   results: SearchResultItem[];
   loading?: boolean;
   selectedKey?: string | null;
+  /** Single click — select/highlight only, never adds anything. */
   onSelect: (item: SearchResultItem) => void;
+  /** Double click — the only way to add a row on 部品製作 (see PartAssembly spec item 15). Optional: 検索 page has no "add" concept. */
+  onAdd?: (item: SearchResultItem) => void;
   onDownload: (item: SearchResultItem, kind: "dwg" | "pdf") => void;
   emptyMessage?: string;
 }
@@ -25,12 +28,19 @@ export function SearchResultList({
   loading,
   selectedKey,
   onSelect,
+  onAdd,
   onDownload,
   emptyMessage,
 }: SearchResultListProps) {
   const { t, locale } = useTranslation();
 
   const columns: DataTableColumn<SearchResultItem>[] = [
+    {
+      key: "symbol",
+      header: t("common.symbol"),
+      width: "90px",
+      render: (row) => row.symbol || "—",
+    },
     {
       key: "sourceType",
       header: t("common.source"),
@@ -91,6 +101,7 @@ export function SearchResultList({
       rows={results}
       rowKey={(row) => `${row.source}-${row.id}`}
       onRowClick={onSelect}
+      onRowDoubleClick={onAdd}
       selectedRowKey={selectedKey ?? undefined}
       loading={loading}
       emptyMessage={emptyMessage}

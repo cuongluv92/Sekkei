@@ -2,6 +2,7 @@ import type {
   Catalog,
   CalculationDefinition,
   CalculationTemplate,
+  ImportFallback,
   ImportFileType,
   ImportRow,
   ImportTargetCategory,
@@ -84,8 +85,10 @@ export interface ManufacturerRepository {
 }
 
 export interface SearchRepository {
-  /** Searches 部品データ and 部品図 together, exact-match style on model/keyword. */
+  /** Searches 部品データ・部品図・カタログ together, exact-match style on model/keyword. */
   search(query: string): Promise<SearchResultItem[]>;
+  /** Every non-trashed row across 部品データ・部品図・カタログ, unfiltered — for client-side filter bars (メーカー/分類/仕様 combined with AND). */
+  listAll(): Promise<SearchResultItem[]>;
 }
 
 export interface SelectionRepository {
@@ -122,7 +125,12 @@ export interface ImportRepository {
    * the real part-data/part-drawing/catalog repositories. Never writes
    * anything — that only happens in `confirmImport`.
    */
-  analyze(file: File, fileType: ImportFileType, targetCategory: ImportTargetCategory): Promise<ImportRow[]>;
+  analyze(
+    file: File,
+    fileType: ImportFileType,
+    targetCategory: ImportTargetCategory,
+    fallback?: ImportFallback,
+  ): Promise<ImportRow[]>;
   confirmImport(rows: ImportRow[]): Promise<{ imported: number; skipped: number }>;
 }
 
