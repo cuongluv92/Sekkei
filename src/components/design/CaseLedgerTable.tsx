@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { FileSpreadsheet, FileText, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
-import { designCaseService } from "@/lib/services/design";
+import { designCaseService, exportDrawingLedgerExcel, exportDrawingLedgerPdf } from "@/lib/services/design";
+import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { CaseStatus, DesignCaseWithPanels } from "@/lib/types/design";
 
 /** Row background per ②図面管理台帳 H1 legend — real colors from the template, not invented. */
@@ -31,8 +33,10 @@ interface CaseLedgerTableProps {
 export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
   const { t } = useTranslation();
   const router = useRouter();
+  const { message, show } = useMockFeedback();
   const [items, setItems] = useState<DesignCaseWithPanels[] | null>(null);
   const [query, setQuery] = useState("");
+  const [exportingKey, setExportingKey] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -86,6 +90,30 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
       }));
   }, [filtered]);
 
+  async function handleExportExcel(year: number, cases: DesignCaseWithPanels[]) {
+    setExportingKey(`${year}-excel`);
+    try {
+      const { fileName } = await exportDrawingLedgerExcel(year, cases);
+      show(t("design.exportedMessage", { fileName }));
+    } catch {
+      show(t("design.exportError"));
+    } finally {
+      setExportingKey(null);
+    }
+  }
+
+  async function handleExportPdf(year: number, cases: DesignCaseWithPanels[]) {
+    setExportingKey(`${year}-pdf`);
+    try {
+      const { fileName } = await exportDrawingLedgerPdf(year, cases);
+      show(t("design.exportedMessage", { fileName }));
+    } catch {
+      show(t("design.exportError"));
+    } finally {
+      setExportingKey(null);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <div className="panel">
@@ -114,6 +142,32 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
             <div key={year} className="panel shrink-0" style={{ width: 1120 }}>
               <div className="panel-header-compact">
                 <span className="panel-title">{t("design.ledger.yearBlockTitle", { year })}</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleExportExcel(year, cases)}
+                    disabled={exportingKey === `${year}-excel`}
+                    className="btn-ghost"
+                  >
+                    {exportingKey === `${year}-excel` ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <FileSpreadsheet className="h-3.5 w-3.5" />
+                    )}
+                    {t("design.exportExcelButton")}
+                  </button>
+                  <button
+                    onClick={() => handleExportPdf(year, cases)}
+                    disabled={exportingKey === `${year}-pdf`}
+                    className="btn-ghost"
+                  >
+                    {exportingKey === `${year}-pdf` ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <FileText className="h-3.5 w-3.5" />
+                    )}
+                    {t("design.exportPdfButton")}
+                  </button>
+                </div>
               </div>
               <div className="data-table-wrap">
                 <table className="data-table" style={{ minWidth: 1080 }}>
@@ -170,6 +224,7 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
           ))}
         </div>
       )}
+      {message && <div className="text-[12px] text-success">{message}</div>}
     </div>
   );
 }
