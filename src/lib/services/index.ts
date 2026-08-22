@@ -8,6 +8,7 @@ export { selectionService } from "./selectionService";
 export { calculationService } from "./calculationService";
 export { calculationTemplateService } from "./calculationTemplateService";
 export { partTemplateService } from "./partTemplateService";
+export { weightMaterialService } from "./weightMaterialService";
 export { uploadPartFile } from "./fileUploadService";
 export { importService } from "./importService";
 export { exportService } from "./exportService";

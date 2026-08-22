@@ -8,26 +8,6 @@ import type { CalculationDefinition } from "@/lib/types";
  */
 export const calculationDefinitions: CalculationDefinition[] = [
   {
-    id: "calc-weight",
-    key: "weight",
-    name: "重量計算",
-    nameVi: "Tính trọng lượng",
-    description: "構造・部材の重量を計算します。",
-    descriptionVi: "Tính trọng lượng kết cấu / vật liệu.",
-    inputFields: [
-      { key: "material", label: "材質", type: "text", placeholder: "例）SS400" },
-      { key: "width", label: "幅", unit: "mm", type: "number" },
-      { key: "height", label: "高さ", unit: "mm", type: "number" },
-      { key: "thickness", label: "板厚", unit: "mm", type: "number" },
-    ],
-    resultColumns: [
-      { key: "item", label: "項目" },
-      { key: "weight", label: "重量", unit: "kg" },
-      { key: "remarks", label: "備考" },
-    ],
-    hasFormula: false,
-  },
-  {
     id: "calc-ventilation",
     key: "ventilation",
     name: "換気計算",

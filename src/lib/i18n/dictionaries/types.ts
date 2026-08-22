@@ -148,6 +148,43 @@ export interface Dictionary {
   weightCalc: {
     title: string;
     description: string;
+    topTabs: {
+      basic: string;
+      panel: string;
+    };
+    basic: {
+      description: string;
+      imagePlaceholder: string;
+      shapes: {
+        angle: string;
+        channel: string;
+        flatBar: string;
+      };
+      material: string;
+      materialPlaceholder: string;
+      noMaterialsWarning: string;
+      density: string;
+      dimensions: string;
+      length: string;
+      quantity: string;
+      sectionArea: string;
+      unitWeight: string;
+      totalWeight: string;
+      unitWeightFormula: string;
+      totalWeightFormula: string;
+      formula: string;
+      invalidInput: string;
+      noMaterial: string;
+      fields: {
+        angle: { W: string; H: string; t1: string; t2: string };
+        channel: { W: string; H: string; t1: string; t2: string };
+        flatBar: { W: string; H: string };
+      };
+    };
+    panel: {
+      title: string;
+      comingSoon: string;
+    };
   };
   ventilationCalc: {
     title: string;
@@ -548,6 +585,17 @@ export interface Dictionary {
       maxValue: string;
       resultValue: string;
       remarks: string;
+    };
+  };
+  weightMaterialSettings: {
+    title: string;
+    description: string;
+    addButton: string;
+    emptyList: string;
+    namePlaceholder: string;
+    columns: {
+      name: string;
+      density: string;
     };
   };
   backupSettings: {

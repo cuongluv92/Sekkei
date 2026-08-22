@@ -146,6 +146,43 @@ const ja: Dictionary = {
   weightCalc: {
     title: "重量計算",
     description: "構造・部材の重量を計算します。",
+    topTabs: {
+      basic: "基本重量計算",
+      panel: "盤重量計算",
+    },
+    basic: {
+      description: "形鋼を選択すると該当する計算欄まで自動でスクロールします。",
+      imagePlaceholder: "断面図（画像は後で登録）",
+      shapes: {
+        angle: "アングル",
+        channel: "チャンネル",
+        flatBar: "フラットバー",
+      },
+      material: "材質",
+      materialPlaceholder: "材質を選択",
+      noMaterialsWarning: "材質が登録されていません。設定 > 重量計算材質設定 から登録してください。",
+      density: "比重",
+      dimensions: "寸法",
+      length: "長さ L (mm)",
+      quantity: "数量 N",
+      sectionArea: "断面積",
+      unitWeight: "1個重量",
+      totalWeight: "合計重量",
+      unitWeightFormula: "1個重量 = 断面積 × L × 比重 × 10⁻⁶",
+      totalWeightFormula: "合計重量 = 1個重量 × N",
+      formula: "計算式",
+      invalidInput: "寸法・長さ・数量・比重には0より大きい数値を入力してください",
+      noMaterial: "材質を選択するか比重を入力すると重量が計算されます",
+      fields: {
+        angle: { W: "W（幅）", H: "H（高さ）", t1: "t1（横フランジ厚）", t2: "t2（縦フランジ厚）" },
+        channel: { W: "W（フランジ幅）", H: "H（高さ）", t1: "t1（フランジ厚）", t2: "t2（ウェブ厚）" },
+        flatBar: { W: "W（幅）", H: "H（厚さ）" },
+      },
+    },
+    panel: {
+      title: "盤重量計算",
+      comingSoon: "盤サイズ・部品データの重量・基本重量計算の材料重量を組み合わせて盤全体の重量を算出する機能を準備中です。",
+    },
   },
   ventilationCalc: {
     title: "換気計算",
@@ -551,6 +588,18 @@ const ja: Dictionary = {
       maxValue: "上限",
       resultValue: "選定結果",
       remarks: "備考",
+    },
+  },
+  weightMaterialSettings: {
+    title: "重量計算材質設定",
+    description:
+      "重量計算 > 基本重量計算の材質ドロップダウンに表示される材質と比重を管理します。ここに登録した材質だけが選択できます。",
+    addButton: "材質を追加",
+    emptyList: "登録されている材質がありません",
+    namePlaceholder: "例: SS400",
+    columns: {
+      name: "材質名",
+      density: "比重",
     },
   },
   backupSettings: {

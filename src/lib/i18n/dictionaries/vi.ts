@@ -146,6 +146,43 @@ const vi: Dictionary = {
   weightCalc: {
     title: "Tính trọng lượng",
     description: "Tính trọng lượng kết cấu / vật liệu.",
+    topTabs: {
+      basic: "基本重量計算",
+      panel: "盤重量計算",
+    },
+    basic: {
+      description: "Bấm vào loại hình thép để cuộn mượt xuống đúng khối tính toán tương ứng.",
+      imagePlaceholder: "Sơ đồ mặt cắt (ảnh thật sẽ thêm sau)",
+      shapes: {
+        angle: "アングル",
+        channel: "チャンネル",
+        flatBar: "フラットバー",
+      },
+      material: "材質",
+      materialPlaceholder: "Chọn材質",
+      noMaterialsWarning: "Chưa có材質 nào. Vào 設定 > 重量計算材質設定 để thêm.",
+      density: "比重",
+      dimensions: "寸法",
+      length: "長さ L (mm)",
+      quantity: "数量 N",
+      sectionArea: "断面積",
+      unitWeight: "1個重量",
+      totalWeight: "合計重量",
+      unitWeightFormula: "1個重量 = 断面積 × L × 比重 × 10⁻⁶",
+      totalWeightFormula: "合計重量 = 1個重量 × N",
+      formula: "計算式",
+      invalidInput: "Kích thước・chiều dài・số lượng・比重 phải là số lớn hơn 0",
+      noMaterial: "Chọn材質 hoặc nhập 比重 để tính trọng lượng",
+      fields: {
+        angle: { W: "W (rộng)", H: "H (cao)", t1: "t1 (dày cánh ngang)", t2: "t2 (dày cánh đứng)" },
+        channel: { W: "W (rộng cánh)", H: "H (cao)", t1: "t1 (dày cánh)", t2: "t2 (dày web)" },
+        flatBar: { W: "W (rộng)", H: "H (dày)" },
+      },
+    },
+    panel: {
+      title: "盤重量計算",
+      comingSoon: "Đang chuẩn bị: nhập kích thước tủ + lấy 重量 từ 部品データ + cộng trọng lượng vật liệu từ 基本重量計算 để ra tổng重量 của tủ.",
+    },
   },
   ventilationCalc: {
     title: "Tính thông gió",
@@ -552,6 +589,18 @@ const vi: Dictionary = {
       maxValue: "Đến",
       resultValue: "Kết quả",
       remarks: "備考",
+    },
+  },
+  weightMaterialSettings: {
+    title: "Cài đặt材質 tính trọng lượng",
+    description:
+      "Quản lý danh sách 材質 và 比重 hiện trong dropdown 材質 của 重量計算 > 基本重量計算. Chỉ những gì khai báo ở đây mới chọn được.",
+    addButton: "Thêm材質",
+    emptyList: "Chưa có材質 nào",
+    namePlaceholder: "VD: SS400",
+    columns: {
+      name: "材質名",
+      density: "比重",
     },
   },
   backupSettings: {

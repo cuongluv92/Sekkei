@@ -194,6 +194,18 @@ export interface CalculationTemplate {
   fileUrl?: string;
 }
 
+/**
+ * 材質 master for 重量計算 > 基本重量計算 (材質 dropdown → auto-fills 比重). Starts
+ * empty on purpose, same as selection_rules — every row is entered via
+ * 設定 > 重量計算材質設定, never seeded with an invented density value.
+ */
+export interface WeightMaterial {
+  id: string;
+  name: string; // 材質名, e.g. "SS400"
+  density: number; // 比重 (g/cm³)
+  order: number;
+}
+
 export type PartTemplateKind = "excel" | "dwg";
 
 /** An uploaded export template for 部品製作 (Excel出力 / DWG出力), independent of the calculation templates above. Stored in Supabase Storage (part-templates/<kind>.<ext>), never bundled in the app. */
