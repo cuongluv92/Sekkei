@@ -70,7 +70,14 @@ export const designTemplateService = {
     const client = requireSupabase();
     const existing = await this.listByKind(kind);
     const nextVersion = (existing[0]?.version ?? 0) + 1;
-    const path = `templates/${kind}/v${nextVersion}-${file.name}`;
+    // Object key stays ASCII-only (kind/version/extension) — the real
+    // template file names contain Japanese text, circled-number glyphs
+    // (①-⑧) and punctuation ("／"・"), which S3-compatible Storage keys can
+    // reject or mishandle. The original name is preserved in file_name for
+    // display/download; it never appears in the Storage path itself.
+    const extMatch = /\.([A-Za-z0-9]+)$/.exec(file.name);
+    const ext = extMatch ? extMatch[1].toLowerCase() : "bin";
+    const path = `templates/${kind}/v${nextVersion}.${ext}`;
 
     const uploaded = await uploadFile(path, file);
 
