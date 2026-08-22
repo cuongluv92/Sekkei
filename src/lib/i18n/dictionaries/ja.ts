@@ -212,6 +212,8 @@ const ja: Dictionary = {
       formula: "計算式",
       invalidInput: "寸法・長さ・数量・比重には0より大きい数値を入力してください",
       noMaterial: "材質を選択するか比重を入力すると重量が計算されます",
+      saved: "保存済み",
+      selectProjectFirst: "計算を保存するにはProjectを選択してください",
       fields: {
         angle: { W: "W（幅）", H: "H（高さ）", t1: "t1（横フランジ厚）", t2: "t2（縦フランジ厚）" },
         channel: { W: "W（フランジ幅）", H: "H（高さ）", t1: "t1（フランジ厚）", t2: "t2（ウェブ厚）" },
@@ -329,6 +331,7 @@ const ja: Dictionary = {
       costLabor: "仕入原価・工数一覧表",
     },
     workspaceBar: {
+      currentProjectLabel: "現在のProject",
       projectLabel: "Project",
       projectPlaceholder: "Projectを選択",
       addProject: "Project追加",

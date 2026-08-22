@@ -214,6 +214,8 @@ export interface Dictionary {
       formula: string;
       invalidInput: string;
       noMaterial: string;
+      saved: string;
+      selectProjectFirst: string;
       fields: {
         angle: { W: string; H: string; t1: string; t2: string };
         channel: { W: string; H: string; t1: string; t2: string };
@@ -328,6 +330,7 @@ export interface Dictionary {
       costLabor: string;
     };
     workspaceBar: {
+      currentProjectLabel: string;
       projectLabel: string;
       projectPlaceholder: string;
       addProject: string;

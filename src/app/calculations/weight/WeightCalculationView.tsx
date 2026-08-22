@@ -3,6 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { PageHeader } from "@/components/common/PageHeader";
+import { ProjectSelector } from "@/components/common/ProjectSelector";
+import { useCalculationProject } from "@/lib/store/CalculationProjectProvider";
 import { BasicWeightCalc } from "@/components/calculation/BasicWeightCalc";
 import { PanelWeightCalc } from "@/components/calculation/PanelWeightCalc";
 
@@ -25,6 +27,7 @@ export function WeightCalculationView() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const tab: WeightTopTab = isWeightTopTab(tabParam) ? tabParam : "basic";
+  const { projectId, setProjectId } = useCalculationProject();
 
   function setTab(next: WeightTopTab) {
     const params = new URLSearchParams(searchParams.toString());
@@ -34,7 +37,12 @@ export function WeightCalculationView() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title={t("weightCalc.title")} description={t("weightCalc.description")} />
+      <PageHeader
+        title={t("weightCalc.title")}
+        description={t("weightCalc.description")}
+      />
+
+      <ProjectSelector projectId={projectId} onProjectChange={setProjectId} />
 
       <div className="-mx-1 overflow-x-auto px-1">
         <div className="flex w-max min-w-full gap-1 border-b border-border pb-0">
@@ -57,7 +65,17 @@ export function WeightCalculationView() {
         </div>
       </div>
 
-      {tab === "basic" ? <BasicWeightCalc /> : <PanelWeightCalc />}
+      {!projectId ? (
+        <div className="panel">
+          <div className="panel-body py-12 text-center text-[13px] text-muted-2">
+            {t("design.workspaceBar.selectProjectFirst")}
+          </div>
+        </div>
+      ) : tab === "basic" ? (
+        <BasicWeightCalc projectId={projectId} />
+      ) : (
+        <PanelWeightCalc projectId={projectId} />
+      )}
     </div>
   );
 }

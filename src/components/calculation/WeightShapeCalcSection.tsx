@@ -1,9 +1,12 @@
 "use client";
 
-import { Image as ImageIcon, Loader2, Upload } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { Image as ImageIcon, Loader2, Save, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
-import { weightShapeImageService } from "@/lib/services";
+import {
+  calculationRecordService,
+  weightShapeImageService,
+} from "@/lib/services";
 import { getPublicUrl } from "@/lib/supabase/storage";
 import {
   getWeightShape,
@@ -17,8 +20,19 @@ import type { WeightMaterial } from "@/lib/types";
 interface WeightShapeCalcSectionProps {
   shapeKey: WeightShapeKey;
   materials: WeightMaterial[];
+  /** True once the 材質 master fetch has resolved (even if it came back empty) — gates the new-calculation 鉄 default so it never fires before we actually know whether 鉄 exists. */
+  materialsLoaded: boolean;
   image?: WeightShapeImage;
   onImageChange: (image: WeightShapeImage) => void;
+  projectId: string;
+}
+
+interface WeightBasicSavedInput {
+  materialId?: string;
+  density?: string;
+  dims?: Partial<Record<WeightDimKey, string>>;
+  length?: string;
+  quantity?: string;
 }
 
 /** "" (untouched) | a positive finite number | null (typed but invalid — 0, negative, or not a number). */
@@ -46,11 +60,14 @@ function roundTo(n: number, decimals: number): number {
 export function WeightShapeCalcSection({
   shapeKey,
   materials,
+  materialsLoaded,
   image,
   onImageChange,
+  projectId,
 }: WeightShapeCalcSectionProps) {
   const { t } = useTranslation();
   const shape = getWeightShape(shapeKey);
+  const calculationType = `weight-basic-${shapeKey}`;
 
   const [dimRaw, setDimRaw] = useState<Record<WeightDimKey, string>>({
     W: "",
@@ -68,6 +85,67 @@ export function WeightShapeCalcSection({
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Saved-record load + one-time hydrate-or-default-to-鉄, per Project.
+  const [loadedRecord, setLoadedRecord] = useState<
+    { input: WeightBasicSavedInput; updatedAt: string } | null | undefined
+  >(undefined);
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    initializedRef.current = false;
+    setLoadedRecord(undefined);
+    setSavedAt(null);
+    if (!projectId) return;
+    calculationRecordService.get(projectId, calculationType).then((record) => {
+      if (cancelled) return;
+      setLoadedRecord(
+        record
+          ? {
+              input: record.input as WeightBasicSavedInput,
+              updatedAt: record.updatedAt,
+            }
+          : null,
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, calculationType]);
+
+  useEffect(() => {
+    if (initializedRef.current) return;
+    // Wait until we know both whether a saved record exists AND whether the
+    // 材質 master has loaded — otherwise a new calculation could briefly see
+    // an empty `materials` list and skip the 鉄 default entirely.
+    if (loadedRecord === undefined || !materialsLoaded) return;
+    initializedRef.current = true;
+
+    if (loadedRecord) {
+      // Never reset an existing calculation to 鉄 — restore exactly what was saved.
+      const saved = loadedRecord.input;
+      setMaterialId(saved.materialId ?? "");
+      setDensityRaw(saved.density ?? "");
+      if (saved.dims) setDimRaw((prev) => ({ ...prev, ...saved.dims }));
+      setLengthRaw(saved.length ?? "");
+      setQuantityRaw(saved.quantity ?? "1");
+      setSavedAt(loadedRecord.updatedAt);
+    } else {
+      // Brand-new calculation only: default to 鉄, with 比重 read live from
+      // the weight_materials master — never a hardcoded number. If 鉄 isn't
+      // in the master, leave material/density blank rather than guessing.
+      const iron = materials.find((m) => m.name === "鉄");
+      if (iron) {
+        setMaterialId(iron.id);
+        setDensityRaw(String(iron.density));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedRecord, materialsLoaded, materials]);
 
   async function handleImageUpload(file: File) {
     setUploadingImage(true);
@@ -90,6 +168,29 @@ export function WeightShapeCalcSection({
     setMaterialId(id);
     const material = materials.find((m) => m.id === id);
     setDensityRaw(material ? String(material.density) : "");
+  }
+
+  async function handleSave() {
+    if (!projectId || saving) return;
+    setSaving(true);
+    try {
+      const input: WeightBasicSavedInput = {
+        materialId,
+        density: densityRaw,
+        dims: dimRaw,
+        length: lengthRaw,
+        quantity: quantityRaw,
+      };
+      const saved = await calculationRecordService.save(
+        projectId,
+        calculationType,
+        input as unknown as Record<string, unknown>,
+        { area, unitWeight, totalWeight },
+      );
+      setSavedAt(saved.updatedAt);
+    } finally {
+      setSaving(false);
+    }
   }
 
   const dimStates = useMemo(
@@ -155,10 +256,34 @@ export function WeightShapeCalcSection({
 
   return (
     <div id={`weight-shape-${shapeKey}`} className="panel scroll-mt-4">
-      <div className="panel-header">
+      <div className="panel-header flex items-center justify-between gap-2">
         <span className="panel-title">
           {t(`weightCalc.basic.shapes.${shapeKey}`)}
         </span>
+        <div className="flex items-center gap-2">
+          {savedAt && (
+            <span className="text-[11px] text-muted-2">
+              {t("weightCalc.basic.saved")}{" "}
+              {new Date(savedAt).toLocaleTimeString()}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!projectId || saving}
+            title={
+              !projectId ? t("weightCalc.basic.selectProjectFirst") : undefined
+            }
+            className="btn-secondary !py-1 !text-[12px]"
+          >
+            {saving ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Save className="h-3.5 w-3.5" />
+            )}
+            {t("common.save")}
+          </button>
+        </div>
       </div>
       <div className="panel-body grid grid-cols-1 gap-5 lg:grid-cols-[1fr_38%]">
         {/* Inputs + results, in the confirmed order — below the image on mobile, left of it on desktop */}

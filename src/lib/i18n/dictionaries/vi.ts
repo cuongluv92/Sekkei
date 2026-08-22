@@ -212,6 +212,8 @@ const vi: Dictionary = {
       formula: "計算式",
       invalidInput: "Kích thước・chiều dài・số lượng・比重 phải là số lớn hơn 0",
       noMaterial: "Chọn材質 hoặc nhập 比重 để tính trọng lượng",
+      saved: "保存済み",
+      selectProjectFirst: "Chọn Project trước khi lưu tính toán",
       fields: {
         angle: { W: "W (rộng)", H: "H (cao)", t1: "t1 (dày cánh ngang)", t2: "t2 (dày cánh đứng)" },
         channel: { W: "W (rộng cánh)", H: "H (cao)", t1: "t1 (dày cánh)", t2: "t2 (dày web)" },
@@ -329,6 +331,7 @@ const vi: Dictionary = {
       costLabor: "仕入原価・工数一覧表",
     },
     workspaceBar: {
+      currentProjectLabel: "現在のProject",
       projectLabel: "Project",
       projectPlaceholder: "Chọn Project",
       addProject: "Project追加",
