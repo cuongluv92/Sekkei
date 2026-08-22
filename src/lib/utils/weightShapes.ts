@@ -21,6 +21,18 @@ export interface WeightShapeDef {
   key: WeightShapeKey;
   /** Which dimension inputs this shape actually shows, in display order. */
   fields: WeightDimKey[];
+  /**
+   * Outer width/height fields, shown on one row together with 長さL
+   * (max 2 — e.g. W + H). flatBar has no separate height field (its "H" is
+   * actually 厚さ), so flatBar's primaryFields is just ["W"].
+   */
+  primaryFields: WeightDimKey[];
+  /**
+   * Thickness-like fields, shown on their own row below. Covers flatBar's
+   * H (its one field, semantically 厚さ not 高さ) and the t1/t2/t fields
+   * of the other shapes.
+   */
+  secondaryFields: WeightDimKey[];
   /** mm² */
   computeArea: (v: WeightDims) => number;
   areaFormulaSymbolic: string;
@@ -35,6 +47,8 @@ export const WEIGHT_SHAPES: WeightShapeDef[] = [
   {
     key: "flatBar",
     fields: ["W", "H"],
+    primaryFields: ["W"],
+    secondaryFields: ["H"],
     areaFormulaSymbolic: "A = W × H",
     computeArea: (v) => v.W * v.H,
     areaFormulaSubstituted: (v) => `A = ${fmt(v.W)} × ${fmt(v.H)}`,
@@ -42,6 +56,8 @@ export const WEIGHT_SHAPES: WeightShapeDef[] = [
   {
     key: "angle",
     fields: ["W", "H", "t1", "t2"],
+    primaryFields: ["W", "H"],
+    secondaryFields: ["t1", "t2"],
     areaFormulaSymbolic: "A = W × t1 + H × t2 − t1 × t2",
     computeArea: (v) => v.W * v.t1 + v.H * v.t2 - v.t1 * v.t2,
     areaFormulaSubstituted: (v) =>
@@ -50,6 +66,8 @@ export const WEIGHT_SHAPES: WeightShapeDef[] = [
   {
     key: "channel",
     fields: ["W", "H", "t1", "t2"],
+    primaryFields: ["W", "H"],
+    secondaryFields: ["t1", "t2"],
     areaFormulaSymbolic: "A = 2 × W × t1 + (H − 2 × t1) × t2",
     computeArea: (v) => 2 * v.W * v.t1 + (v.H - 2 * v.t1) * v.t2,
     areaFormulaSubstituted: (v) =>
@@ -58,6 +76,8 @@ export const WEIGHT_SHAPES: WeightShapeDef[] = [
   {
     key: "hat",
     fields: ["W1", "W2", "H", "t"],
+    primaryFields: ["W1", "H"],
+    secondaryFields: ["W2", "t"],
     areaFormulaSymbolic: "A = t × (W1 + 2 × W2 + 2 × H)",
     computeArea: (v) => v.t * (v.W1 + 2 * v.W2 + 2 * v.H),
     areaFormulaSubstituted: (v) =>

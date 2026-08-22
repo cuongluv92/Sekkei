@@ -36,11 +36,12 @@ function roundTo(n: number, decimals: number): number {
 
 /**
  * One shape's full calculation block (image + inputs + live results), per
- * the confirmed layout: 材質 → 比重 → 寸法 → 長さL → 数量N → 断面積 → 1個重量 →
- * 合計重量 → 計算式, all recomputed on every keystroke, no 計算 button. Driven
- * entirely by the shape's WeightShapeDef (weightShapes.ts) so アングル/
- * チャンネル/フラットバー share this one component instead of being
- * triplicated.
+ * the confirmed layout: [材質, 比重] row → [primary dim, 長さL, primary dim]
+ * row → [secondary/thickness dims] row → 数量N → 断面積 → 1個重量 → 合計重量 →
+ * 計算式, all recomputed on every keystroke, no 計算 button. Driven entirely
+ * by the shape's WeightShapeDef (weightShapes.ts) so アングル/チャンネル/
+ * フラットバー/ハット形 share this one component instead of being
+ * quadruplicated.
  */
 export function WeightShapeCalcSection({
   shapeKey,
@@ -65,17 +66,21 @@ export function WeightShapeCalcSection({
   const [materialId, setMaterialId] = useState("");
   const [densityRaw, setDensityRaw] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [imageError, setImageError] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   async function handleImageUpload(file: File) {
     setUploadingImage(true);
-    setImageError(false);
+    setImageError(null);
     try {
       const uploaded = await weightShapeImageService.upload(shapeKey, file);
       onImageChange(uploaded);
-    } catch {
-      setImageError(true);
+    } catch (err) {
+      const detail =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: unknown }).message)
+          : String(err);
+      setImageError(detail);
     } finally {
       setUploadingImage(false);
     }
@@ -129,6 +134,25 @@ export function WeightShapeCalcSection({
     return state === null ? "field-input !border-danger" : "field-input";
   }
 
+  function renderDimField(k: WeightDimKey) {
+    return (
+      <div key={k}>
+        <label className="mb-1 block text-[11px] text-muted">
+          {t(`weightCalc.basic.fields.${shapeKey}.${k}`)}
+        </label>
+        <input
+          type="number"
+          step="0.1"
+          value={dimRaw[k]}
+          onChange={(e) =>
+            setDimRaw((prev) => ({ ...prev, [k]: e.target.value }))
+          }
+          className={dimFieldClass(dimStates[k])}
+        />
+      </div>
+    );
+  }
+
   return (
     <div id={`weight-shape-${shapeKey}`} className="panel scroll-mt-4">
       <div className="panel-header">
@@ -139,102 +163,92 @@ export function WeightShapeCalcSection({
       <div className="panel-body grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Left: inputs + results, in the confirmed order */}
         <div className="flex flex-col gap-3.5">
-          <div>
-            <label className="field-label">
-              {t("weightCalc.basic.material")}
-            </label>
-            <select
-              value={materialId}
-              onChange={(e) => handleMaterialChange(e.target.value)}
-              className="field-input"
-            >
-              <option value="">
-                {t("weightCalc.basic.materialPlaceholder")}
-              </option>
-              {materials.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
+          <div className="grid grid-cols-2 gap-2.5">
+            <div>
+              <label className="field-label">
+                {t("weightCalc.basic.material")}
+              </label>
+              <select
+                value={materialId}
+                onChange={(e) => handleMaterialChange(e.target.value)}
+                className="field-input"
+              >
+                <option value="">
+                  {t("weightCalc.basic.materialPlaceholder")}
                 </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="field-label">
-              {t("weightCalc.basic.density")}
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={densityRaw}
-              onChange={(e) => setDensityRaw(e.target.value)}
-              placeholder="7.85"
-              className={
-                densityState === null
-                  ? "field-input !border-danger"
-                  : "field-input"
-              }
-            />
+                {materials.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="field-label">
+                {t("weightCalc.basic.density")}
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={densityRaw}
+                onChange={(e) => setDensityRaw(e.target.value)}
+                placeholder="7.85"
+                className={
+                  densityState === null
+                    ? "field-input !border-danger"
+                    : "field-input"
+                }
+              />
+            </div>
           </div>
 
           <div>
             <span className="field-label">
               {t("weightCalc.basic.dimensions")}
             </span>
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-              {shape.fields.map((k) => (
-                <div key={k}>
-                  <label className="mb-1 block text-[11px] text-muted">
-                    {t(`weightCalc.basic.fields.${shapeKey}.${k}`)}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={dimRaw[k]}
-                    onChange={(e) =>
-                      setDimRaw((prev) => ({ ...prev, [k]: e.target.value }))
-                    }
-                    className={dimFieldClass(dimStates[k])}
-                  />
-                </div>
-              ))}
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+              {renderDimField(shape.primaryFields[0])}
+              <div>
+                <label className="mb-1 block text-[11px] text-muted">
+                  {t("weightCalc.basic.length")}
+                </label>
+                <input
+                  type="number"
+                  step="1"
+                  value={lengthRaw}
+                  onChange={(e) => setLengthRaw(e.target.value)}
+                  className={
+                    lengthState === null
+                      ? "field-input !border-danger"
+                      : "field-input"
+                  }
+                />
+              </div>
+              {shape.primaryFields[1] && renderDimField(shape.primaryFields[1])}
             </div>
+            {shape.secondaryFields.length > 0 && (
+              <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+                {shape.secondaryFields.map((k) => renderDimField(k))}
+              </div>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5">
-            <div>
-              <label className="field-label">
-                {t("weightCalc.basic.length")}
-              </label>
-              <input
-                type="number"
-                step="1"
-                value={lengthRaw}
-                onChange={(e) => setLengthRaw(e.target.value)}
-                className={
-                  lengthState === null
-                    ? "field-input !border-danger"
-                    : "field-input"
-                }
-              />
-            </div>
-            <div>
-              <label className="field-label">
-                {t("weightCalc.basic.quantity")}
-              </label>
-              <input
-                type="number"
-                step="1"
-                min="1"
-                value={quantityRaw}
-                onChange={(e) => setQuantityRaw(e.target.value)}
-                className={
-                  quantityState === null
-                    ? "field-input !border-danger"
-                    : "field-input"
-                }
-              />
-            </div>
+          <div>
+            <label className="field-label">
+              {t("weightCalc.basic.quantity")}
+            </label>
+            <input
+              type="number"
+              step="1"
+              min="1"
+              value={quantityRaw}
+              onChange={(e) => setQuantityRaw(e.target.value)}
+              className={
+                quantityState === null
+                  ? "field-input !border-danger"
+                  : "field-input"
+              }
+            />
           </div>
 
           {shape.fields.some((k) => dimStates[k] === null) ||
@@ -365,6 +379,8 @@ export function WeightShapeCalcSection({
           {imageError && (
             <p className="text-[11.5px] text-danger">
               {t("weightCalc.basic.imageUploadError")}
+              {": "}
+              {imageError}
             </p>
           )}
         </div>
