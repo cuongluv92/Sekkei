@@ -160,9 +160,9 @@ export function WeightShapeCalcSection({
           {t(`weightCalc.basic.shapes.${shapeKey}`)}
         </span>
       </div>
-      <div className="panel-body grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {/* Left: inputs + results, in the confirmed order */}
-        <div className="flex flex-col gap-3.5">
+      <div className="panel-body grid grid-cols-1 gap-5 lg:grid-cols-[1fr_38%]">
+        {/* Inputs + results, in the confirmed order — below the image on mobile, left of it on desktop */}
+        <div className="order-2 flex flex-col gap-3.5 lg:order-1">
           <div className="grid grid-cols-2 gap-2.5">
             <div>
               <label className="field-label">
@@ -318,15 +318,19 @@ export function WeightShapeCalcSection({
           </div>
         </div>
 
-        {/* Right: technical drawing — real image once uploaded, otherwise an upload prompt */}
-        <div className="flex flex-col gap-1.5">
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-border-strong bg-surface-2 lg:aspect-auto lg:min-h-[320px]">
+        {/* Technical drawing — real image once uploaded, otherwise an upload prompt. A compact
+            reference thumbnail, not the main visual: fixed, modest frame height (never forces
+            the panel taller), image capped to it via object-contain so it's centered and never
+            cropped or upscaled past its natural size. Above the inputs on mobile, right of them
+            on desktop (see order- classes). */}
+        <div className="order-1 flex flex-col gap-1.5 lg:order-2">
+          <div className="relative flex h-[240px] w-full items-center justify-center overflow-hidden rounded-lg border border-border-strong bg-surface-2 p-2 lg:h-[300px]">
             {image ? (
               // eslint-disable-next-line @next/next/no-img-element -- real Storage URL, not a static asset next/image can optimize
               <img
                 src={getPublicUrl(image.storagePath)}
                 alt={t(`weightCalc.basic.shapes.${shapeKey}`)}
-                className="h-full w-full object-contain p-3"
+                className="max-h-full max-w-full object-contain"
               />
             ) : (
               <button
