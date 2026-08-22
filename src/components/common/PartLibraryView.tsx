@@ -4,15 +4,28 @@ import { Loader2, Trash2, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { uploadPartFile } from "@/lib/services";
-import { getManufacturerName, listManufacturers, preloadManufacturers } from "@/lib/mock/manufacturers";
+import {
+  getManufacturerName,
+  listManufacturers,
+  preloadManufacturers,
+} from "@/lib/mock/manufacturers";
 import { findFileByKind, openFileAsset } from "@/lib/utils/fileDownload";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
 import { FileActions } from "@/components/common/FileActions";
 import { FilePreview } from "@/components/common/FilePreview";
 import { PageHeader } from "@/components/common/PageHeader";
-import { PartFilterBar, type PartFilterBarValue } from "@/components/common/PartFilterBar";
-import { distinctCategories, matchesPartFilters } from "@/lib/utils/partSearch";
+import {
+  PartFilterBar,
+  type PartFilterBarValue,
+} from "@/components/common/PartFilterBar";
+import {
+  distinctCategories,
+  distinctManufacturerIds,
+  hasUncategorizedItem,
+  hasUnsetManufacturer,
+  matchesPartFilters,
+} from "@/lib/utils/partSearch";
 import type { FileAssetOwnerType } from "@/lib/services/fileAssetService";
 import type { FileAsset } from "@/lib/types";
 
@@ -95,7 +108,30 @@ export function PartLibraryView<T extends LibraryItem>({
     };
   }, [fetchAllOnce]);
 
-  const categories = useMemo(() => distinctCategories(items), [items]);
+  // メーカー options are limited to manufacturers that actually have ≥1 active record here — never the
+  // full manufacturer master (see spec #1). 分類 narrows to the selected メーカー's own categories when one
+  // is chosen (spec #2), and "未設定"/"未分類" only appear when a real record is actually missing that field.
+  const activeManufacturerIds = useMemo(
+    () => new Set(distinctManufacturerIds(items)),
+    [items],
+  );
+  const manufacturers = useMemo(
+    () => listManufacturers().filter((m) => activeManufacturerIds.has(m.id)),
+    [activeManufacturerIds],
+  );
+  const categoryScopeItems = useMemo(
+    () =>
+      filters.manufacturerId
+        ? items.filter((i) =>
+            matchesPartFilters(i, { manufacturerId: filters.manufacturerId }),
+          )
+        : items,
+    [items, filters.manufacturerId],
+  );
+  const categories = useMemo(
+    () => distinctCategories(categoryScopeItems),
+    [categoryScopeItems],
+  );
 
   const filtered = useMemo(
     () => items.filter((i) => matchesPartFilters(i, filters)),
@@ -113,9 +149,13 @@ export function PartLibraryView<T extends LibraryItem>({
     try {
       const asset = await uploadPartFile(ownerType, selected.id, file);
       const withNewFile = (item: T) =>
-        item.id === selected.id ? { ...item, files: [...item.files, asset] } : item;
+        item.id === selected.id
+          ? { ...item, files: [...item.files, asset] }
+          : item;
       setItems((prev) => prev.map(withNewFile));
-      setSelected((prev) => (prev ? { ...prev, files: [...prev.files, asset] } : prev));
+      setSelected((prev) =>
+        prev ? { ...prev, files: [...prev.files, asset] } : prev,
+      );
       show(t("common.fileUploaded", { fileName: file.name }));
     } catch {
       show(t("common.uploadError"));
@@ -125,7 +165,10 @@ export function PartLibraryView<T extends LibraryItem>({
   }
 
   async function handleDelete(item: T) {
-    if (!window.confirm(t("common.deleteToTrashConfirm", { model: item.model }))) return;
+    if (
+      !window.confirm(t("common.deleteToTrashConfirm", { model: item.model }))
+    )
+      return;
     setDeletingId(item.id);
     try {
       await onDelete(item.id);
@@ -160,7 +203,10 @@ export function PartLibraryView<T extends LibraryItem>({
       key: "manufacturer",
       header: t("common.manufacturer"),
       width: "150px",
-      render: (r) => (r.manufacturerId ? getManufacturerName(r.manufacturerId, locale) : t("common.unsetManufacturer")),
+      render: (r) =>
+        r.manufacturerId
+          ? getManufacturerName(r.manufacturerId, locale)
+          : t("common.unsetManufacturer"),
     },
     {
       key: "model",
@@ -176,7 +222,8 @@ export function PartLibraryView<T extends LibraryItem>({
             header: t("common.quantity"),
             width: "70px",
             align: "right" as const,
-            render: (r: T) => (r.quantity !== undefined ? String(r.quantity) : "—"),
+            render: (r: T) =>
+              r.quantity !== undefined ? String(r.quantity) : "—",
           },
         ]
       : []),
@@ -203,7 +250,10 @@ export function PartLibraryView<T extends LibraryItem>({
       header: t("common.actions"),
       width: "260px",
       render: (r) => (
-        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="flex items-center gap-1.5"
+          onClick={(e) => e.stopPropagation()}
+        >
           <FileActions
             files={r.files}
             onView={() => setSelected(r)}
@@ -233,9 +283,11 @@ export function PartLibraryView<T extends LibraryItem>({
       <PartFilterBar
         value={filters}
         onChange={setFilters}
-        manufacturers={listManufacturers()}
+        manufacturers={manufacturers}
         categories={categories}
         locale={locale}
+        showUnsetManufacturer={hasUnsetManufacturer(items)}
+        showUncategorized={hasUncategorizedItem(items)}
       />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -250,7 +302,11 @@ export function PartLibraryView<T extends LibraryItem>({
             emptyMessage={emptyMessage}
           />
         </div>
-        <FilePreview selectedKey={selected?.id ?? null} title={selected?.model} files={selected?.files ?? []} />
+        <FilePreview
+          selectedKey={selected?.id ?? null}
+          title={selected?.model}
+          files={selected?.files ?? []}
+        />
       </div>
 
       {selected && (
@@ -258,8 +314,16 @@ export function PartLibraryView<T extends LibraryItem>({
           <div className="panel-header">
             <span className="panel-title">{t("common.detail")}</span>
             <div>
-              <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="btn-secondary">
-                {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="btn-secondary"
+              >
+                {uploading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Upload className="h-3.5 w-3.5" />
+                )}
                 {t("common.upload")}
               </button>
               <input
@@ -277,9 +341,15 @@ export function PartLibraryView<T extends LibraryItem>({
           </div>
           <div className="panel-body grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {showPartDataFields && (
-              <DetailField label={t("common.symbol")} value={selected.symbol || "—"} />
+              <DetailField
+                label={t("common.symbol")}
+                value={selected.symbol || "—"}
+              />
             )}
-            <DetailField label={t("common.kind")} value={selected.category || t("common.uncategorized")} />
+            <DetailField
+              label={t("common.kind")}
+              value={selected.category || t("common.uncategorized")}
+            />
             <DetailField
               label={t("common.manufacturer")}
               value={
@@ -289,22 +359,37 @@ export function PartLibraryView<T extends LibraryItem>({
               }
             />
             <DetailField label={t("common.model")} value={selected.model} />
-            <DetailField label={t("common.specification")} value={selected.specification} />
+            <DetailField
+              label={t("common.specification")}
+              value={selected.specification}
+            />
             {showQuantity && (
               <DetailField
                 label={t("common.quantity")}
-                value={selected.quantity !== undefined ? String(selected.quantity) : "—"}
+                value={
+                  selected.quantity !== undefined
+                    ? String(selected.quantity)
+                    : "—"
+                }
               />
             )}
-            <DetailField label={t("common.remarks")} value={selected.remarks || "—"} />
+            <DetailField
+              label={t("common.remarks")}
+              value={selected.remarks || "—"}
+            />
             {showPartDataFields && (
               <DetailField
                 label={t("common.weight")}
-                value={selected.weight !== undefined ? `${selected.weight} kg` : "—"}
+                value={
+                  selected.weight !== undefined ? `${selected.weight} kg` : "—"
+                }
               />
             )}
             <DetailField label={t("common.source")} value={selected.source} />
-            <DetailField label={t("common.updatedAt")} value={selected.updatedAt} />
+            <DetailField
+              label={t("common.updatedAt")}
+              value={selected.updatedAt}
+            />
           </div>
         </div>
       )}
@@ -317,7 +402,9 @@ export function PartLibraryView<T extends LibraryItem>({
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[11px] tracking-wide text-muted uppercase">{label}</div>
+      <div className="text-[11px] tracking-wide text-muted uppercase">
+        {label}
+      </div>
       <div className="mt-0.5 text-[12.5px] text-foreground">{value}</div>
     </div>
   );

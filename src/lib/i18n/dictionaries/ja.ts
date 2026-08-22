@@ -44,7 +44,7 @@ const ja: Dictionary = {
     kind: "種類",
     manufacturer: "メーカー",
     model: "型式",
-    specification: "走り・仕様",
+    specification: "定格・仕様",
     symbol: "記号",
     name: "品名",
     category: "カテゴリ",
@@ -63,7 +63,8 @@ const ja: Dictionary = {
     uploadError: "アップロードに失敗しました",
     moveToTrash: "ゴミ箱に移動",
     movedToTrash: "ゴミ箱に移動しました",
-    deleteToTrashConfirm: "「{model}」をゴミ箱に移動しますか？（ゴミ箱から復元できます）",
+    deleteToTrashConfirm:
+      "「{model}」をゴミ箱に移動しますか？（ゴミ箱から復元できます）",
     deleteError: "削除に失敗しました",
     analyze: "解析",
     import: "インポート",
@@ -105,11 +106,13 @@ const ja: Dictionary = {
     previewLoading: "プレビューを読み込んでいます...",
     previewError: "プレビューを読み込めませんでした",
     previewNoFile: "添付ファイルがありません",
-    dwgNotice: "DWGはブラウザ変換プレビュー対応予定（現在は元ファイルのダウンロードのみ）",
+    dwgNotice:
+      "DWGはブラウザ変換プレビュー対応予定（現在は元ファイルのダウンロードのみ）",
   },
   selection: {
     title: "選定",
-    description: "入力値と出力項目から、ブレーカーや電線サイズなどを選定します。",
+    description:
+      "入力値と出力項目から、ブレーカーや電線サイズなどを選定します。",
     inputLabel: "入力",
     inputPlaceholder: "例）15 kW  /  20 A",
     inputHint: "容量（kW）または電流（A）を入力してください",
@@ -124,17 +127,22 @@ const ja: Dictionary = {
     },
     resultTitle: "計算結果",
     resultEmpty: "「計算」を押すと結果がここに表示されます",
-    ruleNotice: "選定ロジックは未設定です。設定画面から選定ルールを登録してください。",
+    ruleNotice:
+      "選定ロジックは未設定です。設定画面から選定ルールを登録してください。",
   },
   partAssembly: {
     title: "部品製作",
-    description: "部品データを検索し、ダブルクリックで下の部品リストに追加します。追加後はこのProject専用に自由に編集できます（部品データ本体は変更されません）。",
+    description:
+      "部品データを検索し、ダブルクリックで下の部品リストに追加します。追加後はこのProject専用に自由に編集できます（部品データ本体は変更されません）。",
     searchPlaceholder: "型式・品名で検索",
     tableTitle: "部品リスト",
-    tableEmpty: "まだ部品が追加されていません。上の検索から部品をダブルクリックしてください。",
+    tableEmpty:
+      "まだ部品が追加されていません。上の検索から部品をダブルクリックしてください。",
     addRow: "行を追加",
     reorderHint: "行をドラッグして並び替え",
     addedToList: "部品リストに追加しました",
+    addedToListWithModel: "{model} を部品リストに追加しました",
+    addError: "部品の追加に失敗しました",
     doubleClickHint: "クリックで選択、ダブルクリックで部品リストに追加",
     insertAbove: "上に追加",
     insertBelow: "下に追加",
@@ -159,7 +167,8 @@ const ja: Dictionary = {
   },
   trash: {
     title: "ゴミ箱",
-    description: "部品データ・部品図から削除した項目をここから復元、または完全に削除できます。",
+    description:
+      "部品データ・部品図から削除した項目をここから復元、または完全に削除できます。",
     partDataSection: "部品データ",
     partDrawingSection: "部品図",
     deletedAt: "削除日",
@@ -177,8 +186,10 @@ const ja: Dictionary = {
     resultEmpty: "「計算」を押すと結果がここに表示されます",
     inputTitle: "入力",
     outputTitle: "ファイル出力",
-    formulaPending: "計算式は未設定です。設定 > 計算設定 から登録してください。",
-    templateNotice: "Excel出力は「設定」で登録したテンプレートのレイアウトに従います（現在は未登録）",
+    formulaPending:
+      "計算式は未設定です。設定 > 計算設定 から登録してください。",
+    templateNotice:
+      "Excel出力は「設定」で登録したテンプレートのレイアウトに従います（現在は未登録）",
   },
   weightCalc: {
     title: "重量計算",
@@ -188,7 +199,8 @@ const ja: Dictionary = {
       panel: "盤重量計算",
     },
     basic: {
-      description: "フラットバー・アングル・チャンネル・ハット形の重量を計算します。",
+      description:
+        "フラットバー・アングル・チャンネル・ハット形の重量を計算します。",
       imagePlaceholder: "断面図（未登録）",
       imageUploadError: "画像のアップロードに失敗しました",
       shapes: {
@@ -199,7 +211,8 @@ const ja: Dictionary = {
       },
       material: "材質",
       materialPlaceholder: "材質を選択",
-      noMaterialsWarning: "材質が登録されていません。設定 > 重量計算材質設定 から登録してください。",
+      noMaterialsWarning:
+        "材質が登録されていません。設定 > 重量計算材質設定 から登録してください。",
       density: "比重",
       dimensions: "寸法",
       length: "長さ L (mm)",
@@ -210,20 +223,37 @@ const ja: Dictionary = {
       unitWeightFormula: "1個重量 = 断面積 × L × 比重 × 10⁻⁶",
       totalWeightFormula: "合計重量 = 1個重量 × N",
       formula: "計算式",
-      invalidInput: "寸法・長さ・数量・比重には0より大きい数値を入力してください",
+      invalidInput:
+        "寸法・長さ・数量・比重には0より大きい数値を入力してください",
       noMaterial: "材質を選択するか比重を入力すると重量が計算されます",
       saved: "保存済み",
       selectProjectFirst: "計算を保存するにはProjectを選択してください",
       fields: {
-        angle: { W: "W（幅）", H: "H（高さ）", t1: "t1（横フランジ厚）", t2: "t2（縦フランジ厚）" },
-        channel: { W: "W（フランジ幅）", H: "H（高さ）", t1: "t1（フランジ厚）", t2: "t2（ウェブ厚）" },
+        angle: {
+          W: "W（幅）",
+          H: "H（高さ）",
+          t1: "t1（横フランジ厚）",
+          t2: "t2（縦フランジ厚）",
+        },
+        channel: {
+          W: "W（フランジ幅）",
+          H: "H（高さ）",
+          t1: "t1（フランジ厚）",
+          t2: "t2（ウェブ厚）",
+        },
         flatBar: { W: "W（幅）", H: "H（厚さ）" },
-        hat: { W1: "W1（上部幅）", W2: "W2（下部フランジ幅）", H: "H（高さ）", t: "t（板厚）" },
+        hat: {
+          W1: "W1（上部幅）",
+          W2: "W2（下部フランジ幅）",
+          H: "H（高さ）",
+          t: "t（板厚）",
+        },
       },
     },
     panel: {
       title: "盤重量計算",
-      comingSoon: "盤サイズ・部品データの重量・基本重量計算の材料重量を組み合わせて盤全体の重量を算出する機能を準備中です。",
+      comingSoon:
+        "盤サイズ・部品データの重量・基本重量計算の材料重量を組み合わせて盤全体の重量を算出する機能を準備中です。",
     },
   },
   ventilationCalc: {
@@ -241,19 +271,23 @@ const ja: Dictionary = {
       busbar: "母線銅帯",
       earthWire: "アース電線サイズ",
     },
-    addModuleHint: "新しい計算モジュールは設定から追加できます（この段階ではモック）",
+    addModuleHint:
+      "新しい計算モジュールは設定から追加できます（この段階ではモック）",
   },
   importPage: {
     title: "インポート",
-    description: "Excel・DWG・PDF・画像から部品データ・部品図・カタログへデータを取り込みます。",
+    description:
+      "Excel・DWG・PDF・画像から部品データ・部品図・カタログへデータを取り込みます。",
     step1: "① ファイル選択",
     step2: "② 解析",
     step3: "③ プレビュー確認",
     step4: "④ インポート実行",
     dropHint: "ファイルをドラッグ＆ドロップ、またはクリックして選択",
     targetLabel: "取り込み先",
-    fallbackSectionTitle: "メーカー・分類の初期値（Excelに情報がない行に使用されます）",
-    fallbackManufacturerPlaceholder: "既存から選択、または新しいメーカー名を入力",
+    fallbackSectionTitle:
+      "メーカー・分類の初期値（Excelに情報がない行に使用されます）",
+    fallbackManufacturerPlaceholder:
+      "既存から選択、または新しいメーカー名を入力",
     fallbackCategoryPlaceholder: "既存から選択、または新しい分類名を入力",
     targets: {
       partData: "部品データ",
@@ -268,7 +302,8 @@ const ja: Dictionary = {
     statusDuplicate: "重複",
     statusSkip: "スキップ",
     statusError: "エラー",
-    dedupeNotice: "メーカー・分類・型式・定格仕様が一致する既存データがある場合は「更新候補」として表示されます（型式だけでは同一とみなしません）。上書きするかどうかは行ごとに選択してください（自動では更新しません）。",
+    dedupeNotice:
+      "メーカー・分類・型式・定格仕様が一致する既存データがある場合は「更新候補」として表示されます（型式だけでは同一とみなしません）。上書きするかどうかは行ごとに選択してください（自動では更新しません）。",
     updateActionLabel: "操作",
     applyUpdateOption: "更新する",
     skipOption: "スキップ",
@@ -280,9 +315,11 @@ const ja: Dictionary = {
     languageSection: "言語設定",
     languageDescription: "アプリの表示言語を切り替えます。",
     calcSection: "計算設定",
-    calcDescription: "各計算モジュールの計算式・ロジックは今後こちらから登録します（現在は未設定）。",
+    calcDescription:
+      "各計算モジュールの計算式・ロジックは今後こちらから登録します（現在は未設定）。",
     templateSection: "Excelテンプレート",
-    templateDescription: "計算ごとにExcel出力テンプレートをアップロードできます（現在は未設定）。",
+    templateDescription:
+      "計算ごとにExcel出力テンプレートをアップロードできます（現在は未設定）。",
     templateUpload: "テンプレートをアップロード",
     templateEmpty: "テンプレート未登録",
     formulaEmpty: "計算式未登録",
@@ -441,7 +478,8 @@ const ja: Dictionary = {
     ledger: {
       empty: "データがありません",
       yearBlockTitle: "{year}年　図面管理台帳",
-      searchPlaceholder: "図面番号・管理番号・工事番号・注文先・件名・盤名称で検索",
+      searchPlaceholder:
+        "図面番号・管理番号・工事番号・注文先・件名・盤名称で検索",
       noResults: "条件に一致するデータがありません",
       columns: {
         year: "年",
@@ -471,11 +509,13 @@ const ja: Dictionary = {
     },
     production: {
       sharedInfoTitle: "共通情報（設計依頼書と共通）",
-      sharedInfoHint: "この内容は設計依頼書と同じ案件データです。ここでは編集できません。",
+      sharedInfoHint:
+        "この内容は設計依頼書と同じ案件データです。ここでは編集できません。",
       panelsTitle: "盤①～⑦（製作仕様）",
       caseFieldsTitle: "製作注意事項・検査項目",
       scheduleTitle: "工程日程（予定日）",
-      scheduleHint: "工程表と同じデータです。どちらの画面で編集しても両方に反映されます。",
+      scheduleHint:
+        "工程表と同じデータです。どちらの画面で編集しても両方に反映されます。",
       manufacturerPlaceholder: "メーカー名",
       scheduleColumns: {
         box: "ＢＯＸ",
@@ -562,7 +602,8 @@ const ja: Dictionary = {
   },
   designSettings: {
     title: "設計管理設定",
-    description: "設計管理で使うマスタ一覧（選択肢）を管理します。追加・編集・削除・並び替え・有効/無効の切替ができます。",
+    description:
+      "設計管理で使うマスタ一覧（選択肢）を管理します。追加・編集・削除・並び替え・有効/無効の切替ができます。",
     selectListLabel: "対象リスト",
     addValuePlaceholder: "新しい値を入力",
     addButton: "追加",
@@ -658,13 +699,15 @@ const ja: Dictionary = {
     uploadHint: "バックアップファイル（.xlsx）を選択",
     previewTitle: "復元内容の確認",
     confirmRestoreButton: "この内容で復元する",
-    restoreDone: "復元が完了しました。反映するにはページを再読み込みしてください。",
+    restoreDone:
+      "復元が完了しました。反映するにはページを再読み込みしてください。",
     reloadButton: "再読み込み",
     invalidFile: "バックアップファイルとして読み取れませんでした",
   },
   scheduleColorSettings: {
     title: "工程色設定",
-    description: "工程表のタイムラインで使う色を管理します。色を変更してもすでに保存された日程データは変わりません。",
+    description:
+      "工程表のタイムラインで使う色を管理します。色を変更してもすでに保存された日程データは変わりません。",
     resetButton: "初期値に戻す",
     categories: {
       sheetMetal: "鈑金・BOX発注/納入",

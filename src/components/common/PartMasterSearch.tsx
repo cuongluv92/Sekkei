@@ -3,12 +3,26 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { listManufacturers } from "@/lib/mock/manufacturers";
-import { distinctCategories, matchesPartFilters } from "@/lib/utils/partSearch";
-import { PartFilterBar, type PartFilterBarValue } from "@/components/common/PartFilterBar";
+import {
+  distinctCategories,
+  distinctManufacturerIds,
+  hasUncategorizedItem,
+  hasUnsetManufacturer,
+  matchesPartFilters,
+} from "@/lib/utils/partSearch";
+import {
+  PartFilterBar,
+  type PartFilterBarValue,
+} from "@/components/common/PartFilterBar";
 import { SearchResultList } from "@/components/common/SearchResultList";
 import type { SearchResultItem } from "@/lib/types";
 
-const BLANK_FILTERS: PartFilterBarValue = { manufacturerId: "", category: "", keyword: "", specification: "" };
+const BLANK_FILTERS: PartFilterBarValue = {
+  manufacturerId: "",
+  category: "",
+  keyword: "",
+  specification: "",
+};
 
 interface PartMasterSearchProps {
   items: SearchResultItem[];
@@ -25,15 +39,41 @@ interface PartMasterSearchProps {
  * same single-click-selects / double-click-picks table, so both entry
  * points behave identically instead of drifting apart.
  */
-export function PartMasterSearch({ items, loading, onDownload, onPick }: PartMasterSearchProps) {
+export function PartMasterSearch({
+  items,
+  loading,
+  onDownload,
+  onPick,
+}: PartMasterSearchProps) {
   const { t, locale } = useTranslation();
   const [filters, setFilters] = useState<PartFilterBarValue>(BLANK_FILTERS);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
-  const categories = useMemo(() => distinctCategories(items), [items]);
+  const activeManufacturerIds = useMemo(
+    () => new Set(distinctManufacturerIds(items)),
+    [items],
+  );
+  const manufacturers = useMemo(
+    () => listManufacturers().filter((m) => activeManufacturerIds.has(m.id)),
+    [activeManufacturerIds],
+  );
+  const categoryScopeItems = useMemo(
+    () =>
+      filters.manufacturerId
+        ? items.filter((i) =>
+            matchesPartFilters(i, { manufacturerId: filters.manufacturerId }),
+          )
+        : items,
+    [items, filters.manufacturerId],
+  );
+  const categories = useMemo(
+    () => distinctCategories(categoryScopeItems),
+    [categoryScopeItems],
+  );
   const hasAnyFilter = Object.values(filters).some((v) => v.trim() !== "");
   const filtered = useMemo(
-    () => (hasAnyFilter ? items.filter((i) => matchesPartFilters(i, filters)) : []),
+    () =>
+      hasAnyFilter ? items.filter((i) => matchesPartFilters(i, filters)) : [],
     [items, filters, hasAnyFilter],
   );
 
@@ -42,13 +82,17 @@ export function PartMasterSearch({ items, loading, onDownload, onPick }: PartMas
       <PartFilterBar
         value={filters}
         onChange={setFilters}
-        manufacturers={listManufacturers()}
+        manufacturers={manufacturers}
         categories={categories}
         locale={locale}
+        showUnsetManufacturer={hasUnsetManufacturer(items)}
+        showUncategorized={hasUncategorizedItem(items)}
       />
       {hasAnyFilter && (
         <>
-          <p className="text-[11px] text-muted-2">{t("partAssembly.doubleClickHint")}</p>
+          <p className="text-[11px] text-muted-2">
+            {t("partAssembly.doubleClickHint")}
+          </p>
           <div className="panel overflow-hidden">
             <SearchResultList
               results={filtered}

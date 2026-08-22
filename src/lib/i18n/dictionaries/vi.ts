@@ -24,7 +24,8 @@ const vi: Dictionary = {
   },
   common: {
     search: "Tìm kiếm",
-    globalSearchPlaceholder: "Tìm kiếm toàn hệ thống (dữ liệu / bản vẽ / catalog)",
+    globalSearchPlaceholder:
+      "Tìm kiếm toàn hệ thống (dữ liệu / bản vẽ / catalog)",
     clear: "Xóa",
     calculate: "Tính toán",
     excelExport: "Xuất Excel",
@@ -63,7 +64,8 @@ const vi: Dictionary = {
     uploadError: "Tải lên thất bại",
     moveToTrash: "Chuyển vào thùng rác",
     movedToTrash: "Đã chuyển vào thùng rác",
-    deleteToTrashConfirm: "Chuyển \"{model}\" vào thùng rác? (Có thể khôi phục lại từ thùng rác)",
+    deleteToTrashConfirm:
+      'Chuyển "{model}" vào thùng rác? (Có thể khôi phục lại từ thùng rác)',
     deleteError: "Xóa thất bại",
     analyze: "Phân tích",
     import: "Nhập dữ liệu",
@@ -81,18 +83,20 @@ const vi: Dictionary = {
     unsetManufacturer: "Chưa có nhà sản xuất",
     uncategorized: "Chưa phân loại",
     specificationFilterPlaceholder: "Ví dụ: 3P 63AF 40AT",
-    keywordFilterPlaceholder: "Tìm theo 記号・品名・型式",
+    keywordFilterPlaceholder: "Tìm theo ký hiệu／tên／model",
     newCategoryPlaceholder: "Chọn có sẵn hoặc nhập phân loại mới",
     all: "Tất cả",
     status: "Trạng thái",
     result: "Kết quả",
     input: "Đầu vào",
-    notImplemented: "Chức năng này sẽ được triển khai ở giai đoạn sau (hiện đang là dữ liệu mẫu)",
+    notImplemented:
+      "Chức năng này sẽ được triển khai ở giai đoạn sau (hiện đang là dữ liệu mẫu)",
     mockBadge: "Dữ liệu mẫu",
   },
   search: {
     title: "Tra cứu",
-    description: "Tìm kiếm trong dữ liệu linh kiện, bản vẽ linh kiện và catalog.",
+    description:
+      "Tìm kiếm trong dữ liệu linh kiện, bản vẽ linh kiện và catalog.",
     placeholder: "Ví dụ: NF63-CV",
     button: "Tìm kiếm",
     resultsFor: "Kết quả tìm kiếm cho “{query}”",
@@ -105,7 +109,8 @@ const vi: Dictionary = {
     previewLoading: "Đang tải bản xem trước...",
     previewError: "Không thể tải bản xem trước",
     previewNoFile: "Chưa có file nào được đính kèm",
-    dwgNotice: "File DWG sẽ hỗ trợ xem trước qua trình duyệt sau (hiện chỉ tải file gốc)",
+    dwgNotice:
+      "File DWG sẽ hỗ trợ xem trước qua trình duyệt sau (hiện chỉ tải file gốc)",
   },
   selection: {
     title: "Chọn thiết bị",
@@ -124,17 +129,22 @@ const vi: Dictionary = {
     },
     resultTitle: "Kết quả tính toán",
     resultEmpty: "Nhấn “Tính toán” để hiển thị kết quả tại đây",
-    ruleNotice: "Quy tắc chọn thiết bị chưa được thiết lập. Vui lòng cấu hình trong Cài đặt.",
+    ruleNotice:
+      "Quy tắc chọn thiết bị chưa được thiết lập. Vui lòng cấu hình trong Cài đặt.",
   },
   partAssembly: {
     title: "Tạo bảng linh kiện",
-    description: "Tìm kiếm 部品データ và double click để thêm vào danh sách bên dưới. Sau khi thêm bạn có thể chỉnh sửa riêng cho Project này (không ảnh hưởng 部品データ gốc).",
+    description:
+      "Tìm kiếm 部品データ và double click để thêm vào danh sách bên dưới. Sau khi thêm bạn có thể chỉnh sửa riêng cho Project này (không ảnh hưởng 部品データ gốc).",
     searchPlaceholder: "Tìm theo model hoặc tên linh kiện",
     tableTitle: "Danh sách linh kiện",
-    tableEmpty: "Chưa có linh kiện nào. Hãy double click vào kết quả tìm kiếm ở trên.",
+    tableEmpty:
+      "Chưa có linh kiện nào. Hãy double click vào kết quả tìm kiếm ở trên.",
     addRow: "Thêm dòng",
     reorderHint: "Kéo để sắp xếp lại thứ tự dòng",
     addedToList: "Đã thêm vào danh sách linh kiện",
+    addedToListWithModel: "Đã thêm {model} vào danh sách linh kiện",
+    addError: "Thêm linh kiện thất bại",
     doubleClickHint: "Click để chọn, double click để thêm vào danh sách",
     insertAbove: "Thêm phía trên",
     insertBelow: "Thêm phía dưới",
@@ -159,13 +169,14 @@ const vi: Dictionary = {
   },
   trash: {
     title: "Thùng rác",
-    description: "Các mục đã xóa khỏi 部品データ・部品図 — có thể khôi phục hoặc xóa vĩnh viễn tại đây.",
+    description:
+      "Các mục đã xóa khỏi 部品データ・部品図 — có thể khôi phục hoặc xóa vĩnh viễn tại đây.",
     partDataSection: "部品データ",
     partDrawingSection: "部品図",
     deletedAt: "Ngày xóa",
     restore: "Khôi phục",
     purge: "Xóa vĩnh viễn",
-    purgeConfirm: "Xóa vĩnh viễn \"{model}\"? Không thể hoàn tác.",
+    purgeConfirm: 'Xóa vĩnh viễn "{model}"? Không thể hoàn tác.',
     restored: "Đã khôi phục",
     purged: "Đã xóa vĩnh viễn",
     restoreError: "Khôi phục thất bại",
@@ -177,8 +188,10 @@ const vi: Dictionary = {
     resultEmpty: "Nhấn “Tính toán” để hiển thị kết quả tại đây",
     inputTitle: "Đầu vào",
     outputTitle: "Xuất file",
-    formulaPending: "Công thức chưa được thiết lập. Vui lòng cấu hình trong Cài đặt > Cài đặt tính toán.",
-    templateNotice: "File Excel xuất ra sẽ theo đúng template đã đăng ký trong Cài đặt (hiện chưa có template)",
+    formulaPending:
+      "Công thức chưa được thiết lập. Vui lòng cấu hình trong Cài đặt > Cài đặt tính toán.",
+    templateNotice:
+      "File Excel xuất ra sẽ theo đúng template đã đăng ký trong Cài đặt (hiện chưa có template)",
   },
   weightCalc: {
     title: "Tính trọng lượng",
@@ -188,7 +201,8 @@ const vi: Dictionary = {
       panel: "盤重量計算",
     },
     basic: {
-      description: "Tính trọng lượng cho フラットバー・アングル・チャンネル・ハット形.",
+      description:
+        "Tính trọng lượng cho フラットバー・アングル・チャンネル・ハット形.",
       imagePlaceholder: "Sơ đồ mặt cắt (chưa có ảnh)",
       imageUploadError: "Tải ảnh lên thất bại",
       shapes: {
@@ -199,7 +213,8 @@ const vi: Dictionary = {
       },
       material: "材質",
       materialPlaceholder: "Chọn材質",
-      noMaterialsWarning: "Chưa có材質 nào. Vào 設定 > 重量計算材質設定 để thêm.",
+      noMaterialsWarning:
+        "Chưa có材質 nào. Vào 設定 > 重量計算材質設定 để thêm.",
       density: "比重",
       dimensions: "寸法",
       length: "長さ L (mm)",
@@ -210,20 +225,37 @@ const vi: Dictionary = {
       unitWeightFormula: "1個重量 = 断面積 × L × 比重 × 10⁻⁶",
       totalWeightFormula: "合計重量 = 1個重量 × N",
       formula: "計算式",
-      invalidInput: "Kích thước・chiều dài・số lượng・比重 phải là số lớn hơn 0",
+      invalidInput:
+        "Kích thước・chiều dài・số lượng・比重 phải là số lớn hơn 0",
       noMaterial: "Chọn材質 hoặc nhập 比重 để tính trọng lượng",
       saved: "保存済み",
       selectProjectFirst: "Chọn Project trước khi lưu tính toán",
       fields: {
-        angle: { W: "W (rộng)", H: "H (cao)", t1: "t1 (dày cánh ngang)", t2: "t2 (dày cánh đứng)" },
-        channel: { W: "W (rộng cánh)", H: "H (cao)", t1: "t1 (dày cánh)", t2: "t2 (dày web)" },
+        angle: {
+          W: "W (rộng)",
+          H: "H (cao)",
+          t1: "t1 (dày cánh ngang)",
+          t2: "t2 (dày cánh đứng)",
+        },
+        channel: {
+          W: "W (rộng cánh)",
+          H: "H (cao)",
+          t1: "t1 (dày cánh)",
+          t2: "t2 (dày web)",
+        },
         flatBar: { W: "W (rộng)", H: "H (dày)" },
-        hat: { W1: "W1 (rộng đỉnh)", W2: "W2 (rộng cánh đáy)", H: "H (cao)", t: "t (dày tấm)" },
+        hat: {
+          W1: "W1 (rộng đỉnh)",
+          W2: "W2 (rộng cánh đáy)",
+          H: "H (cao)",
+          t: "t (dày tấm)",
+        },
       },
     },
     panel: {
       title: "盤重量計算",
-      comingSoon: "Đang chuẩn bị: nhập kích thước tủ + lấy 重量 từ 部品データ + cộng trọng lượng vật liệu từ 基本重量計算 để ra tổng重量 của tủ.",
+      comingSoon:
+        "Đang chuẩn bị: nhập kích thước tủ + lấy 重量 từ 部品データ + cộng trọng lượng vật liệu từ 基本重量計算 để ra tổng重量 của tủ.",
     },
   },
   ventilationCalc: {
@@ -241,18 +273,21 @@ const vi: Dictionary = {
       busbar: "Thanh cái đồng",
       earthWire: "Kích thước dây tiếp đất",
     },
-    addModuleHint: "Có thể thêm module tính toán mới từ Cài đặt (hiện là dữ liệu mẫu)",
+    addModuleHint:
+      "Có thể thêm module tính toán mới từ Cài đặt (hiện là dữ liệu mẫu)",
   },
   importPage: {
     title: "Nhập dữ liệu",
-    description: "Nhập dữ liệu từ Excel/DWG/PDF/hình ảnh vào dữ liệu linh kiện, bản vẽ hoặc catalog.",
+    description:
+      "Nhập dữ liệu từ Excel/DWG/PDF/hình ảnh vào dữ liệu linh kiện, bản vẽ hoặc catalog.",
     step1: "① Chọn file",
     step2: "② Phân tích",
     step3: "③ Xem trước dữ liệu",
     step4: "④ Thực hiện nhập",
     dropHint: "Kéo thả file vào đây hoặc bấm để chọn file",
     targetLabel: "Nhập vào",
-    fallbackSectionTitle: "Giá trị mặc định cho メーカー・分類 (áp dụng cho các dòng Excel không có sẵn thông tin này)",
+    fallbackSectionTitle:
+      "Giá trị mặc định cho メーカー・分類 (áp dụng cho các dòng Excel không có sẵn thông tin này)",
     fallbackManufacturerPlaceholder: "Chọn có sẵn hoặc nhập tên メーカー mới",
     fallbackCategoryPlaceholder: "Chọn có sẵn hoặc nhập 分類 mới",
     targets: {
@@ -268,7 +303,8 @@ const vi: Dictionary = {
     statusDuplicate: "Trùng lặp",
     statusSkip: "Bỏ qua",
     statusError: "Lỗi",
-    dedupeNotice: "Nếu メーカー・分類・型式・定格仕様 đều trùng với dữ liệu hiện có, dòng đó sẽ hiện trạng thái \"Có thể cập nhật\" (chỉ trùng 型式 thôi thì không tính là trùng). Bạn phải tự chọn ghi đè hay bỏ qua cho từng dòng — hệ thống không tự động cập nhật.",
+    dedupeNotice:
+      'Nếu メーカー・分類・型式・定格仕様 đều trùng với dữ liệu hiện có, dòng đó sẽ hiện trạng thái "Có thể cập nhật" (chỉ trùng 型式 thôi thì không tính là trùng). Bạn phải tự chọn ghi đè hay bỏ qua cho từng dòng — hệ thống không tự động cập nhật.',
     updateActionLabel: "Hành động",
     applyUpdateOption: "Cập nhật",
     skipOption: "Bỏ qua",
@@ -280,9 +316,11 @@ const vi: Dictionary = {
     languageSection: "Ngôn ngữ",
     languageDescription: "Chuyển đổi ngôn ngữ hiển thị của ứng dụng.",
     calcSection: "Cài đặt tính toán",
-    calcDescription: "Công thức / logic của từng module tính toán sẽ được đăng ký tại đây sau (hiện chưa có).",
+    calcDescription:
+      "Công thức / logic của từng module tính toán sẽ được đăng ký tại đây sau (hiện chưa có).",
     templateSection: "Template Excel",
-    templateDescription: "Có thể tải lên template Excel xuất kết quả cho từng loại tính toán (hiện chưa có).",
+    templateDescription:
+      "Có thể tải lên template Excel xuất kết quả cho từng loại tính toán (hiện chưa có).",
     templateUpload: "Tải lên template",
     templateEmpty: "Chưa có template",
     formulaEmpty: "Chưa có công thức",
@@ -418,7 +456,8 @@ const vi: Dictionary = {
         terminalBlock: "端子台",
       },
     },
-    comingSoon: "Chức năng này sẽ được triển khai ở giai đoạn sau (hiện chưa có).",
+    comingSoon:
+      "Chức năng này sẽ được triển khai ở giai đoạn sau (hiện chưa có).",
     productionComingSoon:
       "製作依頼書 sẽ được triển khai ở giai đoạn sau (hiện chưa có). Việc chọn Project・案件・盤 vẫn dùng chung với giai đoạn sau.",
     saveButton: "Lưu",
@@ -441,7 +480,8 @@ const vi: Dictionary = {
     ledger: {
       empty: "Không có dữ liệu",
       yearBlockTitle: "{year}年　図面管理台帳",
-      searchPlaceholder: "Tìm theo 図面番号・管理番号・工事番号・注文先・件名・盤名称",
+      searchPlaceholder:
+        "Tìm theo 図面番号・管理番号・工事番号・注文先・件名・盤名称",
       noResults: "Không có dữ liệu phù hợp",
       columns: {
         year: "年",
@@ -471,11 +511,13 @@ const vi: Dictionary = {
     },
     production: {
       sharedInfoTitle: "Thông tin chung (dùng chung với 設計依頼書)",
-      sharedInfoHint: "Nội dung này lấy từ cùng案件 với 設計依頼書, không chỉnh sửa ở đây.",
+      sharedInfoHint:
+        "Nội dung này lấy từ cùng案件 với 設計依頼書, không chỉnh sửa ở đây.",
       panelsTitle: "盤①～⑦ (thông số 製作)",
       caseFieldsTitle: "製作注意事項・検査項目",
       scheduleTitle: "工程日程 (ngày dự kiến)",
-      scheduleHint: "Cùng dữ liệu với 工程表 — sửa ở màn nào cũng cập nhật cả hai.",
+      scheduleHint:
+        "Cùng dữ liệu với 工程表 — sửa ở màn nào cũng cập nhật cả hai.",
       manufacturerPlaceholder: "Tên nhà cung cấp",
       scheduleColumns: {
         box: "ＢＯＸ",
@@ -623,7 +665,7 @@ const vi: Dictionary = {
   selectionSettings: {
     title: "Cài đặt 選定",
     description:
-      "Quản lý rule dùng cho 選定 (khoảng input → giá trị output). Chỉ những gì khai báo ở đây mới xuất hiện trong kết quả 選定 — mục nào chưa có rule sẽ hiện \"chưa đăng ký\".",
+      'Quản lý rule dùng cho 選定 (khoảng input → giá trị output). Chỉ những gì khai báo ở đây mới xuất hiện trong kết quả 選定 — mục nào chưa có rule sẽ hiện "chưa đăng ký".',
     addButton: "Thêm rule",
     emptyList: "Chưa có rule nào",
     enableButton: "Bật",
@@ -654,7 +696,8 @@ const vi: Dictionary = {
     exportDescription:
       "Xuất toàn bộ dữ liệu hiện tại (Project・案件・盤・設計依頼・製作依頼・工程・原価工数・master settings・部品データ...) ra file Excel. Mỗi lần bấm sẽ tạo file mới, không ghi đè file backup cũ.",
     createButton: "Tạo backup",
-    restoreDescription: "Khôi phục dữ liệu từ file backup Excel. Kiểm tra nội dung trước khi xác nhận — trước khi xác nhận sẽ không có gì bị ghi đè.",
+    restoreDescription:
+      "Khôi phục dữ liệu từ file backup Excel. Kiểm tra nội dung trước khi xác nhận — trước khi xác nhận sẽ không có gì bị ghi đè.",
     uploadHint: "Chọn file backup (.xlsx)",
     previewTitle: "Xác nhận nội dung khôi phục",
     confirmRestoreButton: "Khôi phục với nội dung này",
@@ -664,7 +707,8 @@ const vi: Dictionary = {
   },
   scheduleColorSettings: {
     title: "Cài đặt màu工程",
-    description: "Quản lý màu dùng trong timeline 工程表. Đổi màu không ảnh hưởng dữ liệu ngày đã lưu.",
+    description:
+      "Quản lý màu dùng trong timeline 工程表. Đổi màu không ảnh hưởng dữ liệu ngày đã lưu.",
     resetButton: "Về mặc định",
     categories: {
       sheetMetal: "鈑金・BOX発注/納入",

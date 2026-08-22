@@ -137,6 +137,8 @@ export interface Dictionary {
     addRow: string;
     reorderHint: string;
     addedToList: string;
+    addedToListWithModel: string;
+    addError: string;
     doubleClickHint: string;
     insertAbove: string;
     insertBelow: string;

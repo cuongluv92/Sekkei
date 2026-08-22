@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { partAssemblyService } from "@/lib/services/partAssemblyService";
 import type { PartAssemblyRow } from "@/lib/types";
 
@@ -9,9 +17,15 @@ interface PartAssemblyContextValue {
   setProjectId: (projectId: string) => void;
   rows: PartAssemblyRow[];
   loading: boolean;
-  addRow: (row: Omit<PartAssemblyRow, "id"> & { id?: string }) => void;
-  /** Inserts at an exact position (clamped to [0, length]) instead of always appending — for 上に追加/下に追加 and "insert from master here". */
-  insertRowAt: (index: number, row: Omit<PartAssemblyRow, "id"> & { id?: string }) => void;
+  /** Resolves once the new row is persisted, rejects if `partAssemblyService.saveRows` fails — lets the caller show a success/error toast. The row is added to local state either way (no rollback on failure). Resolves with the new row's id. */
+  addRow: (
+    row: Omit<PartAssemblyRow, "id"> & { id?: string },
+  ) => Promise<string>;
+  /** Inserts at an exact position (clamped to [0, length]) instead of always appending — for 上に追加/下に追加 and "insert from master here". Same resolve/reject contract as `addRow`. */
+  insertRowAt: (
+    index: number,
+    row: Omit<PartAssemblyRow, "id"> & { id?: string },
+  ) => Promise<string>;
   removeRow: (id: string) => void;
   /** Project-side override of any editable field (記号/品名/メーカー/型式/定格・仕様/数量/備考) — never writes back to 部品データ master. */
   updateField: (id: string, patch: Partial<PartAssemblyRow>) => void;
@@ -19,7 +33,9 @@ interface PartAssemblyContextValue {
   clear: () => void;
 }
 
-const PartAssemblyContext = createContext<PartAssemblyContextValue | null>(null);
+const PartAssemblyContext = createContext<PartAssemblyContextValue | null>(
+  null,
+);
 
 let rowCounter = 0;
 function nextId() {
@@ -77,24 +93,30 @@ export function PartAssemblyProvider({ children }: { children: ReactNode }) {
 
   const addRow = useCallback(
     (row: Omit<PartAssemblyRow, "id"> & { id?: string }) => {
+      const id = row.id ?? nextId();
+      let next: PartAssemblyRow[] = [];
       setRows((prev) => {
-        const next = [...prev, { ...row, id: row.id ?? nextId() }];
-        if (projectId) partAssemblyService.saveRows(projectId, next);
+        next = [...prev, { ...row, id }];
         return next;
       });
+      if (!projectId) return Promise.resolve(id);
+      return partAssemblyService.saveRows(projectId, next).then(() => id);
     },
     [projectId],
   );
 
   const insertRowAt = useCallback(
     (index: number, row: Omit<PartAssemblyRow, "id"> & { id?: string }) => {
+      const id = row.id ?? nextId();
+      let next: PartAssemblyRow[] = [];
       setRows((prev) => {
         const clamped = Math.max(0, Math.min(index, prev.length));
-        const next = [...prev];
-        next.splice(clamped, 0, { ...row, id: row.id ?? nextId() });
-        if (projectId) partAssemblyService.saveRows(projectId, next);
+        next = [...prev];
+        next.splice(clamped, 0, { ...row, id });
         return next;
       });
+      if (!projectId) return Promise.resolve(id);
+      return partAssemblyService.saveRows(projectId, next).then(() => id);
     },
     [projectId],
   );
@@ -158,16 +180,33 @@ export function PartAssemblyProvider({ children }: { children: ReactNode }) {
       moveRow,
       clear,
     }),
-    [projectId, setProjectId, rows, loading, addRow, insertRowAt, removeRow, updateField, moveRow, clear],
+    [
+      projectId,
+      setProjectId,
+      rows,
+      loading,
+      addRow,
+      insertRowAt,
+      removeRow,
+      updateField,
+      moveRow,
+      clear,
+    ],
   );
 
-  return <PartAssemblyContext.Provider value={value}>{children}</PartAssemblyContext.Provider>;
+  return (
+    <PartAssemblyContext.Provider value={value}>
+      {children}
+    </PartAssemblyContext.Provider>
+  );
 }
 
 export function usePartAssembly() {
   const ctx = useContext(PartAssemblyContext);
   if (!ctx) {
-    throw new Error("usePartAssembly must be used within a PartAssemblyProvider");
+    throw new Error(
+      "usePartAssembly must be used within a PartAssemblyProvider",
+    );
   }
   return ctx;
 }

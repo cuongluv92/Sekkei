@@ -1,18 +1,30 @@
 "use client";
 
-import { Check, CornerLeftDown, CornerLeftUp, GripVertical, Plus, Trash2, X } from "lucide-react";
+import {
+  Check,
+  CornerLeftDown,
+  CornerLeftUp,
+  GripVertical,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { searchService } from "@/lib/services";
 import { projectService } from "@/lib/services/design";
-import { listManufacturers, preloadManufacturers } from "@/lib/mock/manufacturers";
+import {
+  listManufacturers,
+  preloadManufacturers,
+} from "@/lib/mock/manufacturers";
 import { findFileByKind, openFileAsset } from "@/lib/utils/fileDownload";
 import { usePartAssembly } from "@/lib/store/PartAssemblyProvider";
-import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
+import { useToast } from "@/lib/hooks/useToast";
 import { InsertPartModal } from "@/components/common/InsertPartModal";
 import { PartMasterSearch } from "@/components/common/PartMasterSearch";
 import { ExportActions } from "@/components/common/ExportActions";
 import { PageHeader } from "@/components/common/PageHeader";
+import { Toast } from "@/components/common/Toast";
 import type { PartAssemblyRow, Project, SearchResultItem } from "@/lib/types";
 
 const BLANK_ROW: Omit<PartAssemblyRow, "id"> = {
@@ -33,7 +45,9 @@ const BLANK_ROW: Omit<PartAssemblyRow, "id"> = {
  * used or shown here); sourceRefId keeps the link back to the master row so
  * 盤重量計算 can look weight up from there later.
  */
-function rowFromMasterItem(item: SearchResultItem): Omit<PartAssemblyRow, "id"> {
+function rowFromMasterItem(
+  item: SearchResultItem,
+): Omit<PartAssemblyRow, "id"> {
   return {
     symbol: item.symbol ?? "",
     name: item.category,
@@ -70,7 +84,8 @@ export default function PartAssemblyPage() {
   const [newProjectName, setNewProjectName] = useState("");
   const projectInputRef = useRef<HTMLInputElement>(null);
   const [, forceRerender] = useState(0);
-  const { message, show } = useMockFeedback();
+  const { toast, showToast } = useToast();
+  const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null);
 
   useEffect(() => {
     preloadManufacturers().then(() => forceRerender((v) => v + 1));
@@ -97,7 +112,9 @@ export default function PartAssemblyPage() {
       return;
     }
     const created = await projectService.create(name);
-    setProjects((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name, "ja")));
+    setProjects((prev) =>
+      [...prev, created].sort((a, b) => a.name.localeCompare(b.name, "ja")),
+    );
     setNewProjectName("");
     setAddingProject(false);
     setProjectId(created.id);
@@ -108,31 +125,74 @@ export default function PartAssemblyPage() {
     if (file) openFileAsset(file);
   }
 
-  function handlePick(item: SearchResultItem) {
-    addRow(rowFromMasterItem(item));
-    show(t("partAssembly.addedToList"));
+  function flashRow(id: string) {
+    setHighlightedRowId(id);
+    setTimeout(
+      () => setHighlightedRowId((current) => (current === id ? null : current)),
+      1000,
+    );
   }
 
-  function handleInsertPick(item: SearchResultItem) {
+  async function handlePick(item: SearchResultItem) {
+    try {
+      const id = await addRow(rowFromMasterItem(item));
+      showToast(
+        item.model
+          ? t("partAssembly.addedToListWithModel", { model: item.model })
+          : t("partAssembly.addedToList"),
+      );
+      flashRow(id);
+    } catch {
+      showToast(t("partAssembly.addError"), "error");
+    }
+  }
+
+  async function handleInsertPick(item: SearchResultItem) {
     if (insertAt === null) return;
-    insertRowAt(insertAt, rowFromMasterItem(item));
-    show(t("partAssembly.addedToList"));
-    setInsertAt(null);
+    try {
+      const id = await insertRowAt(insertAt, rowFromMasterItem(item));
+      showToast(
+        item.model
+          ? t("partAssembly.addedToListWithModel", { model: item.model })
+          : t("partAssembly.addedToList"),
+      );
+      flashRow(id);
+    } catch {
+      showToast(t("partAssembly.addError"), "error");
+    } finally {
+      setInsertAt(null);
+    }
   }
 
-  function handleInsertBlank() {
+  async function handleInsertBlank() {
     if (insertAt === null) return;
-    insertRowAt(insertAt, BLANK_ROW);
-    setInsertAt(null);
+    try {
+      const id = await insertRowAt(insertAt, BLANK_ROW);
+      showToast(t("partAssembly.addedToList"));
+      flashRow(id);
+    } catch {
+      showToast(t("partAssembly.addError"), "error");
+    } finally {
+      setInsertAt(null);
+    }
   }
 
-  function addBlankRow() {
-    addRow(BLANK_ROW);
+  async function addBlankRow() {
+    try {
+      const id = await addRow(BLANK_ROW);
+      showToast(t("partAssembly.addedToList"));
+      flashRow(id);
+    } catch {
+      showToast(t("partAssembly.addError"), "error");
+    }
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title={t("partAssembly.title")} description={t("partAssembly.description")} />
+      <PageHeader
+        title={t("partAssembly.title")}
+        description={t("partAssembly.description")}
+      />
 
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2.5">
         <label className="whitespace-nowrap text-[12.5px] font-semibold text-muted">
@@ -216,13 +276,19 @@ export default function PartAssemblyPage() {
 
           <div className="panel">
             <div className="panel-header">
-              <span className="panel-title">{t("partAssembly.tableTitle")}</span>
+              <span className="panel-title">
+                {t("partAssembly.tableTitle")}
+              </span>
               <div className="flex items-center gap-2">
                 <button onClick={addBlankRow} className="btn-ghost">
                   <Plus className="h-3.5 w-3.5" />
                   {t("partAssembly.addRow")}
                 </button>
-                <button onClick={clear} className="btn-ghost" disabled={rows.length === 0}>
+                <button
+                  onClick={clear}
+                  className="btn-ghost"
+                  disabled={rows.length === 0}
+                >
                   {t("common.clear")}
                 </button>
               </div>
@@ -236,9 +302,13 @@ export default function PartAssemblyPage() {
                     <th style={{ width: "56px" }} />
                     <th style={{ width: "90px" }}>{t("common.symbol")}</th>
                     <th style={{ width: "150px" }}>{t("common.name")}</th>
-                    <th style={{ width: "150px" }}>{t("common.manufacturer")}</th>
+                    <th style={{ width: "150px" }}>
+                      {t("common.manufacturer")}
+                    </th>
                     <th style={{ width: "120px" }}>{t("common.model")}</th>
-                    <th style={{ width: "190px" }}>{t("common.specification")}</th>
+                    <th style={{ width: "190px" }}>
+                      {t("common.specification")}
+                    </th>
                     <th style={{ width: "70px" }} className="text-right">
                       {t("common.quantity")}
                     </th>
@@ -255,7 +325,10 @@ export default function PartAssemblyPage() {
                     </tr>
                   ) : rows.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-8 text-center text-muted-2">
+                      <td
+                        colSpan={10}
+                        className="py-8 text-center text-muted-2"
+                      >
                         {t("partAssembly.tableEmpty")}
                       </td>
                     </tr>
@@ -270,9 +343,18 @@ export default function PartAssemblyPage() {
                           if (dragIndex !== null) moveRow(dragIndex, index);
                           setDragIndex(null);
                         }}
-                        className={dragIndex === index ? "opacity-50" : ""}
+                        className={
+                          dragIndex === index
+                            ? "opacity-50"
+                            : highlightedRowId === row.id
+                              ? "animate-row-added"
+                              : ""
+                        }
                       >
-                        <td className="cursor-grab text-muted-2" title={t("partAssembly.reorderHint")}>
+                        <td
+                          className="cursor-grab text-muted-2"
+                          title={t("partAssembly.reorderHint")}
+                        >
                           <GripVertical className="h-3.5 w-3.5" />
                         </td>
                         <td>
@@ -298,27 +380,39 @@ export default function PartAssemblyPage() {
                         <td>
                           <input
                             value={row.symbol}
-                            onChange={(e) => updateField(row.id, { symbol: e.target.value })}
+                            onChange={(e) =>
+                              updateField(row.id, { symbol: e.target.value })
+                            }
                             className="field-input py-1"
                           />
                         </td>
                         <td>
                           <input
                             value={row.name}
-                            onChange={(e) => updateField(row.id, { name: e.target.value })}
+                            onChange={(e) =>
+                              updateField(row.id, { name: e.target.value })
+                            }
                             className="field-input py-1"
                           />
                         </td>
                         <td>
                           <select
                             value={row.manufacturerId}
-                            onChange={(e) => updateField(row.id, { manufacturerId: e.target.value })}
+                            onChange={(e) =>
+                              updateField(row.id, {
+                                manufacturerId: e.target.value,
+                              })
+                            }
                             className="field-input py-1"
                           >
-                            <option value="">{t("common.unsetManufacturer")}</option>
+                            <option value="">
+                              {t("common.unsetManufacturer")}
+                            </option>
                             {listManufacturers().map((m) => (
                               <option key={m.id} value={m.id}>
-                                {locale === "vi" && m.nameVi ? m.nameVi : m.name}
+                                {locale === "vi" && m.nameVi
+                                  ? m.nameVi
+                                  : m.name}
                               </option>
                             ))}
                           </select>
@@ -326,14 +420,20 @@ export default function PartAssemblyPage() {
                         <td>
                           <input
                             value={row.model}
-                            onChange={(e) => updateField(row.id, { model: e.target.value })}
+                            onChange={(e) =>
+                              updateField(row.id, { model: e.target.value })
+                            }
                             className="field-input py-1 font-mono text-[12px]"
                           />
                         </td>
                         <td>
                           <input
                             value={row.specification}
-                            onChange={(e) => updateField(row.id, { specification: e.target.value })}
+                            onChange={(e) =>
+                              updateField(row.id, {
+                                specification: e.target.value,
+                              })
+                            }
                             className="field-input py-1"
                           />
                         </td>
@@ -342,14 +442,20 @@ export default function PartAssemblyPage() {
                             type="number"
                             min={0}
                             value={row.quantity}
-                            onChange={(e) => updateField(row.id, { quantity: Number(e.target.value) })}
+                            onChange={(e) =>
+                              updateField(row.id, {
+                                quantity: Number(e.target.value),
+                              })
+                            }
                             className="field-input w-16 py-1 text-right"
                           />
                         </td>
                         <td>
                           <input
                             value={row.remarks ?? ""}
-                            onChange={(e) => updateField(row.id, { remarks: e.target.value })}
+                            onChange={(e) =>
+                              updateField(row.id, { remarks: e.target.value })
+                            }
                             className="field-input py-1"
                           />
                         </td>
@@ -369,14 +475,19 @@ export default function PartAssemblyPage() {
             </div>
 
             <div className="flex items-center justify-between border-t border-border px-4 py-3">
-              <span className="text-[11px] text-muted-2">{t("partAssembly.reorderHint")}</span>
-              <ExportActions context="部品製作リスト" formats={["dwg", "excel", "pdf"]} />
+              <span className="text-[11px] text-muted-2">
+                {t("partAssembly.reorderHint")}
+              </span>
+              <ExportActions
+                context="部品製作リスト"
+                formats={["dwg", "excel", "pdf"]}
+              />
             </div>
           </div>
         </>
       )}
 
-      {message && <div className="text-[12px] text-success">{message}</div>}
+      <Toast toast={toast} />
 
       {insertAt !== null && (
         <InsertPartModal
