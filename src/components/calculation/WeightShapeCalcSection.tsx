@@ -208,6 +208,7 @@ export function WeightShapeCalcSection({
             </span>
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
               {renderDimField(shape.primaryFields[0])}
+              {shape.primaryFields[1] && renderDimField(shape.primaryFields[1])}
               <div>
                 <label className="mb-1 block text-[11px] text-muted">
                   {t("weightCalc.basic.length")}
@@ -224,7 +225,6 @@ export function WeightShapeCalcSection({
                   }
                 />
               </div>
-              {shape.primaryFields[1] && renderDimField(shape.primaryFields[1])}
             </div>
             {shape.secondaryFields.length > 0 && (
               <div className="mt-2.5 grid grid-cols-2 gap-2.5">
