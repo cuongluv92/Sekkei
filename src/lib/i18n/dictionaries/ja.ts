@@ -151,13 +151,14 @@ const ja: Dictionary = {
       panel: "盤重量計算",
     },
     basic: {
-      description: "アングル・チャンネル・フラットバーの重量を計算します。",
+      description: "フラットバー・アングル・チャンネル・ハット形の重量を計算します。",
       imagePlaceholder: "断面図（未登録）",
       imageUploadError: "画像のアップロードに失敗しました",
       shapes: {
         angle: "アングル",
         channel: "チャンネル",
         flatBar: "フラットバー",
+        hat: "ハット形",
       },
       material: "材質",
       materialPlaceholder: "材質を選択",
@@ -178,6 +179,7 @@ const ja: Dictionary = {
         angle: { W: "W（幅）", H: "H（高さ）", t1: "t1（横フランジ厚）", t2: "t2（縦フランジ厚）" },
         channel: { W: "W（フランジ幅）", H: "H（高さ）", t1: "t1（フランジ厚）", t2: "t2（ウェブ厚）" },
         flatBar: { W: "W（幅）", H: "H（厚さ）" },
+        hat: { W1: "W1（上部幅）", W2: "W2（下部フランジ幅）", H: "H（高さ）", t: "t（板厚）" },
       },
     },
     panel: {

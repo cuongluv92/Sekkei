@@ -21,8 +21,6 @@ interface WeightShapeCalcSectionProps {
   onImageChange: (image: WeightShapeImage) => void;
 }
 
-const ALL_DIM_KEYS: WeightDimKey[] = ["W", "H", "t1", "t2"];
-
 /** "" (untouched) | a positive finite number | null (typed but invalid — 0, negative, or not a number). */
 function parseField(raw: string): number | null | "" {
   if (raw.trim() === "") return "";
@@ -58,6 +56,9 @@ export function WeightShapeCalcSection({
     H: "",
     t1: "",
     t2: "",
+    W1: "",
+    W2: "",
+    t: "",
   });
   const [lengthRaw, setLengthRaw] = useState("");
   const [quantityRaw, setQuantityRaw] = useState("1");
@@ -107,6 +108,9 @@ export function WeightShapeCalcSection({
     H: typeof dimStates.H === "number" ? dimStates.H : 0,
     t1: typeof dimStates.t1 === "number" ? dimStates.t1 : 0,
     t2: typeof dimStates.t2 === "number" ? dimStates.t2 : 0,
+    W1: typeof dimStates.W1 === "number" ? dimStates.W1 : 0,
+    W2: typeof dimStates.W2 === "number" ? dimStates.W2 : 0,
+    t: typeof dimStates.t === "number" ? dimStates.t : 0,
   };
 
   const area = dimsValid ? shape.computeArea(dims) : null;
@@ -178,7 +182,7 @@ export function WeightShapeCalcSection({
               {t("weightCalc.basic.dimensions")}
             </span>
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-              {ALL_DIM_KEYS.filter((k) => shape.fields.includes(k)).map((k) => (
+              {shape.fields.map((k) => (
                 <div key={k}>
                   <label className="mb-1 block text-[11px] text-muted">
                     {t(`weightCalc.basic.fields.${shapeKey}.${k}`)}

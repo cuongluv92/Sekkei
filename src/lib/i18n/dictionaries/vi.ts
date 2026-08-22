@@ -151,13 +151,14 @@ const vi: Dictionary = {
       panel: "盤重量計算",
     },
     basic: {
-      description: "Tính trọng lượng cho アングル・チャンネル・フラットバー.",
+      description: "Tính trọng lượng cho フラットバー・アングル・チャンネル・ハット形.",
       imagePlaceholder: "Sơ đồ mặt cắt (chưa có ảnh)",
       imageUploadError: "Tải ảnh lên thất bại",
       shapes: {
         angle: "アングル",
         channel: "チャンネル",
         flatBar: "フラットバー",
+        hat: "ハット形",
       },
       material: "材質",
       materialPlaceholder: "Chọn材質",
@@ -178,6 +179,7 @@ const vi: Dictionary = {
         angle: { W: "W (rộng)", H: "H (cao)", t1: "t1 (dày cánh ngang)", t2: "t2 (dày cánh đứng)" },
         channel: { W: "W (rộng cánh)", H: "H (cao)", t1: "t1 (dày cánh)", t2: "t2 (dày web)" },
         flatBar: { W: "W (rộng)", H: "H (dày)" },
+        hat: { W1: "W1 (rộng đỉnh)", W2: "W2 (rộng cánh đáy)", H: "H (cao)", t: "t (dày tấm)" },
       },
     },
     panel: {

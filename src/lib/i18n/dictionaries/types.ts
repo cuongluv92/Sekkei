@@ -160,6 +160,7 @@ export interface Dictionary {
         angle: string;
         channel: string;
         flatBar: string;
+        hat: string;
       };
       material: string;
       materialPlaceholder: string;
@@ -180,6 +181,7 @@ export interface Dictionary {
         angle: { W: string; H: string; t1: string; t2: string };
         channel: { W: string; H: string; t1: string; t2: string };
         flatBar: { W: string; H: string };
+        hat: { W1: string; W2: string; H: string; t: string };
       };
     };
     panel: {

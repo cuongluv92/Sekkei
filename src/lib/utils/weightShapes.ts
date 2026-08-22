@@ -1,13 +1,19 @@
 /**
- * 重量計算 > 基本重量計算 shape definitions — アングル/チャンネル/フラットバー only, per
- * the confirmed spec. Each shape's area formula is data here (not hard-coded
- * per-component), so WeightShapeCalcSection stays one generic component
- * instead of three near-duplicates. Do not add more shapes without an
- * explicit request — this list is deliberately closed for now.
+ * 重量計算 > 基本重量計算 shape definitions — アングル/チャンネル/フラットバー/ハット形
+ * only, per the confirmed spec. Each shape's area formula is data here (not
+ * hard-coded per-component), so WeightShapeCalcSection stays one generic
+ * component instead of near-duplicates per shape. Do not add more shapes
+ * without an explicit request — this list is deliberately closed for now.
+ *
+ * フラットバー is listed first per the confirmed display order (moved to the
+ * front); ハット形 is a formed/bent sheet profile with one uniform thickness
+ * (unlike アングル/チャンネル's solid t1/t2 flange+web), so its area is the
+ * standard thin-wall "developed length × t" used for hat-channel sections,
+ * not a solid cross-section with corner-overlap subtraction.
  */
 
-export type WeightShapeKey = "angle" | "channel" | "flatBar";
-export type WeightDimKey = "W" | "H" | "t1" | "t2";
+export type WeightShapeKey = "flatBar" | "angle" | "channel" | "hat";
+export type WeightDimKey = "W" | "H" | "t1" | "t2" | "W1" | "W2" | "t";
 
 export type WeightDims = Record<WeightDimKey, number>;
 
@@ -27,6 +33,13 @@ function fmt(n: number): string {
 
 export const WEIGHT_SHAPES: WeightShapeDef[] = [
   {
+    key: "flatBar",
+    fields: ["W", "H"],
+    areaFormulaSymbolic: "A = W × H",
+    computeArea: (v) => v.W * v.H,
+    areaFormulaSubstituted: (v) => `A = ${fmt(v.W)} × ${fmt(v.H)}`,
+  },
+  {
     key: "angle",
     fields: ["W", "H", "t1", "t2"],
     areaFormulaSymbolic: "A = W × t1 + H × t2 − t1 × t2",
@@ -43,11 +56,12 @@ export const WEIGHT_SHAPES: WeightShapeDef[] = [
       `A = 2 × ${fmt(v.W)} × ${fmt(v.t1)} + (${fmt(v.H)} − 2 × ${fmt(v.t1)}) × ${fmt(v.t2)}`,
   },
   {
-    key: "flatBar",
-    fields: ["W", "H"],
-    areaFormulaSymbolic: "A = W × H",
-    computeArea: (v) => v.W * v.H,
-    areaFormulaSubstituted: (v) => `A = ${fmt(v.W)} × ${fmt(v.H)}`,
+    key: "hat",
+    fields: ["W1", "W2", "H", "t"],
+    areaFormulaSymbolic: "A = t × (W1 + 2 × W2 + 2 × H)",
+    computeArea: (v) => v.t * (v.W1 + 2 * v.W2 + 2 * v.H),
+    areaFormulaSubstituted: (v) =>
+      `A = ${fmt(v.t)} × (${fmt(v.W1)} + 2 × ${fmt(v.W2)} + 2 × ${fmt(v.H)})`,
   },
 ];
 
@@ -57,7 +71,7 @@ export function getWeightShape(key: WeightShapeKey): WeightShapeDef {
   return shape;
 }
 
-/** A reference drawing for one shape (アングル/チャンネル/フラットバー), stored in Supabase Storage. Never bundled in the app — see weightShapeImageService. */
+/** A reference drawing for one shape (アングル/チャンネル/フラットバー/ハット形), stored in Supabase Storage. Never bundled in the app — see weightShapeImageService. */
 export interface WeightShapeImage {
   id: string;
   shapeKey: WeightShapeKey;
