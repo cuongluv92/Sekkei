@@ -12,7 +12,10 @@ import type { CasePanel, DesignCase } from "@/lib/types/design";
  * a DB unique constraint on (year, sequence_no) plus a transaction — two
  * concurrent users must never be able to claim the same number.
  */
-export function getNextSequenceForYear(cases: DesignCase[], year: number): number {
+export function getNextSequenceForYear(
+  cases: DesignCase[],
+  year: number,
+): number {
   const used = cases.filter((c) => c.year === year).map((c) => c.sequenceNo);
   return used.length === 0 ? 1 : Math.max(...used) + 1;
 }
@@ -25,15 +28,43 @@ export function formatDrawingNumber(year: number, sequenceNo: number): string {
 }
 
 /**
- * 図面番号 ○ 管理番号 件名／盤名称1・盤名称2...
- * Display-only formatting — the database keeps each 盤 as its own row.
+ * The one canonical 案件 display format, used everywhere a 案件 is shown
+ * (現在の案件, the shared picker, 保存済み案件, ledger/index tables, exports,
+ * Global Search results — never a bespoke format per screen):
+ *
+ *   図面番号〇管理番号（工事番号）　件名／盤名称
+ *   例）26-0001〇A260101（R123456）　本社ビル電気設備改修／動力盤
+ *
+ * Rules: 図面番号/管理番号 join with "〇"; 工事番号 wraps in full-width "（）"
+ * (omitted entirely when blank — never a stray "（）"); then a full-width
+ * space "　"; then 件名/盤名称 join with "／" (also omitted entirely when
+ * blank on either side — never a stray "／"). Never uses "|" or any other
+ * separator. Display-only — the database keeps each 盤 as its own row.
  */
-export function buildCaseDisplayLabel(designCase: DesignCase, panels: CasePanel[]): string {
+export function buildCaseDisplayLabel(
+  designCase: DesignCase,
+  panels: CasePanel[],
+): string {
   const panelNames = panels
     .slice()
     .sort((a, b) => a.panelNo - b.panelNo)
     .map((p) => p.panelName.trim())
     .filter(Boolean);
-  const panelPart = panelNames.length > 0 ? `／${panelNames.join("・")}` : "";
-  return `${designCase.drawingNumber} ○ ${designCase.managementNumber} ${designCase.projectName}${panelPart}`;
+
+  const left = [
+    designCase.drawingNumber.trim(),
+    designCase.managementNumber.trim(),
+  ]
+    .filter(Boolean)
+    .join("〇");
+  const constructionPart = designCase.constructionNumber.trim()
+    ? `（${designCase.constructionNumber.trim()}）`
+    : "";
+  const head = `${left}${constructionPart}`;
+  const right = [designCase.projectName.trim(), panelNames.join("・")]
+    .filter(Boolean)
+    .join("／");
+
+  if (head && right) return `${head}　${right}`;
+  return head || right;
 }

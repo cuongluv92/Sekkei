@@ -1,10 +1,11 @@
 "use client";
 
+import { Suspense } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { partDataService } from "@/lib/services";
 import { PartLibraryView } from "@/components/common/PartLibraryView";
 
-export default function PartDataPage() {
+function PartDataView() {
   const { t } = useTranslation();
   return (
     <PartLibraryView
@@ -17,5 +18,13 @@ export default function PartDataPage() {
       showQuantity
       showPartDataFields
     />
+  );
+}
+
+export default function PartDataPage() {
+  return (
+    <Suspense fallback={null}>
+      <PartDataView />
+    </Suspense>
   );
 }

@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { FileSpreadsheet, Loader2, Printer } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
-import { designCaseService, exportDrawingLedgerExcel, printDrawingLedger } from "@/lib/services/design";
+import {
+  designCaseService,
+  exportDrawingLedgerExcel,
+  printDrawingLedger,
+} from "@/lib/services/design";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { CaseStatus, DesignCaseWithPanels } from "@/lib/types/design";
 
@@ -17,13 +21,13 @@ const CASE_STATUS_ROW_CLASS: Record<CaseStatus, string> = {
 };
 
 interface CaseLedgerTableProps {
-  /** Optional filter — the underlying data is always the whole system-wide ledger, never scoped to one Project. */
+  /** Optional filter — the underlying data is always the whole system-wide ledger across every 案件. */
   filter?: (item: DesignCaseWithPanels) => boolean;
 }
 
 /**
  * ②図面管理台帳 — read-only, database-driven aggregate view across every
- * Project (never requires picking a Project first). Columns match the real
+ * 案件 (never requires picking one first). Columns match the real
  * template (図面番号/管理番号/工事番号/客先名/客先担当/件名/盤名称/製造完了). The real
  * workbook is literally one sheet per year ("２０２６年　図面管理台帳"); reproduced
  * here as one panel per year in a horizontally-scrolling row instead of a
@@ -90,7 +94,10 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
       }));
   }, [filtered]);
 
-  async function handleExportExcel(year: number, cases: DesignCaseWithPanels[]) {
+  async function handleExportExcel(
+    year: number,
+    cases: DesignCaseWithPanels[],
+  ) {
     setExportingKey(`${year}-excel`);
     try {
       const { fileName } = await exportDrawingLedgerExcel(year, cases);
@@ -129,18 +136,24 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
 
       {yearBlocks === null ? (
         <div className="panel">
-          <div className="panel-body py-8 text-center text-[13px] text-muted">{t("common.loading")}</div>
+          <div className="panel-body py-8 text-center text-[13px] text-muted">
+            {t("common.loading")}
+          </div>
         </div>
       ) : yearBlocks.length === 0 ? (
         <div className="panel">
-          <div className="panel-body py-8 text-center text-[13px] text-muted-2">{t("design.ledger.empty")}</div>
+          <div className="panel-body py-8 text-center text-[13px] text-muted-2">
+            {t("design.ledger.empty")}
+          </div>
         </div>
       ) : (
         <div className="flex items-start gap-3 overflow-x-auto pb-1">
           {yearBlocks.map(({ year, cases }) => (
             <div key={year} className="panel shrink-0" style={{ width: 1120 }}>
               <div className="panel-header-compact">
-                <span className="panel-title">{t("design.ledger.yearBlockTitle", { year })}</span>
+                <span className="panel-title">
+                  {t("design.ledger.yearBlockTitle", { year })}
+                </span>
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => handleExportExcel(year, cases)}
@@ -172,29 +185,41 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                 <table className="data-table" style={{ minWidth: 1080 }}>
                   <thead>
                     <tr>
-                      <th style={{ width: "110px" }}>{t("design.ledger.columns.drawingNumber")}</th>
-                      <th style={{ width: "120px" }}>{t("design.ledger.columns.managementNumber")}</th>
-                      <th style={{ width: "120px" }}>{t("design.ledger.columns.constructionNumber")}</th>
+                      <th style={{ width: "110px" }}>
+                        {t("design.ledger.columns.drawingNumber")}
+                      </th>
+                      <th style={{ width: "120px" }}>
+                        {t("design.ledger.columns.managementNumber")}
+                      </th>
+                      <th style={{ width: "120px" }}>
+                        {t("design.ledger.columns.constructionNumber")}
+                      </th>
                       <th>{t("design.ledger.columns.orderer")}</th>
-                      <th style={{ width: "100px" }}>{t("design.ledger.columns.customerContact")}</th>
+                      <th style={{ width: "100px" }}>
+                        {t("design.ledger.columns.customerContact")}
+                      </th>
                       <th>{t("design.ledger.columns.projectName")}</th>
                       <th>{t("design.ledger.columns.panelNames")}</th>
                       <th style={{ width: "80px" }} className="text-center">
                         {t("design.ledger.columns.manufacturingComplete")}
                       </th>
-                      <th style={{ width: "100px" }}>{t("design.ledger.columns.updatedAt")}</th>
+                      <th style={{ width: "100px" }}>
+                        {t("design.ledger.columns.updatedAt")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {cases.map(({ case: c, panels }) => (
                       <tr
                         key={c.id}
-                        onClick={() => router.push(`/design?tab=designRequest&project=${c.projectId}&case=${c.id}`)}
+                        onClick={() =>
+                          router.push(`/design?tab=designRequest&case=${c.id}`)
+                        }
                         className={`cursor-pointer ${CASE_STATUS_ROW_CLASS[c.caseStatus]}`}
                       >
                         <td className="font-mono">
                           <Link
-                            href={`/design?tab=designRequest&project=${c.projectId}&case=${c.id}`}
+                            href={`/design?tab=designRequest&case=${c.id}`}
                             onClick={(e) => e.stopPropagation()}
                             className="text-accent hover:underline"
                           >
@@ -212,7 +237,9 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                             .filter(Boolean)
                             .join("・")}
                         </td>
-                        <td className="text-center">{c.manufacturingComplete ? "完" : ""}</td>
+                        <td className="text-center">
+                          {c.manufacturingComplete ? "完" : ""}
+                        </td>
                         <td className="text-muted-2">{c.updatedAt}</td>
                       </tr>
                     ))}

@@ -5,9 +5,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { busbarSizeService, calculationRecordService } from "@/lib/services";
-import { useActiveProject } from "@/lib/store/ActiveProjectProvider";
+import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
 import { PageHeader } from "@/components/common/PageHeader";
-import { ProjectSelector } from "@/components/common/ProjectSelector";
+import { CaseSelector } from "@/components/common/CaseSelector";
 import {
   evaluateBusbarCandidate,
   findBusbarCandidates,
@@ -54,13 +54,13 @@ function parsePositiveNumber(raw: string): number | null {
 }
 
 /**
- * 母線銅帯 — Project → 定格電流 → 必要断面積（JIS C 8480 簡易選定, ≤630A）→
- * 自動選定 or 手動検証 → 採用 → Project に保存. Bypasses the generic
+ * 母線銅帯 — 案件 → 定格電流 → 必要断面積（JIS C 8480 簡易選定, ≤630A）→
+ * 自動選定 or 手動検証 → 採用 → 案件 に保存. Bypasses the generic
  * CalculationDefinition/CalculationForm/CalculationPageView registry
  * entirely (same reasoning as 重量計算) — a real formula needs to show its
  * derivation and standard basis, which that generic shell can't render.
  * Persists via the shared `calculation_records` table
- * (project_id + calculation_type="busbar"), the same mechanism every other
+ * (case_id + calculation_type="busbar"), the same mechanism every other
  * calculation module already uses — no separate persistence system.
  */
 export function BusbarCalculationView() {
@@ -68,13 +68,22 @@ export function BusbarCalculationView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
-    projectId,
-    setProjectId,
-    loading: projectLoading,
-  } = useActiveProject();
+    caseId,
+    setCaseId,
+    loading: caseLoading,
+    registerSaveHandler,
+  } = useActiveCase();
 
   const modeParam = searchParams.get("mode");
   const mode: BusbarMode = isBusbarMode(modeParam) ? modeParam : "auto";
+
+  // Honors a `?case=<id>` deep link (e.g. from Global Search's 計算 result)
+  // by resolving it as the app-wide active 案件.
+  useEffect(() => {
+    const fromUrl = searchParams.get("case");
+    if (fromUrl && fromUrl !== caseId) setCaseId(fromUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const [sizes, setSizes] = useState<BusbarSize[]>([]);
   const [sizesLoaded, setSizesLoaded] = useState(false);
@@ -94,16 +103,17 @@ export function BusbarCalculationView() {
     });
   }, []);
 
-  // Load the saved calculation for this Project — reset the hydrate guard
-  // whenever the Project changes so switching Projects never leaves stale
-  // input/adopted state from a previous Project on screen.
+  // Load the saved calculation for this 案件 — reset the hydrate guard
+  // whenever the 案件 changes so switching 案件 never leaves stale
+  // input/adopted state from a previous 案件 on screen.
   useEffect(() => {
-    if (!projectId) return;
-    if (initializedRef.current === projectId) return;
+    registerSaveHandler(CALCULATION_TYPE, null);
+    if (!caseId) return;
+    if (initializedRef.current === caseId) return;
     let cancelled = false;
-    calculationRecordService.get(projectId, CALCULATION_TYPE).then((record) => {
-      if (cancelled || initializedRef.current === projectId) return;
-      initializedRef.current = projectId;
+    calculationRecordService.get(caseId, CALCULATION_TYPE).then((record) => {
+      if (cancelled || initializedRef.current === caseId) return;
+      initializedRef.current = caseId;
       if (record) {
         const input = record.input as Partial<BusbarSavedInput>;
         const result = record.result as Partial<BusbarSavedResult>;
@@ -126,9 +136,17 @@ export function BusbarCalculationView() {
     return () => {
       cancelled = true;
     };
-    // Only re-run when the Project changes — mode/tab changes shouldn't refetch.
+    // Only re-run when the 案件 changes — mode/tab changes shouldn't refetch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+  }, [caseId]);
+
+  // Unregister this module's save handler on unmount so a stale handler
+  // pointing at an old 案件's data can never be invoked by the switch
+  // confirmation later.
+  useEffect(
+    () => () => registerSaveHandler(CALCULATION_TYPE, null),
+    [registerSaveHandler],
+  );
 
   function setTab(next: BusbarMode) {
     const params = new URLSearchParams(searchParams.toString());
@@ -177,7 +195,7 @@ export function BusbarCalculationView() {
   ]);
 
   async function persist(nextAdopted: AdoptedBusbar | null) {
-    if (!projectId) return;
+    if (!caseId) return;
     setSaving(true);
     try {
       const input: BusbarSavedInput = {
@@ -189,15 +207,21 @@ export function BusbarCalculationView() {
       };
       const result: BusbarSavedResult = { adopted: nextAdopted };
       const saved = await calculationRecordService.save(
-        projectId,
+        caseId,
         CALCULATION_TYPE,
         input as unknown as Record<string, unknown>,
         result as unknown as Record<string, unknown>,
       );
       setSavedAt(saved.updatedAt);
+      registerSaveHandler(CALCULATION_TYPE, null);
     } finally {
       setSaving(false);
     }
+  }
+
+  /** Any input edit registers this module's save handler — marks the page 未保存 and gives the case-switch confirmation's "保存して変更" a real function to call. */
+  function markDirty() {
+    registerSaveHandler(CALCULATION_TYPE, () => persist(adopted));
   }
 
   async function handleAdopt(candidate: BusbarCandidate) {
@@ -216,18 +240,18 @@ export function BusbarCalculationView() {
         description={t("busbarCalc.description")}
       />
 
-      <ProjectSelector projectId={projectId} onProjectChange={setProjectId} />
+      <CaseSelector />
 
-      {projectLoading ? (
+      {caseLoading ? (
         <div className="panel">
           <div className="panel-body py-12 text-center text-[13px] text-muted-2">
             {t("common.loading")}
           </div>
         </div>
-      ) : !projectId ? (
+      ) : !caseId ? (
         <div className="panel">
           <div className="panel-body py-12 text-center text-[13px] text-muted-2">
-            {t("design.workspaceBar.selectProjectFirst")}
+            {t("caseSelector.selectCaseFirst")}
           </div>
         </div>
       ) : (
@@ -264,7 +288,10 @@ export function BusbarCalculationView() {
                   type="number"
                   step="1"
                   value={ratedCurrentRaw}
-                  onChange={(e) => setRatedCurrentRaw(e.target.value)}
+                  onChange={(e) => {
+                    setRatedCurrentRaw(e.target.value);
+                    markDirty();
+                  }}
                   placeholder="180"
                   className={
                     ratedCurrentRaw.trim() !== "" && ratedCurrentA === null
@@ -379,7 +406,10 @@ export function BusbarCalculationView() {
                       type="number"
                       step="0.1"
                       value={thicknessRaw}
-                      onChange={(e) => setThicknessRaw(e.target.value)}
+                      onChange={(e) => {
+                        setThicknessRaw(e.target.value);
+                        markDirty();
+                      }}
                       placeholder="6"
                       className="field-input"
                     />
@@ -392,7 +422,10 @@ export function BusbarCalculationView() {
                       type="number"
                       step="0.1"
                       value={widthRaw}
-                      onChange={(e) => setWidthRaw(e.target.value)}
+                      onChange={(e) => {
+                        setWidthRaw(e.target.value);
+                        markDirty();
+                      }}
                       placeholder="50"
                       className="field-input"
                     />
@@ -406,7 +439,10 @@ export function BusbarCalculationView() {
                       step="1"
                       min="1"
                       value={barsRaw}
-                      onChange={(e) => setBarsRaw(e.target.value)}
+                      onChange={(e) => {
+                        setBarsRaw(e.target.value);
+                        markDirty();
+                      }}
                       className="field-input"
                     />
                   </div>

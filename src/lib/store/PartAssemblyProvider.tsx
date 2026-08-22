@@ -6,18 +6,19 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { partAssemblyService } from "@/lib/services/partAssemblyService";
-import { useActiveProject } from "@/lib/store/ActiveProjectProvider";
+import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
 import type { PartAssemblyRow } from "@/lib/types";
 
 interface PartAssemblyContextValue {
-  projectId: string;
-  setProjectId: (projectId: string) => void;
-  /** True until the shared active-Project selection has been restored/verified — see `ActiveProjectProvider`. */
-  projectLoading: boolean;
+  caseId: string;
+  setCaseId: (caseId: string) => void;
+  /** True until the shared active-案件 selection has been restored/verified — see `ActiveCaseProvider`. */
+  caseLoading: boolean;
   rows: PartAssemblyRow[];
   loading: boolean;
   /** Resolves once the new row is persisted, rejects if `partAssemblyService.saveRows` fails — lets the caller show a success/error toast. The row is added to local state either way (no rollback on failure). Resolves with the new row's id. */
@@ -30,7 +31,7 @@ interface PartAssemblyContextValue {
     row: Omit<PartAssemblyRow, "id"> & { id?: string },
   ) => Promise<string>;
   removeRow: (id: string) => void;
-  /** Project-side override of any editable field (記号/品名/メーカー/型式/定格・仕様/数量/備考) — never writes back to 部品データ master. */
+  /** 案件側 override of any editable field (記号/品名/メーカー/型式/定格・仕様/数量/備考) — never writes back to 部品データ master. */
   updateField: (id: string, patch: Partial<PartAssemblyRow>) => void;
   moveRow: (fromIndex: number, toIndex: number) => void;
   clear: () => void;
@@ -47,30 +48,37 @@ function nextId() {
 }
 
 /**
- * Holds the 部品製作 assembly table, scoped per Project (never mixed between
- * Projects) and persisted so it survives reload/navigation — not just
- * session memory. Kept above the router in the layout so switching pages
- * doesn't lose the in-progress table, but every mutation is written through
- * to `partAssemblyService` immediately.
+ * Holds the 部品製作 assembly table, scoped per 案件 (never mixed between
+ * 案件 — see `partAssemblyService`'s `design_case_id` scoping) and persisted
+ * so it survives reload/navigation — not just session memory. Kept above
+ * the router in the layout so switching pages doesn't lose the in-progress
+ * table, but every mutation is written through to `partAssemblyService`
+ * immediately (so this module never has an "unsaved" state to track).
  */
 export function PartAssemblyProvider({ children }: { children: ReactNode }) {
-  const {
-    projectId,
-    setProjectId,
-    loading: projectLoading,
-  } = useActiveProject();
+  const { caseId, setCaseId, loading: caseLoading } = useActiveCase();
   const [rows, setRows] = useState<PartAssemblyRow[]>([]);
   const [loading, setLoading] = useState(false);
+  // Mirrors `rows` synchronously, kept up to date by every mutator itself
+  // (not just the effect below) — `addRow`/`insertRowAt` need the actual
+  // next array to pass to `saveRows` in the same synchronous call, and
+  // React does not guarantee a `setState(prev => ...)` updater has already
+  // run by the time the next line executes, so reading from state (or from
+  // a value only an updater assigns) here would risk persisting a stale
+  // array — silently dropping the row that was just "added".
+  const rowsRef = useRef<PartAssemblyRow[]>([]);
 
   useEffect(() => {
-    if (!projectId) {
+    if (!caseId) {
+      rowsRef.current = [];
       setRows([]);
       return;
     }
     let active = true;
     setLoading(true);
-    partAssemblyService.listByProject(projectId).then((list) => {
+    partAssemblyService.listByCase(caseId).then((list) => {
       if (active) {
+        rowsRef.current = list;
         setRows(list);
         setLoading(false);
       }
@@ -78,97 +86,94 @@ export function PartAssemblyProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [projectId]);
+  }, [caseId]);
 
   const persist = useCallback(
     (next: PartAssemblyRow[]) => {
+      rowsRef.current = next;
       setRows(next);
-      if (projectId) partAssemblyService.saveRows(projectId, next);
+      if (caseId) partAssemblyService.saveRows(caseId, next);
     },
-    [projectId],
+    [caseId],
   );
 
   const addRow = useCallback(
     (row: Omit<PartAssemblyRow, "id"> & { id?: string }) => {
       const id = row.id ?? nextId();
-      let next: PartAssemblyRow[] = [];
-      setRows((prev) => {
-        next = [...prev, { ...row, id }];
-        return next;
-      });
-      if (!projectId) return Promise.resolve(id);
-      return partAssemblyService.saveRows(projectId, next).then(() => id);
+      const next = [...rowsRef.current, { ...row, id }];
+      rowsRef.current = next;
+      setRows(next);
+      if (!caseId) return Promise.resolve(id);
+      return partAssemblyService.saveRows(caseId, next).then(() => id);
     },
-    [projectId],
+    [caseId],
   );
 
   const insertRowAt = useCallback(
     (index: number, row: Omit<PartAssemblyRow, "id"> & { id?: string }) => {
       const id = row.id ?? nextId();
-      let next: PartAssemblyRow[] = [];
-      setRows((prev) => {
-        const clamped = Math.max(0, Math.min(index, prev.length));
-        next = [...prev];
-        next.splice(clamped, 0, { ...row, id });
-        return next;
-      });
-      if (!projectId) return Promise.resolve(id);
-      return partAssemblyService.saveRows(projectId, next).then(() => id);
+      const clamped = Math.max(0, Math.min(index, rowsRef.current.length));
+      const next = [...rowsRef.current];
+      next.splice(clamped, 0, { ...row, id });
+      rowsRef.current = next;
+      setRows(next);
+      if (!caseId) return Promise.resolve(id);
+      return partAssemblyService.saveRows(caseId, next).then(() => id);
     },
-    [projectId],
+    [caseId],
   );
 
   const removeRow = useCallback(
     (id: string) => {
-      setRows((prev) => {
-        const next = prev.filter((r) => r.id !== id);
-        if (projectId) partAssemblyService.saveRows(projectId, next);
-        return next;
-      });
+      const next = rowsRef.current.filter((r) => r.id !== id);
+      rowsRef.current = next;
+      setRows(next);
+      if (caseId) partAssemblyService.saveRows(caseId, next);
     },
-    [projectId],
+    [caseId],
   );
 
   const updateField = useCallback(
     (id: string, patch: Partial<PartAssemblyRow>) => {
-      setRows((prev) => {
-        const next = prev.map((r) => (r.id === id ? { ...r, ...patch } : r));
-        if (projectId) partAssemblyService.saveRows(projectId, next);
-        return next;
-      });
+      const next = rowsRef.current.map((r) =>
+        r.id === id ? { ...r, ...patch } : r,
+      );
+      rowsRef.current = next;
+      setRows(next);
+      if (caseId) partAssemblyService.saveRows(caseId, next);
     },
-    [projectId],
+    [caseId],
   );
 
   const moveRow = useCallback(
     (fromIndex: number, toIndex: number) => {
-      setRows((prev) => {
-        if (
-          fromIndex === toIndex ||
-          fromIndex < 0 ||
-          toIndex < 0 ||
-          fromIndex >= prev.length ||
-          toIndex >= prev.length
-        ) {
-          return prev;
-        }
-        const next = [...prev];
-        const [moved] = next.splice(fromIndex, 1);
-        next.splice(toIndex, 0, moved);
-        if (projectId) partAssemblyService.saveRows(projectId, next);
-        return next;
-      });
+      const prev = rowsRef.current;
+      if (
+        fromIndex === toIndex ||
+        fromIndex < 0 ||
+        toIndex < 0 ||
+        fromIndex >= prev.length ||
+        toIndex >= prev.length
+      ) {
+        return;
+      }
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      rowsRef.current = next;
+      setRows(next);
+      if (caseId) partAssemblyService.saveRows(caseId, next);
     },
-    [projectId],
+    [caseId],
   );
 
   const clear = useCallback(() => persist([]), [persist]);
 
   const value = useMemo(
     () => ({
-      projectId,
-      setProjectId,
-      projectLoading,
+      caseId,
+      setCaseId,
+      caseLoading,
       rows,
       loading,
       addRow,
@@ -179,9 +184,9 @@ export function PartAssemblyProvider({ children }: { children: ReactNode }) {
       clear,
     }),
     [
-      projectId,
-      setProjectId,
-      projectLoading,
+      caseId,
+      setCaseId,
+      caseLoading,
       rows,
       loading,
       addRow,

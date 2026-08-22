@@ -7,7 +7,8 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { searchService } from "@/lib/services";
 import {
@@ -21,7 +22,7 @@ import { InsertPartModal } from "@/components/common/InsertPartModal";
 import { PartMasterSearch } from "@/components/common/PartMasterSearch";
 import { ExportActions } from "@/components/common/ExportActions";
 import { PageHeader } from "@/components/common/PageHeader";
-import { ProjectSelector } from "@/components/common/ProjectSelector";
+import { CaseSelector } from "@/components/common/CaseSelector";
 import { Toast } from "@/components/common/Toast";
 import type { PartAssemblyRow, SearchResultItem } from "@/lib/types";
 
@@ -36,9 +37,9 @@ const BLANK_ROW: Omit<PartAssemblyRow, "id"> = {
 };
 
 /**
- * Builds a Project-side 部品リスト row from a picked 部品データ/部品図/カタログ
- * hit. 数量・備考 are per-project and always start blank/1 here — 部品データ's
- * own 数量・備考 (if any) describe the master record, not this project, so
+ * Builds a 案件側 部品リスト row from a picked 部品データ/部品図/カタログ
+ * hit. 数量・備考 are per-案件 and always start blank/1 here — 部品データ's
+ * own 数量・備考 (if any) describe the master record, not this 案件, so
  * they're intentionally never copied in. 重量 isn't copied in either (not
  * used or shown here); sourceRefId keeps the link back to the master row so
  * 盤重量計算 can look weight up from there later.
@@ -59,12 +60,12 @@ function rowFromMasterItem(
   };
 }
 
-export default function PartAssemblyPage() {
+function PartAssemblyView() {
   const { t, locale } = useTranslation();
   const {
-    projectId,
-    setProjectId,
-    projectLoading,
+    caseId,
+    setCaseId,
+    caseLoading,
     rows,
     loading: rowsLoading,
     addRow,
@@ -74,6 +75,16 @@ export default function PartAssemblyPage() {
     moveRow,
     clear,
   } = usePartAssembly();
+  const searchParams = useSearchParams();
+
+  // Honors a `?case=<id>` deep link (e.g. from Global Search's 部品製作 result)
+  // by resolving it as the app-wide active 案件 — never a page-local override,
+  // so every other module stays in sync too.
+  useEffect(() => {
+    const fromUrl = searchParams.get("case");
+    if (fromUrl && fromUrl !== caseId) setCaseId(fromUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   const [masterItems, setMasterItems] = useState<SearchResultItem[]>([]);
   const [masterLoading, setMasterLoading] = useState(true);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -164,18 +175,18 @@ export default function PartAssemblyPage() {
         description={t("partAssembly.description")}
       />
 
-      <ProjectSelector projectId={projectId} onProjectChange={setProjectId} />
+      <CaseSelector />
 
-      {projectLoading ? (
+      {caseLoading ? (
         <div className="panel">
           <div className="panel-body py-12 text-center text-[13px] text-muted-2">
             {t("common.loading")}
           </div>
         </div>
-      ) : !projectId ? (
+      ) : !caseId ? (
         <div className="panel">
           <div className="panel-body py-12 text-center text-[13px] text-muted-2">
-            {t("design.workspaceBar.selectProjectFirst")}
+            {t("caseSelector.selectCaseFirst")}
           </div>
         </div>
       ) : (
@@ -419,5 +430,13 @@ export default function PartAssemblyPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function PartAssemblyPage() {
+  return (
+    <Suspense fallback={null}>
+      <PartAssemblyView />
+    </Suspense>
   );
 }

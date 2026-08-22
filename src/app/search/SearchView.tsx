@@ -1,17 +1,37 @@
 "use client";
 
 import { Search as SearchIcon } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
-import { searchService } from "@/lib/services";
+import {
+  searchGlobal,
+  type GroupedSearchResults,
+} from "@/lib/search/globalSearchService";
 import { preloadManufacturers } from "@/lib/mock/manufacturers";
-import { findFileByKind, openFileAsset } from "@/lib/utils/fileDownload";
-import { SearchResultList } from "@/components/common/SearchResultList";
-import { FilePreview } from "@/components/common/FilePreview";
 import { PageHeader } from "@/components/common/PageHeader";
-import type { FileAsset, SearchResultItem } from "@/lib/types";
+import type { SearchSourceKind } from "@/lib/search/types";
 
+const SECTION_LABEL_KEY: Record<SearchSourceKind, string> = {
+  case: "search.sections.case",
+  "part-assembly": "search.sections.partAssembly",
+  "part-data": "search.sections.partData",
+  "part-drawing": "search.sections.partDrawing",
+  catalog: "search.sections.catalog",
+  calculation: "search.sections.calculation",
+};
+
+/**
+ * Global Search — spans the whole app (案件/部品製作/部品データ/部品図/カタログ/計算,
+ * spec #12-#16), not just 部品データ・部品図・カタログ. Results are grouped by
+ * source with a real navigable target per hit (`SearchHit.href`) — clicking
+ * a 案件 opens that 案件 in 設計管理, a 部品製作 hit opens 部品製作 with that 案件
+ * active, a 計算 hit opens the right calculation module for the right 案件,
+ * and 部品データ/部品図/カタログ hits open their own screen prefiltered by the
+ * same query. All source-specific logic lives in `globalSearchService`'s
+ * providers — this view only renders whatever comes back.
+ */
 export function SearchView() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -20,9 +40,8 @@ export function SearchView() {
 
   const [inputValue, setInputValue] = useState(initialQuery);
   const [query, setQuery] = useState(initialQuery);
-  const [results, setResults] = useState<SearchResultItem[]>([]);
+  const [groups, setGroups] = useState<GroupedSearchResults>([]);
   const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState<SearchResultItem | null>(null);
 
   useEffect(() => {
     setInputValue(initialQuery);
@@ -31,18 +50,18 @@ export function SearchView() {
 
   useEffect(() => {
     if (!query) {
-      setResults([]);
-      setSelected(null);
+      setGroups([]);
       return;
     }
     let active = true;
     setLoading(true);
-    Promise.all([preloadManufacturers(), searchService.search(query)]).then(([, res]) => {
-      if (!active) return;
-      setResults(res);
-      setSelected(null);
-      setLoading(false);
-    });
+    Promise.all([preloadManufacturers(), searchGlobal(query)]).then(
+      ([, res]) => {
+        if (!active) return;
+        setGroups(res);
+        setLoading(false);
+      },
+    );
     return () => {
       active = false;
     };
@@ -54,16 +73,14 @@ export function SearchView() {
     router.replace(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
   }
 
-  function handleDownload(item: SearchResultItem, kind: FileAsset["kind"]) {
-    const file = findFileByKind(item.files, kind);
-    if (file) openFileAsset(file);
-  }
-
-  const selectedKey = selected ? `${selected.source}-${selected.id}` : null;
+  const totalCount = groups.reduce((sum, g) => sum + g.hits.length, 0);
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title={t("search.title")} description={t("search.description")} />
+      <PageHeader
+        title={t("search.title")}
+        description={t("search.description")}
+      />
 
       <div className="flex gap-2">
         <div className="relative max-w-md flex-1">
@@ -85,26 +102,66 @@ export function SearchView() {
 
       {query && (
         <div className="flex items-center justify-between">
-          <span className="text-[12px] text-muted">{t("search.resultsFor", { query })}</span>
+          <span className="text-[12px] text-muted">
+            {t("search.resultsFor", { query })}
+          </span>
           <span className="text-[12px] text-muted-2">
-            {t("search.resultCount", { count: results.length })}
+            {t("search.resultCount", { count: totalCount })}
           </span>
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="panel overflow-hidden">
-          <SearchResultList
-            results={results}
-            loading={loading}
-            selectedKey={selectedKey}
-            onSelect={setSelected}
-            onDownload={handleDownload}
-            emptyMessage={query ? t("common.noResults") : t("common.selectPrompt")}
-          />
+      {loading ? (
+        <div className="panel">
+          <div className="panel-body py-12 text-center text-[13px] text-muted-2">
+            {t("common.loading")}
+          </div>
         </div>
-        <FilePreview selectedKey={selectedKey} title={selected?.model} files={selected?.files ?? []} />
-      </div>
+      ) : query && groups.length === 0 ? (
+        <div className="panel">
+          <div className="panel-body py-12 text-center text-[13px] text-muted-2">
+            {t("common.noResults")}
+          </div>
+        </div>
+      ) : !query ? (
+        <div className="panel">
+          <div className="panel-body py-12 text-center text-[13px] text-muted-2">
+            {t("common.selectPrompt")}
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {groups.map((group) => (
+            <div key={group.kind} className="panel">
+              <div className="panel-header">
+                <span className="panel-title">
+                  {t(SECTION_LABEL_KEY[group.kind])}
+                </span>
+                <span className="text-[11px] text-muted-2">
+                  {group.hits.length}
+                </span>
+              </div>
+              <ul className="divide-y divide-border">
+                {group.hits.map((hit) => (
+                  <li key={`${hit.kind}-${hit.id}`}>
+                    <Link
+                      href={hit.href}
+                      className="flex flex-col gap-0.5 px-4 py-2.5 text-[13.5px] text-foreground transition-colors hover:bg-surface-2"
+                    >
+                      <span className="truncate font-medium">{hit.title}</span>
+                      {hit.subtitle && (
+                        <span className="truncate text-[11.5px] text-muted-2">
+                          {hit.subtitle}
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

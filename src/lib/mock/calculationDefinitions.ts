@@ -2,7 +2,7 @@ import type { CalculationDefinition } from "@/lib/types";
 
 /**
  * Placeholder input/output shape for calculation modules that still use the
- * generic Project→入力→計算→保存 shell (`CalculationPageView`). None of
+ * generic 案件→入力→計算→保存 shell (`CalculationPageView`). None of
  * these carry real formulas (`hasFormula: false` — this generic mock
  * `calculate()` never computes anything real; see calculationService.ts).
  * A module with a real, standard-backed formula (計算式/計算過程/根拠規格)

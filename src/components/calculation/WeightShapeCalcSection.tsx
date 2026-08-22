@@ -7,6 +7,7 @@ import {
   calculationRecordService,
   weightShapeImageService,
 } from "@/lib/services";
+import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
 import { getPublicUrl } from "@/lib/supabase/storage";
 import {
   getWeightShape,
@@ -24,7 +25,7 @@ interface WeightShapeCalcSectionProps {
   materialsLoaded: boolean;
   image?: WeightShapeImage;
   onImageChange: (image: WeightShapeImage) => void;
-  projectId: string;
+  caseId: string;
 }
 
 interface WeightBasicSavedInput {
@@ -63,11 +64,13 @@ export function WeightShapeCalcSection({
   materialsLoaded,
   image,
   onImageChange,
-  projectId,
+  caseId,
 }: WeightShapeCalcSectionProps) {
   const { t } = useTranslation();
+  const { registerSaveHandler } = useActiveCase();
   const shape = getWeightShape(shapeKey);
   const calculationType = `weight-basic-${shapeKey}`;
+  const dirtyHandlerId = `weight-basic-${shapeKey}`;
 
   const [dimRaw, setDimRaw] = useState<Record<WeightDimKey, string>>({
     W: "",
@@ -86,7 +89,7 @@ export function WeightShapeCalcSection({
   const [imageError, setImageError] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
-  // Saved-record load + one-time hydrate-or-default-to-鉄, per Project.
+  // Saved-record load + one-time hydrate-or-default-to-鉄, per 案件.
   const [loadedRecord, setLoadedRecord] = useState<
     { input: WeightBasicSavedInput; updatedAt: string } | null | undefined
   >(undefined);
@@ -99,8 +102,9 @@ export function WeightShapeCalcSection({
     initializedRef.current = false;
     setLoadedRecord(undefined);
     setSavedAt(null);
-    if (!projectId) return;
-    calculationRecordService.get(projectId, calculationType).then((record) => {
+    registerSaveHandler(dirtyHandlerId, null);
+    if (!caseId) return;
+    calculationRecordService.get(caseId, calculationType).then((record) => {
       if (cancelled) return;
       setLoadedRecord(
         record
@@ -115,7 +119,15 @@ export function WeightShapeCalcSection({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, calculationType]);
+  }, [caseId, calculationType]);
+
+  // Unregister this section's save handler on unmount so a stale handler
+  // pointing at an old case's data can never be invoked by the switch
+  // confirmation later.
+  useEffect(
+    () => () => registerSaveHandler(dirtyHandlerId, null),
+    [dirtyHandlerId, registerSaveHandler],
+  );
 
   useEffect(() => {
     if (initializedRef.current) return;
@@ -168,10 +180,16 @@ export function WeightShapeCalcSection({
     setMaterialId(id);
     const material = materials.find((m) => m.id === id);
     setDensityRaw(material ? String(material.density) : "");
+    markDirty();
+  }
+
+  /** Any user edit (material/density/dims/length/quantity) registers this section's save handler — which both marks the page 未保存 and gives the case-switch confirmation's "保存して変更" a real function to call for this specific shape. */
+  function markDirty() {
+    registerSaveHandler(dirtyHandlerId, handleSave);
   }
 
   async function handleSave() {
-    if (!projectId || saving) return;
+    if (!caseId || saving) return;
     setSaving(true);
     try {
       const input: WeightBasicSavedInput = {
@@ -182,12 +200,13 @@ export function WeightShapeCalcSection({
         quantity: quantityRaw,
       };
       const saved = await calculationRecordService.save(
-        projectId,
+        caseId,
         calculationType,
         input as unknown as Record<string, unknown>,
         { area, unitWeight, totalWeight },
       );
       setSavedAt(saved.updatedAt);
+      registerSaveHandler(dirtyHandlerId, null);
     } finally {
       setSaving(false);
     }
@@ -245,9 +264,10 @@ export function WeightShapeCalcSection({
           type="number"
           step="0.1"
           value={dimRaw[k]}
-          onChange={(e) =>
-            setDimRaw((prev) => ({ ...prev, [k]: e.target.value }))
-          }
+          onChange={(e) => {
+            setDimRaw((prev) => ({ ...prev, [k]: e.target.value }));
+            markDirty();
+          }}
           className={dimFieldClass(dimStates[k])}
         />
       </div>
@@ -270,10 +290,8 @@ export function WeightShapeCalcSection({
           <button
             type="button"
             onClick={handleSave}
-            disabled={!projectId || saving}
-            title={
-              !projectId ? t("weightCalc.basic.selectProjectFirst") : undefined
-            }
+            disabled={!caseId || saving}
+            title={!caseId ? t("caseSelector.selectCaseFirst") : undefined}
             className="btn-secondary !py-1 !text-[12px]"
           >
             {saving ? (
@@ -316,7 +334,10 @@ export function WeightShapeCalcSection({
                 type="number"
                 step="0.01"
                 value={densityRaw}
-                onChange={(e) => setDensityRaw(e.target.value)}
+                onChange={(e) => {
+                  setDensityRaw(e.target.value);
+                  markDirty();
+                }}
                 placeholder="7.85"
                 className={
                   densityState === null
@@ -342,7 +363,10 @@ export function WeightShapeCalcSection({
                   type="number"
                   step="1"
                   value={lengthRaw}
-                  onChange={(e) => setLengthRaw(e.target.value)}
+                  onChange={(e) => {
+                    setLengthRaw(e.target.value);
+                    markDirty();
+                  }}
                   className={
                     lengthState === null
                       ? "field-input !border-danger"
@@ -367,7 +391,10 @@ export function WeightShapeCalcSection({
               step="1"
               min="1"
               value={quantityRaw}
-              onChange={(e) => setQuantityRaw(e.target.value)}
+              onChange={(e) => {
+                setQuantityRaw(e.target.value);
+                markDirty();
+              }}
               className={
                 quantityState === null
                   ? "field-input !border-danger"

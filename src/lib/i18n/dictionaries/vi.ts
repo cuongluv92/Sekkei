@@ -26,7 +26,7 @@ const vi: Dictionary = {
   common: {
     search: "Tìm kiếm",
     globalSearchPlaceholder:
-      "Tìm kiếm toàn hệ thống (dữ liệu / bản vẽ / catalog)",
+      "Tìm kiếm toàn hệ thống (案件 / bộ phận / tính toán / catalog...)",
     clear: "Xóa",
     calculate: "Tính toán",
     excelExport: "Xuất Excel",
@@ -112,6 +112,41 @@ const vi: Dictionary = {
     previewNoFile: "Chưa có file nào được đính kèm",
     dwgNotice:
       "File DWG sẽ hỗ trợ xem trước qua trình duyệt sau (hiện chỉ tải file gốc)",
+    sections: {
+      case: "案件",
+      partAssembly: "Tạo bảng linh kiện",
+      partData: "Dữ liệu linh kiện",
+      partDrawing: "Bản vẽ linh kiện",
+      catalog: "Catalog",
+      calculation: "Tính toán",
+    },
+  },
+  caseSelector: {
+    currentCaseLabel: "案件 hiện tại",
+    savedBadge: "Đã lưu",
+    unsavedBadge: "Chưa lưu",
+    changeCase: "Đổi 案件",
+    savedCasesButton: "案件 đã lưu",
+    deselectCase: "Bỏ chọn",
+    caseNotFound: "Không tìm thấy 案件 đã chọn",
+    searchPlaceholder: "Tìm theo 図面番号・管理番号・工事番号・件名・盤名称",
+    noCases: "Chưa có 案件 nào",
+    newCaseButton: "＋ 案件 mới",
+    newCaseModalTitle: "案件 mới",
+    editCaseModalTitle: "Sửa 案件",
+    savedCasesTitle: "案件 đã lưu",
+    openButton: "Mở",
+    deleteConfirmTitle: "Xóa 案件 này?",
+    deleteImpactWarning:
+      "案件 này đang có {partCount} dòng dữ liệu 部品製作 và {calcCount} dữ liệu tính toán. Xóa sẽ ẩn cả các dữ liệu này khỏi danh sách.",
+    deleteArchiveNote:
+      "Xóa không làm mất hoàn toàn dữ liệu (được lưu dạng lưu trữ, có thể khôi phục nếu cần).",
+    unsavedTitle: "Có thay đổi chưa lưu",
+    unsavedMessage:
+      "未保存の変更があります。案件を変更しますか？ (Có thay đổi chưa lưu. Bạn có muốn đổi 案件 không?)",
+    switchWithoutSaving: "Đổi mà không lưu",
+    saveAndSwitch: "Lưu rồi đổi",
+    selectCaseFirst: "Vui lòng chọn 案件",
   },
   selection: {
     title: "Chọn thiết bị",
@@ -136,7 +171,7 @@ const vi: Dictionary = {
   partAssembly: {
     title: "Tạo bảng linh kiện",
     description:
-      "Tìm kiếm 部品データ và double click để thêm vào danh sách bên dưới. Sau khi thêm bạn có thể chỉnh sửa riêng cho Project này (không ảnh hưởng 部品データ gốc).",
+      "Tìm kiếm 部品データ và double click để thêm vào danh sách bên dưới. Sau khi thêm bạn có thể chỉnh sửa riêng cho 案件 này (không ảnh hưởng 部品データ gốc).",
     searchPlaceholder: "Tìm theo model hoặc tên linh kiện",
     tableTitle: "Danh sách linh kiện",
     tableEmpty:
@@ -230,7 +265,6 @@ const vi: Dictionary = {
         "Kích thước・chiều dài・số lượng・比重 phải là số lớn hơn 0",
       noMaterial: "Chọn材質 hoặc nhập 比重 để tính trọng lượng",
       saved: "保存済み",
-      selectProjectFirst: "Chọn Project trước khi lưu tính toán",
       fields: {
         angle: {
           W: "W (rộng)",
@@ -424,26 +458,10 @@ const vi: Dictionary = {
       costLabor: "仕入原価・工数一覧表",
     },
     workspaceBar: {
-      currentProjectLabel: "現在のProject",
-      projectNamePlaceholder: "Nhập tên Project",
       caseLabel: "案件",
       casePlaceholder: "Chọn案件",
-      newCase: "新規案件",
       advancedSearchButton: "詳細検索",
-      noProjects: "Chưa có Project nào",
-      noCases: "Chưa có案件 nào",
-      selectProjectFirst: "Hãy chọn Project trước",
       selectCasePrompt: "Chọn案件 để xem chi tiết",
-      quickSearchPlaceholder: "Tìm theo 件名・図面番号・管理番号・盤名称",
-      quickSearchNoResults: "Không tìm thấy案件 phù hợp",
-      changeProject: "Đổi",
-      deselectProject: "Bỏ chọn",
-      newProjectButton: "＋ Project mới",
-      newProjectModalTitle: "Project mới",
-      projectSearchPlaceholder:
-        "Tìm theo 図面番号・管理番号・工事番号・件名・盤名称",
-      projectNotFound: "Không tìm thấy Project đã chọn",
-      createButton: "Tạo",
     },
     newCaseForm: {
       title: "Tạo案件 mới",
@@ -518,8 +536,6 @@ const vi: Dictionary = {
     },
     comingSoon:
       "Chức năng này sẽ được triển khai ở giai đoạn sau (hiện chưa có).",
-    productionComingSoon:
-      "製作依頼書 sẽ được triển khai ở giai đoạn sau (hiện chưa có). Việc chọn Project・案件・盤 vẫn dùng chung với giai đoạn sau.",
     saveButton: "Lưu",
     savedMessage: "Đã lưu",
     exportExcelButton: "Xuất Excel",
@@ -535,7 +551,6 @@ const vi: Dictionary = {
       noResults: "Không tìm thấy案件 phù hợp",
       andHint: "Tìm案件 thỏa mãn tất cả điều kiện đã nhập (AND)",
       panelNameLabel: "盤名称",
-      allProjects: "Tất cả Project",
     },
     ledger: {
       empty: "Không có dữ liệu",
@@ -647,7 +662,6 @@ const vi: Dictionary = {
       productionEstimatedTotal: "製作見積合計",
       productionActualTotal: "製作実動合計",
       yearBlockTitle: "{year}年　工数データ",
-      filterProject: "Project",
       searchPlaceholder: "Tìm theo 図面番号・管理番号・件名・盤名称",
       columns: {
         drawingNumber: "図面番号",
@@ -765,7 +779,7 @@ const vi: Dictionary = {
   backupSettings: {
     title: "Backup",
     exportDescription:
-      "Xuất toàn bộ dữ liệu hiện tại (Project・案件・盤・設計依頼・製作依頼・工程・原価工数・master settings・部品データ...) ra file Excel. Mỗi lần bấm sẽ tạo file mới, không ghi đè file backup cũ.",
+      "Xuất toàn bộ dữ liệu hiện tại (案件・盤・設計依頼・製作依頼・工程・原価工数・master settings・部品データ...) ra file Excel. Mỗi lần bấm sẽ tạo file mới, không ghi đè file backup cũ.",
     createButton: "Tạo backup",
     restoreDescription:
       "Khôi phục dữ liệu từ file backup Excel. Kiểm tra nội dung trước khi xác nhận — trước khi xác nhận sẽ không có gì bị ghi đè.",

@@ -1,0 +1,328 @@
+"use client";
+
+import { Check, Loader2, Plus, Search as SearchIcon, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "@/lib/i18n";
+import { designCaseService } from "@/lib/services/design";
+import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
+import {
+  buildCaseOptionLabel,
+  buildCaseOptions,
+  matchesCaseOptionQuery,
+  type CaseOption,
+} from "@/lib/utils/caseSearch";
+import { NewCaseModal } from "@/components/common/NewCaseModal";
+import { SavedCasesModal } from "@/components/common/SavedCasesModal";
+import { Modal } from "@/components/common/Modal";
+import type { DesignCase } from "@/lib/types/design";
+
+/**
+ * THE one 案件 picker shared by every 案件-scoped area of the app (設計管理,
+ * 部品製作, 重量/盤重量/母線銅帯/換気/耐震/他計算) — same `design_cases` table, same
+ * list, same UX everywhere. Reads/writes `useActiveCase()` directly so every
+ * mounted instance always reflects (and can change) the one app-wide
+ * current 案件 — no props needed.
+ *
+ * Collapsed by default to a plain "現在の案件：…" line + 変更/保存済み案件/選択解除
+ * buttons so it never crowds the page; expands into the searchable list only
+ * when changing. "＋ 新規案件" opens a real form (`NewCaseModal`) instead of
+ * an always-visible inline input. Never auto-picks on the user's behalf —
+ * leaving nothing selected is a normal, expected state.
+ *
+ * Switching away from a 案件 (変更/選択解除/開くfrom 保存済み案件) while the
+ * current screen has unsaved local edits (`dirty`) prompts
+ * 未保存の変更があります。案件を変更しますか？ with 保存して変更/保存せず変更/キャンセル.
+ */
+export function CaseSelector() {
+  const { t } = useTranslation();
+  const { caseId, setCaseId, dirty, runSaveHandler } = useActiveCase();
+  const [options, setOptions] = useState<CaseOption[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [picking, setPicking] = useState(!caseId);
+  const [query, setQuery] = useState("");
+  const [showNewCaseModal, setShowNewCaseModal] = useState(false);
+  const [showSavedCasesModal, setShowSavedCasesModal] = useState(false);
+  const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [savingBeforeSwitch, setSavingBeforeSwitch] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    designCaseService.listAll().then((all) => {
+      setOptions(buildCaseOptions(all));
+      setLoaded(true);
+    });
+  }, []);
+
+  // Keep the displayed label in sync with `caseId` when it changes for a
+  // reason other than a local click here — restored on mount, changed by
+  // another mounted CaseSelector, or cleared.
+  useEffect(() => {
+    if (!caseId) {
+      setSelectedLabel(null);
+      return;
+    }
+    const match = options.find((o) => o.caseId === caseId);
+    if (match) setSelectedLabel(buildCaseOptionLabel(match));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseId, options]);
+
+  // Once a 案件 becomes active (restored, or picked just now), collapse back
+  // to the compact "現在の案件" display.
+  useEffect(() => {
+    if (caseId) setPicking(false);
+  }, [caseId]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node) &&
+        caseId
+      ) {
+        setPicking(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [caseId]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim();
+    if (!q) return options;
+    return options.filter((o) => matchesCaseOptionQuery(o, q));
+  }, [options, query]);
+
+  /** Runs `action` immediately, unless the active screen has unsaved edits — then it's deferred behind the 未保存の変更 confirmation. */
+  function guardedSwitch(action: () => void) {
+    if (dirty) {
+      setPendingAction(() => action);
+    } else {
+      action();
+    }
+  }
+
+  function handleSelect(option: CaseOption) {
+    guardedSwitch(() => {
+      setSelectedLabel(buildCaseOptionLabel(option));
+      setCaseId(option.caseId);
+      setQuery("");
+      setPicking(false);
+    });
+  }
+
+  function handleDeselect() {
+    guardedSwitch(() => {
+      setSelectedLabel(null);
+      setCaseId("");
+      setQuery("");
+      setPicking(true);
+    });
+  }
+
+  function handleOpenFromSaved(nextCaseId: string) {
+    guardedSwitch(() => {
+      setCaseId(nextCaseId);
+      setShowSavedCasesModal(false);
+      setPicking(false);
+    });
+  }
+
+  function handleCreated(created: DesignCase) {
+    const option: CaseOption = {
+      caseId: created.id,
+      case: created,
+      panels: [],
+    };
+    setOptions((prev) =>
+      [...prev, option].sort((a, b) =>
+        a.case.drawingNumber.localeCompare(b.case.drawingNumber, "ja"),
+      ),
+    );
+    setSelectedLabel(buildCaseOptionLabel(option));
+    setCaseId(created.id);
+    setShowNewCaseModal(false);
+    setPicking(false);
+  }
+
+  async function handleSaveAndSwitch() {
+    if (!pendingAction) return;
+    setSavingBeforeSwitch(true);
+    try {
+      await runSaveHandler();
+    } finally {
+      setSavingBeforeSwitch(false);
+    }
+    const action = pendingAction;
+    setPendingAction(null);
+    action();
+  }
+
+  function handleSwitchWithoutSaving() {
+    if (!pendingAction) return;
+    const action = pendingAction;
+    setPendingAction(null);
+    action();
+  }
+
+  const currentLabel = caseId
+    ? (selectedLabel ??
+      (loaded ? t("caseSelector.caseNotFound") : t("common.loading")))
+    : null;
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative flex flex-col gap-2 rounded-lg border border-border bg-surface px-3 py-2.5"
+    >
+      {!picking ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-muted uppercase">
+              {t("caseSelector.currentCaseLabel")}
+              {dirty ? (
+                <span className="normal-case text-warning">
+                  ● {t("caseSelector.unsavedBadge")}
+                </span>
+              ) : (
+                <span className="normal-case text-success">
+                  ✓ {t("caseSelector.savedBadge")}
+                </span>
+              )}
+            </div>
+            <div className="truncate text-[14px] font-bold text-foreground">
+              {currentLabel}
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => guardedSwitch(() => setPicking(true))}
+              className="btn-secondary"
+            >
+              {t("caseSelector.changeCase")}
+            </button>
+            <button
+              onClick={() => setShowSavedCasesModal(true)}
+              className="btn-secondary"
+            >
+              {t("caseSelector.savedCasesButton")}
+            </button>
+            <button
+              onClick={handleDeselect}
+              className="btn-ghost"
+              title={t("caseSelector.deselectCase")}
+            >
+              <X className="h-3.5 w-3.5" />
+              {t("caseSelector.deselectCase")}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <div className="relative">
+            <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-2" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("caseSelector.searchPlaceholder")}
+              className="field-input pl-8"
+            />
+          </div>
+          <div className="max-h-64 overflow-y-auto rounded-md border border-border-strong bg-surface-2">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-3 text-center text-[12.5px] text-muted-2">
+                {loaded ? t("caseSelector.noCases") : t("common.loading")}
+              </div>
+            ) : (
+              filtered.map((option) => {
+                const isCurrent = option.caseId === caseId;
+                return (
+                  <button
+                    key={option.caseId}
+                    type="button"
+                    onClick={() => handleSelect(option)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-foreground hover:bg-surface-hover"
+                  >
+                    {isCurrent && (
+                      <Check className="h-3.5 w-3.5 shrink-0 text-accent" />
+                    )}
+                    <span className="truncate">
+                      {buildCaseOptionLabel(option)}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={() => setShowNewCaseModal(true)}
+              className="btn-ghost"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {t("caseSelector.newCaseButton")}
+            </button>
+            {caseId && (
+              <button onClick={() => setPicking(false)} className="btn-ghost">
+                {t("common.cancel")}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showNewCaseModal && (
+        <NewCaseModal
+          onClose={() => setShowNewCaseModal(false)}
+          onCreated={handleCreated}
+        />
+      )}
+
+      {showSavedCasesModal && (
+        <SavedCasesModal
+          onClose={() => setShowSavedCasesModal(false)}
+          onOpen={handleOpenFromSaved}
+        />
+      )}
+
+      {pendingAction && (
+        <Modal
+          title={t("caseSelector.unsavedTitle")}
+          onClose={() => setPendingAction(null)}
+          widthClassName="max-w-md"
+        >
+          <div className="flex flex-col gap-3.5">
+            <p className="text-[13px] text-foreground">
+              {t("caseSelector.unsavedMessage")}
+            </p>
+            <div className="flex flex-col items-stretch gap-2 border-t border-border pt-3 sm:flex-row sm:justify-end">
+              <button
+                onClick={() => setPendingAction(null)}
+                className="btn-secondary"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                onClick={handleSwitchWithoutSaving}
+                className="btn-secondary"
+              >
+                {t("caseSelector.switchWithoutSaving")}
+              </button>
+              <button
+                onClick={handleSaveAndSwitch}
+                disabled={savingBeforeSwitch}
+                className="btn-primary"
+              >
+                {savingBeforeSwitch && (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                )}
+                {t("caseSelector.saveAndSwitch")}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}

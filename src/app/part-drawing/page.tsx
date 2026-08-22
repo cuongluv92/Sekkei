@@ -1,10 +1,11 @@
 "use client";
 
+import { Suspense } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { partDrawingService } from "@/lib/services";
 import { PartLibraryView } from "@/components/common/PartLibraryView";
 
-export default function PartDrawingPage() {
+function PartDrawingView() {
   const { t } = useTranslation();
   return (
     <PartLibraryView
@@ -15,5 +16,13 @@ export default function PartDrawingPage() {
       ownerType="part_drawing"
       onDelete={(id) => partDrawingService.moveToTrash(id)}
     />
+  );
+}
+
+export default function PartDrawingPage() {
+  return (
+    <Suspense fallback={null}>
+      <PartDrawingView />
+    </Suspense>
   );
 }

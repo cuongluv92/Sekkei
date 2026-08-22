@@ -8,40 +8,37 @@ import {
   designCaseService,
   exportCostLaborExcel,
   printCostLabor,
-  projectService,
 } from "@/lib/services/design";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
-import type { CasePanel, DesignCaseWithPanels, Project } from "@/lib/types/design";
+import type { CasePanel, DesignCaseWithPanels } from "@/lib/types/design";
 
 function sumHours(panels: CasePanel[], key: keyof CasePanel): number {
-  return panels.reduce((total, p) => total + (typeof p[key] === "number" ? (p[key] as number) : 0), 0);
+  return panels.reduce(
+    (total, p) => total + (typeof p[key] === "number" ? (p[key] as number) : 0),
+    0,
+  );
 }
 
 /**
  * 仕入原価・工数一覧表 (⑥) — system-wide, computed at read time from
  * DesignCase/CasePanel (設計実動合計/製作実動合計/... are sums over panels,
- * never stored as their own duplicated field). Project is a filter here, not
- * a required parent — matches 図面管理台帳/目次/工程表. The real 工数データ sheet
- * has one tab per year with a combined 件名／盤名称 column (no per-part 単価/
- * 合計 — pricing was explicitly excluded from this app, only hours are
- * tracked); reproduced here as one panel per year, oldest on the left,
- * matching 設計依頼書目次's layout.
+ * never stored as their own duplicated field) — matches 図面管理台帳/目次/工程表.
+ * The real 工数データ sheet has one tab per year with a combined 件名／盤名称
+ * column (no per-part 単価/合計 — pricing was explicitly excluded from this
+ * app, only hours are tracked); reproduced here as one panel per year,
+ * oldest on the left, matching 設計依頼書目次's layout.
  */
 export function CostLaborTable() {
   const { t } = useTranslation();
   const { message, show } = useMockFeedback();
   const [items, setItems] = useState<DesignCaseWithPanels[] | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [projectId, setProjectId] = useState("");
   const [query, setQuery] = useState("");
   const [exportingKey, setExportingKey] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    Promise.all([designCaseService.listAll(), projectService.list()]).then(([cases, projs]) => {
-      if (!active) return;
-      setItems(cases);
-      setProjects(projs);
+    designCaseService.listAll().then((cases) => {
+      if (active) setItems(cases);
     });
     return () => {
       active = false;
@@ -52,26 +49,39 @@ export function CostLaborTable() {
     if (!items) return null;
     const q = query.trim().toLowerCase();
     return items.filter(({ case: c, panels }) => {
-      if (projectId && c.projectId !== projectId) return false;
       if (!q) return true;
-      const haystack = [c.drawingNumber, c.managementNumber, c.projectName, ...panels.map((p) => p.panelName)]
+      const haystack = [
+        c.drawingNumber,
+        c.managementNumber,
+        c.projectName,
+        ...panels.map((p) => p.panelName),
+      ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [items, projectId, query]);
+  }, [items, query]);
 
   const grandTotals = useMemo(() => {
     if (!rows) return null;
     return rows.reduce(
       (acc, { panels }) => ({
-        designEstimated: acc.designEstimated + sumHours(panels, "designEstimatedHours"),
+        designEstimated:
+          acc.designEstimated + sumHours(panels, "designEstimatedHours"),
         designActual: acc.designActual + sumHours(panels, "designActualHours"),
-        productionEstimated: acc.productionEstimated + sumHours(panels, "productionEstimatedHours"),
-        productionActual: acc.productionActual + sumHours(panels, "productionActualHours"),
+        productionEstimated:
+          acc.productionEstimated +
+          sumHours(panels, "productionEstimatedHours"),
+        productionActual:
+          acc.productionActual + sumHours(panels, "productionActualHours"),
       }),
-      { designEstimated: 0, designActual: 0, productionEstimated: 0, productionActual: 0 },
+      {
+        designEstimated: 0,
+        designActual: 0,
+        productionEstimated: 0,
+        productionActual: 0,
+      },
     );
   }, [rows]);
 
@@ -91,7 +101,10 @@ export function CostLaborTable() {
       }));
   }, [rows]);
 
-  async function handleExportExcel(year: number, cases: DesignCaseWithPanels[]) {
+  async function handleExportExcel(
+    year: number,
+    cases: DesignCaseWithPanels[],
+  ) {
     setExportingKey(`${year}-excel`);
     try {
       const { fileName } = await exportCostLaborExcel(year, cases);
@@ -118,21 +131,6 @@ export function CostLaborTable() {
     <div className="flex flex-col gap-3">
       <div className="panel">
         <div className="panel-body-compact flex flex-wrap items-end gap-2.5">
-          <div>
-            <label className="field-label">{t("design.costLabor.filterProject")}</label>
-            <select
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              className="field-input w-auto py-1.5"
-            >
-              <option value="">{t("design.search.allProjects")}</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
           <div className="flex-1 min-w-[220px]">
             <label className="field-label">{t("common.search")}</label>
             <input
@@ -148,24 +146,42 @@ export function CostLaborTable() {
       {grandTotals && (
         <div className="panel">
           <div className="panel-header-compact">
-            <span className="panel-title">{t("design.costLabor.totalsTitle")}</span>
+            <span className="panel-title">
+              {t("design.costLabor.totalsTitle")}
+            </span>
           </div>
           <div className="panel-body-compact grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             <div className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
-              <div className="text-[11px] text-muted uppercase">{t("design.costLabor.designEstimatedTotal")}</div>
-              <div className="text-[19px] font-bold text-foreground">{grandTotals.designEstimated}</div>
+              <div className="text-[11px] text-muted uppercase">
+                {t("design.costLabor.designEstimatedTotal")}
+              </div>
+              <div className="text-[19px] font-bold text-foreground">
+                {grandTotals.designEstimated}
+              </div>
             </div>
             <div className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
-              <div className="text-[11px] text-muted uppercase">{t("design.costLabor.designActualTotal")}</div>
-              <div className="text-[19px] font-bold text-foreground">{grandTotals.designActual}</div>
+              <div className="text-[11px] text-muted uppercase">
+                {t("design.costLabor.designActualTotal")}
+              </div>
+              <div className="text-[19px] font-bold text-foreground">
+                {grandTotals.designActual}
+              </div>
             </div>
             <div className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
-              <div className="text-[11px] text-muted uppercase">{t("design.costLabor.productionEstimatedTotal")}</div>
-              <div className="text-[19px] font-bold text-foreground">{grandTotals.productionEstimated}</div>
+              <div className="text-[11px] text-muted uppercase">
+                {t("design.costLabor.productionEstimatedTotal")}
+              </div>
+              <div className="text-[19px] font-bold text-foreground">
+                {grandTotals.productionEstimated}
+              </div>
             </div>
             <div className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
-              <div className="text-[11px] text-muted uppercase">{t("design.costLabor.productionActualTotal")}</div>
-              <div className="text-[19px] font-bold text-foreground">{grandTotals.productionActual}</div>
+              <div className="text-[11px] text-muted uppercase">
+                {t("design.costLabor.productionActualTotal")}
+              </div>
+              <div className="text-[19px] font-bold text-foreground">
+                {grandTotals.productionActual}
+              </div>
             </div>
           </div>
         </div>
@@ -173,18 +189,24 @@ export function CostLaborTable() {
 
       {yearBlocks === null ? (
         <div className="panel">
-          <div className="panel-body py-8 text-center text-[13px] text-muted">{t("common.loading")}</div>
+          <div className="panel-body py-8 text-center text-[13px] text-muted">
+            {t("common.loading")}
+          </div>
         </div>
       ) : yearBlocks.length === 0 ? (
         <div className="panel">
-          <div className="panel-body py-8 text-center text-[13px] text-muted-2">{t("design.ledger.noResults")}</div>
+          <div className="panel-body py-8 text-center text-[13px] text-muted-2">
+            {t("design.ledger.noResults")}
+          </div>
         </div>
       ) : (
         <div className="flex items-start gap-3 overflow-x-auto pb-1">
           {yearBlocks.map(({ year, cases }) => (
             <div key={year} className="panel shrink-0" style={{ width: 890 }}>
               <div className="panel-header-compact">
-                <span className="panel-title">{t("design.costLabor.yearBlockTitle", { year })}</span>
+                <span className="panel-title">
+                  {t("design.costLabor.yearBlockTitle", { year })}
+                </span>
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => handleExportExcel(year, cases)}
@@ -216,14 +238,28 @@ export function CostLaborTable() {
                 <table className="data-table" style={{ minWidth: 870 }}>
                   <thead>
                     <tr>
-                      <th style={{ width: "90px" }}>{t("design.costLabor.columns.drawingNumber")}</th>
-                      <th style={{ width: "110px" }}>{t("design.costLabor.columns.managementNumber")}</th>
+                      <th style={{ width: "90px" }}>
+                        {t("design.costLabor.columns.drawingNumber")}
+                      </th>
+                      <th style={{ width: "110px" }}>
+                        {t("design.costLabor.columns.managementNumber")}
+                      </th>
                       <th>{t("design.costLabor.columns.projectName")}</th>
-                      <th style={{ width: "120px" }}>{t("design.costLabor.columns.panelNames")}</th>
-                      <th style={{ width: "90px" }}>{t("design.costLabor.columns.designEstimated")}</th>
-                      <th style={{ width: "90px" }}>{t("design.costLabor.columns.designActual")}</th>
-                      <th style={{ width: "90px" }}>{t("design.costLabor.columns.productionEstimated")}</th>
-                      <th style={{ width: "90px" }}>{t("design.costLabor.columns.productionActual")}</th>
+                      <th style={{ width: "120px" }}>
+                        {t("design.costLabor.columns.panelNames")}
+                      </th>
+                      <th style={{ width: "90px" }}>
+                        {t("design.costLabor.columns.designEstimated")}
+                      </th>
+                      <th style={{ width: "90px" }}>
+                        {t("design.costLabor.columns.designActual")}
+                      </th>
+                      <th style={{ width: "90px" }}>
+                        {t("design.costLabor.columns.productionEstimated")}
+                      </th>
+                      <th style={{ width: "90px" }}>
+                        {t("design.costLabor.columns.productionActual")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -231,7 +267,7 @@ export function CostLaborTable() {
                       <tr key={c.id}>
                         <td className="font-mono">
                           <Link
-                            href={`/design?tab=designRequest&project=${c.projectId}&case=${c.id}`}
+                            href={`/design?tab=designRequest&case=${c.id}`}
                             className="text-accent hover:underline"
                           >
                             {c.drawingNumber}

@@ -2,6 +2,7 @@
 
 import { Loader2, Trash2, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { uploadPartFile } from "@/lib/services";
 import {
@@ -75,12 +76,16 @@ export function PartLibraryView<T extends LibraryItem>({
   showPartDataFields,
 }: PartLibraryViewProps<T>) {
   const { t, locale } = useTranslation();
+  const searchParams = useSearchParams();
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<PartFilterBarValue>({
     manufacturerId: "",
     category: "",
-    keyword: "",
+    // Honors a `?q=<text>` deep link (e.g. from Global Search's 部品データ/部品図
+    // result) by prefilling the keyword filter — read once at mount, the
+    // user's own typing takes over after that.
+    keyword: searchParams.get("q") ?? "",
     specification: "",
   });
   const [selected, setSelected] = useState<T | null>(null);

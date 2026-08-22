@@ -25,7 +25,7 @@ const ja: Dictionary = {
   },
   common: {
     search: "検索",
-    globalSearchPlaceholder: "全体検索（部品データ・部品図・カタログ）",
+    globalSearchPlaceholder: "全体検索（案件・部品・計算・カタログなど）",
     clear: "クリア",
     calculate: "計算",
     excelExport: "Excel出力",
@@ -109,6 +109,40 @@ const ja: Dictionary = {
     previewNoFile: "添付ファイルがありません",
     dwgNotice:
       "DWGはブラウザ変換プレビュー対応予定（現在は元ファイルのダウンロードのみ）",
+    sections: {
+      case: "案件",
+      partAssembly: "部品製作",
+      partData: "部品データ",
+      partDrawing: "部品図",
+      catalog: "カタログ",
+      calculation: "計算",
+    },
+  },
+  caseSelector: {
+    currentCaseLabel: "現在の案件",
+    savedBadge: "保存済み",
+    unsavedBadge: "未保存",
+    changeCase: "案件を変更",
+    savedCasesButton: "保存済み案件",
+    deselectCase: "選択解除",
+    caseNotFound: "選択した案件が見つかりません",
+    searchPlaceholder: "図面番号・管理番号・工事番号・件名・盤名称で検索",
+    noCases: "案件がありません",
+    newCaseButton: "＋ 新規案件",
+    newCaseModalTitle: "新規案件",
+    editCaseModalTitle: "案件を編集",
+    savedCasesTitle: "保存済み案件",
+    openButton: "開く",
+    deleteConfirmTitle: "この案件を削除しますか？",
+    deleteImpactWarning:
+      "この案件には部品製作データ {partCount} 件、計算データ {calcCount} 件があります。削除するとこれらも一覧から見えなくなります。",
+    deleteArchiveNote:
+      "削除してもデータは完全には失われません（アーカイブとして保存され、必要であれば復元できます）。",
+    unsavedTitle: "未保存の変更があります",
+    unsavedMessage: "未保存の変更があります。案件を変更しますか？",
+    switchWithoutSaving: "保存せず変更",
+    saveAndSwitch: "保存して変更",
+    selectCaseFirst: "案件を選択してください",
   },
   selection: {
     title: "選定",
@@ -134,7 +168,7 @@ const ja: Dictionary = {
   partAssembly: {
     title: "部品製作",
     description:
-      "部品データを検索し、ダブルクリックで下の部品リストに追加します。追加後はこのProject専用に自由に編集できます（部品データ本体は変更されません）。",
+      "部品データを検索し、ダブルクリックで下の部品リストに追加します。追加後はこの案件専用に自由に編集できます（部品データ本体は変更されません）。",
     searchPlaceholder: "型式・品名で検索",
     tableTitle: "部品リスト",
     tableEmpty:
@@ -228,7 +262,6 @@ const ja: Dictionary = {
         "寸法・長さ・数量・比重には0より大きい数値を入力してください",
       noMaterial: "材質を選択するか比重を入力すると重量が計算されます",
       saved: "保存済み",
-      selectProjectFirst: "計算を保存するにはProjectを選択してください",
       fields: {
         angle: {
           W: "W（幅）",
@@ -422,26 +455,10 @@ const ja: Dictionary = {
       costLabor: "仕入原価・工数一覧表",
     },
     workspaceBar: {
-      currentProjectLabel: "現在のProject",
-      projectNamePlaceholder: "Project名を入力",
       caseLabel: "案件",
       casePlaceholder: "案件を選択",
-      newCase: "新規案件",
       advancedSearchButton: "詳細検索",
-      noProjects: "Projectがありません",
-      noCases: "案件がありません",
-      selectProjectFirst: "先にProjectを選択してください",
       selectCasePrompt: "案件を選択すると詳細が表示されます",
-      quickSearchPlaceholder: "件名・図面番号・管理番号・盤名称で検索",
-      quickSearchNoResults: "該当する案件が見つかりません",
-      changeProject: "変更",
-      deselectProject: "選択解除",
-      newProjectButton: "＋ 新規Project",
-      newProjectModalTitle: "新規Project",
-      projectSearchPlaceholder:
-        "図面番号・管理番号・工事番号・件名・盤名称で検索",
-      projectNotFound: "選択したProjectが見つかりません",
-      createButton: "作成",
     },
     newCaseForm: {
       title: "新規案件",
@@ -515,8 +532,6 @@ const ja: Dictionary = {
       },
     },
     comingSoon: "この機能は次のフェーズで実装予定です（現在は未実装）。",
-    productionComingSoon:
-      "製作依頼書は次のフェーズで実装予定です（現在は未実装）。Project・案件・盤の選択はこのまま次フェーズでも使用します。",
     saveButton: "保存",
     savedMessage: "保存しました",
     exportExcelButton: "Excel出力",
@@ -532,7 +547,6 @@ const ja: Dictionary = {
       noResults: "条件に一致する案件が見つかりません",
       andHint: "入力した項目すべてに一致する案件を検索します（AND検索）",
       panelNameLabel: "盤名称",
-      allProjects: "すべてのProject",
     },
     ledger: {
       empty: "データがありません",
@@ -644,7 +658,6 @@ const ja: Dictionary = {
       productionEstimatedTotal: "製作見積合計",
       productionActualTotal: "製作実動合計",
       yearBlockTitle: "{year}年　工数データ",
-      filterProject: "Project",
       searchPlaceholder: "図面番号・管理番号・件名・盤名称で検索",
       columns: {
         drawingNumber: "図面番号",
@@ -762,7 +775,7 @@ const ja: Dictionary = {
   backupSettings: {
     title: "バックアップ",
     exportDescription:
-      "現在のデータ（Project・案件・盤・設計依頼・製作依頼・工程・原価工数・マスタ設定・部品データ等）をExcelファイルとして書き出します。実行するたびに新しいファイルが作成され、既存のバックアップは上書きされません。",
+      "現在のデータ（案件・盤・設計依頼・製作依頼・工程・原価工数・マスタ設定・部品データ等）をExcelファイルとして書き出します。実行するたびに新しいファイルが作成され、既存のバックアップは上書きされません。",
     createButton: "バックアップを作成",
     restoreDescription:
       "バックアップExcelファイルからデータを復元します。内容を確認してから実行してください（確認前は何も書き換わりません）。",

@@ -15,8 +15,9 @@ const SUMMARY_SHEET = "Summary";
 
 // Parent -> child order for INSERT during restore (and DELETE runs in the
 // reverse of this order). Keep in sync with supabase/migrations/0001_init.sql.
+// `design_cases` is a root table (案件 is the whole app's root record — see
+// 0018_case_is_root.sql, which retired the old `projects` parent table).
 const TABLES_IN_DEPENDENCY_ORDER = [
-  "projects",
   "manufacturers",
   "design_cases",
   "case_panels",
@@ -133,7 +134,9 @@ export const backupService = {
     const client = requireSupabase();
 
     // Most tables use `id` as their primary key; these three don't (see 0001_init.sql).
-    const DELETE_KEY_COLUMN: Partial<Record<(typeof TABLES_IN_DEPENDENCY_ORDER)[number], string>> = {
+    const DELETE_KEY_COLUMN: Partial<
+      Record<(typeof TABLES_IN_DEPENDENCY_ORDER)[number], string>
+    > = {
       production_requests: "case_id",
       case_schedules: "case_id",
       schedule_colors: "category",
@@ -142,7 +145,10 @@ export const backupService = {
     for (const table of [...TABLES_IN_DEPENDENCY_ORDER].reverse()) {
       if (!rowsByTable.has(table)) continue;
       const keyColumn = DELETE_KEY_COLUMN[table] ?? "id";
-      const { error } = await client.from(table).delete().not(keyColumn, "is", null);
+      const { error } = await client
+        .from(table)
+        .delete()
+        .not(keyColumn, "is", null);
       if (error) throw error;
     }
 

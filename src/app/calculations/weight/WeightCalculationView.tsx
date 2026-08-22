@@ -1,10 +1,11 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { PageHeader } from "@/components/common/PageHeader";
-import { ProjectSelector } from "@/components/common/ProjectSelector";
-import { useActiveProject } from "@/lib/store/ActiveProjectProvider";
+import { CaseSelector } from "@/components/common/CaseSelector";
+import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
 import { BasicWeightCalc } from "@/components/calculation/BasicWeightCalc";
 import { PanelWeightCalc } from "@/components/calculation/PanelWeightCalc";
 
@@ -27,11 +28,15 @@ export function WeightCalculationView() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const tab: WeightTopTab = isWeightTopTab(tabParam) ? tabParam : "basic";
-  const {
-    projectId,
-    setProjectId,
-    loading: projectLoading,
-  } = useActiveProject();
+  const { caseId, setCaseId, loading: caseLoading } = useActiveCase();
+
+  // Honors a `?case=<id>` deep link (e.g. from Global Search's 計算 result)
+  // by resolving it as the app-wide active 案件.
+  useEffect(() => {
+    const fromUrl = searchParams.get("case");
+    if (fromUrl && fromUrl !== caseId) setCaseId(fromUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   function setTab(next: WeightTopTab) {
     const params = new URLSearchParams(searchParams.toString());
@@ -46,7 +51,7 @@ export function WeightCalculationView() {
         description={t("weightCalc.description")}
       />
 
-      <ProjectSelector projectId={projectId} onProjectChange={setProjectId} />
+      <CaseSelector />
 
       <div className="-mx-1 overflow-x-auto px-1">
         <div className="flex w-max min-w-full gap-1 border-b border-border pb-0">
@@ -69,22 +74,22 @@ export function WeightCalculationView() {
         </div>
       </div>
 
-      {projectLoading ? (
+      {caseLoading ? (
         <div className="panel">
           <div className="panel-body py-12 text-center text-[13px] text-muted-2">
             {t("common.loading")}
           </div>
         </div>
-      ) : !projectId ? (
+      ) : !caseId ? (
         <div className="panel">
           <div className="panel-body py-12 text-center text-[13px] text-muted-2">
-            {t("design.workspaceBar.selectProjectFirst")}
+            {t("caseSelector.selectCaseFirst")}
           </div>
         </div>
       ) : tab === "basic" ? (
-        <BasicWeightCalc projectId={projectId} />
+        <BasicWeightCalc caseId={caseId} />
       ) : (
-        <PanelWeightCalc projectId={projectId} />
+        <PanelWeightCalc caseId={caseId} />
       )}
     </div>
   );

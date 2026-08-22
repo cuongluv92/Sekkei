@@ -1,5 +1,8 @@
 import { requireSupabase } from "@/lib/supabase/client";
-import { formatDrawingNumber, getNextSequenceForYear } from "@/lib/utils/designNumbering";
+import {
+  formatDrawingNumber,
+  getNextSequenceForYear,
+} from "@/lib/utils/designNumbering";
 import type {
   CasePanel,
   CaseStatus,
@@ -12,7 +15,6 @@ import type {
 
 interface DesignCaseRow {
   id: string;
-  project_id: string;
   year: number;
   sequence_no: number;
   drawing_number: string;
@@ -30,6 +32,7 @@ interface DesignCaseRow {
   manufacturing_complete: boolean;
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
 }
 
 interface CasePanelRow {
@@ -56,7 +59,6 @@ interface CasePanelRow {
 function caseFromRow(row: DesignCaseRow): DesignCase {
   return {
     id: row.id,
-    projectId: row.project_id,
     year: row.year,
     sequenceNo: row.sequence_no,
     drawingNumber: row.drawing_number,
@@ -74,6 +76,7 @@ function caseFromRow(row: DesignCaseRow): DesignCase {
     manufacturingComplete: row.manufacturing_complete,
     createdAt: row.created_at.slice(0, 10),
     updatedAt: row.updated_at.slice(0, 10),
+    deletedAt: row.deleted_at,
   };
 }
 
@@ -132,7 +135,9 @@ async function panelsForCase(caseId: string): Promise<CasePanel[]> {
   return (data ?? []).map(panelFromRow);
 }
 
-async function panelsForCases(caseIds: string[]): Promise<Map<string, CasePanel[]>> {
+async function panelsForCases(
+  caseIds: string[],
+): Promise<Map<string, CasePanel[]>> {
   const map = new Map<string, CasePanel[]>();
   if (caseIds.length === 0) return map;
   const { data, error } = await requireSupabase()
@@ -151,7 +156,6 @@ async function panelsForCases(caseIds: string[]): Promise<Map<string, CasePanel[
 }
 
 export interface CreateCaseInput {
-  projectId: string;
   year: number;
   requestType: string;
   managementNumber: string;
@@ -163,23 +167,12 @@ export interface CreateCaseInput {
 }
 
 export const designCaseService = {
-  async listByProject(projectId: string): Promise<DesignCaseWithPanels[]> {
-    const { data, error } = await requireSupabase()
-      .from("design_cases")
-      .select("*")
-      .eq("project_id", projectId)
-      .order("drawing_number", { ascending: false });
-    if (error) throw error;
-    const cases = (data ?? []).map(caseFromRow);
-    const panelMap = await panelsForCases(cases.map((c) => c.id));
-    return cases.map((c) => ({ case: c, panels: panelMap.get(c.id) ?? [] }));
-  },
-
-  /** All cases across every Project — for the system-wide ledger tables (図面管理台帳/目次/工程表/原価工数), never scoped to one Project. */
+  /** Every 案件 across the whole app (excluding archived) — 案件 is the single root record, there is no per-module/per-Project scoping to list "within". Backs the system-wide ledger tables (図面管理台帳/目次/工程表/原価工数) and every 案件 picker/search. */
   async listAll(): Promise<DesignCaseWithPanels[]> {
     const { data, error } = await requireSupabase()
       .from("design_cases")
       .select("*")
+      .is("deleted_at", null)
       .order("drawing_number", { ascending: false });
     if (error) throw error;
     const cases = (data ?? []).map(caseFromRow);
@@ -192,11 +185,77 @@ export const designCaseService = {
       .from("design_cases")
       .select("*")
       .eq("id", caseId)
+      .is("deleted_at", null)
       .maybeSingle();
     if (error) throw error;
     if (!data) return null;
     const panels = await panelsForCase(caseId);
     return { case: caseFromRow(data as DesignCaseRow), panels };
+  },
+
+  /**
+   * Free-text OR search across 図面番号/管理番号/工事番号/件名/担当/盤名称 for one
+   * query string — backs the shared 案件 picker's quick search and Global
+   * Search's 案件 provider. Runs each field as its own `ilike` (instead of
+   * building one `.or(...)` filter string) so user input containing commas
+   * or parentheses — which the label format itself uses, e.g. "（R123456）"
+   * — can never be misread as PostgREST filter syntax.
+   */
+  async quickSearch(query: string): Promise<DesignCaseWithPanels[]> {
+    const q = query.trim();
+    if (!q) return [];
+    const client = requireSupabase();
+    const fields = [
+      "drawing_number",
+      "management_number",
+      "construction_number",
+      "project_name",
+      "assignee",
+    ] as const;
+    const [byField, panelMatches] = await Promise.all([
+      Promise.all(
+        fields.map((f) =>
+          client
+            .from("design_cases")
+            .select("*")
+            .is("deleted_at", null)
+            .ilike(f, `%${q}%`),
+        ),
+      ),
+      client
+        .from("case_panels")
+        .select("case_id")
+        .ilike("panel_name", `%${q}%`),
+    ]);
+    if (panelMatches.error) throw panelMatches.error;
+
+    const rowsById = new Map<string, DesignCaseRow>();
+    for (const result of byField) {
+      if (result.error) throw result.error;
+      for (const row of (result.data ?? []) as DesignCaseRow[])
+        rowsById.set(row.id, row);
+    }
+    const panelCaseIds = Array.from(
+      new Set((panelMatches.data ?? []).map((r) => r.case_id as string)),
+    );
+    if (panelCaseIds.length > 0) {
+      const { data, error } = await client
+        .from("design_cases")
+        .select("*")
+        .is("deleted_at", null)
+        .in("id", panelCaseIds);
+      if (error) throw error;
+      for (const row of (data ?? []) as DesignCaseRow[])
+        rowsById.set(row.id, row);
+    }
+
+    const cases = Array.from(rowsById.values()).map(caseFromRow);
+    const panelMap = await panelsForCases(cases.map((c) => c.id));
+    return cases
+      .map((c) => ({ case: c, panels: panelMap.get(c.id) ?? [] }))
+      .sort((a, b) =>
+        a.case.drawingNumber.localeCompare(b.case.drawingNumber, "ja"),
+      );
   },
 
   /** Preview only — does not reserve the number. The real number is assigned atomically by the `create_design_case` DB function. */
@@ -206,7 +265,10 @@ export const designCaseService = {
       .select("sequence_no")
       .eq("year", year);
     if (error) throw error;
-    const cases = (data ?? []).map((r) => ({ year, sequenceNo: r.sequence_no })) as DesignCase[];
+    const cases = (data ?? []).map((r) => ({
+      year,
+      sequenceNo: r.sequence_no,
+    })) as DesignCase[];
     const seq = getNextSequenceForYear(cases, year);
     return formatDrawingNumber(year, seq);
   },
@@ -219,7 +281,6 @@ export const designCaseService = {
    */
   async create(input: CreateCaseInput): Promise<DesignCase> {
     const { data, error } = await requireSupabase().rpc("create_design_case", {
-      p_project_id: input.projectId,
       p_year: input.year,
       p_request_type: input.requestType,
       p_management_number: input.managementNumber,
@@ -233,20 +294,29 @@ export const designCaseService = {
     return caseFromRow(data as DesignCaseRow);
   },
 
-  async update(caseId: string, patch: Partial<DesignCase>): Promise<DesignCase> {
+  async update(
+    caseId: string,
+    patch: Partial<DesignCase>,
+  ): Promise<DesignCase> {
     const row: Record<string, unknown> = {};
     if (patch.requestType !== undefined) row.request_type = patch.requestType;
-    if (patch.managementNumber !== undefined) row.management_number = patch.managementNumber;
-    if (patch.constructionNumber !== undefined) row.construction_number = patch.constructionNumber;
+    if (patch.managementNumber !== undefined)
+      row.management_number = patch.managementNumber;
+    if (patch.constructionNumber !== undefined)
+      row.construction_number = patch.constructionNumber;
     if (patch.orderer !== undefined) row.orderer = patch.orderer;
-    if (patch.customerContact !== undefined) row.customer_contact = patch.customerContact;
+    if (patch.customerContact !== undefined)
+      row.customer_contact = patch.customerContact;
     if (patch.projectName !== undefined) row.project_name = patch.projectName;
     if (patch.specs !== undefined) row.specs = patch.specs;
-    if (patch.designRemarks !== undefined) row.design_remarks = patch.designRemarks;
-    if (patch.indexCategory !== undefined) row.index_category = patch.indexCategory;
+    if (patch.designRemarks !== undefined)
+      row.design_remarks = patch.designRemarks;
+    if (patch.indexCategory !== undefined)
+      row.index_category = patch.indexCategory;
     if (patch.assignee !== undefined) row.assignee = patch.assignee;
     if (patch.caseStatus !== undefined) row.case_status = patch.caseStatus;
-    if (patch.manufacturingComplete !== undefined) row.manufacturing_complete = patch.manufacturingComplete;
+    if (patch.manufacturingComplete !== undefined)
+      row.manufacturing_complete = patch.manufacturingComplete;
     row.updated_at = new Date().toISOString();
 
     const { data, error } = await requireSupabase()
@@ -259,38 +329,63 @@ export const designCaseService = {
     return caseFromRow(data as DesignCaseRow);
   },
 
+  /** 保存済み案件's 削除 action — soft delete only (never a hard DELETE): sets `deleted_at`, which every listing/search filters out. Recoverable directly in the database if archived by mistake. */
+  async archive(caseId: string): Promise<void> {
+    const { error } = await requireSupabase()
+      .from("design_cases")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", caseId);
+    if (error) throw error;
+  },
+
   /** Replaces the full panel set for a case (盤①～⑦ are edited together as one form): upsert every row in the new set, then delete any panel_no no longer present. */
   async savePanels(caseId: string, panels: CasePanel[]): Promise<CasePanel[]> {
     const client = requireSupabase();
     if (panels.length > 0) {
-      const { error } = await client
-        .from("case_panels")
-        .upsert(
-          panels.map((p) => panelToRow(caseId, p)),
-          { onConflict: "case_id,panel_no" },
-        );
+      const { error } = await client.from("case_panels").upsert(
+        panels.map((p) => panelToRow(caseId, p)),
+        { onConflict: "case_id,panel_no" },
+      );
       if (error) throw error;
     }
     const keepNos = panels.map((p) => p.panelNo);
-    const deleteQuery = client.from("case_panels").delete().eq("case_id", caseId);
+    const deleteQuery = client
+      .from("case_panels")
+      .delete()
+      .eq("case_id", caseId);
     const { error: deleteError } =
-      keepNos.length > 0 ? await deleteQuery.not("panel_no", "in", `(${keepNos.join(",")})`) : await deleteQuery;
+      keepNos.length > 0
+        ? await deleteQuery.not("panel_no", "in", `(${keepNos.join(",")})`)
+        : await deleteQuery;
     if (deleteError) throw deleteError;
     return panelsForCase(caseId);
   },
 
   async search(query: DesignCaseSearchQuery): Promise<DesignCaseWithPanels[]> {
     const client = requireSupabase();
-    let request = client.from("design_cases").select("*");
+    let request = client
+      .from("design_cases")
+      .select("*")
+      .is("deleted_at", null);
 
-    if (query.projectId) request = request.eq("project_id", query.projectId);
     if (query.year) request = request.eq("year", query.year);
-    if (query.drawingNumber) request = request.ilike("drawing_number", `%${query.drawingNumber}%`);
-    if (query.managementNumber) request = request.ilike("management_number", `%${query.managementNumber}%`);
-    if (query.constructionNumber) request = request.ilike("construction_number", `%${query.constructionNumber}%`);
+    if (query.drawingNumber)
+      request = request.ilike("drawing_number", `%${query.drawingNumber}%`);
+    if (query.managementNumber)
+      request = request.ilike(
+        "management_number",
+        `%${query.managementNumber}%`,
+      );
+    if (query.constructionNumber)
+      request = request.ilike(
+        "construction_number",
+        `%${query.constructionNumber}%`,
+      );
     if (query.orderer) request = request.ilike("orderer", `%${query.orderer}%`);
-    if (query.customerContact) request = request.ilike("customer_contact", `%${query.customerContact}%`);
-    if (query.projectName) request = request.ilike("project_name", `%${query.projectName}%`);
+    if (query.customerContact)
+      request = request.ilike("customer_contact", `%${query.customerContact}%`);
+    if (query.projectName)
+      request = request.ilike("project_name", `%${query.projectName}%`);
 
     if (query.panelName) {
       const { data: matchingPanels, error: panelError } = await client
@@ -298,7 +393,9 @@ export const designCaseService = {
         .select("case_id")
         .ilike("panel_name", `%${query.panelName}%`);
       if (panelError) throw panelError;
-      const caseIds = Array.from(new Set((matchingPanels ?? []).map((r) => r.case_id as string)));
+      const caseIds = Array.from(
+        new Set((matchingPanels ?? []).map((r) => r.case_id as string)),
+      );
       if (caseIds.length === 0) return [];
       request = request.in("id", caseIds);
     }

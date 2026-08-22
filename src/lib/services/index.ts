@@ -12,6 +12,7 @@ export { weightMaterialService } from "./weightMaterialService";
 export { busbarSizeService } from "./busbarSizeService";
 export { weightShapeImageService } from "./weightShapeImageService";
 export { calculationRecordService } from "./calculationRecordService";
+export { partAssemblyService } from "./partAssemblyService";
 export { uploadPartFile } from "./fileUploadService";
 export { importService } from "./importService";
 export { exportService } from "./exportService";

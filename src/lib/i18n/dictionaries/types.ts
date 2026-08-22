@@ -109,6 +109,39 @@ export interface Dictionary {
     previewError: string;
     previewNoFile: string;
     dwgNotice: string;
+    sections: {
+      case: string;
+      partAssembly: string;
+      partData: string;
+      partDrawing: string;
+      catalog: string;
+      calculation: string;
+    };
+  };
+  /** Shared 案件 picker (CaseSelector) + 新規案件/編集/保存済み案件 flows — used app-wide, not scoped to 設計管理. */
+  caseSelector: {
+    currentCaseLabel: string;
+    savedBadge: string;
+    unsavedBadge: string;
+    changeCase: string;
+    savedCasesButton: string;
+    deselectCase: string;
+    caseNotFound: string;
+    searchPlaceholder: string;
+    noCases: string;
+    newCaseButton: string;
+    newCaseModalTitle: string;
+    editCaseModalTitle: string;
+    savedCasesTitle: string;
+    openButton: string;
+    deleteConfirmTitle: string;
+    deleteImpactWarning: string;
+    deleteArchiveNote: string;
+    unsavedTitle: string;
+    unsavedMessage: string;
+    switchWithoutSaving: string;
+    saveAndSwitch: string;
+    selectCaseFirst: string;
   };
   selection: {
     title: string;
@@ -218,7 +251,6 @@ export interface Dictionary {
       invalidInput: string;
       noMaterial: string;
       saved: string;
-      selectProjectFirst: string;
       fields: {
         angle: { W: string; H: string; t1: string; t2: string };
         channel: { W: string; H: string; t1: string; t2: string };
@@ -381,25 +413,10 @@ export interface Dictionary {
       costLabor: string;
     };
     workspaceBar: {
-      currentProjectLabel: string;
-      projectNamePlaceholder: string;
       caseLabel: string;
       casePlaceholder: string;
-      newCase: string;
       advancedSearchButton: string;
-      noProjects: string;
-      noCases: string;
-      selectProjectFirst: string;
       selectCasePrompt: string;
-      quickSearchPlaceholder: string;
-      quickSearchNoResults: string;
-      changeProject: string;
-      deselectProject: string;
-      newProjectButton: string;
-      newProjectModalTitle: string;
-      projectSearchPlaceholder: string;
-      projectNotFound: string;
-      createButton: string;
     };
     newCaseForm: {
       title: string;
@@ -473,7 +490,6 @@ export interface Dictionary {
       };
     };
     comingSoon: string;
-    productionComingSoon: string;
     saveButton: string;
     savedMessage: string;
     exportExcelButton: string;
@@ -489,7 +505,6 @@ export interface Dictionary {
       noResults: string;
       andHint: string;
       panelNameLabel: string;
-      allProjects: string;
     };
     ledger: {
       empty: string;
@@ -598,7 +613,6 @@ export interface Dictionary {
       productionEstimatedTotal: string;
       productionActualTotal: string;
       yearBlockTitle: string;
-      filterProject: string;
       searchPlaceholder: string;
       columns: {
         drawingNumber: string;

@@ -1,7 +1,8 @@
 "use client";
 
 import { Loader2, Save } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import {
   calculationRecordService,
@@ -12,8 +13,8 @@ import { CalculationForm } from "@/components/calculation/CalculationForm";
 import { CalculationResult } from "@/components/calculation/CalculationResult";
 import { ExportActions } from "@/components/common/ExportActions";
 import { PageHeader } from "@/components/common/PageHeader";
-import { ProjectSelector } from "@/components/common/ProjectSelector";
-import { useActiveProject } from "@/lib/store/ActiveProjectProvider";
+import { CaseSelector } from "@/components/common/CaseSelector";
+import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
 import type { CalculationDefinition, CalculationTemplate } from "@/lib/types";
 
 interface CalculationPageViewProps {
@@ -23,26 +24,36 @@ interface CalculationPageViewProps {
 }
 
 /**
- * Generic Project → 入力 → 計算 → 保存 screen shared by every calculation
- * module (換気計算, 耐震計算, and the 他計算 modules — 重量計算 has its own
- * persistence in BasicWeightCalc/WeightShapeCalcSection). Everything the
- * page renders comes from the module's `CalculationDefinition`, so adding a
- * new calculation later means registering a new definition, not a new page.
- * Saved state (`values`/`results`) is keyed by (project, calculationKey) via
- * `calculation_records` — reopening a Project restores it for editing,
+ * Generic 案件 → 入力 → 計算 → 保存 screen shared by every calculation module
+ * (換気計算, 耐震計算, and the 他計算 modules — 重量計算/母線銅帯 have their own
+ * bespoke persistence). Everything the page renders comes from the module's
+ * `CalculationDefinition`, so adding a new calculation later means
+ * registering a new definition, not a new page. Saved state
+ * (`values`/`results`) is keyed by (案件, calculationKey) via
+ * `calculation_records` — reopening a 案件 restores it for editing,
  * recalculating, and re-saving.
  */
-export function CalculationPageView({
+function CalculationPageViewInner({
   calculationKey,
   title,
   description,
 }: CalculationPageViewProps) {
   const { t } = useTranslation();
+  const searchParams = useSearchParams();
   const {
-    projectId,
-    setProjectId,
-    loading: projectLoading,
-  } = useActiveProject();
+    caseId,
+    setCaseId,
+    loading: caseLoading,
+    registerSaveHandler,
+  } = useActiveCase();
+
+  // Honors a `?case=<id>` deep link (e.g. from Global Search's 計算 result)
+  // by resolving it as the app-wide active 案件.
+  useEffect(() => {
+    const fromUrl = searchParams.get("case");
+    if (fromUrl && fromUrl !== caseId) setCaseId(fromUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   const [definition, setDefinition] = useState<CalculationDefinition | null>(
     null,
   );
@@ -67,9 +78,10 @@ export function CalculationPageView({
   useEffect(() => {
     const token = ++loadTokenRef.current;
     setSavedAt(null);
-    if (!projectId) return;
-    calculationRecordService.get(projectId, calculationKey).then((record) => {
-      if (loadTokenRef.current !== token) return; // a newer (project/calculationKey) fetch already applied
+    registerSaveHandler(calculationKey, null);
+    if (!caseId) return;
+    calculationRecordService.get(caseId, calculationKey).then((record) => {
+      if (loadTokenRef.current !== token) return; // a newer (case/calculationKey) fetch already applied
       if (record) {
         setValues((record.input as Record<string, string>) ?? {});
         const rows = record.result?.rows;
@@ -82,7 +94,16 @@ export function CalculationPageView({
         setResults([]);
       }
     });
-  }, [projectId, calculationKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseId, calculationKey]);
+
+  // Unregister this module's save handler on unmount so a stale handler
+  // pointing at an old case's data can never be invoked by the switch
+  // confirmation later.
+  useEffect(
+    () => () => registerSaveHandler(calculationKey, null),
+    [calculationKey, registerSaveHandler],
+  );
 
   async function handleCalculate() {
     if (!definition) return;
@@ -90,6 +111,7 @@ export function CalculationPageView({
     const rows = await calculationService.calculate(calculationKey, values);
     setResults(rows);
     setLoading(false);
+    registerSaveHandler(calculationKey, handleSave);
   }
 
   function handleClear() {
@@ -98,16 +120,17 @@ export function CalculationPageView({
   }
 
   async function handleSave() {
-    if (!projectId || saving) return;
+    if (!caseId || saving) return;
     setSaving(true);
     try {
       const saved = await calculationRecordService.save(
-        projectId,
+        caseId,
         calculationKey,
         values,
         { rows: results },
       );
       setSavedAt(saved.updatedAt);
+      registerSaveHandler(calculationKey, null);
     } finally {
       setSaving(false);
     }
@@ -121,18 +144,18 @@ export function CalculationPageView({
     <div className="flex flex-col gap-4">
       <PageHeader title={title} description={description} />
 
-      <ProjectSelector projectId={projectId} onProjectChange={setProjectId} />
+      <CaseSelector />
 
-      {projectLoading ? (
+      {caseLoading ? (
         <div className="panel">
           <div className="panel-body py-12 text-center text-[13px] text-muted-2">
             {t("common.loading")}
           </div>
         </div>
-      ) : !projectId ? (
+      ) : !caseId ? (
         <div className="panel">
           <div className="panel-body py-12 text-center text-[13px] text-muted-2">
-            {t("design.workspaceBar.selectProjectFirst")}
+            {t("caseSelector.selectCaseFirst")}
           </div>
         </div>
       ) : (
@@ -145,9 +168,10 @@ export function CalculationPageView({
               <CalculationForm
                 definition={definition}
                 values={values}
-                onChange={(key, value) =>
-                  setValues((prev) => ({ ...prev, [key]: value }))
-                }
+                onChange={(key, value) => {
+                  setValues((prev) => ({ ...prev, [key]: value }));
+                  registerSaveHandler(calculationKey, handleSave);
+                }}
               />
               <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
                 <button
@@ -219,5 +243,13 @@ export function CalculationPageView({
         </>
       )}
     </div>
+  );
+}
+
+export function CalculationPageView(props: CalculationPageViewProps) {
+  return (
+    <Suspense fallback={null}>
+      <CalculationPageViewInner {...props} />
+    </Suspense>
   );
 }

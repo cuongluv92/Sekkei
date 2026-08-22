@@ -16,7 +16,7 @@ import type { WeightMaterial } from "@/lib/types";
  * these 3 shapes, per the confirmed spec; not a place to add more without
  * an explicit request.
  */
-export function BasicWeightCalc({ projectId }: { projectId: string }) {
+export function BasicWeightCalc({ caseId }: { caseId: string }) {
   const { t } = useTranslation();
   const [materials, setMaterials] = useState<WeightMaterial[]>([]);
   const [materialsLoaded, setMaterialsLoaded] = useState(false);
@@ -62,7 +62,7 @@ export function BasicWeightCalc({ projectId }: { projectId: string }) {
             materialsLoaded={materialsLoaded}
             image={images[shape.key]}
             onImageChange={(image) => handleImageChange(shape.key, image)}
-            projectId={projectId}
+            caseId={caseId}
           />
         ))}
       </div>

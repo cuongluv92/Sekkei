@@ -16,7 +16,7 @@ import type { DesignCaseWithPanels } from "@/lib/types/design";
 interface DesignRequestIndexTableProps {
   /** Which real template (③京王 / ④その他) this list exports against. */
   kind: "keio" | "other";
-  /** e.g. orderer contains "京王" — the underlying data is always the whole system-wide list, never scoped to one Project. */
+  /** e.g. orderer contains "京王" — the underlying data is always the whole system-wide list across every 案件. */
   filter?: (item: DesignCaseWithPanels) => boolean;
 }
 
@@ -30,7 +30,10 @@ interface DesignRequestIndexTableProps {
  * per year in a horizontally-scrolling row instead of a single table with a
  * year dropdown.
  */
-export function DesignRequestIndexTable({ kind, filter }: DesignRequestIndexTableProps) {
+export function DesignRequestIndexTable({
+  kind,
+  filter,
+}: DesignRequestIndexTableProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const { message, show } = useMockFeedback();
@@ -58,7 +61,13 @@ export function DesignRequestIndexTable({ kind, filter }: DesignRequestIndexTabl
     const q = query.trim().toLowerCase();
     if (!q) return scoped;
     return scoped.filter(({ case: c, panels }) => {
-      const haystack = [c.drawingNumber, c.managementNumber, c.projectName, c.assignee, ...panels.map((p) => p.panelName)]
+      const haystack = [
+        c.drawingNumber,
+        c.managementNumber,
+        c.projectName,
+        c.assignee,
+        ...panels.map((p) => p.panelName),
+      ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -82,10 +91,17 @@ export function DesignRequestIndexTable({ kind, filter }: DesignRequestIndexTabl
       }));
   }, [filtered]);
 
-  async function handleExportExcel(year: number, cases: DesignCaseWithPanels[]) {
+  async function handleExportExcel(
+    year: number,
+    cases: DesignCaseWithPanels[],
+  ) {
     setExportingKey(`${year}-excel`);
     try {
-      const { fileName } = await exportDesignRequestIndexExcel(kind, year, cases);
+      const { fileName } = await exportDesignRequestIndexExcel(
+        kind,
+        year,
+        cases,
+      );
       show(t("design.exportedMessage", { fileName }));
     } catch {
       show(t("design.exportError"));
@@ -121,18 +137,24 @@ export function DesignRequestIndexTable({ kind, filter }: DesignRequestIndexTabl
 
       {yearBlocks === null ? (
         <div className="panel">
-          <div className="panel-body py-8 text-center text-[13px] text-muted">{t("common.loading")}</div>
+          <div className="panel-body py-8 text-center text-[13px] text-muted">
+            {t("common.loading")}
+          </div>
         </div>
       ) : yearBlocks.length === 0 ? (
         <div className="panel">
-          <div className="panel-body py-8 text-center text-[13px] text-muted-2">{t("design.index.empty")}</div>
+          <div className="panel-body py-8 text-center text-[13px] text-muted-2">
+            {t("design.index.empty")}
+          </div>
         </div>
       ) : (
         <div className="flex items-start gap-3 overflow-x-auto pb-1">
           {yearBlocks.map(({ year, cases }) => (
             <div key={year} className="panel shrink-0" style={{ width: 680 }}>
               <div className="panel-header-compact">
-                <span className="panel-title">{t("design.index.yearBlockTitle", { year })}</span>
+                <span className="panel-title">
+                  {t("design.index.yearBlockTitle", { year })}
+                </span>
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => handleExportExcel(year, cases)}
@@ -164,24 +186,36 @@ export function DesignRequestIndexTable({ kind, filter }: DesignRequestIndexTabl
                 <table className="data-table" style={{ minWidth: 660 }}>
                   <thead>
                     <tr>
-                      <th style={{ width: "90px" }}>{t("design.index.columns.drawingNumber")}</th>
-                      <th style={{ width: "120px" }}>{t("design.index.columns.managementNumber")}</th>
+                      <th style={{ width: "90px" }}>
+                        {t("design.index.columns.drawingNumber")}
+                      </th>
+                      <th style={{ width: "120px" }}>
+                        {t("design.index.columns.managementNumber")}
+                      </th>
                       <th>{t("design.index.columns.projectName")}</th>
-                      <th style={{ width: "110px" }}>{t("design.index.columns.panelNames")}</th>
-                      <th style={{ width: "70px" }}>{t("design.index.columns.assignee")}</th>
-                      <th style={{ width: "70px" }}>{t("design.index.columns.remarks")}</th>
+                      <th style={{ width: "110px" }}>
+                        {t("design.index.columns.panelNames")}
+                      </th>
+                      <th style={{ width: "70px" }}>
+                        {t("design.index.columns.assignee")}
+                      </th>
+                      <th style={{ width: "70px" }}>
+                        {t("design.index.columns.remarks")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {cases.map(({ case: c, panels }) => (
                       <tr
                         key={c.id}
-                        onClick={() => router.push(`/design?tab=designRequest&project=${c.projectId}&case=${c.id}`)}
+                        onClick={() =>
+                          router.push(`/design?tab=designRequest&case=${c.id}`)
+                        }
                         className="cursor-pointer"
                       >
                         <td className="font-mono">
                           <Link
-                            href={`/design?tab=designRequest&project=${c.projectId}&case=${c.id}`}
+                            href={`/design?tab=designRequest&case=${c.id}`}
                             onClick={(e) => e.stopPropagation()}
                             className="text-accent hover:underline"
                           >
@@ -197,7 +231,9 @@ export function DesignRequestIndexTable({ kind, filter }: DesignRequestIndexTabl
                             .join("・")}
                         </td>
                         <td>{c.assignee}</td>
-                        <td className="truncate text-muted">{c.designRemarks}</td>
+                        <td className="truncate text-muted">
+                          {c.designRemarks}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

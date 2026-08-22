@@ -3,7 +3,7 @@ import type { PartAssemblyRow } from "@/lib/types";
 
 interface PartAssemblyRow_DB {
   id: string;
-  project_id: string;
+  design_case_id: string;
   position: number;
   symbol: string;
   name: string;
@@ -37,9 +37,9 @@ function fromRow(row: PartAssemblyRow_DB): PartAssemblyRow {
   };
 }
 
-function toRow(projectId: string, position: number, row: PartAssemblyRow) {
+function toRow(caseId: string, position: number, row: PartAssemblyRow) {
   return {
-    project_id: projectId,
+    design_case_id: caseId,
     position,
     symbol: row.symbol,
     name: row.name,
@@ -57,34 +57,74 @@ function toRow(projectId: string, position: number, row: PartAssemblyRow) {
 }
 
 /**
- * 部品製作 rows, scoped per Project (never mixed between Projects). Reuses
- * the same `Project` entity as 設計管理 — one shared Project concept, not a
- * second parallel one. "Last active project" is a per-browser UI
- * convenience, not real data, so it stays in localStorage per the
- * "localStorage only for UI preference" rule.
+ * 部品製作 rows, scoped per 案件 (never mixed between 案件 — see
+ * `design_case_id`, distinct from the optional per-row `case_id`/`panel_id`
+ * traceability fields above). 案件 is the single root record shared by the
+ * whole app — there is no separate "Project" system for 部品製作 to belong
+ * to.
  */
 export const partAssemblyService = {
-  async listByProject(projectId: string): Promise<PartAssemblyRow[]> {
+  async listByCase(caseId: string): Promise<PartAssemblyRow[]> {
     const { data, error } = await requireSupabase()
       .from("part_assembly_rows")
       .select("*")
-      .eq("project_id", projectId)
+      .eq("design_case_id", caseId)
       .order("position", { ascending: true });
     if (error) throw error;
     return (data ?? []).map(fromRow);
   },
 
-  async saveRows(projectId: string, rows: PartAssemblyRow[]): Promise<void> {
+  async saveRows(caseId: string, rows: PartAssemblyRow[]): Promise<void> {
     const client = requireSupabase();
     const { error: deleteError } = await client
       .from("part_assembly_rows")
       .delete()
-      .eq("project_id", projectId);
+      .eq("design_case_id", caseId);
     if (deleteError) throw deleteError;
     if (rows.length === 0) return;
     const { error: insertError } = await client
       .from("part_assembly_rows")
-      .insert(rows.map((r, i) => toRow(projectId, i, r)));
+      .insert(rows.map((r, i) => toRow(caseId, i, r)));
     if (insertError) throw insertError;
+  },
+
+  /**
+   * Free-text OR search across 記号/品名/型式/定格・仕様/備考 for one query
+   * string, across every 案件 — backs Global Search's 部品製作 provider (point
+   * 12: "部品製作 - 部品 thuộc案件 nào"). Each field runs as its own `ilike`
+   * and results are merged/deduped client-side, same reasoning as
+   * `designCaseService.quickSearch` (avoids `.or()` filter-string injection
+   * from user-typed punctuation). Returns the owning 案件's id alongside
+   * each row (distinct from the row's own optional, unrelated `caseId`
+   * traceability field) so callers can label/link back to the right 案件.
+   */
+  async searchAll(
+    query: string,
+  ): Promise<{ row: PartAssemblyRow; caseId: string }[]> {
+    const q = query.trim();
+    if (!q) return [];
+    const client = requireSupabase();
+    const fields = [
+      "symbol",
+      "name",
+      "model",
+      "specification",
+      "remarks",
+    ] as const;
+    const results = await Promise.all(
+      fields.map((f) =>
+        client.from("part_assembly_rows").select("*").ilike(f, `%${q}%`),
+      ),
+    );
+    const rowsById = new Map<string, PartAssemblyRow_DB>();
+    for (const result of results) {
+      if (result.error) throw result.error;
+      for (const row of (result.data ?? []) as PartAssemblyRow_DB[])
+        rowsById.set(row.id, row);
+    }
+    return Array.from(rowsById.values()).map((row) => ({
+      row: fromRow(row),
+      caseId: row.design_case_id,
+    }));
   },
 };

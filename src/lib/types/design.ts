@@ -1,21 +1,18 @@
 /**
  * 設計管理 (Design Management) domain types.
  *
- * Architecture per spec: one 案件 (DesignCase) is the single central record.
- * 設計依頼・製作依頼・工程・原価工数 are different *slices of data* on that same
- * record (or its child 盤/panels) — never copies of the same fields spread
- * across separate tables that need to be kept in sync. `DesignCase` itself
- * holds every 設計依頼 field directly; 製作依頼/工程/原価工数 (Phase 2-4) will
- * add their own child tables (`CaseSchedule`, `CaseCostLabor`) keyed by the
- * same `caseId`, and per-panel production fields live directly on
- * `CasePanel` — nothing here is denormalized data that must be re-synced.
+ * Architecture per spec: one 案件 (`DesignCase`) is THE single root record
+ * for a job — not a child of some separate "Project" grouping table. Every
+ * other module's data (部品製作, 重量計算, 母線銅帯, and every future
+ * calculation) hangs off this same `DesignCase.id` directly. 設計依頼・製作依頼・
+ * 工程・原価工数 are different *slices of data* on that same record (or its
+ * child 盤/panels) — never copies of the same fields spread across separate
+ * tables that need to be kept in sync. `DesignCase` itself holds every
+ * 設計依頼 field directly; 製作依頼/工程/原価工数 (Phase 2-4) will add their own
+ * child tables (`CaseSchedule`, `CaseCostLabor`) keyed by the same
+ * `caseId`, and per-panel production fields live directly on `CasePanel` —
+ * nothing here is denormalized data that must be re-synced.
  */
-
-export interface Project {
-  id: string;
-  name: string;
-  createdAt: string;
-}
 
 /**
  * The 16 spec items from 設計依頼書 (外形仕様: 箱体/塗装/ハンドル/その他,
@@ -47,7 +44,10 @@ export type SpecFieldKey = (typeof SPEC_FIELD_KEYS)[number];
 
 /** Visual grouping only (mirrors the real 設計依頼書 layout) — does not change the data shape. */
 export const SPEC_GROUPS: { group: string; fields: SpecFieldKey[] }[] = [
-  { group: "box", fields: ["location", "installation", "structure", "material"] },
+  {
+    group: "box",
+    fields: ["location", "installation", "structure", "material"],
+  },
   { group: "paint", fields: ["color", "gloss"] },
   { group: "handle", fields: ["handleLocation", "handleType", "keyNo"] },
   { group: "other", fields: ["wireEntry", "opening", "blankPlate"] },
@@ -78,7 +78,11 @@ export type SpecValues = Partial<Record<SpecFieldKey, SpecEntry>>;
  * text marker tracked separately via `manufacturingComplete`. "" means no
  * color yet (design still in progress).
  */
-export const CASE_STATUS_VALUES = ["", "design_pending_approval", "production_requested"] as const;
+export const CASE_STATUS_VALUES = [
+  "",
+  "design_pending_approval",
+  "production_requested",
+] as const;
 export type CaseStatus = (typeof CASE_STATUS_VALUES)[number];
 
 /** Which 設計依頼書目次 (③京王 / ④その他) a 案件 is listed under — an explicit choice, never guessed from 注文先 text. */
@@ -87,7 +91,6 @@ export type IndexCategory = (typeof INDEX_CATEGORY_VALUES)[number];
 
 export interface DesignCase {
   id: string;
-  projectId: string;
   year: number; // full 4-digit year, e.g. 2026
   sequenceNo: number; // per-year sequence, e.g. 4 -> "26-004"
   drawingNumber: string; // formatted cache of year+sequenceNo, immutable after creation
@@ -105,6 +108,8 @@ export interface DesignCase {
   manufacturingComplete: boolean; // 製造完了 (②図面管理台帳 column J, "完")
   createdAt: string;
   updatedAt: string;
+  /** Archived (soft-deleted) via 保存済み案件's 削除 action — excluded from every listing/search unless explicitly requested. Never a hard delete: recoverable. */
+  deletedAt: string | null;
 }
 
 export const PANEL_NUMBERS = [1, 2, 3, 4, 5, 6, 7] as const;
@@ -233,7 +238,6 @@ export interface MasterListItem {
 }
 
 export interface DesignCaseSearchQuery {
-  projectId?: string;
   year?: number;
   drawingNumber?: string;
   managementNumber?: string;

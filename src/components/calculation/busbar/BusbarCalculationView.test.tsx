@@ -11,51 +11,58 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(""),
 }));
 
-// A minimal, real (not stubbed) active-Project context so BusbarCalculationView's
-// own project-switch effect (resetting the hydrate guard, reloading the saved
+// A minimal, real (not stubbed) active-案件 context so BusbarCalculationView's
+// own case-switch effect (resetting the hydrate guard, reloading the saved
 // record) runs exactly as it does in the app — only the underlying
-// projectService/calculationRecordService calls are faked below.
-interface FakeActiveProjectValue {
-  projectId: string;
-  setProjectId: (id: string) => void;
+// designCaseService/calculationRecordService calls are faked below.
+interface FakeActiveCaseValue {
+  caseId: string;
+  setCaseId: (id: string) => void;
   loading: boolean;
+  dirty: boolean;
+  registerSaveHandler: (
+    id: string,
+    handler: (() => Promise<void>) | null,
+  ) => void;
+  runSaveHandler: () => Promise<void>;
 }
-const FakeActiveProjectContext = createContext<FakeActiveProjectValue | null>(
-  null,
-);
-function FakeActiveProjectProvider({ children }: { children: ReactNode }) {
-  const [projectId, setProjectId] = useState("proj-1");
+const FakeActiveCaseContext = createContext<FakeActiveCaseValue | null>(null);
+function FakeActiveCaseProvider({ children }: { children: ReactNode }) {
+  const [caseId, setCaseId] = useState("case-1");
   return (
-    <FakeActiveProjectContext.Provider
-      value={{ projectId, setProjectId, loading: false }}
+    <FakeActiveCaseContext.Provider
+      value={{
+        caseId,
+        setCaseId,
+        loading: false,
+        dirty: false,
+        registerSaveHandler: () => {},
+        runSaveHandler: async () => {},
+      }}
     >
       {children}
-    </FakeActiveProjectContext.Provider>
+    </FakeActiveCaseContext.Provider>
   );
 }
-vi.mock("@/lib/store/ActiveProjectProvider", () => ({
-  useActiveProject: () => {
-    const ctx = useContext(FakeActiveProjectContext);
-    if (!ctx) throw new Error("missing FakeActiveProjectProvider in test");
-    return ctx;
-  },
+function useFakeActiveCase() {
+  const ctx = useContext(FakeActiveCaseContext);
+  if (!ctx) throw new Error("missing FakeActiveCaseProvider in test");
+  return ctx;
+}
+vi.mock("@/lib/store/ActiveCaseProvider", () => ({
+  useActiveCase: () => useFakeActiveCase(),
 }));
 
-vi.mock("@/components/common/ProjectSelector", () => ({
-  ProjectSelector: ({
-    projectId,
-    onProjectChange,
-  }: {
-    projectId: string;
-    onProjectChange: (id: string) => void;
-  }) => (
-    <div>
-      <span data-testid="current-project">{projectId}</span>
-      <button onClick={() => onProjectChange("proj-2")}>
-        switch-to-proj-2
-      </button>
-    </div>
-  ),
+vi.mock("@/components/common/CaseSelector", () => ({
+  CaseSelector: () => {
+    const { caseId, setCaseId } = useFakeActiveCase();
+    return (
+      <div>
+        <span data-testid="current-case">{caseId}</span>
+        <button onClick={() => setCaseId("case-2")}>switch-to-case-2</button>
+      </div>
+    );
+  },
 }));
 
 const sizes: BusbarSize[] = [
@@ -71,7 +78,7 @@ const savedRecords: Record<
     updatedAt: string;
   }
 > = {
-  "proj-1": {
+  "case-1": {
     input: {
       ratedCurrentRaw: "180",
       mode: "auto",
@@ -99,23 +106,23 @@ const savedRecords: Record<
 vi.mock("@/lib/services", () => ({
   busbarSizeService: { list: vi.fn(async () => sizes) },
   calculationRecordService: {
-    get: vi.fn(async (projectId: string, calculationType: string) => {
-      const record = savedRecords[projectId];
+    get: vi.fn(async (caseId: string, calculationType: string) => {
+      const record = savedRecords[caseId];
       if (!record || calculationType !== "busbar") return null;
-      return { id: "r1", projectId, calculationType, ...record };
+      return { id: "r1", caseId, calculationType, ...record };
     }),
     save: vi.fn(
       async (
-        projectId: string,
+        caseId: string,
         calculationType: string,
         input: Record<string, unknown>,
         result: Record<string, unknown>,
       ) => {
         const updatedAt = new Date().toISOString();
-        savedRecords[projectId] = { input, result, updatedAt };
+        savedRecords[caseId] = { input, result, updatedAt };
         return {
           id: "r1",
-          projectId,
+          caseId,
           calculationType,
           input,
           result,
@@ -129,15 +136,15 @@ vi.mock("@/lib/services", () => ({
 function renderView() {
   render(
     <LanguageProvider>
-      <FakeActiveProjectProvider>
+      <FakeActiveCaseProvider>
         <BusbarCalculationView />
-      </FakeActiveProjectProvider>
+      </FakeActiveCaseProvider>
     </LanguageProvider>,
   );
 }
 
 describe("BusbarCalculationView — saved calculation reload (spec #25)", () => {
-  it("restores the saved rated current and adopted candidate for a Project that already has one", async () => {
+  it("restores the saved rated current and adopted candidate for a 案件 that already has one", async () => {
     renderView();
 
     const currentInput = (await screen.findByPlaceholderText(
@@ -152,8 +159,8 @@ describe("BusbarCalculationView — saved calculation reload (spec #25)", () => 
   });
 });
 
-describe("BusbarCalculationView — Project switching never mixes data (spec #25)", () => {
-  it("clears proj-1's rated current/adopted state when switching to a Project with no saved calculation", async () => {
+describe("BusbarCalculationView — 案件 switching never mixes data (spec #18, #25)", () => {
+  it("clears case-1's rated current/adopted state when switching to a 案件 with no saved calculation", async () => {
     const user = userEvent.setup();
     renderView();
 
@@ -165,13 +172,13 @@ describe("BusbarCalculationView — Project switching never mixes data (spec #25
       expect(screen.getByText("採用済み")).toBeInTheDocument(),
     );
 
-    await user.click(screen.getByText("switch-to-proj-2"));
+    await user.click(screen.getByText("switch-to-case-2"));
 
     await waitFor(() => {
-      expect(screen.getByTestId("current-project").textContent).toBe("proj-2");
+      expect(screen.getByTestId("current-case").textContent).toBe("case-2");
     });
-    // proj-2 has no saved record — the rated current field must be blank, not
-    // carrying over proj-1's "180", and there must be no lingering 採用済み.
+    // case-2 has no saved record — the rated current field must be blank, not
+    // carrying over case-1's "180", and there must be no lingering 採用済み.
     await waitFor(() => {
       const freshInput = screen.getByPlaceholderText("180") as HTMLInputElement;
       expect(freshInput.value).toBe("");
@@ -185,10 +192,10 @@ describe("BusbarCalculationView — Auto mode candidate search + adopt", () => {
     const user = userEvent.setup();
     renderView();
 
-    // Switch to proj-2 (blank slate) to test the full type→search→adopt flow independent of preloaded proj-1 data.
-    await user.click(screen.getByText("switch-to-proj-2"));
+    // Switch to case-2 (blank slate) to test the full type→search→adopt flow independent of preloaded case-1 data.
+    await user.click(screen.getByText("switch-to-case-2"));
     await waitFor(() =>
-      expect(screen.getByTestId("current-project").textContent).toBe("proj-2"),
+      expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
     );
 
     const input = await screen.findByPlaceholderText("180");

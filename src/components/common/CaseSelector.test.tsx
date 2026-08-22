@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
-import { ProjectSelector } from "./ProjectSelector";
-import type { CasePanel, DesignCase, DesignCaseWithPanels, Project } from "@/lib/types/design";
-
-const project: Project = { id: "proj-1", name: "サンプルプロジェクト", createdAt: "2026-01-01" };
+import { CaseSelector } from "./CaseSelector";
+import type {
+  CasePanel,
+  DesignCase,
+  DesignCaseWithPanels,
+} from "@/lib/types/design";
 
 function makeCase(overrides: Partial<DesignCase> & { id: string }): DesignCase {
   return {
-    projectId: "proj-1",
     year: 2026,
     sequenceNo: 1,
     drawingNumber: "",
@@ -28,19 +29,20 @@ function makeCase(overrides: Partial<DesignCase> & { id: string }): DesignCase {
     manufacturingComplete: false,
     createdAt: "2026-01-01",
     updatedAt: "2026-01-01",
+    deletedAt: null,
     ...overrides,
   };
 }
 
 const case1 = makeCase({
   id: "case-1",
-  drawingNumber: "26-001",
+  drawingNumber: "26-0001",
   managementNumber: "A260101",
   projectName: "本社ビル電気設備",
 });
 const case2 = makeCase({
   id: "case-2",
-  drawingNumber: "26-002",
+  drawingNumber: "26-0002",
   managementNumber: "A260102",
   constructionNumber: "R223301",
   projectName: "工場増設",
@@ -67,7 +69,7 @@ const panel3: CasePanel = {
 };
 const case3 = makeCase({
   id: "case-3",
-  drawingNumber: "26-003",
+  drawingNumber: "26-0003",
   managementNumber: "A260103",
   constructionNumber: "R223344",
   projectName: "倉庫照明更新",
@@ -80,13 +82,42 @@ const allCases: DesignCaseWithPanels[] = [
 ];
 
 vi.mock("@/lib/services/design", () => ({
-  projectService: {
-    list: vi.fn(async () => [project]),
-    create: vi.fn(),
-    getById: vi.fn(),
-  },
   designCaseService: {
     listAll: vi.fn(async () => allCases),
+  },
+}));
+
+interface FakeActiveCaseValue {
+  caseId: string;
+  setCaseId: (id: string) => void;
+  loading: boolean;
+  dirty: boolean;
+  registerSaveHandler: () => void;
+  runSaveHandler: () => Promise<void>;
+}
+const FakeActiveCaseContext = createContext<FakeActiveCaseValue | null>(null);
+function FakeActiveCaseProvider({ children }: { children: ReactNode }) {
+  const [caseId, setCaseId] = useState("");
+  return (
+    <FakeActiveCaseContext.Provider
+      value={{
+        caseId,
+        setCaseId,
+        loading: false,
+        dirty: false,
+        registerSaveHandler: () => {},
+        runSaveHandler: async () => {},
+      }}
+    >
+      {children}
+    </FakeActiveCaseContext.Provider>
+  );
+}
+vi.mock("@/lib/store/ActiveCaseProvider", () => ({
+  useActiveCase: () => {
+    const ctx = useContext(FakeActiveCaseContext);
+    if (!ctx) throw new Error("missing FakeActiveCaseProvider in test");
+    return ctx;
   },
 }));
 
@@ -96,68 +127,82 @@ vi.mock("@/lib/services/design", () => ({
 // string with its real "　" character never succeeds. Match by regex
 // instead, treating any whitespace run as equivalent.
 function labelMatcher(label: string): RegExp {
-  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/[\s\u3000]+/g, "\\s+");
+  const escaped = label
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/[\s\u3000]+/g, "\\s+");
   return new RegExp(`^${escaped}$`);
 }
 
 function Harness() {
-  const [projectId, setProjectId] = useState("");
   return (
     <LanguageProvider>
-      <ProjectSelector projectId={projectId} onProjectChange={setProjectId} />
+      <FakeActiveCaseProvider>
+        <CaseSelector />
+      </FakeActiveCaseProvider>
     </LanguageProvider>
   );
 }
 
-describe("ProjectSelector — 26-001/26-002/26-003 under one Project (bug report repro)", () => {
-  it("finds, selects, and displays 26-001 in the new 〇（）／ format — distinct from 26-002/26-003", async () => {
+describe("CaseSelector — 26-0001/26-0002/26-0003 each independently findable (spec #1, #5, #18)", () => {
+  it("finds, selects, and displays 26-0001 in the 〇（）／ format — distinct from 26-0002/26-0003", async () => {
     const user = userEvent.setup();
     render(<Harness />);
 
     const search = await screen.findByPlaceholderText(/図面番号/);
-    await user.type(search, "26-001");
+    await user.type(search, "26-0001");
 
-    const row = await screen.findByText(labelMatcher("26-001〇A260101　本社ビル電気設備"));
-    // 26-002/26-003 must NOT be in the filtered results.
-    expect(screen.queryByText(/26-002/)).toBeNull();
-    expect(screen.queryByText(/26-003/)).toBeNull();
+    const row = await screen.findByText(
+      labelMatcher("26-0001〇A260101　本社ビル電気設備"),
+    );
+    expect(screen.queryByText(/26-0002/)).toBeNull();
+    expect(screen.queryByText(/26-0003/)).toBeNull();
 
     await user.click(row);
 
     await waitFor(() => {
-      expect(screen.getByText(labelMatcher("26-001〇A260101　本社ビル電気設備"))).toBeInTheDocument();
+      expect(
+        screen.getByText(labelMatcher("26-0001〇A260101　本社ビル電気設備")),
+      ).toBeInTheDocument();
     });
   });
 
-  it("finds and selects 26-002 with its 工事番号 shown, format has no | separator", async () => {
+  it("finds and selects 26-0002 with its 工事番号 shown, format has no | separator", async () => {
     const user = userEvent.setup();
     render(<Harness />);
 
     const search = await screen.findByPlaceholderText(/図面番号/);
-    await user.type(search, "26-002");
+    await user.type(search, "26-0002");
 
-    const row = await screen.findByText(labelMatcher("26-002〇A260102（R223301）　工場増設"));
+    const row = await screen.findByText(
+      labelMatcher("26-0002〇A260102（R223301）　工場増設"),
+    );
     expect(row.textContent).not.toContain("|");
     await user.click(row);
 
     await waitFor(() => {
-      expect(screen.getByText(labelMatcher("26-002〇A260102（R223301）　工場増設"))).toBeInTheDocument();
+      expect(
+        screen.getByText(labelMatcher("26-0002〇A260102（R223301）　工場増設")),
+      ).toBeInTheDocument();
     });
   });
 
-  it("finds 26-003 by its 盤名称 (照明盤) and selects it with the full format including panel name", async () => {
+  it("finds 26-0003 by its 盤名称 (照明盤) and selects it with the full format including panel name", async () => {
     const user = userEvent.setup();
     render(<Harness />);
 
     const search = await screen.findByPlaceholderText(/図面番号/);
     await user.type(search, "照明盤");
 
-    const row = await screen.findByText(labelMatcher("26-003〇A260103（R223344）　倉庫照明更新／照明盤"));
+    const row = await screen.findByText(
+      labelMatcher("26-0003〇A260103（R223344）　倉庫照明更新／照明盤"),
+    );
     await user.click(row);
 
     await waitFor(() => {
       expect(
-        screen.getByText(labelMatcher("26-003〇A260103（R223344）　倉庫照明更新／照明盤")),
+        screen.getByText(
+          labelMatcher("26-0003〇A260103（R223344）　倉庫照明更新／照明盤"),
+        ),
       ).toBeInTheDocument();
     });
   });
@@ -167,21 +212,23 @@ describe("ProjectSelector — 26-001/26-002/26-003 under one Project (bug report
     render(<Harness />);
 
     const search = await screen.findByPlaceholderText(/図面番号/);
-    await user.type(search, "26-001");
-    const row = await screen.findByText(labelMatcher("26-001〇A260101　本社ビル電気設備"));
+    await user.type(search, "26-0001");
+    const row = await screen.findByText(
+      labelMatcher("26-0001〇A260101　本社ビル電気設備"),
+    );
     await user.click(row);
 
-    await waitFor(() => screen.getByText(labelMatcher("26-001〇A260101　本社ビル電気設備")));
+    await waitFor(() =>
+      screen.getByText(labelMatcher("26-0001〇A260101　本社ビル電気設備")),
+    );
 
-    await user.click(screen.getByRole("button", { name: "選択解除" }));
+    await user.click(screen.getByRole("button", { name: /選択解除/ }));
 
     // Back to the picking view: the search box is visible again and the
-    // "現在のProject" display (only rendered in the collapsed view) is gone —
-    // 26-001 legitimately still appears as one of the pickable rows in the
-    // reopened list, so that alone isn't what "deselected" means here.
+    // "現在の案件" display (only rendered in the collapsed view) is gone.
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/図面番号/)).toBeInTheDocument();
     });
-    expect(screen.queryByText("現在のProject")).toBeNull();
+    expect(screen.queryByText("現在の案件")).toBeNull();
   });
 });
