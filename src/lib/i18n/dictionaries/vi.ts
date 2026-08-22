@@ -309,6 +309,10 @@ const vi: Dictionary = {
       "製作依頼書 sẽ được triển khai ở giai đoạn sau (hiện chưa có). Việc chọn Project・案件・盤 vẫn dùng chung với giai đoạn sau.",
     saveButton: "Lưu",
     savedMessage: "Đã lưu",
+    exportExcelButton: "Xuất Excel",
+    exportPdfButton: "Xuất PDF",
+    exportedMessage: "Đã xuất {fileName}",
+    exportError: "Xuất file thất bại, thử lại.",
     search: {
       title: "Tìm案件",
       description: "Nhiều điều kiện sẽ được lọc theo AND (thỏa mãn tất cả).",

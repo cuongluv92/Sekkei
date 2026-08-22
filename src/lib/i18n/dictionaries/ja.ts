@@ -309,6 +309,10 @@ const ja: Dictionary = {
       "製作依頼書は次のフェーズで実装予定です（現在は未実装）。Project・案件・盤の選択はこのまま次フェーズでも使用します。",
     saveButton: "保存",
     savedMessage: "保存しました",
+    exportExcelButton: "Excel出力",
+    exportPdfButton: "PDF出力",
+    exportedMessage: "{fileName} を出力しました",
+    exportError: "出力に失敗しました。もう一度お試しください。",
     search: {
       title: "案件検索",
       description: "複数条件はすべてAND条件で絞り込みます。",

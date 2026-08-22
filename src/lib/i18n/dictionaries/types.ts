@@ -309,6 +309,10 @@ export interface Dictionary {
     productionComingSoon: string;
     saveButton: string;
     savedMessage: string;
+    exportExcelButton: string;
+    exportPdfButton: string;
+    exportedMessage: string;
+    exportError: string;
     search: {
       title: string;
       description: string;

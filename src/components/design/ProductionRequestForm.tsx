@@ -1,9 +1,14 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { FileSpreadsheet, FileText, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
-import { designCaseService, productionRequestService } from "@/lib/services/design";
+import {
+  designCaseService,
+  exportProductionRequestExcel,
+  exportProductionRequestPdf,
+  productionRequestService,
+} from "@/lib/services/design";
 import { SpecCombobox } from "@/components/design/SpecCombobox";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { CasePanel, DesignCase, ProductionRequest } from "@/lib/types/design";
@@ -50,6 +55,9 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
   const [request, setRequest] = useState<ProductionRequest | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -105,6 +113,32 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
     }
   }
 
+  async function handleExportExcel() {
+    setExportError(null);
+    setExportingExcel(true);
+    try {
+      const { fileName } = await exportProductionRequestExcel(caseId);
+      show(t("design.exportedMessage", { fileName }));
+    } catch {
+      setExportError(t("design.exportError"));
+    } finally {
+      setExportingExcel(false);
+    }
+  }
+
+  async function handleExportPdf() {
+    setExportError(null);
+    setExportingPdf(true);
+    try {
+      const { fileName } = await exportProductionRequestPdf(caseId);
+      show(t("design.exportedMessage", { fileName }));
+    } catch {
+      setExportError(t("design.exportError"));
+    } finally {
+      setExportingPdf(false);
+    }
+  }
+
   if (loading) {
     return <p className="p-6 text-center text-[13px] text-muted">{t("common.loading")}</p>;
   }
@@ -123,11 +157,26 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
           </h2>
           <p className="text-[13px] text-muted">{designCase.managementNumber}</p>
         </div>
-        <button onClick={handleSave} disabled={saving} className="btn-primary">
-          {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-          {t("design.saveButton")}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleExportExcel} disabled={exportingExcel} className="btn-secondary">
+            {exportingExcel ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+            )}
+            {t("design.exportExcelButton")}
+          </button>
+          <button onClick={handleExportPdf} disabled={exportingPdf} className="btn-secondary">
+            {exportingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+            {t("design.exportPdfButton")}
+          </button>
+          <button onClick={handleSave} disabled={saving} className="btn-primary">
+            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {t("design.saveButton")}
+          </button>
+        </div>
       </div>
+      {exportError && <p className="text-[12.5px] text-danger">{exportError}</p>}
 
       {saveError && <p className="text-[12.5px] text-danger">{saveError}</p>}
 
