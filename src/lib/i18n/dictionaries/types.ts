@@ -252,11 +252,13 @@ export interface Dictionary {
       caseLabel: string;
       casePlaceholder: string;
       newCase: string;
-      searchButton: string;
+      advancedSearchButton: string;
       noProjects: string;
       noCases: string;
       selectProjectFirst: string;
       selectCasePrompt: string;
+      quickSearchPlaceholder: string;
+      quickSearchNoResults: string;
     };
     newCaseForm: {
       title: string;

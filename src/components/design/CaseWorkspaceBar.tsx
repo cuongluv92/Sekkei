@@ -2,12 +2,14 @@
 
 import { Check, Plus, Search as SearchIcon, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { projectService, designCaseService } from "@/lib/services/design";
 import { buildCaseDisplayLabel } from "@/lib/utils/designNumbering";
 import { NewCaseModal } from "@/components/design/NewCaseModal";
 import type { DesignCaseWithPanels, Project } from "@/lib/types/design";
+
+const QUICK_SEARCH_LIMIT = 15;
 
 interface CaseWorkspaceBarProps {
   projectId: string;
@@ -34,10 +36,14 @@ export function CaseWorkspaceBar({
   const { t } = useTranslation();
   const [projects, setProjects] = useState<Project[]>([]);
   const [cases, setCases] = useState<DesignCaseWithPanels[]>([]);
+  const [allCases, setAllCases] = useState<DesignCaseWithPanels[]>([]);
   const [addingProject, setAddingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [showNewCaseModal, setShowNewCaseModal] = useState(false);
+  const [quickQuery, setQuickQuery] = useState("");
+  const [quickOpen, setQuickOpen] = useState(false);
   const projectInputRef = useRef<HTMLInputElement>(null);
+  const quickSearchRef = useRef<HTMLDivElement>(null);
   const autoSelected = useRef(false);
 
   useEffect(() => {
@@ -70,6 +76,50 @@ export function CaseWorkspaceBar({
     if (addingProject) projectInputRef.current?.focus();
   }, [addingProject]);
 
+  useEffect(() => {
+    designCaseService.listAll().then(setAllCases);
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        quickSearchRef.current &&
+        !quickSearchRef.current.contains(e.target as Node)
+      ) {
+        setQuickOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const quickMatches = useMemo(() => {
+    const q = quickQuery.trim().toLowerCase();
+    if (!q) return [];
+    return allCases
+      .filter(({ case: c, panels }) => {
+        const haystack = [
+          c.drawingNumber,
+          c.managementNumber,
+          c.constructionNumber,
+          c.projectName,
+          ...panels.map((p) => p.panelName),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(q);
+      })
+      .slice(0, QUICK_SEARCH_LIMIT);
+  }, [allCases, quickQuery]);
+
+  function handleQuickSelect(match: DesignCaseWithPanels) {
+    onProjectChange(match.case.projectId);
+    onCaseChange(match.case.id);
+    setQuickQuery("");
+    setQuickOpen(false);
+  }
+
   async function handleAddProject() {
     const name = newProjectName.trim();
     if (!name) {
@@ -77,7 +127,9 @@ export function CaseWorkspaceBar({
       return;
     }
     const created = await projectService.create(name);
-    setProjects((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name, "ja")));
+    setProjects((prev) =>
+      [...prev, created].sort((a, b) => a.name.localeCompare(b.name, "ja")),
+    );
     setNewProjectName("");
     setAddingProject(false);
     onProjectChange(created.id);
@@ -86,122 +138,172 @@ export function CaseWorkspaceBar({
   function handleCaseCreated(created: { id: string; projectId: string }) {
     setShowNewCaseModal(false);
     designCaseService.listByProject(created.projectId).then(setCases);
+    designCaseService.listAll().then(setAllCases);
     onCaseChange(created.id);
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2.5">
-      <div className="flex w-full items-center gap-1.5 sm:w-auto">
-        <label className="shrink-0 whitespace-nowrap text-[12.5px] font-semibold text-muted">
-          {t("design.workspaceBar.projectLabel")}
-        </label>
-        <select
-          value={projectId}
-          onChange={(e) => onProjectChange(e.target.value)}
-          className="field-input w-full py-1.5 sm:w-auto sm:min-w-[150px]"
-        >
-          <option value="">
-            {projects.length === 0
-              ? t("design.workspaceBar.noProjects")
-              : t("design.workspaceBar.projectPlaceholder")}
-          </option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+    <div className="flex flex-col gap-2">
+      <div ref={quickSearchRef} className="relative">
+        <div className="relative">
+          <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-2" />
+          <input
+            value={quickQuery}
+            onChange={(e) => {
+              setQuickQuery(e.target.value);
+              setQuickOpen(true);
+            }}
+            onFocus={() => setQuickOpen(true)}
+            placeholder={t("design.workspaceBar.quickSearchPlaceholder")}
+            className="field-input w-full py-2 pl-8"
+          />
+        </div>
+        {quickOpen && quickQuery.trim() && (
+          <ul className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-md border border-border-strong bg-surface-2 shadow-lg">
+            {quickMatches.length === 0 ? (
+              <li className="px-3 py-2.5 text-[12.5px] text-muted-2">
+                {t("design.workspaceBar.quickSearchNoResults")}
+              </li>
+            ) : (
+              quickMatches.map((match) => (
+                <li key={match.case.id}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => handleQuickSelect(match)}
+                    className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-surface-hover"
+                  >
+                    <span className="truncate text-[13.5px] text-foreground">
+                      {buildCaseDisplayLabel(match.case, match.panels)}
+                    </span>
+                    <span className="truncate text-[11.5px] text-muted-2">
+                      {match.case.projectName}
+                    </span>
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
       </div>
 
-      {addingProject ? (
-        <div className="flex items-center gap-1">
-          <input
-            ref={projectInputRef}
-            value={newProjectName}
-            onChange={(e) => setNewProjectName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleAddProject();
-              if (e.key === "Escape") {
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2.5">
+        <div className="flex w-full items-center gap-1.5 sm:w-auto">
+          <label className="shrink-0 whitespace-nowrap text-[12.5px] font-semibold text-muted">
+            {t("design.workspaceBar.projectLabel")}
+          </label>
+          <select
+            value={projectId}
+            onChange={(e) => onProjectChange(e.target.value)}
+            className="field-input w-full py-1.5 sm:w-auto sm:min-w-[150px]"
+          >
+            <option value="">
+              {projects.length === 0
+                ? t("design.workspaceBar.noProjects")
+                : t("design.workspaceBar.projectPlaceholder")}
+            </option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {addingProject ? (
+          <div className="flex items-center gap-1">
+            <input
+              ref={projectInputRef}
+              value={newProjectName}
+              onChange={(e) => setNewProjectName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAddProject();
+                if (e.key === "Escape") {
+                  setNewProjectName("");
+                  setAddingProject(false);
+                }
+              }}
+              placeholder={t("design.workspaceBar.projectNamePlaceholder")}
+              className="field-input w-auto min-w-[140px] py-1.5"
+            />
+            <button onClick={handleAddProject} className="btn-ghost btn-icon">
+              <Check className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => {
                 setNewProjectName("");
                 setAddingProject(false);
-              }
-            }}
-            placeholder={t("design.workspaceBar.projectNamePlaceholder")}
-            className="field-input w-auto min-w-[140px] py-1.5"
-          />
-          <button onClick={handleAddProject} className="btn-ghost btn-icon">
-            <Check className="h-3.5 w-3.5" />
+              }}
+              className="btn-ghost btn-icon"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setAddingProject(true)} className="btn-ghost">
+            <Plus className="h-3.5 w-3.5" />
+            {t("design.workspaceBar.addProject")}
           </button>
-          <button
-            onClick={() => {
-              setNewProjectName("");
-              setAddingProject(false);
-            }}
-            className="btn-ghost btn-icon"
+        )}
+
+        <div className="mx-1 hidden h-5 w-px bg-border sm:block" />
+
+        <div className="flex w-full items-center gap-1.5 sm:w-auto">
+          <label className="shrink-0 whitespace-nowrap text-[12.5px] font-semibold text-muted">
+            {t("design.workspaceBar.caseLabel")}
+          </label>
+          <select
+            value={caseId}
+            onChange={(e) => onCaseChange(e.target.value)}
+            disabled={!projectId}
+            className="field-input w-full py-1.5 sm:w-auto sm:min-w-[220px]"
           >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      ) : (
-        <button onClick={() => setAddingProject(true)} className="btn-ghost">
-          <Plus className="h-3.5 w-3.5" />
-          {t("design.workspaceBar.addProject")}
-        </button>
-      )}
-
-      <div className="mx-1 hidden h-5 w-px bg-border sm:block" />
-
-      <div className="flex w-full items-center gap-1.5 sm:w-auto">
-        <label className="shrink-0 whitespace-nowrap text-[12.5px] font-semibold text-muted">
-          {t("design.workspaceBar.caseLabel")}
-        </label>
-        <select
-          value={caseId}
-          onChange={(e) => onCaseChange(e.target.value)}
-          disabled={!projectId}
-          className="field-input w-full py-1.5 sm:w-auto sm:min-w-[220px]"
-        >
-          <option value="">
-            {!projectId
-              ? t("design.workspaceBar.selectProjectFirst")
-              : cases.length === 0
-                ? t("design.workspaceBar.noCases")
-                : t("design.workspaceBar.casePlaceholder")}
-          </option>
-          {cases.map(({ case: c, panels }) => (
-            <option key={c.id} value={c.id}>
-              {buildCaseDisplayLabel(c, panels)}
+            <option value="">
+              {!projectId
+                ? t("design.workspaceBar.selectProjectFirst")
+                : cases.length === 0
+                  ? t("design.workspaceBar.noCases")
+                  : t("design.workspaceBar.casePlaceholder")}
             </option>
-          ))}
-        </select>
-      </div>
+            {cases.map(({ case: c, panels }) => (
+              <option key={c.id} value={c.id}>
+                {buildCaseDisplayLabel(c, panels)}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      {allowCreate && (
-        <button
-          onClick={() => setShowNewCaseModal(true)}
-          disabled={!projectId}
-          className="btn-primary w-full sm:w-auto"
+        {allowCreate && (
+          <button
+            onClick={() => setShowNewCaseModal(true)}
+            disabled={!projectId}
+            className="btn-primary w-full sm:w-auto"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {t("design.workspaceBar.newCase")}
+          </button>
+        )}
+
+        <Link
+          href={
+            projectId
+              ? `/design/search?projectId=${projectId}`
+              : "/design/search"
+          }
+          className="btn-secondary w-full sm:w-auto"
         >
-          <Plus className="h-3.5 w-3.5" />
-          {t("design.workspaceBar.newCase")}
-        </button>
-      )}
+          <SearchIcon className="h-3.5 w-3.5" />
+          {t("design.workspaceBar.advancedSearchButton")}
+        </Link>
 
-      <Link
-        href={projectId ? `/design/search?projectId=${projectId}` : "/design/search"}
-        className="btn-secondary w-full sm:w-auto"
-      >
-        <SearchIcon className="h-3.5 w-3.5" />
-        {t("design.workspaceBar.searchButton")}
-      </Link>
-
-      {allowCreate && showNewCaseModal && projectId && (
-        <NewCaseModal
-          projectId={projectId}
-          onClose={() => setShowNewCaseModal(false)}
-          onCreated={handleCaseCreated}
-        />
-      )}
+        {allowCreate && showNewCaseModal && projectId && (
+          <NewCaseModal
+            projectId={projectId}
+            onClose={() => setShowNewCaseModal(false)}
+            onCreated={handleCaseCreated}
+          />
+        )}
+      </div>
     </div>
   );
 }
