@@ -58,6 +58,8 @@ export interface Dictionary {
     save: string;
     upload: string;
     selectFile: string;
+    fileUploaded: string;
+    uploadError: string;
     analyze: string;
     import: string;
     close: string;
@@ -89,6 +91,7 @@ export interface Dictionary {
     previewEmpty: string;
     previewLoading: string;
     previewError: string;
+    previewNoFile: string;
     dwgNotice: string;
   };
   selection: {

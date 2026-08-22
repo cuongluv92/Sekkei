@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { calculationDefinitions } from "@/lib/mock/calculationDefinitions";
 import { calculationTemplateService, partTemplateService } from "@/lib/services";
+import { getPublicUrl } from "@/lib/supabase/storage";
 import { LanguageSwitcher } from "@/components/settings/LanguageSwitcher";
 import { MasterListEditor } from "@/components/design/MasterListEditor";
 import { ScheduleColorSettings } from "@/components/design/ScheduleColorSettings";
@@ -45,7 +46,7 @@ export default function SettingsPage() {
   }
 
   async function handlePartUpload(kind: PartTemplateKind, file: File) {
-    const tpl = await partTemplateService.upload(kind, file.name);
+    const tpl = await partTemplateService.upload(kind, file);
     setPartTemplates((prev) => ({ ...prev, [kind]: tpl }));
     show(`${file.name} を登録しました`);
   }
@@ -239,7 +240,18 @@ export default function SettingsPage() {
                     <tr key={kind}>
                       <td>{kind === "excel" ? t("settings.kindExcel") : t("settings.kindDwg")}</td>
                       <td className={tpl ? "text-foreground" : "text-muted-2"}>
-                        {tpl ? tpl.fileName : t("settings.templateEmpty")}
+                        {tpl ? (
+                          <a
+                            href={getPublicUrl(tpl.storagePath)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-accent hover:underline"
+                          >
+                            {tpl.fileName}
+                          </a>
+                        ) : (
+                          t("settings.templateEmpty")
+                        )}
                       </td>
                       <td>
                         <button

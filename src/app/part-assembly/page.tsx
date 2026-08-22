@@ -3,14 +3,14 @@
 import { GripVertical, Plus, Search as SearchIcon, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
-import { searchService, exportService } from "@/lib/services";
+import { searchService } from "@/lib/services";
 import { projectService } from "@/lib/services/design";
 import { getManufacturerName, preloadManufacturers } from "@/lib/mock/manufacturers";
+import { findFileByKind, openFileAsset } from "@/lib/utils/fileDownload";
 import { usePartAssembly } from "@/lib/store/PartAssemblyProvider";
 import { SearchResultList } from "@/components/common/SearchResultList";
 import { ExportActions } from "@/components/common/ExportActions";
 import { PageHeader } from "@/components/common/PageHeader";
-import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { Project, SearchResultItem } from "@/lib/types";
 
 export default function PartAssemblyPage() {
@@ -23,7 +23,6 @@ export default function PartAssemblyPage() {
   const [loading, setLoading] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [, forceRerender] = useState(0);
-  const { message, show } = useMockFeedback();
 
   useEffect(() => {
     preloadManufacturers().then(() => forceRerender((v) => v + 1));
@@ -60,9 +59,9 @@ export default function PartAssemblyPage() {
     });
   }
 
-  async function handleDownload(item: SearchResultItem, kind: "dwg" | "pdf") {
-    const { fileName } = await exportService.export(kind, item.model);
-    show(`${fileName} をダウンロードしました（モック）`);
+  function handleDownload(item: SearchResultItem, kind: "dwg" | "pdf") {
+    const file = findFileByKind(item.files, kind);
+    if (file) openFileAsset(file);
   }
 
   function addBlankRow() {
@@ -250,7 +249,6 @@ export default function PartAssemblyPage() {
       </div>
         </>
       )}
-      {message && <div className="text-[12px] text-success">{message}</div>}
     </div>
   );
 }

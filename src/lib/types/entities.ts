@@ -196,11 +196,12 @@ export interface CalculationTemplate {
 
 export type PartTemplateKind = "excel" | "dwg";
 
-/** An uploaded export template for 部品製作 (Excel出力 / DWG出力), independent of the calculation templates above. */
+/** An uploaded export template for 部品製作 (Excel出力 / DWG出力), independent of the calculation templates above. Stored in Supabase Storage (part-templates/<kind>.<ext>), never bundled in the app. */
 export interface PartTemplate {
   id: string;
   kind: PartTemplateKind;
   fileName: string;
+  storagePath: string;
   uploadedAt?: string;
 }
 

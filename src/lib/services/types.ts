@@ -85,7 +85,7 @@ export interface CalculationTemplateRepository {
 export interface PartTemplateRepository {
   list(): Promise<PartTemplate[]>;
   getByKind(kind: PartTemplateKind): Promise<PartTemplate | null>;
-  upload(kind: PartTemplateKind, fileName: string): Promise<PartTemplate>;
+  upload(kind: PartTemplateKind, file: File): Promise<PartTemplate>;
 }
 
 export interface ImportRepository {

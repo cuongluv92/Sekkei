@@ -56,6 +56,8 @@ const vi: Dictionary = {
     save: "Lưu",
     upload: "Tải lên",
     selectFile: "Chọn file",
+    fileUploaded: "Đã đính kèm {fileName}",
+    uploadError: "Tải lên thất bại",
     analyze: "Phân tích",
     import: "Nhập dữ liệu",
     close: "Đóng",
@@ -87,6 +89,7 @@ const vi: Dictionary = {
     previewEmpty: "Nhấn “Xem” để hiển thị bản xem trước tại đây",
     previewLoading: "Đang tải bản xem trước...",
     previewError: "Không thể tải bản xem trước",
+    previewNoFile: "Chưa có file nào được đính kèm",
     dwgNotice: "File DWG sẽ hỗ trợ xem trước qua trình duyệt sau (hiện chỉ tải file gốc)",
   },
   selection: {

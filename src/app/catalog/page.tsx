@@ -1,10 +1,11 @@
 "use client";
 
-import { Download, Eye, Search as SearchIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Download, Eye, Loader2, Search as SearchIcon, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
-import { catalogService, exportService } from "@/lib/services";
+import { catalogService, uploadPartFile } from "@/lib/services";
 import { getManufacturerName, preloadManufacturers } from "@/lib/mock/manufacturers";
+import { openFileAsset } from "@/lib/utils/fileDownload";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
 import { FilePreview } from "@/components/common/FilePreview";
@@ -18,7 +19,9 @@ export default function CatalogPage() {
   const [keyword, setKeyword] = useState("");
   const [manufacturerFilter, setManufacturerFilter] = useState("all");
   const [selected, setSelected] = useState<Catalog | null>(null);
+  const [uploading, setUploading] = useState(false);
   const { message, show } = useMockFeedback();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -48,10 +51,26 @@ export default function CatalogPage() {
     });
   }, [items, keyword, manufacturerFilter]);
 
-  async function handleDownload(item: Catalog) {
-    const kind = item.files[0]?.kind ?? "pdf";
-    const { fileName } = await exportService.export(kind, item.fileName.replace(/\.[^.]+$/, ""));
-    show(`${fileName} をダウンロードしました（モック）`);
+  function handleDownload(item: Catalog) {
+    const file = item.files[0];
+    if (file) openFileAsset(file);
+  }
+
+  async function handleUploadFile(file: File) {
+    if (!selected) return;
+    setUploading(true);
+    try {
+      const asset = await uploadPartFile("catalog", selected.id, file);
+      const withNewFile = (item: Catalog) =>
+        item.id === selected.id ? { ...item, files: [...item.files, asset] } : item;
+      setItems((prev) => prev.map(withNewFile));
+      setSelected((prev) => (prev ? { ...prev, files: [...prev.files, asset] } : prev));
+      show(t("common.fileUploaded", { fileName: file.name }));
+    } catch {
+      show(t("common.uploadError"));
+    } finally {
+      setUploading(false);
+    }
   }
 
   const columns: DataTableColumn<Catalog>[] = [
@@ -75,7 +94,7 @@ export default function CatalogPage() {
             <Eye className="h-3.5 w-3.5" />
             {t("common.display")}
           </button>
-          <button onClick={() => handleDownload(r)} className="btn-ghost">
+          <button onClick={() => handleDownload(r)} disabled={r.files.length === 0} className="btn-ghost">
             <Download className="h-3.5 w-3.5" />
             {t("common.download")}
           </button>
@@ -124,13 +143,33 @@ export default function CatalogPage() {
             emptyMessage={t("catalog.tableEmpty")}
           />
         </div>
-        <FilePreview
-          selectedKey={selected?.id ?? null}
-          title={selected?.fileName}
-          files={selected?.files ?? []}
-          onDownload={() => selected && handleDownload(selected)}
-        />
+        <FilePreview selectedKey={selected?.id ?? null} title={selected?.fileName} files={selected?.files ?? []} />
       </div>
+
+      {selected && (
+        <div className="panel">
+          <div className="panel-header">
+            <span className="panel-title">{t("common.detail")}</span>
+            <div>
+              <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="btn-secondary">
+                {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                {t("common.upload")}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleUploadFile(file);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {message && <div className="text-[12px] text-success">{message}</div>}
     </div>

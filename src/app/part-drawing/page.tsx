@@ -12,6 +12,7 @@ export default function PartDrawingPage() {
       description={t("partDrawing.description")}
       emptyMessage={t("partDrawing.tableEmpty")}
       fetchAll={() => partDrawingService.list()}
+      ownerType="part_drawing"
     />
   );
 }

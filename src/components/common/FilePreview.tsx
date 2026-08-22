@@ -1,46 +1,15 @@
 "use client";
 
-import { AlertTriangle, FileQuestion, FileText, Image as ImageIcon, Layers, Loader2, RotateCw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { FileQuestion, FileText, Image as ImageIcon, Layers } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { openFileAsset } from "@/lib/utils/fileDownload";
 import type { FileAsset } from "@/lib/types";
-
-type PreviewStatus = "idle" | "loading" | "error" | "ready";
-
-/**
- * Drives the preview lifecycle for a selected record. No real DWG/PDF
- * rendering happens yet — `previewUrl` is never populated by the mock
- * services — so a "ready" result renders a placeholder explaining what will
- * eventually show there (an in-browser PDF viewer, a converted DWG preview)
- * while still exposing the file list and download actions. A record with no
- * attached files surfaces the error state, since there is genuinely nothing
- * to load for it.
- */
-function useFilePreviewStatus(selectedKey: string | null, fileCount: number) {
-  const [status, setStatus] = useState<PreviewStatus>("idle");
-  const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    if (!selectedKey) {
-      setStatus("idle");
-      return;
-    }
-    setStatus("loading");
-    const timer = setTimeout(() => {
-      setStatus(fileCount > 0 ? "ready" : "error");
-    }, 450);
-    return () => clearTimeout(timer);
-  }, [selectedKey, fileCount, attempt]);
-
-  return { status, retry: () => setAttempt((a) => a + 1) };
-}
 
 interface FilePreviewProps {
   /** Unique key identifying the selected record, or null when nothing is selected. */
   selectedKey: string | null;
   title?: string;
   files: FileAsset[];
-  onDownload: (kind: FileAsset["kind"]) => void;
 }
 
 function FileKindIcon({ kind }: { kind: FileAsset["kind"] }) {
@@ -49,9 +18,16 @@ function FileKindIcon({ kind }: { kind: FileAsset["kind"] }) {
   return <FileText className="h-3.5 w-3.5 shrink-0 text-muted" />;
 }
 
-export function FilePreview({ selectedKey, title, files, onDownload }: FilePreviewProps) {
+/**
+ * Shows the real attached files (Supabase Storage) for the selected record.
+ * Images/PDFs render inline via their real previewUrl; DWG has no in-browser
+ * renderer (a real DWG viewer would need a conversion service this app
+ * doesn't have) so it stays download-only, honestly labeled as such — never
+ * a fake "loading" delay pretending to render something it can't.
+ */
+export function FilePreview({ selectedKey, title, files }: FilePreviewProps) {
   const { t } = useTranslation();
-  const { status, retry } = useFilePreviewStatus(selectedKey, files.length);
+  const previewable = files.find((f) => (f.kind === "image" || f.kind === "pdf") && f.previewUrl);
 
   return (
     <div className="panel flex h-full min-h-[280px] flex-col">
@@ -59,46 +35,45 @@ export function FilePreview({ selectedKey, title, files, onDownload }: FilePrevi
         <span className="panel-title">{t("search.previewTitle")}</span>
         {title && <span className="truncate text-[12px] text-muted">{title}</span>}
       </div>
-      <div className="flex flex-1 items-center justify-center p-4">
-        {status === "idle" && (
-          <div className="flex flex-col items-center gap-2 text-center text-muted-2">
+      <div className="flex flex-1 flex-col">
+        {!selectedKey ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 p-4 text-center text-muted-2">
             <FileQuestion className="h-8 w-8" />
             <p className="text-[12px]">{t("search.previewEmpty")}</p>
           </div>
-        )}
-        {status === "loading" && (
-          <div className="flex flex-col items-center gap-2 text-center text-muted">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <p className="text-[12px]">{t("search.previewLoading")}</p>
+        ) : files.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 p-4 text-center text-muted-2">
+            <FileQuestion className="h-8 w-8" />
+            <p className="text-[12px]">{t("search.previewNoFile")}</p>
           </div>
-        )}
-        {status === "error" && (
-          <div className="flex flex-col items-center gap-2 text-center text-danger">
-            <AlertTriangle className="h-7 w-7" />
-            <p className="text-[12px]">{t("search.previewError")}</p>
-            <button onClick={retry} className="btn-secondary mt-1">
-              <RotateCw className="h-3.5 w-3.5" />
-              {t("common.back")}
-            </button>
-          </div>
-        )}
-        {status === "ready" && (
-          <div className="flex w-full flex-col items-center gap-3 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-md border border-border-strong bg-surface-2 text-muted">
-              <FileText className="h-6 w-6" />
-            </div>
-            <p className="max-w-xs text-[12px] text-muted">{t("search.dwgNotice")}</p>
-            <ul className="w-full max-w-xs divide-y divide-border rounded-md border border-border">
+        ) : (
+          <div className="flex flex-1 flex-col gap-3 p-3">
+            {previewable ? (
+              previewable.kind === "image" ? (
+                // eslint-disable-next-line @next/next/no-img-element -- real Storage URL, not a static asset next/image can optimize
+                <img
+                  src={previewable.previewUrl}
+                  alt={previewable.fileName}
+                  className="max-h-56 w-full rounded-md border border-border object-contain"
+                />
+              ) : (
+                <iframe
+                  src={previewable.previewUrl}
+                  title={previewable.fileName}
+                  className="h-56 w-full rounded-md border border-border bg-white"
+                />
+              )
+            ) : (
+              <p className="text-center text-[12px] text-muted">{t("search.dwgNotice")}</p>
+            )}
+            <ul className="w-full divide-y divide-border rounded-md border border-border">
               {files.map((f) => (
                 <li key={f.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5">
                   <span className="flex min-w-0 items-center gap-1.5 truncate text-[12px] text-foreground">
                     <FileKindIcon kind={f.kind} />
                     <span className="truncate">{f.fileName}</span>
                   </span>
-                  <button
-                    onClick={() => onDownload(f.kind)}
-                    className="btn-ghost btn-icon shrink-0"
-                  >
+                  <button onClick={() => openFileAsset(f)} className="btn-ghost btn-icon shrink-0">
                     {t("common.download")}
                   </button>
                 </li>

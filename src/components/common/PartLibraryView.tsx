@@ -1,15 +1,17 @@
 "use client";
 
-import { Search as SearchIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Loader2, Search as SearchIcon, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
+import { uploadPartFile } from "@/lib/services";
 import { getManufacturerName, preloadManufacturers } from "@/lib/mock/manufacturers";
-import { exportService } from "@/lib/services";
+import { findFileByKind, openFileAsset } from "@/lib/utils/fileDownload";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
 import { FileActions } from "@/components/common/FileActions";
 import { FilePreview } from "@/components/common/FilePreview";
 import { PageHeader } from "@/components/common/PageHeader";
+import type { FileAssetOwnerType } from "@/lib/services/fileAssetService";
 import type { FileAsset } from "@/lib/types";
 
 interface LibraryItem {
@@ -30,6 +32,8 @@ interface PartLibraryViewProps<T extends LibraryItem> {
   description: string;
   emptyMessage: string;
   fetchAll: () => Promise<T[]>;
+  /** Which owner_type file_assets rows uploaded here get attached under. */
+  ownerType: FileAssetOwnerType;
   showQuantity?: boolean;
 }
 
@@ -44,6 +48,7 @@ export function PartLibraryView<T extends LibraryItem>({
   description,
   emptyMessage,
   fetchAll,
+  ownerType,
   showQuantity,
 }: PartLibraryViewProps<T>) {
   const { t, locale } = useTranslation();
@@ -52,7 +57,9 @@ export function PartLibraryView<T extends LibraryItem>({
   const [keyword, setKeyword] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selected, setSelected] = useState<T | null>(null);
+  const [uploading, setUploading] = useState(false);
   const { message, show } = useMockFeedback();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // `fetchAll` identity is not meaningful across renders (it's a fresh closure
   // over a stable repository call on every parent render); only its value at
@@ -88,9 +95,26 @@ export function PartLibraryView<T extends LibraryItem>({
     });
   }, [items, keyword, categoryFilter]);
 
-  async function handleDownload(item: T, kind: FileAsset["kind"]) {
-    const { fileName } = await exportService.export(kind, item.model);
-    show(`${fileName} をダウンロードしました（モック）`);
+  function handleDownload(item: T, kind: FileAsset["kind"]) {
+    const file = findFileByKind(item.files, kind);
+    if (file) openFileAsset(file);
+  }
+
+  async function handleUploadFile(file: File) {
+    if (!selected) return;
+    setUploading(true);
+    try {
+      const asset = await uploadPartFile(ownerType, selected.id, file);
+      const withNewFile = (item: T) =>
+        item.id === selected.id ? { ...item, files: [...item.files, asset] } : item;
+      setItems((prev) => prev.map(withNewFile));
+      setSelected((prev) => (prev ? { ...prev, files: [...prev.files, asset] } : prev));
+      show(t("common.fileUploaded", { fileName: file.name }));
+    } catch {
+      show(t("common.uploadError"));
+    } finally {
+      setUploading(false);
+    }
   }
 
   const columns: DataTableColumn<T>[] = [
@@ -180,18 +204,30 @@ export function PartLibraryView<T extends LibraryItem>({
             emptyMessage={emptyMessage}
           />
         </div>
-        <FilePreview
-          selectedKey={selected?.id ?? null}
-          title={selected?.model}
-          files={selected?.files ?? []}
-          onDownload={(kind) => selected && handleDownload(selected, kind)}
-        />
+        <FilePreview selectedKey={selected?.id ?? null} title={selected?.model} files={selected?.files ?? []} />
       </div>
 
       {selected && (
         <div className="panel">
           <div className="panel-header">
             <span className="panel-title">{t("common.detail")}</span>
+            <div>
+              <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="btn-secondary">
+                {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                {t("common.upload")}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".dwg,.dxf,.pdf,.jpg,.jpeg,.png,.gif,.webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleUploadFile(file);
+                  e.target.value = "";
+                }}
+              />
+            </div>
           </div>
           <div className="panel-body grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             <DetailField label={t("common.kind")} value={selected.category} />

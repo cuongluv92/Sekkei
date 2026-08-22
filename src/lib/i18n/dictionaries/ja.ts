@@ -56,6 +56,8 @@ const ja: Dictionary = {
     save: "保存",
     upload: "アップロード",
     selectFile: "ファイルを選択",
+    fileUploaded: "{fileName} を添付しました",
+    uploadError: "アップロードに失敗しました",
     analyze: "解析",
     import: "インポート",
     close: "閉じる",
@@ -87,6 +89,7 @@ const ja: Dictionary = {
     previewEmpty: "「表示」を押すとここにプレビューが表示されます",
     previewLoading: "プレビューを読み込んでいます...",
     previewError: "プレビューを読み込めませんでした",
+    previewNoFile: "添付ファイルがありません",
     dwgNotice: "DWGはブラウザ変換プレビュー対応予定（現在は元ファイルのダウンロードのみ）",
   },
   selection: {

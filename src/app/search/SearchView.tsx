@@ -4,12 +4,12 @@ import { Search as SearchIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
-import { searchService, exportService } from "@/lib/services";
+import { searchService } from "@/lib/services";
 import { preloadManufacturers } from "@/lib/mock/manufacturers";
+import { findFileByKind, openFileAsset } from "@/lib/utils/fileDownload";
 import { SearchResultList } from "@/components/common/SearchResultList";
 import { FilePreview } from "@/components/common/FilePreview";
 import { PageHeader } from "@/components/common/PageHeader";
-import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { FileAsset, SearchResultItem } from "@/lib/types";
 
 export function SearchView() {
@@ -23,7 +23,6 @@ export function SearchView() {
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<SearchResultItem | null>(null);
-  const { message, show } = useMockFeedback();
 
   useEffect(() => {
     setInputValue(initialQuery);
@@ -55,9 +54,9 @@ export function SearchView() {
     router.replace(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
   }
 
-  async function handleDownload(item: SearchResultItem, kind: FileAsset["kind"]) {
-    const { fileName } = await exportService.export(kind, item.model);
-    show(`${fileName} をダウンロードしました（モック・元ファイルは未接続）`);
+  function handleDownload(item: SearchResultItem, kind: FileAsset["kind"]) {
+    const file = findFileByKind(item.files, kind);
+    if (file) openFileAsset(file);
   }
 
   const selectedKey = selected ? `${selected.source}-${selected.id}` : null;
@@ -104,15 +103,8 @@ export function SearchView() {
             emptyMessage={query ? t("common.noResults") : t("common.selectPrompt")}
           />
         </div>
-        <FilePreview
-          selectedKey={selectedKey}
-          title={selected?.model}
-          files={selected?.files ?? []}
-          onDownload={(kind) => selected && handleDownload(selected, kind)}
-        />
+        <FilePreview selectedKey={selectedKey} title={selected?.model} files={selected?.files ?? []} />
       </div>
-
-      {message && <div className="text-[12px] text-success">{message}</div>}
     </div>
   );
 }

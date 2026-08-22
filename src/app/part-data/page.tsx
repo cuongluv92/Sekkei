@@ -12,6 +12,7 @@ export default function PartDataPage() {
       description={t("partData.description")}
       emptyMessage={t("partData.tableEmpty")}
       fetchAll={() => partDataService.list()}
+      ownerType="part_data"
       showQuantity
     />
   );
