@@ -31,7 +31,6 @@ export function NewCaseModal({ projectId, onClose, onCreated }: NewCaseModalProp
 
   const [year, setYear] = useState(currentYear);
   const [drawingNumberPreview, setDrawingNumberPreview] = useState("");
-  const [requestType, setRequestType] = useState("");
   const [managementNumber, setManagementNumber] = useState("");
   const [constructionNumber, setConstructionNumber] = useState("");
   const [orderer, setOrderer] = useState("");
@@ -50,7 +49,7 @@ export function NewCaseModal({ projectId, onClose, onCreated }: NewCaseModalProp
     const created = await designCaseService.create({
       projectId,
       year,
-      requestType,
+      requestType: "", // 新規作成時点では常に空 — 設計依頼書タブで後から編集可能
       managementNumber,
       constructionNumber,
       orderer,
@@ -80,10 +79,6 @@ export function NewCaseModal({ projectId, onClose, onCreated }: NewCaseModalProp
             <div className="field-input flex items-center bg-surface-2 font-mono text-muted">
               {drawingNumberPreview || "—"}
             </div>
-          </div>
-          <div>
-            <label className="field-label">{t("design.fields.requestType")}</label>
-            <SpecCombobox listKey="requestType" value={requestType} onChange={setRequestType} />
           </div>
           <div>
             <label className="field-label">{t("design.fields.managementNumber")}</label>

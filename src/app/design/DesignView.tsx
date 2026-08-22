@@ -60,6 +60,7 @@ export function DesignView() {
             caseId={caseId}
             onProjectChange={(nextProject) => setParams({ project: nextProject, case: "" })}
             onCaseChange={(nextCase) => setParams({ case: nextCase })}
+            allowCreate={tab === "designRequest"}
           />
           {!caseId ? (
             <div className="panel">

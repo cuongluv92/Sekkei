@@ -14,6 +14,8 @@ interface CaseWorkspaceBarProps {
   caseId: string;
   onProjectChange: (projectId: string) => void;
   onCaseChange: (caseId: string) => void;
+  /** 設計依頼書 only — 製作依頼書 always works from an existing case (its 設計依頼書 must already exist), so it never creates a brand new one here. */
+  allowCreate?: boolean;
 }
 
 /**
@@ -27,6 +29,7 @@ export function CaseWorkspaceBar({
   caseId,
   onProjectChange,
   onCaseChange,
+  allowCreate = true,
 }: CaseWorkspaceBarProps) {
   const { t } = useTranslation();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -173,14 +176,16 @@ export function CaseWorkspaceBar({
         </select>
       </div>
 
-      <button
-        onClick={() => setShowNewCaseModal(true)}
-        disabled={!projectId}
-        className="btn-primary w-full sm:w-auto"
-      >
-        <Plus className="h-3.5 w-3.5" />
-        {t("design.workspaceBar.newCase")}
-      </button>
+      {allowCreate && (
+        <button
+          onClick={() => setShowNewCaseModal(true)}
+          disabled={!projectId}
+          className="btn-primary w-full sm:w-auto"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {t("design.workspaceBar.newCase")}
+        </button>
+      )}
 
       <Link
         href={projectId ? `/design/search?projectId=${projectId}` : "/design/search"}
@@ -190,7 +195,7 @@ export function CaseWorkspaceBar({
         {t("design.workspaceBar.searchButton")}
       </Link>
 
-      {showNewCaseModal && projectId && (
+      {allowCreate && showNewCaseModal && projectId && (
         <NewCaseModal
           projectId={projectId}
           onClose={() => setShowNewCaseModal(false)}
