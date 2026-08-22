@@ -18,9 +18,15 @@ import {
   isWithinSimpleSelectionRange,
   JSIA_T1006_SOURCE,
 } from "@/lib/calc/busbar/highCurrentRule";
+import {
+  evaluateHighCurrentCandidate,
+  findHighCurrentCandidates,
+  type HighCurrentBusbarCandidate,
+} from "@/lib/calc/busbar/highCurrentCandidateSearch";
 import { JIS_H_3140_COPPER_SOURCE } from "@/lib/calc/busbar/material";
 import { BusbarBasisPanel } from "./BusbarBasisPanel";
 import { BusbarCandidateList } from "./BusbarCandidateList";
+import { HighCurrentBusbarCandidateList } from "./HighCurrentBusbarCandidateList";
 import type { BusbarSize } from "@/lib/types";
 
 const CALCULATION_TYPE = "busbar";
@@ -31,10 +37,19 @@ function isBusbarMode(value: string | null): value is BusbarMode {
   return !!value && (BUSBAR_MODES as readonly string[]).includes(value);
 }
 
-/** Adopted candidate as persisted — a snapshot, not a live reference to master data (a master size could be edited/removed later without invalidating what was actually adopted). */
-export interface AdoptedBusbar extends BusbarCandidate {
-  adoptedAt: string;
-}
+/**
+ * Adopted candidate as persisted — a snapshot, not a live reference to
+ * master data (a master size could be edited/removed later without
+ * invalidating what was actually adopted). A union because ≤630A (verified
+ * JIS C 8480 path) and >630A (honest "requiresVerification" path) produce
+ * structurally different candidates — see `BusbarCandidate` vs
+ * `HighCurrentBusbarCandidate`. `kind` defaults to "standard" on hydration
+ * for records saved before this distinction existed (see the load effect
+ * below) — every busbar record ever saved was on the ≤630A path back then.
+ */
+export type AdoptedBusbar =
+  | (BusbarCandidate & { kind: "standard"; adoptedAt: string })
+  | (HighCurrentBusbarCandidate & { kind: "highCurrent"; adoptedAt: string });
 
 interface BusbarSavedInput {
   ratedCurrentRaw: string;
@@ -121,7 +136,16 @@ export function BusbarCalculationView() {
         setThicknessRaw(input.thicknessRaw ?? "");
         setWidthRaw(input.widthRaw ?? "");
         setBarsRaw(input.barsRaw ?? "1");
-        setAdopted(result.adopted ?? null);
+        // `kind` defaults to "standard" for records saved before the
+        // high-current path existed — every one of those was ≤630A.
+        setAdopted(
+          result.adopted
+            ? ({
+                ...result.adopted,
+                kind: result.adopted.kind ?? "standard",
+              } as AdoptedBusbar)
+            : null,
+        );
         setSavedAt(record.updatedAt);
         if (input.mode && input.mode !== mode) setTab(input.mode);
       } else {
@@ -167,18 +191,30 @@ export function BusbarCalculationView() {
   const candidates = useMemo(() => {
     if (
       mode !== "auto" ||
+      outOfRange ||
       requiredAreaMm2 === null ||
       ratedCurrentA === null ||
       !sizesLoaded
     )
       return [];
     return findBusbarCandidates(sizes, requiredAreaMm2, ratedCurrentA);
-  }, [mode, requiredAreaMm2, ratedCurrentA, sizes, sizesLoaded]);
+  }, [mode, outOfRange, requiredAreaMm2, ratedCurrentA, sizes, sizesLoaded]);
+
+  // >630A auto search — real geometry only, every candidate honestly
+  // "requiresVerification" (see highCurrentCandidateSearch.ts); never
+  // reuses the ≤630A JIS C 8480 table past its range.
+  const highCurrentCandidates = useMemo(() => {
+    if (mode !== "auto" || !outOfRange || ratedCurrentA === null || !sizesLoaded)
+      return [];
+    return findHighCurrentCandidates(sizes, ratedCurrentA);
+  }, [mode, outOfRange, ratedCurrentA, sizes, sizesLoaded]);
 
   const manualThickness = parsePositiveNumber(thicknessRaw);
   const manualWidth = parsePositiveNumber(widthRaw);
   const manualBars = Math.max(1, parseInt(barsRaw, 10) || 1);
-  const manualCandidate = useMemo(() => {
+
+  const manualCandidateStandard = useMemo(() => {
+    if (outOfRange) return null;
     if (manualThickness === null || manualWidth === null) return null;
     return evaluateBusbarCandidate(
       { id: "manual", thicknessMm: manualThickness, widthMm: manualWidth },
@@ -187,12 +223,23 @@ export function BusbarCalculationView() {
       ratedCurrentA,
     );
   }, [
+    outOfRange,
     manualThickness,
     manualWidth,
     manualBars,
     requiredAreaMm2,
     ratedCurrentA,
   ]);
+
+  const manualCandidateHighCurrent = useMemo(() => {
+    if (!outOfRange || ratedCurrentA === null) return null;
+    if (manualThickness === null || manualWidth === null) return null;
+    return evaluateHighCurrentCandidate(
+      { id: "manual", thicknessMm: manualThickness, widthMm: manualWidth },
+      manualBars,
+      ratedCurrentA,
+    );
+  }, [outOfRange, manualThickness, manualWidth, manualBars, ratedCurrentA]);
 
   async function persist(nextAdopted: AdoptedBusbar | null) {
     if (!caseId) return;
@@ -224,14 +271,28 @@ export function BusbarCalculationView() {
     registerSaveHandler(CALCULATION_TYPE, () => persist(adopted));
   }
 
-  async function handleAdopt(candidate: BusbarCandidate) {
+  async function handleAdoptStandard(candidate: BusbarCandidate) {
     const next: AdoptedBusbar = {
       ...candidate,
+      kind: "standard",
       adoptedAt: new Date().toISOString(),
     };
     setAdopted(next);
     await persist(next);
   }
+
+  async function handleAdoptHighCurrent(candidate: HighCurrentBusbarCandidate) {
+    const next: AdoptedBusbar = {
+      ...candidate,
+      kind: "highCurrent",
+      adoptedAt: new Date().toISOString(),
+    };
+    setAdopted(next);
+    await persist(next);
+  }
+
+  const adoptedStandard = adopted?.kind === "standard" ? adopted : null;
+  const adoptedHighCurrent = adopted?.kind === "highCurrent" ? adopted : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -371,15 +432,26 @@ export function BusbarCalculationView() {
                   <p className="text-[12px] text-warning">
                     {t("busbarCalc.noSizesConfigured")}
                   </p>
-                ) : ratedCurrentA === null || requiredAreaMm2 === null ? (
+                ) : ratedCurrentA === null ? (
+                  <p className="text-[12px] text-muted-2">
+                    {t("busbarCalc.enterCurrentPrompt")}
+                  </p>
+                ) : outOfRange ? (
+                  <HighCurrentBusbarCandidateList
+                    candidates={highCurrentCandidates}
+                    adopted={adoptedHighCurrent}
+                    onAdopt={handleAdoptHighCurrent}
+                    saving={saving}
+                  />
+                ) : requiredAreaMm2 === null ? (
                   <p className="text-[12px] text-muted-2">
                     {t("busbarCalc.enterCurrentPrompt")}
                   </p>
                 ) : (
                   <BusbarCandidateList
                     candidates={candidates}
-                    adopted={adopted}
-                    onAdopt={handleAdopt}
+                    adopted={adoptedStandard}
+                    onAdopt={handleAdoptStandard}
                     saving={saving}
                     ratedCurrentA={ratedCurrentA}
                   />
@@ -448,15 +520,23 @@ export function BusbarCalculationView() {
                   </div>
                 </div>
 
-                {manualCandidate && (
-                  <BusbarCandidateList
-                    candidates={[manualCandidate]}
-                    adopted={adopted}
-                    onAdopt={handleAdopt}
+                {manualCandidateHighCurrent ? (
+                  <HighCurrentBusbarCandidateList
+                    candidates={[manualCandidateHighCurrent]}
+                    adopted={adoptedHighCurrent}
+                    onAdopt={handleAdoptHighCurrent}
                     saving={saving}
-                    ratedCurrentA={ratedCurrentA}
-                    highCurrentUnverified={outOfRange}
                   />
+                ) : (
+                  manualCandidateStandard && (
+                    <BusbarCandidateList
+                      candidates={[manualCandidateStandard]}
+                      adopted={adoptedStandard}
+                      onAdopt={handleAdoptStandard}
+                      saving={saving}
+                      ratedCurrentA={ratedCurrentA}
+                    />
+                  )
                 )}
               </div>
             </div>

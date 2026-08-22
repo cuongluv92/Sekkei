@@ -7,11 +7,12 @@ import type { CalculationDefinition } from "@/lib/types";
  * `calculate()` never computes anything real; see calculationService.ts).
  * A module with a real, standard-backed formula (計算式/計算過程/根拠規格)
  * graduates out of this registry into its own bespoke component instead —
- * see 重量計算 (`BasicWeightCalc`/`WeightShapeCalcSection`) and 母線銅帯
- * (`src/components/calculation/busbar/*`, `src/lib/calc/busbar/*`) for that
- * pattern. There is no Settings UI to "register a formula" here — technical
- * formulas are implemented in code with tests and a cited standard/source,
- * never user-entered (see `src/lib/calc/technicalSource.ts`).
+ * see 重量計算 (`BasicWeightCalc`/`WeightShapeCalcSection`), 母線銅帯
+ * (`src/components/calculation/busbar/*`, `src/lib/calc/busbar/*`) and 接地線
+ * (`src/components/calculation/earthWire/*`, `src/lib/calc/earthWire/*`) for
+ * that pattern. There is no Settings UI to "register a formula" here —
+ * technical formulas are implemented in code with tests and a cited
+ * standard/source, never user-entered (see `src/lib/calc/technicalSource.ts`).
  */
 export const calculationDefinitions: CalculationDefinition[] = [
   {
@@ -57,33 +58,6 @@ export const calculationDefinitions: CalculationDefinition[] = [
       { key: "item", label: "項目" },
       { key: "value", label: "値" },
       { key: "judgement", label: "判定" },
-    ],
-    hasFormula: false,
-  },
-  {
-    id: "calc-earth-wire",
-    key: "earth-wire",
-    name: "アース電線サイズ",
-    nameVi: "Kích thước dây tiếp đất",
-    description: "アース電線サイズを計算します。",
-    descriptionVi: "Tính kích thước dây tiếp đất.",
-    inputFields: [
-      {
-        key: "breakerCapacity",
-        label: "遮断器定格",
-        unit: "A",
-        type: "number",
-      },
-      {
-        key: "wireMaterial",
-        label: "電線材質",
-        type: "text",
-        placeholder: "例）IV",
-      },
-    ],
-    resultColumns: [
-      { key: "size", label: "電線サイズ" },
-      { key: "remarks", label: "備考" },
     ],
     hasFormula: false,
   },

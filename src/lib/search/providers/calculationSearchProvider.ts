@@ -10,6 +10,8 @@ const CALCULATION_TYPE_ROUTES: {
   href: (caseId: string) => string;
 }[] = [
   { match: (t) => t === "busbar", label: "母線銅帯", href: (id) => `/calculations/busbar?case=${id}` },
+  { match: (t) => t === "earth-wire", label: "接地線", href: (id) => `/calculations/earth-wire?case=${id}` },
+  { match: (t) => t === "earth-bar", label: "アースバー", href: (id) => `/calculations/earth-bar?case=${id}` },
   {
     match: (t) => t.startsWith("weight-basic-"),
     label: "基本重量計算",

@@ -226,6 +226,21 @@ export interface BusbarSize {
   order: number;
 }
 
+/** 社内選定マスタ — company-used 接地線 (grounding wire) cross-section sizes. Starts empty; never pre-seeded with invented values (same rule as BusbarSize/WeightMaterial). */
+export interface EarthWireSize {
+  id: string;
+  areaMm2: number; // 断面積 (mm²)
+  order: number;
+}
+
+/** 社内選定マスタ — company-used アースバー (earth bar / 盤内接地母線) sizes, geometrically the same shape as busbar (t×W×n) but a separate master since it is a separate calculation/selection (never reuse busbar's master for this). */
+export interface EarthBarSize {
+  id: string;
+  thicknessMm: number; // 厚さ t (mm)
+  widthMm: number; // 幅 W (mm)
+  order: number;
+}
+
 export type PartTemplateKind = "excel" | "dwg";
 
 /** An uploaded export template for 部品製作 (Excel出力 / DWG出力), independent of the calculation templates above. Stored in Supabase Storage (part-templates/<kind>.<ext>), never bundled in the app. */

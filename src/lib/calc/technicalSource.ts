@@ -10,6 +10,26 @@
  * directly confirmed. Only flip it to `true` once the actual standard
  * document (not a secondary blog/calculator) has been checked against the
  * exact clause/table cited in `reference`.
+ *
+ * 計算 → 選定 architecture (every module under `src/lib/calc/**` follows this
+ * same chain, never mixes the two stages):
+ *   1. 計算 (this file's consumers, e.g. `currentDensityRule.ts`,
+ *      `geometry.ts`): pure functions turning a design input (定格電流, ...)
+ *      into a 必要条件 (必要断面積, ...) — always cites a `TechnicalSource`,
+ *      never reads company/master data.
+ *   2. 選定 (e.g. `candidateSearch.ts`): takes that 必要条件 plus real
+ *      company master data (社内選定マスタ — busbar/wire/earth sizes actually
+ *      stocked/preferred) and searches for concrete candidates. This layer
+ *      may apply company preference (fewer bars, stock size, ease of
+ *      fabrication, ...) but only ever *after* a candidate has already
+ *      passed the 計算 layer's technical requirement — company preference
+ *      never overrides or substitutes for a technical pass/fail.
+ *   3. 採用: the designer picks one candidate (or a manual what-if the 選定
+ *      layer evaluates on demand); the UI persists exactly which one via
+ *      `calculationRecordService`, keyed by the active 案件.
+ * A rule that cannot honestly complete step 1 (no verified source reaches
+ * that current/size range) must say so — `要確認`/`要技術確認` — rather than
+ * let step 2 quietly invent a technical requirement to search against.
  */
 
 /** What kind of document a rule is actually sourced from — determines how much trust the UI should imply. */

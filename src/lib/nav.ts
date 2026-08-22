@@ -10,6 +10,8 @@ import {
   Wind,
   Activity,
   Zap,
+  ArrowDownToLine,
+  Rows3,
   Grid2x2,
   FolderInput,
   Trash2,
@@ -31,6 +33,8 @@ export interface NavItem {
     | "ventilationCalc"
     | "seismicCalc"
     | "busbarCalc"
+    | "earthWireCalc"
+    | "earthBarCalc"
     | "otherCalc"
     | "import"
     | "trash"
@@ -51,6 +55,12 @@ export const navItems: NavItem[] = [
   { key: "ventilationCalc", href: "/calculations/ventilation", icon: Wind },
   { key: "seismicCalc", href: "/calculations/seismic", icon: Activity },
   { key: "busbarCalc", href: "/calculations/busbar", icon: Zap },
+  {
+    key: "earthWireCalc",
+    href: "/calculations/earth-wire",
+    icon: ArrowDownToLine,
+  },
+  { key: "earthBarCalc", href: "/calculations/earth-bar", icon: Rows3 },
   { key: "otherCalc", href: "/calculations/other", icon: Grid2x2 },
   { key: "import", href: "/import", icon: FolderInput },
   { key: "trash", href: "/trash", icon: Trash2 },

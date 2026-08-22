@@ -12,8 +12,6 @@ interface BusbarCandidateListProps {
   saving: boolean;
   /** For the NG message ("必要電流{current}Aに対して..."). */
   ratedCurrentA: number | null;
-  /** True when this candidate is being checked against a rated current outside the JIS C 8480 simplified range (>630A) — the judgment shown must not claim OK/注意/NG since no verified high-current method has been applied (spec #12, #18). */
-  highCurrentUnverified?: boolean;
 }
 
 function roundTo(n: number, decimals: number): number {
@@ -37,7 +35,6 @@ export function BusbarCandidateList({
   onAdopt,
   saving,
   ratedCurrentA,
-  highCurrentUnverified,
 }: BusbarCandidateListProps) {
   const { t } = useTranslation();
 
@@ -92,14 +89,7 @@ export function BusbarCandidateList({
                     : "—"}
                 </td>
                 <td>
-                  {highCurrentUnverified ? (
-                    <span
-                      className="badge-warning"
-                      title={t("busbarCalc.highCurrentNotAvailable")}
-                    >
-                      {t("busbarCalc.unverifiedBadge")}
-                    </span>
-                  ) : c.judgment === "ok" ? (
+                  {c.judgment === "ok" ? (
                     <span className="badge-success">
                       {t("busbarCalc.judgmentOk")}
                     </span>

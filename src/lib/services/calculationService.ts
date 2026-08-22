@@ -3,12 +3,16 @@ import { delay } from "@/lib/utils/async";
 import type { CalculationRepository } from "./types";
 
 /**
- * Mock calculation engine shared by 重量計算 / 換気計算 / 耐震計算 / 他計算.
- * `calculate()` never runs real formulas in this phase — it just echoes the
- * submitted input back as a single placeholder row so the result table has
- * something to render. Real formulas will be registered per
- * `CalculationDefinition.key` later (see 設定 > 計算設定) and plugged in here
- * without any page needing to change.
+ * Mock calculation engine shared by 換気計算 / 耐震計算 / 他計算 — modules that
+ * still lack a real, standard-backed formula. `calculate()` never runs real
+ * formulas here — it just echoes the submitted input back as a single
+ * placeholder row so the result table has something to render. There is no
+ * Settings UI to "register a formula" (that 計算設定 section was removed —
+ * technical formulas are implemented in code with tests and a cited
+ * standard/source, never user-entered; see `src/lib/calc/technicalSource.ts`).
+ * A module with a real formula graduates out of this mock engine entirely
+ * into its own bespoke component/page instead — see 重量計算, 母線銅帯, 接地線,
+ * アースバー.
  */
 class MockCalculationRepository implements CalculationRepository {
   async listDefinitions() {

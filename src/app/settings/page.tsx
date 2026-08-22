@@ -18,6 +18,8 @@ import { SelectionRuleSettings } from "@/components/settings/SelectionRuleSettin
 import { TemplateManagementSettings } from "@/components/settings/TemplateManagementSettings";
 import { WeightMaterialSettings } from "@/components/settings/WeightMaterialSettings";
 import { BusbarSizeSettings } from "@/components/settings/BusbarSizeSettings";
+import { EarthWireSizeSettings } from "@/components/settings/EarthWireSizeSettings";
+import { EarthBarSizeSettings } from "@/components/settings/EarthBarSizeSettings";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type {
@@ -146,6 +148,28 @@ export default function SettingsPage() {
         </div>
         <div className="panel-body">
           <BusbarSizeSettings />
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-header">
+          <span className="panel-title">
+            {t("earthWireSizeSettings.title")}
+          </span>
+        </div>
+        <div className="panel-body">
+          <EarthWireSizeSettings />
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-header">
+          <span className="panel-title">
+            {t("earthBarSizeSettings.title")}
+          </span>
+        </div>
+        <div className="panel-body">
+          <EarthBarSizeSettings />
         </div>
       </div>
 
