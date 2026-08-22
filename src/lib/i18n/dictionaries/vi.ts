@@ -151,7 +151,7 @@ const vi: Dictionary = {
       panel: "盤重量計算",
     },
     basic: {
-      description: "Bấm vào loại hình thép để cuộn mượt xuống đúng khối tính toán tương ứng.",
+      description: "Tính trọng lượng cho アングル・チャンネル・フラットバー.",
       imagePlaceholder: "Sơ đồ mặt cắt (ảnh thật sẽ thêm sau)",
       shapes: {
         angle: "アングル",

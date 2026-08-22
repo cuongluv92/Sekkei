@@ -151,7 +151,7 @@ const ja: Dictionary = {
       panel: "盤重量計算",
     },
     basic: {
-      description: "形鋼を選択すると該当する計算欄まで自動でスクロールします。",
+      description: "アングル・チャンネル・フラットバーの重量を計算します。",
       imagePlaceholder: "断面図（画像は後で登録）",
       shapes: {
         angle: "アングル",

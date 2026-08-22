@@ -86,13 +86,7 @@ export function WeightShapeCalcSection({ shapeKey, materials }: WeightShapeCalcS
         <span className="panel-title">{t(`weightCalc.basic.shapes.${shapeKey}`)}</span>
       </div>
       <div className="panel-body grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {/* Left: technical drawing placeholder */}
-        <div className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-strong bg-surface-2 text-muted-2 lg:aspect-auto lg:min-h-[320px]">
-          <ImageIcon className="h-9 w-9" />
-          <p className="max-w-[240px] text-center text-[12px]">{t("weightCalc.basic.imagePlaceholder")}</p>
-        </div>
-
-        {/* Right: inputs + results, in the confirmed order */}
+        {/* Left: inputs + results, in the confirmed order */}
         <div className="flex flex-col gap-3.5">
           <div>
             <label className="field-label">{t("weightCalc.basic.material")}</label>
@@ -212,6 +206,12 @@ export function WeightShapeCalcSection({ shapeKey, materials }: WeightShapeCalcS
               )}
             </div>
           </div>
+        </div>
+
+        {/* Right: technical drawing placeholder */}
+        <div className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-strong bg-surface-2 text-muted-2 lg:aspect-auto lg:min-h-[320px]">
+          <ImageIcon className="h-9 w-9" />
+          <p className="max-w-[240px] text-center text-[12px]">{t("weightCalc.basic.imagePlaceholder")}</p>
         </div>
       </div>
     </div>
