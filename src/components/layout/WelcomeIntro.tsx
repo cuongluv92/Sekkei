@@ -21,28 +21,45 @@ interface Particle {
   lifeMs: number;
 }
 
+/** dir: 1 = fan inward-right (left corner), -1 = fan inward-left (right corner), 0 = fan both ways (center). */
+function addBurst(
+  particles: Particle[],
+  x: number,
+  y: number,
+  count: number,
+  dir: -1 | 0 | 1,
+  speedMin: number,
+  speedMax: number,
+  now: number,
+) {
+  // Angle measured from horizontal: corners fan up-and-inward, center is
+  // near-vertical (a real "shoots up the middle" burst, not a fan).
+  const angleMin = dir === 0 ? (Math.PI / 2) * 0.78 : (Math.PI / 2) * 0.55;
+  const angleMax = Math.PI / 2;
+  for (let i = 0; i < count; i++) {
+    const angle = angleMin + Math.random() * (angleMax - angleMin);
+    const speed = speedMin + Math.random() * (speedMax - speedMin);
+    const horizontal = dir === 0 ? (Math.random() - 0.5) * 2 : dir;
+    particles.push({
+      x,
+      y,
+      vx: Math.cos(angle) * speed * horizontal,
+      vy: -Math.sin(angle) * speed,
+      size: 5 + Math.random() * 5,
+      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+      rotation: Math.random() * Math.PI * 2,
+      rotationSpeed: (Math.random() - 0.5) * 0.35,
+      bornAt: now,
+      lifeMs: 1100 + Math.random() * 550,
+    });
+  }
+}
+
 function spawnParticles(width: number, height: number, now: number): Particle[] {
   const particles: Particle[] = [];
-  const corners = [0, width];
-  for (const cornerX of corners) {
-    const inward = cornerX === 0 ? 1 : -1;
-    for (let i = 0; i < 18; i++) {
-      const angle = (Math.PI / 2) * 0.55 + Math.random() * (Math.PI / 2) * 0.5; // mostly upward, some spread
-      const speed = 5.5 + Math.random() * 4.5;
-      particles.push({
-        x: cornerX,
-        y: height,
-        vx: Math.cos(angle) * speed * inward,
-        vy: -Math.sin(angle) * speed,
-        size: 4 + Math.random() * 4,
-        color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-        rotation: Math.random() * Math.PI * 2,
-        rotationSpeed: (Math.random() - 0.5) * 0.3,
-        bornAt: now,
-        lifeMs: 900 + Math.random() * 400,
-      });
-    }
-  }
+  addBurst(particles, 0, height, 26, 1, 6, 11, now); // bottom-left corner, fans up-and-inward
+  addBurst(particles, width, height, 26, -1, 6, 11, now); // bottom-right corner, fans up-and-inward
+  addBurst(particles, width / 2, height, 32, 0, 10, 15, now); // bottom-center, shoots up toward mid-screen
   return particles;
 }
 
@@ -78,11 +95,11 @@ export function WelcomeIntro() {
 
     const timers: number[] = [];
     if (reducedMotion) {
-      timers.push(window.setTimeout(() => setFadingOut(true), 900));
-      timers.push(window.setTimeout(() => setMounted(false), 900 + 500));
+      timers.push(window.setTimeout(() => setFadingOut(true), 1000));
+      timers.push(window.setTimeout(() => setMounted(false), 1000 + 500));
     } else {
-      timers.push(window.setTimeout(() => setFadingOut(true), 1500));
-      timers.push(window.setTimeout(() => setMounted(false), 1500 + 500));
+      timers.push(window.setTimeout(() => setFadingOut(true), 1950));
+      timers.push(window.setTimeout(() => setMounted(false), 1950 + 550));
     }
     return () => {
       cancelAnimationFrame(raf);
@@ -147,7 +164,7 @@ export function WelcomeIntro() {
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex items-center justify-center bg-background transition-opacity duration-500 ease-out ${
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-background transition-opacity duration-[550ms] ease-out ${
         fadingOut ? "opacity-0" : "opacity-100"
       }`}
       aria-hidden="true"
