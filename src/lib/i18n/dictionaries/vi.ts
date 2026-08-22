@@ -152,7 +152,8 @@ const vi: Dictionary = {
     },
     basic: {
       description: "Tính trọng lượng cho アングル・チャンネル・フラットバー.",
-      imagePlaceholder: "Sơ đồ mặt cắt (ảnh thật sẽ thêm sau)",
+      imagePlaceholder: "Sơ đồ mặt cắt (chưa có ảnh)",
+      imageUploadError: "Tải ảnh lên thất bại",
       shapes: {
         angle: "アングル",
         channel: "チャンネル",

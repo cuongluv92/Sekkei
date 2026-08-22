@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
-import { weightMaterialService } from "@/lib/services";
-import { WEIGHT_SHAPES } from "@/lib/utils/weightShapes";
+import { weightMaterialService, weightShapeImageService } from "@/lib/services";
+import { WEIGHT_SHAPES, type WeightShapeImage, type WeightShapeKey } from "@/lib/utils/weightShapes";
 import { WeightShapeCalcSection } from "@/components/calculation/WeightShapeCalcSection";
 import type { WeightMaterial } from "@/lib/types";
 
@@ -15,10 +15,18 @@ import type { WeightMaterial } from "@/lib/types";
 export function BasicWeightCalc() {
   const { t } = useTranslation();
   const [materials, setMaterials] = useState<WeightMaterial[]>([]);
+  const [images, setImages] = useState<Partial<Record<WeightShapeKey, WeightShapeImage>>>({});
 
   useEffect(() => {
     weightMaterialService.list().then(setMaterials);
+    weightShapeImageService.list().then((list) => {
+      setImages(Object.fromEntries(list.map((img) => [img.shapeKey, img])));
+    });
   }, []);
+
+  function handleImageChange(shapeKey: WeightShapeKey, image: WeightShapeImage) {
+    setImages((prev) => ({ ...prev, [shapeKey]: image }));
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -30,7 +38,13 @@ export function BasicWeightCalc() {
 
       <div className="flex flex-col gap-4">
         {WEIGHT_SHAPES.map((shape) => (
-          <WeightShapeCalcSection key={shape.key} shapeKey={shape.key} materials={materials} />
+          <WeightShapeCalcSection
+            key={shape.key}
+            shapeKey={shape.key}
+            materials={materials}
+            image={images[shape.key]}
+            onImageChange={(image) => handleImageChange(shape.key, image)}
+          />
         ))}
       </div>
     </div>

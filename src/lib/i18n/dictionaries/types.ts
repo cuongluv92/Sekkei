@@ -155,6 +155,7 @@ export interface Dictionary {
     basic: {
       description: string;
       imagePlaceholder: string;
+      imageUploadError: string;
       shapes: {
         angle: string;
         channel: string;

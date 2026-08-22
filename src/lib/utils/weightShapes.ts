@@ -56,3 +56,12 @@ export function getWeightShape(key: WeightShapeKey): WeightShapeDef {
   if (!shape) throw new Error(`unknown-weight-shape:${key}`);
   return shape;
 }
+
+/** A reference drawing for one shape (アングル/チャンネル/フラットバー), stored in Supabase Storage. Never bundled in the app — see weightShapeImageService. */
+export interface WeightShapeImage {
+  id: string;
+  shapeKey: WeightShapeKey;
+  fileName: string;
+  storagePath: string;
+  uploadedAt: string;
+}

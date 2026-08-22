@@ -152,7 +152,8 @@ const ja: Dictionary = {
     },
     basic: {
       description: "アングル・チャンネル・フラットバーの重量を計算します。",
-      imagePlaceholder: "断面図（画像は後で登録）",
+      imagePlaceholder: "断面図（未登録）",
+      imageUploadError: "画像のアップロードに失敗しました",
       shapes: {
         angle: "アングル",
         channel: "チャンネル",
