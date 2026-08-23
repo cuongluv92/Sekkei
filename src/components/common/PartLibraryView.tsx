@@ -26,6 +26,7 @@ import {
   hasUncategorizedItem,
   hasUnsetManufacturer,
   matchesPartFilters,
+  UNSET_FILTER_VALUE,
 } from "@/lib/utils/partSearch";
 import type { FileAssetOwnerType } from "@/lib/services/fileAssetService";
 import type { FileAsset } from "@/lib/types";
@@ -96,6 +97,7 @@ export function PartLibraryView<T extends LibraryItem>({
   const [selected, setSelected] = useState<T | null>(null);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const { message, show } = useMockFeedback();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -189,6 +191,45 @@ export function PartLibraryView<T extends LibraryItem>({
       show(t("common.deleteError"));
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  // "分類を一括削除": deletes every row currently shown by the table (i.e.
+  // matching all active filters, not just 分類), so the button only appears
+  // once a specific 分類 is chosen — that turns the visible table into
+  // exactly "this whole 分類 group" (e.g. 漏電遮断機), which is what the
+  // button deletes. Sequential awaits (not Promise.all) so a mid-batch
+  // failure leaves `items`/`deletingId`-free rows in a known, inspectable
+  // state rather than a partial concurrent mess.
+  async function handleBulkDeleteCategory() {
+    const categoryLabel =
+      filters.category === UNSET_FILTER_VALUE
+        ? t("common.uncategorized")
+        : filters.category;
+    const targets = filtered;
+    if (targets.length === 0) return;
+    if (
+      !window.confirm(
+        t("common.bulkDeleteCategoryConfirm", {
+          category: categoryLabel,
+          count: targets.length,
+        }),
+      )
+    )
+      return;
+    setBulkDeleting(true);
+    try {
+      for (const item of targets) {
+        await onDelete(item.id);
+      }
+      const deletedIds = new Set(targets.map((i) => i.id));
+      setItems((prev) => prev.filter((i) => !deletedIds.has(i.id)));
+      setSelected((prev) => (prev && deletedIds.has(prev.id) ? null : prev));
+      show(t("common.bulkDeletedToTrash", { count: targets.length }));
+    } catch {
+      show(t("common.bulkDeleteError"));
+    } finally {
+      setBulkDeleting(false);
     }
   }
 
@@ -299,6 +340,29 @@ export function PartLibraryView<T extends LibraryItem>({
         showUnsetManufacturer={hasUnsetManufacturer(items)}
         showUncategorized={hasUncategorizedItem(items)}
       />
+
+      {filters.category && (
+        <div className="flex justify-end">
+          <button
+            onClick={handleBulkDeleteCategory}
+            disabled={bulkDeleting || filtered.length === 0}
+            className="btn-ghost text-danger hover:bg-danger/10"
+          >
+            {bulkDeleting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" />
+            )}
+            {t("common.bulkDeleteCategory", {
+              category:
+                filters.category === UNSET_FILTER_VALUE
+                  ? t("common.uncategorized")
+                  : filters.category,
+              count: filtered.length,
+            })}
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="panel overflow-hidden">

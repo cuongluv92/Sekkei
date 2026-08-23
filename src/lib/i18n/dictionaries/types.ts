@@ -70,6 +70,10 @@ export interface Dictionary {
     movedToTrash: string;
     deleteToTrashConfirm: string;
     deleteError: string;
+    bulkDeleteCategory: string;
+    bulkDeleteCategoryConfirm: string;
+    bulkDeletedToTrash: string;
+    bulkDeleteError: string;
     analyze: string;
     import: string;
     close: string;
@@ -203,6 +207,7 @@ export interface Dictionary {
     description: string;
     partDataSection: string;
     partDrawingSection: string;
+    catalogSection: string;
     deletedAt: string;
     restore: string;
     purge: string;

@@ -70,6 +70,11 @@ const vi: Dictionary = {
     deleteToTrashConfirm:
       'Chuyển "{model}" vào thùng rác? (Có thể khôi phục lại từ thùng rác)',
     deleteError: "Xóa thất bại",
+    bulkDeleteCategory: 'Xóa cả nhóm "{category}" ({count} mục)',
+    bulkDeleteCategoryConfirm:
+      'Chuyển toàn bộ {count} mục thuộc "{category}" vào thùng rác? (Có thể khôi phục lại từ thùng rác)',
+    bulkDeletedToTrash: "Đã chuyển {count} mục vào thùng rác",
+    bulkDeleteError: "Xóa hàng loạt thất bại",
     analyze: "Phân tích",
     import: "Nhập dữ liệu",
     close: "Đóng",
@@ -213,6 +218,7 @@ const vi: Dictionary = {
       "Các mục đã xóa khỏi 部品データ・部品図 — có thể khôi phục hoặc xóa vĩnh viễn tại đây.",
     partDataSection: "部品データ",
     partDrawingSection: "部品図",
+    catalogSection: "カタログ",
     deletedAt: "Ngày xóa",
     restore: "Khôi phục",
     purge: "Xóa vĩnh viễn",

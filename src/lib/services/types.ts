@@ -76,6 +76,14 @@ export interface CatalogRepository {
   findByModel(model: string): Promise<Catalog | null>;
   create(input: Omit<Catalog, "id" | "updatedAt">): Promise<Catalog>;
   update(id: string, patch: Partial<Catalog>): Promise<Catalog>;
+  /** Moves a row to ゴミ箱 (sets deleted_at) — recoverable via restore(), not a hard delete. */
+  moveToTrash(id: string): Promise<void>;
+  /** Lists only trashed rows (deleted_at is not null), newest deletion first. */
+  listTrashed(): Promise<Catalog[]>;
+  /** Clears deleted_at, returning the row to normal listing. */
+  restore(id: string): Promise<void>;
+  /** Permanently deletes a trashed row — cannot be undone. */
+  purge(id: string): Promise<void>;
 }
 
 export interface ManufacturerRepository {

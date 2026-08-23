@@ -3,21 +3,24 @@
 import { Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
-import { partDataService, partDrawingService } from "@/lib/services";
+import { catalogService, partDataService, partDrawingService } from "@/lib/services";
 import { getManufacturerName, preloadManufacturers } from "@/lib/mock/manufacturers";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
 import { PageHeader } from "@/components/common/PageHeader";
-import type { PartData, PartDrawing } from "@/lib/types";
+import type { Catalog, PartData, PartDrawing } from "@/lib/types";
 
 interface TrashedItem {
   id: string;
   category: string;
   manufacturerId: string;
   model: string;
-  specification: string;
+  specification?: string;
+  fileName?: string;
   deletedAt?: string;
 }
+
+type TrashSection = "partData" | "partDrawing" | "catalog";
 
 /**
  * ゴミ箱 — items removed (soft-deleted) from 部品データ・部品図 land here,
@@ -29,34 +32,42 @@ export default function TrashPage() {
   const { t, locale } = useTranslation();
   const [partDataTrash, setPartDataTrash] = useState<PartData[]>([]);
   const [partDrawingTrash, setPartDrawingTrash] = useState<PartDrawing[]>([]);
+  const [catalogTrash, setCatalogTrash] = useState<Catalog[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const { message, show } = useMockFeedback();
 
   useEffect(() => {
     let active = true;
-    Promise.all([preloadManufacturers(), partDataService.listTrashed(), partDrawingService.listTrashed()]).then(
-      ([, data, drawings]) => {
-        if (!active) return;
-        setPartDataTrash(data);
-        setPartDrawingTrash(drawings);
-        setLoading(false);
-      },
-    );
+    Promise.all([
+      preloadManufacturers(),
+      partDataService.listTrashed(),
+      partDrawingService.listTrashed(),
+      catalogService.listTrashed(),
+    ]).then(([, data, drawings, catalogs]) => {
+      if (!active) return;
+      setPartDataTrash(data);
+      setPartDrawingTrash(drawings);
+      setCatalogTrash(catalogs);
+      setLoading(false);
+    });
     return () => {
       active = false;
     };
   }, []);
 
-  async function handleRestore(section: "partData" | "partDrawing", item: TrashedItem) {
+  async function handleRestore(section: TrashSection, item: TrashedItem) {
     setBusyId(item.id);
     try {
       if (section === "partData") {
         await partDataService.restore(item.id);
         setPartDataTrash((prev) => prev.filter((i) => i.id !== item.id));
-      } else {
+      } else if (section === "partDrawing") {
         await partDrawingService.restore(item.id);
         setPartDrawingTrash((prev) => prev.filter((i) => i.id !== item.id));
+      } else {
+        await catalogService.restore(item.id);
+        setCatalogTrash((prev) => prev.filter((i) => i.id !== item.id));
       }
       show(t("trash.restored"));
     } catch {
@@ -66,16 +77,19 @@ export default function TrashPage() {
     }
   }
 
-  async function handlePurge(section: "partData" | "partDrawing", item: TrashedItem) {
+  async function handlePurge(section: TrashSection, item: TrashedItem) {
     if (!window.confirm(t("trash.purgeConfirm", { model: item.model }))) return;
     setBusyId(item.id);
     try {
       if (section === "partData") {
         await partDataService.purge(item.id);
         setPartDataTrash((prev) => prev.filter((i) => i.id !== item.id));
-      } else {
+      } else if (section === "partDrawing") {
         await partDrawingService.purge(item.id);
         setPartDrawingTrash((prev) => prev.filter((i) => i.id !== item.id));
+      } else {
+        await catalogService.purge(item.id);
+        setCatalogTrash((prev) => prev.filter((i) => i.id !== item.id));
       }
       show(t("trash.purged"));
     } catch {
@@ -85,7 +99,7 @@ export default function TrashPage() {
     }
   }
 
-  function columnsFor(section: "partData" | "partDrawing"): DataTableColumn<TrashedItem>[] {
+  function columnsFor(section: TrashSection): DataTableColumn<TrashedItem>[] {
     return [
       { key: "category", header: t("common.kind"), width: "140px" },
       {
@@ -100,7 +114,9 @@ export default function TrashPage() {
         width: "140px",
         render: (r) => <span className="font-mono text-[12px]">{r.model}</span>,
       },
-      { key: "specification", header: t("common.specification") },
+      section === "catalog"
+        ? { key: "fileName", header: t("common.fileName"), render: (r) => r.fileName ?? "—" }
+        : { key: "specification", header: t("common.specification") },
       { key: "deletedAt", header: t("trash.deletedAt"), width: "110px", render: (r) => r.deletedAt ?? "—" },
       {
         key: "actions",
@@ -158,6 +174,19 @@ export default function TrashPage() {
         <DataTable
           columns={columnsFor("partDrawing")}
           rows={partDrawingTrash}
+          rowKey={(r) => r.id}
+          loading={loading}
+          emptyMessage={t("trash.tableEmpty")}
+        />
+      </div>
+
+      <div className="panel overflow-hidden">
+        <div className="panel-header">
+          <span className="panel-title">{t("trash.catalogSection")}</span>
+        </div>
+        <DataTable
+          columns={columnsFor("catalog")}
+          rows={catalogTrash}
           rowKey={(r) => r.id}
           loading={loading}
           emptyMessage={t("trash.tableEmpty")}

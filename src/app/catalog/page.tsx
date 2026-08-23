@@ -5,6 +5,7 @@ import {
   Eye,
   Loader2,
   Search as SearchIcon,
+  Trash2,
   Upload,
 } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -20,6 +21,7 @@ import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
 import { FilePreview } from "@/components/common/FilePreview";
 import { PageHeader } from "@/components/common/PageHeader";
+import { distinctCategories } from "@/lib/utils/partSearch";
 import type { Catalog } from "@/lib/types";
 
 function CatalogView() {
@@ -30,8 +32,11 @@ function CatalogView() {
   // Honors a `?q=<text>` deep link (e.g. from Global Search's カタログ result).
   const [keyword, setKeyword] = useState(searchParams.get("q") ?? "");
   const [manufacturerFilter, setManufacturerFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [selected, setSelected] = useState<Catalog | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const { message, show } = useMockFeedback();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,6 +58,7 @@ function CatalogView() {
     () => Array.from(new Set(items.map((i) => i.manufacturerId))),
     [items],
   );
+  const categories = useMemo(() => distinctCategories(items), [items]);
 
   const filtered = useMemo(() => {
     const q = keyword.trim().toLowerCase();
@@ -64,13 +70,64 @@ function CatalogView() {
         );
       const matchesManufacturer =
         manufacturerFilter === "all" || i.manufacturerId === manufacturerFilter;
-      return matchesKeyword && matchesManufacturer;
+      const matchesCategory =
+        categoryFilter === "all" || i.category === categoryFilter;
+      return matchesKeyword && matchesManufacturer && matchesCategory;
     });
-  }, [items, keyword, manufacturerFilter]);
+  }, [items, keyword, manufacturerFilter, categoryFilter]);
 
   function handleDownload(item: Catalog) {
     const file = item.files[0];
     if (file) openFileAsset(file);
+  }
+
+  async function handleDelete(item: Catalog) {
+    if (
+      !window.confirm(t("common.deleteToTrashConfirm", { model: item.model }))
+    )
+      return;
+    setDeletingId(item.id);
+    try {
+      await catalogService.moveToTrash(item.id);
+      setItems((prev) => prev.filter((i) => i.id !== item.id));
+      setSelected((prev) => (prev?.id === item.id ? null : prev));
+      show(t("common.movedToTrash"));
+    } catch {
+      show(t("common.deleteError"));
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  // Deletes every row currently shown by the table — the button only
+  // appears once a specific 分類 is chosen, so the visible table is exactly
+  // "this whole 分類 group" (e.g. 漏電遮断機) at that point.
+  async function handleBulkDeleteCategory() {
+    const targets = filtered;
+    if (targets.length === 0) return;
+    if (
+      !window.confirm(
+        t("common.bulkDeleteCategoryConfirm", {
+          category: categoryFilter,
+          count: targets.length,
+        }),
+      )
+    )
+      return;
+    setBulkDeleting(true);
+    try {
+      for (const item of targets) {
+        await catalogService.moveToTrash(item.id);
+      }
+      const deletedIds = new Set(targets.map((i) => i.id));
+      setItems((prev) => prev.filter((i) => !deletedIds.has(i.id)));
+      setSelected((prev) => (prev && deletedIds.has(prev.id) ? null : prev));
+      show(t("common.bulkDeletedToTrash", { count: targets.length }));
+    } catch {
+      show(t("common.bulkDeleteError"));
+    } finally {
+      setBulkDeleting(false);
+    }
   }
 
   async function handleUploadFile(file: File) {
@@ -108,7 +165,7 @@ function CatalogView() {
     {
       key: "actions",
       header: t("common.actions"),
-      width: "170px",
+      width: "210px",
       render: (r) => (
         <div
           className="flex items-center gap-1.5"
@@ -125,6 +182,18 @@ function CatalogView() {
           >
             <Download className="h-3.5 w-3.5" />
             {t("common.download")}
+          </button>
+          <button
+            onClick={() => handleDelete(r)}
+            disabled={deletingId === r.id}
+            title={t("common.moveToTrash")}
+            className="btn-ghost btn-icon text-danger hover:bg-danger/10"
+          >
+            {deletingId === r.id ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" />
+            )}
           </button>
         </div>
       ),
@@ -160,7 +229,39 @@ function CatalogView() {
             </option>
           ))}
         </select>
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="field-input max-w-[180px]"
+        >
+          <option value="all">{t("common.allCategories")}</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
       </div>
+
+      {categoryFilter !== "all" && (
+        <div className="flex justify-end">
+          <button
+            onClick={handleBulkDeleteCategory}
+            disabled={bulkDeleting || filtered.length === 0}
+            className="btn-ghost text-danger hover:bg-danger/10"
+          >
+            {bulkDeleting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" />
+            )}
+            {t("common.bulkDeleteCategory", {
+              category: categoryFilter,
+              count: filtered.length,
+            })}
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="panel overflow-hidden">

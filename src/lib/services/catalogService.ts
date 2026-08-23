@@ -11,6 +11,7 @@ interface CatalogRow {
   model: string;
   file_name: string;
   updated_at: string;
+  deleted_at: string | null;
 }
 
 function rowToCatalog(row: CatalogRow, files: Catalog["files"]): Catalog {
@@ -22,6 +23,7 @@ function rowToCatalog(row: CatalogRow, files: Catalog["files"]): Catalog {
     fileName: row.file_name,
     files,
     updatedAt: row.updated_at.slice(0, 10),
+    deletedAt: row.deleted_at ? row.deleted_at.slice(0, 10) : undefined,
   };
 }
 
@@ -37,7 +39,7 @@ async function attachFiles(rows: CatalogRow[]): Promise<Catalog[]> {
 
 class SupabaseCatalogRepository implements CatalogRepository {
   async search(query: string) {
-    const { data, error } = await requireSupabase().from("catalogs").select("*");
+    const { data, error } = await requireSupabase().from("catalogs").select("*").is("deleted_at", null);
     if (error) throw error;
     const all = await attachFiles((data ?? []) as CatalogRow[]);
     if (!query.trim()) return all;
@@ -45,7 +47,11 @@ class SupabaseCatalogRepository implements CatalogRepository {
   }
 
   async list() {
-    const { data, error } = await requireSupabase().from("catalogs").select("*").order("updated_at", { ascending: false });
+    const { data, error } = await requireSupabase()
+      .from("catalogs")
+      .select("*")
+      .is("deleted_at", null)
+      .order("updated_at", { ascending: false });
     if (error) throw error;
     return attachFiles((data ?? []) as CatalogRow[]);
   }
@@ -54,6 +60,7 @@ class SupabaseCatalogRepository implements CatalogRepository {
     const { data, error } = await requireSupabase()
       .from("catalogs")
       .select("*")
+      .is("deleted_at", null)
       .ilike("model", model.trim())
       .maybeSingle();
     if (error) throw error;
@@ -86,6 +93,34 @@ class SupabaseCatalogRepository implements CatalogRepository {
     const { data, error } = await requireSupabase().from("catalogs").update(row).eq("id", id).select().single();
     if (error) throw error;
     return fromRow(data as CatalogRow);
+  }
+
+  async moveToTrash(id: string): Promise<void> {
+    const { error } = await requireSupabase()
+      .from("catalogs")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) throw error;
+  }
+
+  async listTrashed() {
+    const { data, error } = await requireSupabase()
+      .from("catalogs")
+      .select("*")
+      .not("deleted_at", "is", null)
+      .order("deleted_at", { ascending: false });
+    if (error) throw error;
+    return attachFiles((data ?? []) as CatalogRow[]);
+  }
+
+  async restore(id: string): Promise<void> {
+    const { error } = await requireSupabase().from("catalogs").update({ deleted_at: null }).eq("id", id);
+    if (error) throw error;
+  }
+
+  async purge(id: string): Promise<void> {
+    const { error } = await requireSupabase().from("catalogs").delete().eq("id", id);
+    if (error) throw error;
   }
 }
 

@@ -69,6 +69,11 @@ const ja: Dictionary = {
     deleteToTrashConfirm:
       "「{model}」をゴミ箱に移動しますか？（ゴミ箱から復元できます）",
     deleteError: "削除に失敗しました",
+    bulkDeleteCategory: "「{category}」を一括削除（{count}件）",
+    bulkDeleteCategoryConfirm:
+      "「{category}」に該当する{count}件をすべてゴミ箱に移動しますか？（ゴミ箱から復元できます）",
+    bulkDeletedToTrash: "{count}件をゴミ箱に移動しました",
+    bulkDeleteError: "一括削除に失敗しました",
     analyze: "解析",
     import: "インポート",
     close: "閉じる",
@@ -210,6 +215,7 @@ const ja: Dictionary = {
       "部品データ・部品図から削除した項目をここから復元、または完全に削除できます。",
     partDataSection: "部品データ",
     partDrawingSection: "部品図",
+    catalogSection: "カタログ",
     deletedAt: "削除日",
     restore: "復元",
     purge: "完全に削除",

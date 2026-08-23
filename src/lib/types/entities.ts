@@ -74,6 +74,8 @@ export interface Catalog {
   fileName: string;
   updatedAt: string;
   files: FileAsset[];
+  /** Set only on rows returned by listTrashed() — when this catalog entry was moved to ゴミ箱. */
+  deletedAt?: string;
 }
 
 /** A row the user has picked into the 部品製作 assembly table. */
