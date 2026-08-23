@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileSpreadsheet, Loader2, Printer } from "lucide-react";
+import { FileSpreadsheet, Loader2, Pencil, Printer, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import {
@@ -10,8 +10,11 @@ import {
   exportDrawingLedgerExcel,
   printDrawingLedger,
 } from "@/lib/services/design";
+import { calculationRecordService, partAssemblyService } from "@/lib/services";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
-import type { CaseStatus, DesignCaseWithPanels } from "@/lib/types/design";
+import { EditCaseModal } from "@/components/common/EditCaseModal";
+import { Modal } from "@/components/common/Modal";
+import type { CaseStatus, DesignCase, DesignCaseWithPanels } from "@/lib/types/design";
 
 /** Row background per ②図面管理台帳 H1 legend — real colors from the template, not invented. */
 const CASE_STATUS_ROW_CLASS: Record<CaseStatus, string> = {
@@ -41,6 +44,19 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
   const [items, setItems] = useState<DesignCaseWithPanels[] | null>(null);
   const [query, setQuery] = useState("");
   const [exportingKey, setExportingKey] = useState<string | null>(null);
+  const [editing, setEditing] = useState<DesignCase | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{
+    caseId: string;
+    label: string;
+    partCount: number;
+    calcCount: number;
+  } | null>(null);
+  const [checkingImpact, setCheckingImpact] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  function reload() {
+    designCaseService.listAll().then((list) => setItems(list));
+  }
 
   useEffect(() => {
     let active = true;
@@ -51,6 +67,33 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
       active = false;
     };
   }, []);
+
+  async function handleDeleteClick(c: DesignCaseWithPanels["case"]) {
+    setCheckingImpact(c.id);
+    const [parts, calcs] = await Promise.all([
+      partAssemblyService.listByCase(c.id),
+      calculationRecordService.listByCase(c.id),
+    ]);
+    setCheckingImpact(null);
+    setConfirmDelete({
+      caseId: c.id,
+      label: `${c.drawingNumber}　${c.projectName}`,
+      partCount: parts.length,
+      calcCount: calcs.length,
+    });
+  }
+
+  async function handleConfirmDelete() {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      await designCaseService.archive(confirmDelete.caseId);
+      setConfirmDelete(null);
+      reload();
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   const scoped = useMemo(() => {
     if (!items) return null;
@@ -90,7 +133,13 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
       .sort(([a], [b]) => a - b) // oldest first (left), newest last (right)
       .map(([year, cases]) => ({
         year,
-        cases: cases.sort((a, b) => a.case.sequenceNo - b.case.sequenceNo),
+        // 図面番号 itself, ascending — never sequence_no: a manually-typed
+        // 図面番号 (spec follow-up: only 設計依頼 auto-numbers) can diverge
+        // from the internal auto-incrementing sequence_no, so sorting by
+        // sequence_no could show 図面番号 out of order.
+        cases: cases.sort((a, b) =>
+          a.case.drawingNumber.localeCompare(b.case.drawingNumber, "ja"),
+        ),
       }));
   }, [filtered]);
 
@@ -206,6 +255,7 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                       <th style={{ width: "100px" }}>
                         {t("design.ledger.columns.updatedAt")}
                       </th>
+                      <th style={{ width: "80px" }} />
                     </tr>
                   </thead>
                   <tbody>
@@ -241,6 +291,29 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                           {c.manufacturingComplete ? "完" : ""}
                         </td>
                         <td className="text-muted-2">{c.updatedAt}</td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setEditing(c)}
+                              className="btn-ghost btn-icon !p-1.5"
+                              title={t("common.edit")}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick(c)}
+                              disabled={checkingImpact === c.id}
+                              className="btn-ghost btn-icon !p-1.5 text-danger hover:bg-danger/10"
+                              title={t("common.delete")}
+                            >
+                              {checkingImpact === c.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -251,6 +324,56 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
         </div>
       )}
       {message && <div className="text-[12px] text-success">{message}</div>}
+
+      {editing && (
+        <EditCaseModal
+          designCase={editing}
+          onClose={() => setEditing(null)}
+          onUpdated={() => {
+            setEditing(null);
+            reload();
+          }}
+        />
+      )}
+
+      {confirmDelete && (
+        <Modal
+          title={t("caseSelector.deleteConfirmTitle")}
+          onClose={() => setConfirmDelete(null)}
+          widthClassName="max-w-md"
+        >
+          <div className="flex flex-col gap-3.5">
+            <p className="text-[13px] text-foreground">{confirmDelete.label}</p>
+            {(confirmDelete.partCount > 0 || confirmDelete.calcCount > 0) && (
+              <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-[12px] text-warning">
+                {t("caseSelector.deleteImpactWarning", {
+                  partCount: String(confirmDelete.partCount),
+                  calcCount: String(confirmDelete.calcCount),
+                })}
+              </p>
+            )}
+            <p className="text-[11.5px] text-muted-2">
+              {t("caseSelector.deleteArchiveNote")}
+            </p>
+            <div className="flex items-center justify-end gap-2 border-t border-border pt-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="btn-secondary"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="btn-primary bg-danger hover:bg-danger/90"
+              >
+                {deleting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {t("common.delete")}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
