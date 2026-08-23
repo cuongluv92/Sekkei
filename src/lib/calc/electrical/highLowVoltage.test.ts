@@ -36,6 +36,12 @@ describe("classifyVoltage — DC uses a different 低圧 boundary (750V, not 600
   it("751V DC is 高圧", () => {
     expect(classifyVoltage(751, "DC")).toBe("high");
   });
+  it("exactly 7000V DC is still 高圧 (boundary, inclusive — same 高圧/特別高圧 threshold as AC)", () => {
+    expect(classifyVoltage(7000, "DC")).toBe("high");
+  });
+  it("7001V DC is 特別高圧", () => {
+    expect(classifyVoltage(7001, "DC")).toBe("extraHigh");
+  });
 });
 
 describe("classifyVoltage — invalid input", () => {

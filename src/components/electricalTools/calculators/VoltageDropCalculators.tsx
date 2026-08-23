@@ -8,6 +8,7 @@ import {
   solveVoltageDrop,
   type SimplifiedVoltageDropVar,
   type SimplifiedVoltageDropWiring,
+  type VoltageDropLoadType,
   type VoltageDropMode,
   type VoltageDropVar,
 } from "@/lib/calc/electrical/voltageDrop";
@@ -44,6 +45,7 @@ export function VoltageDropCalculators() {
   const { t, locale } = useTranslation();
   const [method, setMethod] = useState<Method>("rx");
   const [mode, setMode] = useState<VoltageDropMode>("three");
+  const [loadType, setLoadType] = useState<VoltageDropLoadType>("lagging");
   const [wiring, setWiring] = useState<SimplifiedVoltageDropWiring>("three3wire");
   const [result, setResult] = useState<SolveResult | null>(null);
   const [rxKnown, setRxKnown] = useState<Partial<Record<VoltageDropVar, number>>>({});
@@ -94,22 +96,41 @@ export function VoltageDropCalculators() {
             <>
               <VariableSolverCard
                 variables={mode === "dc" ? RX_VARS_DC : RX_VARS_AC}
-                solve={(known, target) => solveVoltageDrop(known, target, mode)}
+                solve={(known, target) => solveVoltageDrop(known, target, mode, loadType)}
                 onResult={setResult}
                 onValuesChange={setRxKnown}
-                resetKey={`rx-${mode}`}
+                resetKey={`rx-${mode}-${loadType}`}
                 defaultTarget="deltaV"
                 extra={
-                  <PillToggle
-                    label={locale === "vi" ? "Kiểu mạch" : "回路種別"}
-                    value={mode}
-                    onChange={setMode}
-                    options={[
-                      { value: "dc", label: locale === "vi" ? "DC" : "直流" },
-                      { value: "single", label: locale === "vi" ? "1 pha 2 dây" : "単相2線式" },
-                      { value: "three", label: locale === "vi" ? "3 pha 3 dây" : "三相3線式" },
-                    ]}
-                  />
+                  <div className="flex flex-col gap-3">
+                    <PillToggle
+                      label={locale === "vi" ? "Kiểu mạch" : "回路種別"}
+                      value={mode}
+                      onChange={setMode}
+                      options={[
+                        { value: "dc", label: locale === "vi" ? "DC" : "直流" },
+                        { value: "single", label: locale === "vi" ? "1 pha 2 dây" : "単相2線式" },
+                        { value: "three", label: locale === "vi" ? "3 pha 3 dây" : "三相3線式" },
+                      ]}
+                    />
+                    {mode !== "dc" && (
+                      <PillToggle
+                        label={locale === "vi" ? "Loại tải (lệch pha)" : "負荷の力率"}
+                        value={loadType}
+                        onChange={setLoadType}
+                        options={[
+                          {
+                            value: "lagging",
+                            label: locale === "vi" ? "Trễ (cảm kháng, +x·sinφ)" : "遅れ（誘導性、+x·sinφ）",
+                          },
+                          {
+                            value: "leading",
+                            label: locale === "vi" ? "Sớm (dung kháng, −x·sinφ)" : "進み（容量性、−x·sinφ）",
+                          },
+                        ]}
+                      />
+                    )}
+                  </div>
                 }
               />
 

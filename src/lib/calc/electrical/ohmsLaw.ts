@@ -198,8 +198,59 @@ function acPowerRules(phase: AcPhase): readonly Rule<AcPowerVar>[] {
   const sToI = isThree ? "I = S × 1000 / (√3 × V)" : "I = S × 1000 / V";
   const sToV = isThree ? "V = S × 1000 / (√3 × I)" : "V = S × 1000 / I";
   const k = isThree ? Math.sqrt(3) : 1;
+  const pFromViPfFormula = isThree
+    ? "P = √3 × V × I × cosφ / 1000"
+    : "P = V × I × cosφ / 1000";
+  const iFromPvPfFormula = isThree
+    ? "I = P × 1000 / (√3 × V × cosφ)"
+    : "I = P × 1000 / (V × cosφ)";
+  const vFromPiPfFormula = isThree
+    ? "V = P × 1000 / (√3 × I × cosφ)"
+    : "V = P × 1000 / (I × cosφ)";
 
   return [
+    // Direct 3-variable P/V/I/cosφ identities, listed first so the solver
+    // (which breaks ties between equal-hop-count rules by array order)
+    // prefers a single-hop path (e.g. P,V,cosφ→I) over routing through S.
+    {
+      output: "P",
+      inputs: ["V", "I", "pf"],
+      compute: ({ V, I, pf }) => (k * V * I * pf) / 1000,
+      describe: (v, r) => ({
+        formula: pFromViPfFormula,
+        substituted: isThree
+          ? `P = √3 × ${v.V} × ${v.I} × ${v.pf} / 1000`
+          : `P = ${v.V} × ${v.I} × ${v.pf} / 1000`,
+        resultLine: `P ≈ ${r} kW`,
+      }),
+      source: AC_POWER_SOURCE,
+    },
+    {
+      output: "I",
+      inputs: ["P", "V", "pf"],
+      compute: ({ P, V, pf }) => (P * 1000) / (k * V * pf),
+      describe: (v, r) => ({
+        formula: iFromPvPfFormula,
+        substituted: isThree
+          ? `I = ${v.P} × 1000 / (√3 × ${v.V} × ${v.pf})`
+          : `I = ${v.P} × 1000 / (${v.V} × ${v.pf})`,
+        resultLine: `I ≈ ${r} A`,
+      }),
+      source: AC_POWER_SOURCE,
+    },
+    {
+      output: "V",
+      inputs: ["P", "I", "pf"],
+      compute: ({ P, I, pf }) => (P * 1000) / (k * I * pf),
+      describe: (v, r) => ({
+        formula: vFromPiPfFormula,
+        substituted: isThree
+          ? `V = ${v.P} × 1000 / (√3 × ${v.I} × ${v.pf})`
+          : `V = ${v.P} × 1000 / (${v.I} × ${v.pf})`,
+        resultLine: `V ≈ ${r} V`,
+      }),
+      source: AC_POWER_SOURCE,
+    },
     {
       output: "S",
       inputs: ["V", "I"],

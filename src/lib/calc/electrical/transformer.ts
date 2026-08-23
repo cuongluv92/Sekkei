@@ -180,12 +180,17 @@ export function computeLineVoltageRatio(
 /**
  * Vector group（結線記号・時計表示）の一般的な定義 — 実際の製品がどの
  * ベクトル群に該当するかは計算で求められるものではなく、必ず銘板・仕様書で
- * 確認する。ここでは各記号が表す一次・二次の位相差（clock notation:
- * 1時間=30°）を参考情報として示すのみで、数値計算の対象ではない。
+ * 確認する。ここでは各記号が表す一次・二次の「時計表示（clock number）」
+ * のみを参考情報として示す — clock numberが1時間=30°の位相差に対応する
+ * という換算自体は教科書レベルで広く一致しているが、その位相差の「符号」
+ * （進み/遅れ、+/-の付け方）は文献・規格により表現規則が異なりうるため、
+ * 本システムはsourceで符号の向きを確認できるまで符号付き角度を断定表示
+ * しない — clock number（0〜11の整数）のみを事実として示す。
  */
 export interface VectorGroupInfo {
   code: string;
-  phaseShiftDeg: number;
+  /** 時計表示（0〜11）。1クロック=30°に相当するが、符号（進み/遅れ）はここでは断定しない。 */
+  clockNumber: number;
   descriptionJa: string;
 }
 export const TRANSFORMER_VECTOR_GROUP_SOURCE: TechnicalSource = {
@@ -196,17 +201,19 @@ export const TRANSFORMER_VECTOR_GROUP_SOURCE: TechnicalSource = {
   sourceType: "standard",
   verified: false,
   verificationNote:
-    "clock numberが1時間=30°の位相差を表すという定義自体は電気工学の教科書レベルで広く一致しているが、" +
-    "本システムはJEC-2200:2014の原文でこの定義を直接確認していない。実機のベクトル群（Yy0/Dyn11等）は" +
-    "計算で求めず、必ず対象製品の銘板・試験成績書で確認すること。",
+    "clock numberが1時間=30°の位相差の大きさに対応するという換算自体は電気工学の教科書レベルで広く一致しているが、" +
+    "本システムはJEC-2200:2014の原文でこの定義（および位相差の符号の付け方）を直接確認していないため、" +
+    "符号付きの角度（+30°/−30°等）は断定表示せず、clock numberのみを参考情報として示す。" +
+    "実機のベクトル群（Yy0/Yd1/Dyn11等）は計算で求めず、必ず対象製品の銘板・試験成績書で確認すること。",
 };
 export const TRANSFORMER_VECTOR_GROUPS: VectorGroupInfo[] = [
-  { code: "Yy0", phaseShiftDeg: 0, descriptionJa: "一次Y・二次Y、位相差0°" },
-  { code: "Dd0", phaseShiftDeg: 0, descriptionJa: "一次Δ・二次Δ、位相差0°" },
-  { code: "Dyn1", phaseShiftDeg: 30, descriptionJa: "一次Δ・二次Y（中性点引出）、位相差+30°" },
-  { code: "Ynd1", phaseShiftDeg: 30, descriptionJa: "一次Y（中性点引出）・二次Δ、位相差+30°" },
-  { code: "Dyn11", phaseShiftDeg: -30, descriptionJa: "一次Δ・二次Y（中性点引出）、位相差-30°" },
-  { code: "Ynd11", phaseShiftDeg: -30, descriptionJa: "一次Y（中性点引出）・二次Δ、位相差-30°" },
+  { code: "Yy0", clockNumber: 0, descriptionJa: "一次Y・二次Y、時計表示0（1クロック=30°換算で0°相当）" },
+  { code: "Dd0", clockNumber: 0, descriptionJa: "一次Δ・二次Δ、時計表示0（1クロック=30°換算で0°相当）" },
+  { code: "Yd1", clockNumber: 1, descriptionJa: "一次Y・二次Δ、時計表示1（1クロック=30°換算で30°相当）" },
+  { code: "Dyn1", clockNumber: 1, descriptionJa: "一次Δ・二次Y（中性点引出）、時計表示1（1クロック=30°換算で30°相当）" },
+  { code: "Ynd1", clockNumber: 1, descriptionJa: "一次Y（中性点引出）・二次Δ、時計表示1（1クロック=30°換算で30°相当）" },
+  { code: "Dyn11", clockNumber: 11, descriptionJa: "一次Δ・二次Y（中性点引出）、時計表示11（1クロック=30°換算で330°相当）" },
+  { code: "Ynd11", clockNumber: 11, descriptionJa: "一次Y（中性点引出）・二次Δ、時計表示11（1クロック=30°換算で330°相当）" },
 ];
 
 /**

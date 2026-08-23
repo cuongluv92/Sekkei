@@ -173,6 +173,11 @@ export function solveCapacitorCorrection(
     requireRatio01(known.pfBefore, "改善前の力率cosφ1"),
     requireRatio01(known.pfAfter, "目標力率cosφ2"),
     requireNonNegative(known.qcKvar, "必要コンデンサ容量Qc"),
+    // This formula models adding capacitive kvar to IMPROVE (raise) power
+    // factor from pfBefore toward pfAfter — pfBefore must not exceed
+    // pfAfter, or Qc would come out negative (removing capacitance, not
+    // sizing one), which this basic formula does not represent.
+    requireLessOrEqual(known.pfBefore, known.pfAfter, "改善前の力率cosφ1", "目標力率cosφ2"),
   );
   if (invalid) return invalid;
   return solveByRules(capacitorCorrectionRules, known, target);

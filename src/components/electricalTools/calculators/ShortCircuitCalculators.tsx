@@ -174,13 +174,20 @@ export function ShortCircuitCalculators() {
             </>
           )}
           {subTool === "baseConversion" && (
-            <VariableSolverCard
-              variables={BASE_CONVERSION_VARS}
-              solve={solvePercentZBaseConversion}
-              onResult={setResult}
-              resetKey={subTool}
-              defaultTarget="percentZNew"
-            />
+            <>
+              <VariableSolverCard
+                variables={BASE_CONVERSION_VARS}
+                solve={solvePercentZBaseConversion}
+                onResult={setResult}
+                resetKey={subTool}
+                defaultTarget="percentZNew"
+              />
+              <p className="text-[11px] text-muted-2">
+                {locale === "vi"
+                  ? "Công thức này chỉ đổi cơ sở dung lượng (kVA) ở CÙNG một điện áp cơ sở. Nếu điện áp cơ sở cũng thay đổi, cần thêm hệ số (V_cũ/V_mới)² — công cụ này chưa hỗ trợ trường hợp đó."
+                  : "この換算式は同一の電圧ベース内での容量（kVA）ベース変更のみに対応しています。電圧ベースも同時に変わる場合は (V_old/V_new)² の項が別途必要であり、本ツールはその場合には対応していません。"}
+              </p>
+            </>
           )}
         </div>
       </div>

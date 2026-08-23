@@ -64,6 +64,87 @@ describe("solveVoltageDrop — 単相2線式 (R/X method, pf=1 means x term vani
   });
 });
 
+describe("solveVoltageDrop — leading (進み/capacitive) load flips the reactance sign", () => {
+  it("leading pf<1 subtracts the reactance term instead of adding it", () => {
+    const lagging = solveVoltageDrop(
+      { current: 20, rOhmPerKm: 0.5, xOhmPerKm: 0.3, pf: 0.8, lengthM: 50 },
+      "deltaV",
+      "single",
+      "lagging",
+    );
+    const leading = solveVoltageDrop(
+      { current: 20, rOhmPerKm: 0.5, xOhmPerKm: 0.3, pf: 0.8, lengthM: 50 },
+      "deltaV",
+      "single",
+      "leading",
+    );
+    expect(lagging.ok).toBe(true);
+    expect(leading.ok).toBe(true);
+    if (lagging.ok && leading.ok) {
+      const sinPhi = Math.sqrt(1 - 0.8 * 0.8);
+      const expectedLagging = (2 * 20 * (0.5 * 0.8 + 0.3 * sinPhi) * 50) / 1000;
+      const expectedLeading = (2 * 20 * (0.5 * 0.8 - 0.3 * sinPhi) * 50) / 1000;
+      expect(lagging.value).toBeCloseTo(expectedLagging, 5);
+      expect(leading.value).toBeCloseTo(expectedLeading, 5);
+      // A leading load's reactive term reduces the drop relative to the same lagging load.
+      expect(leading.value).toBeLessThan(lagging.value);
+    }
+  });
+
+  it("defaults to lagging when loadType is omitted (backward-compatible call sites)", () => {
+    const withDefault = solveVoltageDrop(
+      { current: 20, rOhmPerKm: 0.5, xOhmPerKm: 0.3, pf: 0.8, lengthM: 50 },
+      "deltaV",
+      "single",
+    );
+    const explicitLagging = solveVoltageDrop(
+      { current: 20, rOhmPerKm: 0.5, xOhmPerKm: 0.3, pf: 0.8, lengthM: 50 },
+      "deltaV",
+      "single",
+      "lagging",
+    );
+    expect(withDefault.ok).toBe(true);
+    expect(explicitLagging.ok).toBe(true);
+    if (withDefault.ok && explicitLagging.ok) {
+      expect(withDefault.value).toBeCloseTo(explicitLagging.value, 10);
+    }
+  });
+
+  it("leading load: reverse-solving r from ΔV correctly inverts the flipped sign", () => {
+    const forward = solveVoltageDrop(
+      { current: 20, rOhmPerKm: 0.5, xOhmPerKm: 0.3, pf: 0.8, lengthM: 50 },
+      "deltaV",
+      "single",
+      "leading",
+    );
+    expect(forward.ok).toBe(true);
+    if (!forward.ok) return;
+    const reverse = solveVoltageDrop(
+      { deltaV: forward.value, current: 20, xOhmPerKm: 0.3, pf: 0.8, lengthM: 50 },
+      "rOhmPerKm",
+      "single",
+      "leading",
+    );
+    expect(reverse.ok).toBe(true);
+    if (reverse.ok) expect(reverse.value).toBeCloseTo(0.5, 4);
+  });
+
+  it("three-phase leading load also flips the sign under √3", () => {
+    const leading = solveVoltageDrop(
+      { current: 30, rOhmPerKm: 0.4, xOhmPerKm: 0.25, pf: 0.9, lengthM: 80 },
+      "deltaV",
+      "three",
+      "leading",
+    );
+    expect(leading.ok).toBe(true);
+    if (leading.ok) {
+      const sinPhi = Math.sqrt(1 - 0.9 * 0.9);
+      const expected = (Math.sqrt(3) * 30 * (0.4 * 0.9 - 0.25 * sinPhi) * 80) / 1000;
+      expect(leading.value).toBeCloseTo(expected, 5);
+    }
+  });
+});
+
 describe("solveVoltageDrop — 三相3線式 uses √3", () => {
   it("forward matches the √3 formula exactly", () => {
     const r = solveVoltageDrop(

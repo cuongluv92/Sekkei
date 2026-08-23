@@ -154,3 +154,17 @@ describe("checkBreakingCapacity — pure arithmetic comparison against a user-su
     expect(checkBreakingCapacity(-100, 2500)).toBeNull();
   });
 });
+
+describe("solvePercentZBaseConversion — explicitly restricted to a fixed voltage base", () => {
+  it("source applicability states this only covers same-voltage-base conversion", () => {
+    const r = solvePercentZBaseConversion(
+      { percentZOld: 5, kvaOld: 100, kvaNew: 200 },
+      "percentZNew",
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.sources[0].applicability).toContain("同一電圧ベース");
+      expect(r.sources[0].reference).toContain("V_old / V_new");
+    }
+  });
+});

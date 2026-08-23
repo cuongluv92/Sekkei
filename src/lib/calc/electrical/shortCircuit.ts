@@ -24,8 +24,11 @@ const SIMPLIFIED_SHORT_CIRCUIT_SOURCE = engineeringFundamentalSource(
     "電動機の逆流電流を含む詳細検討には使用不可（簡易計算）",
 );
 const PERCENT_Z_BASE_CONVERSION_SOURCE = engineeringFundamentalSource(
-  "%Zのベース容量換算 %Z_new = %Z_old × (kVA_new / kVA_old)（線形性を利用したパーユニット法の基本式）",
-  "同一機器・同一系統内で基準容量（ベースkVA）を変更する場合",
+  "%Zのベース容量換算（電圧ベース一定の場合のみ） %Z_new = %Z_old × (kVA_new / kVA_old)" +
+    "（パーユニット法の基本式。電圧ベースも変える場合は別途 (V_old / V_new)² の項が必要— 本ツールは未対応）",
+  "同一電圧ベース内で基準容量（ベースkVA）のみを変更する場合に限る。" +
+    "一次・二次で電圧ベースが異なる換算（電圧ベースも同時に変える場合）は本ツールの対象外 — " +
+    "その場合は %Z_new = %Z_old × (kVA_new/kVA_old) × (V_old/V_new)² を用いること。",
 );
 
 export const SHORT_CIRCUIT_SIMPLIFIED_WARNING =

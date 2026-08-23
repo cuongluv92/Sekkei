@@ -109,3 +109,40 @@ describe("solveByRules — consistency checking (入力値が一致していま�
     if (r.ok) expect(r.value).toBe(50);
   });
 });
+
+describe("solveByRules — shortest-path step selection (no unnecessary detours)", () => {
+  type PVar = "P" | "V" | "I" | "pf" | "S" | "Q";
+  const src = engineeringFundamentalSource("test", "test");
+  // Mirrors the real ohmsLaw shape before the direct-formula fix: I is only
+  // reachable via S (S from P,pf; then I from S,V), and S also has an
+  // unrelated Q offshoot (S,P -> Q) that must never appear when solving I.
+  const pRules: Rule<PVar>[] = [
+    { output: "S", inputs: ["P", "pf"], compute: ({ P, pf }) => P / pf, describe: (v, r) => ({ formula: "S=P/pf", substituted: "", resultLine: `${r}` }), source: src },
+    { output: "I", inputs: ["S", "V"], compute: ({ S, V }) => S / V, describe: (v, r) => ({ formula: "I=S/V", substituted: "", resultLine: `${r}` }), source: src },
+    { output: "Q", inputs: ["S", "P"], compute: ({ S, P }) => Math.sqrt(Math.max(S * S - P * P, 0)), describe: (v, r) => ({ formula: "Q=sqrt(S^2-P^2)", substituted: "", resultLine: `${r}` }), source: src },
+  ];
+
+  it("never shows a step for a variable that isn't an ancestor of the target", () => {
+    const r = solveByRules(pRules, { P: 20, V: 200, pf: 0.8 }, "I");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.value).toBeCloseTo(0.125, 10); // S=25, I=25/200=0.125 in this toy unit-less rule set
+      const formulas = r.steps.map((s) => s.formula);
+      expect(formulas).toEqual(["S=P/pf", "I=S/V"]);
+      expect(formulas).not.toContain("Q=sqrt(S^2-P^2)");
+    }
+  });
+
+  it("prefers an earlier-declared direct rule over a longer equivalent path", () => {
+    // Add a direct P,V,pf -> I rule ahead of the S-detour rules.
+    const directFirst: Rule<PVar>[] = [
+      { output: "I", inputs: ["P", "V", "pf"], compute: ({ P, V, pf }) => P / (V * pf), describe: (v, r) => ({ formula: "I=P/(V*pf)", substituted: "", resultLine: `${r}` }), source: src },
+      ...pRules,
+    ];
+    const r = solveByRules(directFirst, { P: 20, V: 200, pf: 0.8 }, "I");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.steps.map((s) => s.formula)).toEqual(["I=P/(V*pf)"]);
+    }
+  });
+});

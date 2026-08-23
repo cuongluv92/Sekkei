@@ -6,7 +6,11 @@
  *  1. R/X法（`solveVoltageDrop`）— 電線こう長あたりの抵抗 r [Ω/km] と
  *     リアクタンス x [Ω/km] から、回路理論そのもの（キルヒホッフの電圧則）
  *     で電圧降下を求める。JIS/JEACの特定条項に依存しないため
- *     `engineeringFundamentalSource`（verified: true）。
+ *     `engineeringFundamentalSource`（verified: true）。負荷力率が遅れ
+ *     （誘導性）か進み（容量性）かでリアクタンス項の符号が反転する
+ *     （ΔV = k×I×(r·cosφ ± x·sinφ)×L/1000、遅れ=+、進み=−）ため、
+ *     呼び出し側は必ず `loadType` を明示的に選ばせ、遅れを暗黙のデフォルト
+ *     として決め打ちしない。
  *
  *  2. 簡易係数法（`solveSimplifiedVoltageDrop`）— 単相2線式 35.6、三相3線式
  *     30.8 という、内線規程（JEAC 8001）の簡易早見式としてしばしば引用
@@ -44,6 +48,8 @@ const VOLTAGE_RELATION_SOURCE = engineeringFundamentalSource(
 );
 
 export type VoltageDropMode = "dc" | "single" | "three";
+/** 遅れ（誘導性、+x·sinφ）か進み（容量性、−x·sinφ）かで電圧降下式の符号が変わる。DCでは無関係。 */
+export type VoltageDropLoadType = "lagging" | "leading";
 export type VoltageDropVar =
   | "current"
   | "rOhmPerKm"
@@ -59,21 +65,32 @@ function modeFactor(mode: VoltageDropMode): number {
   return mode === "three" ? Math.sqrt(3) : 2;
 }
 
-/** r·cosφ + x·sinφ — DC has no x/pf, so it degenerates to plain r. */
+/** 遅れ: +1（r·cosφ + x·sinφ）／進み: −1（r·cosφ − x·sinφ）。 */
+function reactiveSign(loadType: VoltageDropLoadType): 1 | -1 {
+  return loadType === "leading" ? -1 : 1;
+}
+
+/** r·cosφ ± x·sinφ（符号はloadType依存）— DC has no x/pf, so it degenerates to plain r. */
 function effectiveR(
   mode: VoltageDropMode,
   r: number,
   x: number,
   pf: number,
+  loadType: VoltageDropLoadType,
 ): number {
   if (mode === "dc") return r;
   const sinPhi = Math.sqrt(Math.max(1 - pf * pf, 0));
-  return r * pf + x * sinPhi;
+  return r * pf + reactiveSign(loadType) * x * sinPhi;
 }
 
-function physicalRules(mode: VoltageDropMode): Rule<VoltageDropVar>[] {
+function physicalRules(
+  mode: VoltageDropMode,
+  loadType: VoltageDropLoadType,
+): Rule<VoltageDropVar>[] {
   const k = modeFactor(mode);
   const isDc = mode === "dc";
+  const sign = reactiveSign(loadType);
+  const signSymbol = sign === 1 ? "+" : "−";
   const requiredForDeltaV: VoltageDropVar[] = isDc
     ? ["current", "rOhmPerKm", "lengthM"]
     : ["current", "rOhmPerKm", "xOhmPerKm", "pf", "lengthM"];
@@ -81,22 +98,24 @@ function physicalRules(mode: VoltageDropMode): Rule<VoltageDropVar>[] {
   const formulaSymbol = isDc
     ? "ΔV = 2 × I × r × L / 1000"
     : mode === "single"
-      ? "ΔV = 2 × I × (r·cosφ + x·sinφ) × L / 1000"
-      : "ΔV = √3 × I × (r·cosφ + x·sinφ) × L / 1000";
+      ? `ΔV = 2 × I × (r·cosφ ${signSymbol} x·sinφ) × L / 1000`
+      : `ΔV = √3 × I × (r·cosφ ${signSymbol} x·sinφ) × L / 1000`;
 
   return [
     {
       output: "deltaV",
       inputs: requiredForDeltaV,
       compute: (v) => {
-        const rEff = isDc ? v.rOhmPerKm : effectiveR(mode, v.rOhmPerKm, v.xOhmPerKm, v.pf);
+        const rEff = isDc
+          ? v.rOhmPerKm
+          : effectiveR(mode, v.rOhmPerKm, v.xOhmPerKm, v.pf, loadType);
         return (k * v.current * rEff * v.lengthM) / 1000;
       },
       describe: (v, r) => ({
         formula: formulaSymbol,
         substituted: isDc
           ? `ΔV = 2 × ${v.current} × ${v.rOhmPerKm} × ${v.lengthM} / 1000`
-          : `ΔV = ${mode === "three" ? "√3" : "2"} × ${v.current} × (${v.rOhmPerKm}×${v.pf} + ${v.xOhmPerKm}×√(1−${v.pf}²)) × ${v.lengthM} / 1000`,
+          : `ΔV = ${mode === "three" ? "√3" : "2"} × ${v.current} × (${v.rOhmPerKm}×${v.pf} ${signSymbol} ${v.xOhmPerKm}×√(1−${v.pf}²)) × ${v.lengthM} / 1000`,
         resultLine: `ΔV ≈ ${r} V`,
       }),
       source: VOLTAGE_DROP_RX_SOURCE,
@@ -107,7 +126,9 @@ function physicalRules(mode: VoltageDropMode): Rule<VoltageDropVar>[] {
         ? ["deltaV", "current", "rOhmPerKm"]
         : ["deltaV", "current", "rOhmPerKm", "xOhmPerKm", "pf"],
       compute: (v) => {
-        const rEff = isDc ? v.rOhmPerKm : effectiveR(mode, v.rOhmPerKm, v.xOhmPerKm, v.pf);
+        const rEff = isDc
+          ? v.rOhmPerKm
+          : effectiveR(mode, v.rOhmPerKm, v.xOhmPerKm, v.pf, loadType);
         return (v.deltaV * 1000) / (k * v.current * rEff);
       },
       describe: (v, r) => ({
@@ -126,10 +147,10 @@ function physicalRules(mode: VoltageDropMode): Rule<VoltageDropVar>[] {
         if (isDc) return (v.deltaV * 1000) / (k * v.current * v.lengthM);
         const sinPhi = Math.sqrt(Math.max(1 - v.pf * v.pf, 0));
         const rEffNeeded = (v.deltaV * 1000) / (k * v.current * v.lengthM);
-        return (rEffNeeded - v.xOhmPerKm * sinPhi) / v.pf;
+        return (rEffNeeded - sign * v.xOhmPerKm * sinPhi) / v.pf;
       },
       describe: (v, r) => ({
-        formula: "r = (必要なr_eff − x·sinφ) / cosφ",
+        formula: `r = (必要なr_eff ${signSymbol === "+" ? "−" : "+"} x·sinφ) / cosφ`,
         substituted: `r ≈ ${r} Ω/km（ΔV=${v.deltaV}Vを満たす必要値）`,
         resultLine: `r ≈ ${r} Ω/km`,
       }),
@@ -141,7 +162,9 @@ function physicalRules(mode: VoltageDropMode): Rule<VoltageDropVar>[] {
         ? ["deltaV", "rOhmPerKm", "lengthM"]
         : ["deltaV", "rOhmPerKm", "xOhmPerKm", "pf", "lengthM"],
       compute: (v) => {
-        const rEff = isDc ? v.rOhmPerKm : effectiveR(mode, v.rOhmPerKm, v.xOhmPerKm, v.pf);
+        const rEff = isDc
+          ? v.rOhmPerKm
+          : effectiveR(mode, v.rOhmPerKm, v.xOhmPerKm, v.pf, loadType);
         return (v.deltaV * 1000) / (k * rEff * v.lengthM);
       },
       describe: (v, r) => ({
@@ -216,6 +239,7 @@ export function solveVoltageDrop(
   known: KnownValues<VoltageDropVar>,
   target: VoltageDropVar,
   mode: VoltageDropMode,
+  loadType: VoltageDropLoadType = "lagging",
 ): SolveResult {
   const invalid = firstValidationError(
     requirePositive(known.current, "電流"),
@@ -231,7 +255,7 @@ export function solveVoltageDrop(
     requireLessOrEqual(known.endVoltage, known.sourceVoltage, "末端電圧", "始端電圧"),
   );
   if (invalid) return invalid;
-  const rules = [...physicalRules(mode), ...RELATION_RULES];
+  const rules = [...physicalRules(mode, loadType), ...RELATION_RULES];
   return solveByRules(rules, known, target);
 }
 

@@ -117,6 +117,12 @@ describe("solveMotorPower", () => {
     expect(r.ok).toBe(false);
   });
 
+  it("pf=1 and η=1 (ideal case): outputKw exactly equals V×I/1000 with no losses", () => {
+    const r = solveMotorPower({ voltage: 200, current: 100, pf: 1, eta: 1 }, "outputKw", "single");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value).toBeCloseTo((200 * 100) / 1000, 6); // 20 kW
+  });
+
   it("rejects pf/eta outside (0,1]", () => {
     expect(solveMotorPower({ voltage: 200, current: 10, pf: 1.1 }, "inputKw", "three").ok).toBe(false);
     expect(solveMotorPower({ inputKw: 10, eta: 0 }, "outputKw", "three").ok).toBe(false);

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   computeLineVoltageRatio,
   solveTransformer,
+  TRANSFORMER_VECTOR_GROUP_SOURCE,
+  TRANSFORMER_VECTOR_GROUPS,
 } from "./transformer";
 
 describe("solveTransformer — 単相", () => {
@@ -95,5 +97,40 @@ describe("computeLineVoltageRatio — explicitly not called 巻数比", () => {
   it("returns null for invalid input rather than Infinity/NaN", () => {
     expect(computeLineVoltageRatio(6600, 0)).toBeNull();
     expect(computeLineVoltageRatio(NaN, 200)).toBeNull();
+  });
+});
+
+describe("TRANSFORMER_VECTOR_GROUPS — clock number only, no unverified signed angle", () => {
+  it("includes the required audit set: Yy0, Yd1, Dd0, Dyn11", () => {
+    const codes = TRANSFORMER_VECTOR_GROUPS.map((g) => g.code);
+    expect(codes).toContain("Yy0");
+    expect(codes).toContain("Yd1");
+    expect(codes).toContain("Dd0");
+    expect(codes).toContain("Dyn11");
+  });
+
+  it("every entry carries an integer clock number in [0, 11], never a signed degree field", () => {
+    for (const g of TRANSFORMER_VECTOR_GROUPS) {
+      expect(Number.isInteger(g.clockNumber)).toBe(true);
+      expect(g.clockNumber).toBeGreaterThanOrEqual(0);
+      expect(g.clockNumber).toBeLessThanOrEqual(11);
+      expect(g).not.toHaveProperty("phaseShiftDeg");
+    }
+  });
+
+  it("Yy0/Dd0 are clock 0, Yd1/Dyn1/Ynd1 are clock 1, Dyn11/Ynd11 are clock 11", () => {
+    const byCode = Object.fromEntries(TRANSFORMER_VECTOR_GROUPS.map((g) => [g.code, g.clockNumber]));
+    expect(byCode["Yy0"]).toBe(0);
+    expect(byCode["Dd0"]).toBe(0);
+    expect(byCode["Yd1"]).toBe(1);
+    expect(byCode["Dyn1"]).toBe(1);
+    expect(byCode["Ynd1"]).toBe(1);
+    expect(byCode["Dyn11"]).toBe(11);
+    expect(byCode["Ynd11"]).toBe(11);
+  });
+
+  it("source stays unverified and its note explains why signed angles are withheld", () => {
+    expect(TRANSFORMER_VECTOR_GROUP_SOURCE.verified).toBe(false);
+    expect(TRANSFORMER_VECTOR_GROUP_SOURCE.verificationNote).toContain("符号");
   });
 });

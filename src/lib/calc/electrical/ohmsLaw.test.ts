@@ -96,12 +96,46 @@ describe("solveAcPower — single/three-phase power triangle", () => {
     if (r2.ok) expect(r2.value).toBeCloseTo(0);
   });
 
-  it("multi-hop chain: V,I,pf → S → P (three-phase)", () => {
+  it("V,I,pf → P uses the direct 3-variable formula, not a detour through S", () => {
     const r = solveAcPower({ V: 200, I: 30, pf: 0.85 }, "P", "three");
     expect(r.ok).toBe(true);
     if (r.ok) {
       const expectedS = (Math.sqrt(3) * 200 * 30) / 1000;
       expect(r.value).toBeCloseTo(expectedS * 0.85, 3);
+      expect(r.steps).toHaveLength(1);
+      expect(r.steps[0].formula).toContain("P = √3");
+    }
+  });
+
+  it("golden case (1φ): P=20kW, V=200V, cosφ=0.8 → I=125A in a single direct step", () => {
+    const r = solveAcPower({ P: 20, V: 200, pf: 0.8 }, "I", "single");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.value).toBeCloseTo(125, 6); // I = 20*1000/(200*0.8) = 125
+      expect(r.steps).toHaveLength(1);
+      expect(r.steps[0].formula).toBe("I = P × 1000 / (V × cosφ)");
+      // Must never show an unrelated Q/S detour for this direct query.
+      expect(r.steps.some((s) => s.formula.includes("Q"))).toBe(false);
+    }
+  });
+
+  it("golden case (3φ): P=20kW, V=200V, cosφ=0.8 → I via the √3 direct formula", () => {
+    const r = solveAcPower({ P: 20, V: 200, pf: 0.8 }, "I", "three");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const expected = (20 * 1000) / (Math.sqrt(3) * 200 * 0.8);
+      expect(r.value).toBeCloseTo(expected, 6);
+      expect(r.steps).toHaveLength(1);
+      expect(r.steps[0].formula).toBe("I = P × 1000 / (√3 × V × cosφ)");
+    }
+  });
+
+  it("V from P,I,pf uses the direct formula (single step)", () => {
+    const r = solveAcPower({ P: 20, I: 125, pf: 0.8 }, "V", "single");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.value).toBeCloseTo(200, 3);
+      expect(r.steps).toHaveLength(1);
     }
   });
 
@@ -171,6 +205,12 @@ describe("solveEfficiency", () => {
 
   it("reverse: input from output,η", () => {
     const r = solveEfficiency({ outputKw: 9, eta: 0.9 }, "inputKw");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value).toBeCloseTo(10);
+  });
+
+  it("η=1 (ideal, lossless) is a valid boundary — output equals input exactly", () => {
+    const r = solveEfficiency({ inputKw: 10, eta: 1 }, "outputKw");
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.value).toBeCloseTo(10);
   });

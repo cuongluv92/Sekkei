@@ -112,4 +112,13 @@ describe("solveCapacitorCorrection", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
   });
+
+  it("rejects pfBefore > pfAfter — this formula only models improving (raising) power factor, never producing a negative Qc", () => {
+    const r = solveCapacitorCorrection(
+      { activePowerKw: 100, pfBefore: 0.95, pfAfter: 0.8 },
+      "qcKvar",
+    );
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
+  });
 });
