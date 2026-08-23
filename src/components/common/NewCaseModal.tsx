@@ -22,19 +22,33 @@ const currentYear = new Date().getFullYear();
 interface NewCaseModalProps {
   onClose: () => void;
   onCreated: (createdCase: DesignCase) => void;
+  /**
+   * True only for 設計依頼's own 新規案件 flow (設計管理) — shows the live
+   * auto-numbering preview and lets the server derive 図面番号 from
+   * year+sequence. Every other entry point (the shared CaseSelector used
+   * from 部品製作, 計算 modules, ...) defaults to false: 図面番号 becomes a
+   * plain required text field the user fills in themselves, since only
+   * 設計依頼 is allowed to auto-assign a new number (spec: e.g. 26-003
+   * existing must never silently offer 26-004 outside that flow).
+   */
+  autoNumberDrawingNumber?: boolean;
 }
 
 /**
  * ＋新規案件 — the one shared 案件 creation flow used everywhere a 案件 can be
  * created (the shared CaseSelector, 設計管理). 案件 is the root record for the
- * whole app, so creating one here needs no Project to attach it to — same
- * create logic/fields as before (incl. live 図面番号 auto-numbering preview).
+ * whole app, so creating one here needs no Project to attach it to.
  */
-export function NewCaseModal({ onClose, onCreated }: NewCaseModalProps) {
+export function NewCaseModal({
+  onClose,
+  onCreated,
+  autoNumberDrawingNumber = false,
+}: NewCaseModalProps) {
   const { t } = useTranslation();
 
   const [year, setYear] = useState(currentYear);
   const [drawingNumberPreview, setDrawingNumberPreview] = useState("");
+  const [drawingNumberManual, setDrawingNumberManual] = useState("");
   const [managementNumber, setManagementNumber] = useState("");
   const [constructionNumber, setConstructionNumber] = useState("");
   const [orderer, setOrderer] = useState("");
@@ -44,13 +58,18 @@ export function NewCaseModal({ onClose, onCreated }: NewCaseModalProps) {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    if (!autoNumberDrawingNumber) return;
     designCaseService
       .previewNextDrawingNumber(year)
       .then(setDrawingNumberPreview);
-  }, [year]);
+  }, [year, autoNumberDrawingNumber]);
+
+  const canSubmit =
+    projectName.trim() !== "" &&
+    (autoNumberDrawingNumber || drawingNumberManual.trim() !== "");
 
   async function handleSubmit() {
-    if (!projectName.trim()) return;
+    if (!canSubmit) return;
     setSubmitting(true);
     const created = await designCaseService.create({
       year,
@@ -61,6 +80,9 @@ export function NewCaseModal({ onClose, onCreated }: NewCaseModalProps) {
       customerContact,
       projectName,
       indexCategory,
+      drawingNumber: autoNumberDrawingNumber
+        ? undefined
+        : drawingNumberManual.trim(),
     });
     setSubmitting(false);
     onCreated(created);
@@ -84,12 +106,28 @@ export function NewCaseModal({ onClose, onCreated }: NewCaseModalProps) {
             />
           </div>
           <div>
-            <label className="field-label">
-              {t("design.newCaseForm.drawingNumberPreview")}
-            </label>
-            <div className="field-input flex items-center bg-surface-2 font-mono text-muted">
-              {drawingNumberPreview || "—"}
-            </div>
+            {autoNumberDrawingNumber ? (
+              <>
+                <label className="field-label">
+                  {t("design.newCaseForm.drawingNumberPreview")}
+                </label>
+                <div className="field-input flex items-center bg-surface-2 font-mono text-muted">
+                  {drawingNumberPreview || "—"}
+                </div>
+              </>
+            ) : (
+              <>
+                <label className="field-label">
+                  {t("design.newCaseForm.drawingNumberManualLabel")}
+                </label>
+                <input
+                  value={drawingNumberManual}
+                  onChange={(e) => setDrawingNumberManual(e.target.value)}
+                  placeholder="26-004"
+                  className="field-input font-mono"
+                />
+              </>
+            )}
           </div>
           <div>
             <label className="field-label">
@@ -130,10 +168,11 @@ export function NewCaseModal({ onClose, onCreated }: NewCaseModalProps) {
             />
           </div>
           <div className="sm:col-span-2 lg:col-span-3">
-            <label className="field-label">
+            <label htmlFor="new-case-project-name" className="field-label">
               {t("design.fields.projectName")}
             </label>
             <input
+              id="new-case-project-name"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
               className="field-input"
@@ -167,7 +206,7 @@ export function NewCaseModal({ onClose, onCreated }: NewCaseModalProps) {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!projectName.trim() || submitting}
+            disabled={!canSubmit || submitting}
             className="btn-primary"
           >
             {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}

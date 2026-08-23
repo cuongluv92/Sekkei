@@ -87,6 +87,22 @@ vi.mock("@/lib/services/design", () => ({
   },
 }));
 
+// NewCaseModal itself (and its own SpecCombobox/masterListService
+// dependencies) isn't the point of these tests — only whether CaseSelector
+// renders "＋新規案件" and which `autoNumberDrawingNumber` it forwards. See
+// NewCaseModal.test.tsx for the auto-vs-manual 図面番号 behavior itself.
+// Captured via an object wrapper (not a bare reassigned `let`) so TS
+// doesn't narrow it to `null` from control-flow analysis of a same-scope
+// assignment that actually happens later, inside the mocked component.
+const newCaseModalCall: { props: { autoNumberDrawingNumber?: boolean } | null } =
+  { props: null };
+vi.mock("@/components/common/NewCaseModal", () => ({
+  NewCaseModal: (props: { autoNumberDrawingNumber?: boolean }) => {
+    newCaseModalCall.props = props;
+    return <div data-testid="new-case-modal" />;
+  },
+}));
+
 interface FakeActiveCaseValue {
   caseId: string;
   setCaseId: (id: string) => void;
@@ -133,11 +149,13 @@ function labelMatcher(label: string): RegExp {
   return new RegExp(`^${escaped}$`);
 }
 
-function Harness({ allowCreate }: { allowCreate?: boolean } = {}) {
+function Harness({
+  autoNumberDrawingNumber,
+}: { autoNumberDrawingNumber?: boolean } = {}) {
   return (
     <LanguageProvider>
       <FakeActiveCaseProvider>
-        <CaseSelector allowCreate={allowCreate} />
+        <CaseSelector autoNumberDrawingNumber={autoNumberDrawingNumber} />
       </FakeActiveCaseProvider>
     </LanguageProvider>
   );
@@ -233,24 +251,32 @@ describe("CaseSelector — 26-0001/26-0002/26-0003 each independently findable (
   });
 });
 
-describe("CaseSelector — allowCreate gates ＋新規案件 (only 設計依頼/設計管理 mints a new 図面番号)", () => {
-  it("hides ＋新規案件 by default and shows the create-elsewhere hint instead", async () => {
+describe("CaseSelector — ＋新規案件 is always available; only 図面番号 auto-numbering is 設計依頼-only", () => {
+  it("shows ＋新規案件 by default and does not auto-number 図面番号 (autoNumberDrawingNumber defaults to false)", async () => {
+    const user = userEvent.setup();
+    newCaseModalCall.props = null;
     render(<Harness />);
-
-    await screen.findByPlaceholderText(/図面番号/);
-    expect(screen.queryByRole("button", { name: /新規案件/ })).toBeNull();
-    expect(
-      screen.getByText("新しい案件（図面番号）は設計管理からのみ作成できます。"),
-    ).toBeInTheDocument();
-  });
-
-  it("shows ＋新規案件 when allowCreate is passed (設計管理's own CaseSelector)", async () => {
-    render(<Harness allowCreate />);
 
     const button = await screen.findByRole("button", { name: /新規案件/ });
     expect(button).toBeInTheDocument();
-    expect(
-      screen.queryByText("新しい案件（図面番号）は設計管理からのみ作成できます。"),
-    ).toBeNull();
+
+    await user.click(button);
+    expect(await screen.findByTestId("new-case-modal")).toBeInTheDocument();
+    const props1 = newCaseModalCall.props as { autoNumberDrawingNumber?: boolean } | null;
+    expect(props1?.autoNumberDrawingNumber).toBeFalsy();
+  });
+
+  it("still shows ＋新規案件 and enables 図面番号 auto-numbering when autoNumberDrawingNumber is passed (設計管理's own CaseSelector)", async () => {
+    const user = userEvent.setup();
+    newCaseModalCall.props = null;
+    render(<Harness autoNumberDrawingNumber />);
+
+    const button = await screen.findByRole("button", { name: /新規案件/ });
+    expect(button).toBeInTheDocument();
+
+    await user.click(button);
+    expect(await screen.findByTestId("new-case-modal")).toBeInTheDocument();
+    const props2 = newCaseModalCall.props as { autoNumberDrawingNumber?: boolean } | null;
+    expect(props2?.autoNumberDrawingNumber).toBe(true);
   });
 });

@@ -135,7 +135,6 @@ const vi: Dictionary = {
     searchPlaceholder: "Tìm theo 図面番号・管理番号・工事番号・件名・盤名称",
     noCases: "Chưa có 案件 nào",
     newCaseButton: "＋ 案件 mới",
-    createElsewhereHint: "案件（図面番号）mới chỉ có thể tạo từ 設計管理.",
     newCaseModalTitle: "案件 mới",
     editCaseModalTitle: "Sửa 案件",
     savedCasesTitle: "案件 đã lưu",
@@ -311,7 +310,7 @@ const vi: Dictionary = {
       "Tự động chọn hoặc kiểm tra thủ công kích thước thanh cái đồng (busbar).",
     modeAuto: "自動選定",
     modeManual: "手動検証",
-    ratedCurrentLabel: "定格電流 I",
+    ratedCurrentLabel: "定格電流",
     requiredAreaLabel: "必要断面積",
     densityLabel: "電流密度",
     recommendedLabel: "推奨銅帯",
@@ -365,7 +364,7 @@ const vi: Dictionary = {
     arrangementLabel: "配置",
     highCurrentCandidateDisclaimer:
       "許容電流・余裕率は未検証のため表示していません。採用する場合は設計者ご自身の技術判断・原資料確認のうえで決定してください。",
-    reverseCalcTitle: "断面積 → 電流（逆算）",
+    reverseCalcTitle: "断面積 → 電流",
     reverseCalcHint:
       "実際の銅帯の断面積（mm²）を直接入力すると、JIS C 8480 簡易選定表から目安上限電流を逆算します（定格電流の入力は不要です）。",
     reverseCalcFormula: "断面積 × 電流密度 = 目安上限電流",
@@ -579,6 +578,7 @@ const vi: Dictionary = {
     newCaseForm: {
       title: "Tạo案件 mới",
       drawingNumberPreview: "図面番号 (tự động cấp số)",
+      drawingNumberManualLabel: "図面番号（手入力）",
       submitButton: "Tạo案件",
     },
     fields: {

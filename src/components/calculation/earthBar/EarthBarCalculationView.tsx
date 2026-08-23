@@ -4,6 +4,7 @@ import { Loader2, Save } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
+import { formatJaTime } from "@/lib/utils/dateFormat";
 import { earthBarSizeService, calculationRecordService } from "@/lib/services";
 import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -278,7 +279,7 @@ export function EarthBarCalculationView({
                 {savedAt && (
                   <span className="text-[11px] text-muted-2">
                     {t("earthBarCalc.saved")}{" "}
-                    {new Date(savedAt).toLocaleTimeString()}
+                    {formatJaTime(savedAt)}
                   </span>
                 )}
                 <button

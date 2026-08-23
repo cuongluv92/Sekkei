@@ -164,6 +164,14 @@ export interface CreateCaseInput {
   customerContact: string;
   projectName: string;
   indexCategory: IndexCategory;
+  /**
+   * Explicit 図面番号, typed by hand. Only 設計依頼 (設計管理) auto-suggests
+   * the next number — every other 案件-creation entry point (部品製作, 計算
+   * modules) requires the user to type this themselves; leave undefined
+   * only for the 設計依頼 auto-numbered flow, where the server derives it
+   * from year+sequence instead.
+   */
+  drawingNumber?: string;
 }
 
 export const designCaseService = {
@@ -278,6 +286,9 @@ export const designCaseService = {
    * sequence_no is computed and inserted inside one transaction, serialized
    * per-year with an advisory lock, so two concurrent creates for the same
    * year can never collide — the mock's known limitation, now closed.
+   * `input.drawingNumber`, when supplied, is used verbatim as the stored
+   * 図面番号 instead of the server's auto-derived year+sequence string (see
+   * `CreateCaseInput.drawingNumber` — only 設計依頼's own flow omits it).
    */
   async create(input: CreateCaseInput): Promise<DesignCase> {
     const { data, error } = await requireSupabase().rpc("create_design_case", {
@@ -289,6 +300,7 @@ export const designCaseService = {
       p_customer_contact: input.customerContact,
       p_project_name: input.projectName,
       p_index_category: input.indexCategory,
+      p_drawing_number: input.drawingNumber ?? null,
     });
     if (error) throw error;
     return caseFromRow(data as DesignCaseRow);

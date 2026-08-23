@@ -33,16 +33,18 @@ import type { DesignCase } from "@/lib/types/design";
  * current screen has unsaved local edits (`dirty`) prompts
  * 未保存の変更があります。案件を変更しますか？ with 保存して変更/保存せず変更/キャンセル.
  *
- * `allowCreate` gates "＋新規案件" — a brand-new 案件 mints a brand-new
- * 図面番号, and only 設計依頼 (設計管理) is allowed to do that. Every other
- * call site (部品製作, 計算 modules, ...) defaults to `false`: those screens
- * can only pick an existing 案件, never create one — so 設計管理 is the one
- * place that needs to opt in explicitly.
+ * "＋新規案件" is available from every call site — 案件 creation itself is
+ * never restricted. What IS restricted is 図面番号 auto-numbering: only
+ * 設計依頼 (設計管理) passes `autoNumberDrawingNumber`, letting
+ * `NewCaseModal` auto-suggest the next 図面番号. Every other call site
+ * (部品製作, 計算 modules, ...) leaves it `false`, so the modal instead asks
+ * the user to type 図面番号 by hand — creating a 案件 is still possible
+ * anywhere, only the auto-suggested number is 設計依頼-only.
  */
 export function CaseSelector({
-  allowCreate = false,
+  autoNumberDrawingNumber = false,
 }: {
-  allowCreate?: boolean;
+  autoNumberDrawingNumber?: boolean;
 } = {}) {
   const { t } = useTranslation();
   const { caseId, setCaseId, dirty, runSaveHandler } = useActiveCase();
@@ -266,19 +268,13 @@ export function CaseSelector({
             )}
           </div>
           <div className="flex items-center justify-between gap-2">
-            {allowCreate ? (
-              <button
-                onClick={() => setShowNewCaseModal(true)}
-                className="btn-ghost"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                {t("caseSelector.newCaseButton")}
-              </button>
-            ) : (
-              <span className="text-[11.5px] text-muted-2">
-                {t("caseSelector.createElsewhereHint")}
-              </span>
-            )}
+            <button
+              onClick={() => setShowNewCaseModal(true)}
+              className="btn-ghost"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {t("caseSelector.newCaseButton")}
+            </button>
             {caseId && (
               <button onClick={() => setPicking(false)} className="btn-ghost">
                 {t("common.cancel")}
@@ -292,6 +288,7 @@ export function CaseSelector({
         <NewCaseModal
           onClose={() => setShowNewCaseModal(false)}
           onCreated={handleCreated}
+          autoNumberDrawingNumber={autoNumberDrawingNumber}
         />
       )}
 

@@ -19,6 +19,8 @@ function roundTo(n: number, decimals: number): number {
  * candidate list). Inverts the same table (`maxCurrentForArea`), never a
  * new/invented value — same `verified: false` source as the forward
  * direction. A quick reference tool, not part of the persisted calculation.
+ * Rendered beside the 定格電流 I input in both 自動選定/手動検証 modes (not
+ * mode-gated) so it's always reachable next to the field it complements.
  */
 export function BusbarReverseCalcPanel() {
   const { t } = useTranslation();

@@ -4,6 +4,7 @@ import { Loader2, Save } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
+import { formatJaTime } from "@/lib/utils/dateFormat";
 import { busbarSizeService, calculationRecordService } from "@/lib/services";
 import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -330,68 +331,76 @@ export function BusbarCalculationView({
         </div>
       ) : (
         <div className="calc-layout">
-          <div className="calc-layout-input panel">
-            <div className="panel-header flex items-center justify-between gap-2">
-              <span className="panel-title">
-                {t("busbarCalc.ratedCurrentLabel")}
-              </span>
-              <div className="flex items-center gap-2">
-                {savedAt && (
-                  <span className="text-[11px] text-muted-2">
-                    {t("busbarCalc.saved")}{" "}
-                    {new Date(savedAt).toLocaleTimeString()}
-                  </span>
-                )}
-                <button
-                  onClick={() => persist(adopted)}
-                  disabled={saving}
-                  className="btn-secondary !py-1 !text-[12px]"
-                >
-                  {saving ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Save className="h-3.5 w-3.5" />
+          <div className="calc-layout-input flex flex-col gap-3 lg:flex-row lg:items-start">
+            <div className="panel flex-1">
+              <div className="panel-header flex items-center justify-between gap-2">
+                <span className="panel-title">
+                  {t("busbarCalc.ratedCurrentLabel")}
+                </span>
+                <div className="flex items-center gap-2">
+                  {savedAt && (
+                    <span className="text-[11px] text-muted-2">
+                      {t("busbarCalc.saved")}{" "}
+                      {formatJaTime(savedAt)}
+                    </span>
                   )}
-                  {t("common.save")}
-                </button>
+                  <button
+                    onClick={() => persist(adopted)}
+                    disabled={saving}
+                    className="btn-secondary !py-1 !text-[12px]"
+                  >
+                    {saving ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Save className="h-3.5 w-3.5" />
+                    )}
+                    {t("common.save")}
+                  </button>
+                </div>
+              </div>
+              <div className="panel-body flex flex-col gap-3">
+                <div className="max-w-[200px]">
+                  <input
+                    type="number"
+                    step="1"
+                    value={ratedCurrentRaw}
+                    onChange={(e) => {
+                      setRatedCurrentRaw(e.target.value);
+                      markDirty();
+                    }}
+                    placeholder="180"
+                    className={
+                      ratedCurrentRaw.trim() !== "" && ratedCurrentA === null
+                        ? "field-input !border-danger"
+                        : "field-input"
+                    }
+                  />
+                  <span className="mt-1 block text-[11px] text-muted-2">
+                    A
+                  </span>
+                </div>
+
+                {outOfRange && (
+                  <div className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5">
+                    <p className="text-[13px] font-bold text-warning">
+                      {t("busbarCalc.outOfRangeTitle")}
+                    </p>
+                    <p className="mt-1 text-[12px] text-muted">
+                      {t("busbarCalc.outOfRangeDescription")}
+                    </p>
+                    <p className="mt-2 text-[12px] font-semibold text-foreground">
+                      {t("busbarCalc.highCurrentModeTitle")}
+                    </p>
+                    <p className="mt-1 text-[11.5px] text-muted">
+                      {t("busbarCalc.highCurrentNotAvailable")}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="panel-body flex flex-col gap-3">
-              <div className="max-w-[200px]">
-                <input
-                  type="number"
-                  step="1"
-                  value={ratedCurrentRaw}
-                  onChange={(e) => {
-                    setRatedCurrentRaw(e.target.value);
-                    markDirty();
-                  }}
-                  placeholder="180"
-                  className={
-                    ratedCurrentRaw.trim() !== "" && ratedCurrentA === null
-                      ? "field-input !border-danger"
-                      : "field-input"
-                  }
-                />
-                <span className="mt-1 block text-[11px] text-muted-2">A</span>
-              </div>
 
-              {outOfRange && (
-                <div className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5">
-                  <p className="text-[13px] font-bold text-warning">
-                    {t("busbarCalc.outOfRangeTitle")}
-                  </p>
-                  <p className="mt-1 text-[12px] text-muted">
-                    {t("busbarCalc.outOfRangeDescription")}
-                  </p>
-                  <p className="mt-2 text-[12px] font-semibold text-foreground">
-                    {t("busbarCalc.highCurrentModeTitle")}
-                  </p>
-                  <p className="mt-1 text-[11.5px] text-muted">
-                    {t("busbarCalc.highCurrentNotAvailable")}
-                  </p>
-                </div>
-              )}
+            <div className="flex-1">
+              <BusbarReverseCalcPanel />
             </div>
           </div>
 
@@ -568,8 +577,6 @@ export function BusbarCalculationView({
                 </div>
               </div>
             )}
-
-            {mode === "manual" && <BusbarReverseCalcPanel />}
           </div>
         </div>
       )}

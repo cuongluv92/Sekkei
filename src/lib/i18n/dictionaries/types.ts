@@ -133,7 +133,6 @@ export interface Dictionary {
     searchPlaceholder: string;
     noCases: string;
     newCaseButton: string;
-    createElsewhereHint: string;
     newCaseModalTitle: string;
     editCaseModalTitle: string;
     savedCasesTitle: string;
@@ -522,6 +521,7 @@ export interface Dictionary {
     newCaseForm: {
       title: string;
       drawingNumberPreview: string;
+      drawingNumberManualLabel: string;
       submitButton: string;
     };
     fields: {

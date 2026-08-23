@@ -4,6 +4,7 @@ import { Loader2, Save } from "lucide-react";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
+import { formatJaTime } from "@/lib/utils/dateFormat";
 import {
   calculationRecordService,
   calculationService,
@@ -200,7 +201,7 @@ function CalculationPageViewInner({
                 {savedAt && (
                   <span className="text-[11px] text-muted-2">
                     {t("weightCalc.basic.saved")}{" "}
-                    {new Date(savedAt).toLocaleTimeString()}
+                    {formatJaTime(savedAt)}
                   </span>
                 )}
               </div>

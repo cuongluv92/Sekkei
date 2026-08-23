@@ -3,6 +3,7 @@
 import { Image as ImageIcon, Loader2, Save, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
+import { formatJaTime } from "@/lib/utils/dateFormat";
 import {
   calculationRecordService,
   weightShapeImageService,
@@ -284,7 +285,7 @@ export function WeightShapeCalcSection({
           {savedAt && (
             <span className="text-[11px] text-muted-2">
               {t("weightCalc.basic.saved")}{" "}
-              {new Date(savedAt).toLocaleTimeString()}
+              {formatJaTime(savedAt)}
             </span>
           )}
           <button
