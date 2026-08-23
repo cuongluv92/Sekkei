@@ -3,13 +3,24 @@
  * すべて交流回路理論の基本定義（engineering_fundamental）。
  *
  * 直列合成はR成分・X成分をそれぞれ単純加算するだけの厳密解（複素数の
- * 実部・虚部が独立に加算されるため）。並列合成は複素インピーダンスの
- * 一般式（1/Z = 1/Z1 + 1/Z2）だと複素数演算が必要になり検証が難しくなる
- * ため、本モジュールでは「純抵抗どうしの並列」という、式が明確でテスト
- * できる場合のみを実装する（それ以外の並列合成は対象外）。
+ * 実部・虚部が独立に加算されるため）。`solveParallelResistance`は「純抵抗
+ * どうしの並列」という、式が明確でテストできる場合のみを実装する。
+ *
+ * `solveParallelComplexImpedance`は、R・X成分を両方持つ2つの複素
+ * インピーダンス Z1=R1+jX1, Z2=R2+jX2 の並列合成 Ztotal=Z1×Z2/(Z1+Z2) を
+ * 複素数演算（実部・虚部を明示的に計算）で厳密に求める。逆算（Rtotal・
+ * Xtotal・ZtotalからR1/X1/R2/X2を求める）は一意に定まらない不定問題
+ * （4未知数に対し実質2つの独立した式しかない）のため、意図的に前方向
+ * （R1,X1,R2,X2 → Rtotal,Xtotal,Ztotal）のみを提供する。
  */
 import { engineeringFundamentalSource } from "@/lib/calc/technicalSource";
 import { solveByRules, type Rule } from "./ruleSolver";
+import {
+  firstValidationError,
+  requireLessOrEqual,
+  requireNonNegative,
+  requirePositive,
+} from "./validation";
 import type { KnownValues, SolveResult } from "./types";
 
 const IMPEDANCE_SOURCE = engineeringFundamentalSource(
@@ -35,6 +46,10 @@ const SERIES_SOURCE = engineeringFundamentalSource(
 const PARALLEL_RESISTANCE_SOURCE = engineeringFundamentalSource(
   "純抵抗2つの並列合成 R_total = R1 × R2 / (R1 + R2)",
   "リアクタンス成分を含まない、純抵抗どうしの並列接続のみ",
+);
+const PARALLEL_COMPLEX_IMPEDANCE_SOURCE = engineeringFundamentalSource(
+  "複素インピーダンスの並列合成 Ztotal = Z1×Z2 / (Z1+Z2)（Z1=R1+jX1, Z2=R2+jX2の複素数演算による厳密解）",
+  "R成分・X成分をそれぞれ持つ2つのインピーダンスの並列接続（Xは符号付き：+が誘導性、−が容量性）",
 );
 
 export type ImpedanceVar = "R" | "X" | "Z";
@@ -77,6 +92,15 @@ export function solveImpedance(
   known: KnownValues<ImpedanceVar>,
   target: ImpedanceVar,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requireNonNegative(known.R, "抵抗R"),
+    requireNonNegative(known.X, "リアクタンスX"),
+    requireNonNegative(known.Z, "インピーダンスZ"),
+    // R and X are the orthogonal legs of Z — neither can exceed the hypotenuse.
+    requireLessOrEqual(known.R, known.Z, "抵抗R", "インピーダンスZ"),
+    requireLessOrEqual(known.X, known.Z, "リアクタンスX", "インピーダンスZ"),
+  );
+  if (invalid) return invalid;
   return solveByRules(impedanceRules, known, target);
 }
 
@@ -120,6 +144,12 @@ export function solveInductiveReactance(
   known: KnownValues<InductiveReactanceVar>,
   target: InductiveReactanceVar,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requirePositive(known.f, "周波数"),
+    requirePositive(known.L, "インダクタンスL"),
+    requirePositive(known.XL, "誘導性リアクタンスXL"),
+  );
+  if (invalid) return invalid;
   return solveByRules(inductiveReactanceRules, known, target);
 }
 
@@ -163,6 +193,12 @@ export function solveCapacitiveReactance(
   known: KnownValues<CapacitiveReactanceVar>,
   target: CapacitiveReactanceVar,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requirePositive(known.f, "周波数"),
+    requirePositive(known.C, "静電容量C"),
+    requirePositive(known.XC, "容量性リアクタンスXC"),
+  );
+  if (invalid) return invalid;
   return solveByRules(capacitiveReactanceRules, known, target);
 }
 
@@ -206,6 +242,12 @@ export function solveResonance(
   known: KnownValues<ResonanceVar>,
   target: ResonanceVar,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requirePositive(known.f0, "共振周波数"),
+    requirePositive(known.L, "インダクタンスL"),
+    requirePositive(known.C, "静電容量C"),
+  );
+  if (invalid) return invalid;
   return solveByRules(resonanceRules, known, target);
 }
 
@@ -282,6 +324,15 @@ export function solveSeriesRX(
   known: KnownValues<SeriesVar>,
   target: SeriesVar,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requireNonNegative(known.R1, "抵抗R1"),
+    requireNonNegative(known.R2, "抵抗R2"),
+    requireNonNegative(known.Rtotal, "合成抵抗"),
+    requireNonNegative(known.X1, "リアクタンスX1"),
+    requireNonNegative(known.X2, "リアクタンスX2"),
+    requireNonNegative(known.Xtotal, "合成リアクタンス"),
+  );
+  if (invalid) return invalid;
   return solveByRules(seriesRules, known, target);
 }
 
@@ -325,5 +376,94 @@ export function solveParallelResistance(
   known: KnownValues<ParallelResistanceVar>,
   target: ParallelResistanceVar,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requirePositive(known.R1, "抵抗R1"),
+    requirePositive(known.R2, "抵抗R2"),
+    requirePositive(known.Rtotal, "合成抵抗"),
+  );
+  if (invalid) return invalid;
   return solveByRules(parallelResistanceRules, known, target);
+}
+
+export type ParallelComplexImpedanceVar =
+  | "R1"
+  | "X1"
+  | "R2"
+  | "X2"
+  | "Rtotal"
+  | "Xtotal"
+  | "Ztotal";
+
+/** Z1×Z2/(Z1+Z2) の実部・虚部を明示的な複素数演算で求める（符号付きXに対応）。 */
+function parallelComplexParts(
+  R1: number,
+  X1: number,
+  R2: number,
+  X2: number,
+): { rTotal: number; xTotal: number } {
+  const numeratorReal = R1 * R2 - X1 * X2;
+  const numeratorImag = R1 * X2 + X1 * R2;
+  const denomReal = R1 + R2;
+  const denomImag = X1 + X2;
+  const denomMagSq = denomReal * denomReal + denomImag * denomImag;
+  return {
+    rTotal: (numeratorReal * denomReal + numeratorImag * denomImag) / denomMagSq,
+    xTotal: (numeratorImag * denomReal - numeratorReal * denomImag) / denomMagSq,
+  };
+}
+
+export const parallelComplexImpedanceRules: readonly Rule<ParallelComplexImpedanceVar>[] = [
+  {
+    output: "Rtotal",
+    inputs: ["R1", "X1", "R2", "X2"],
+    compute: ({ R1, X1, R2, X2 }) => parallelComplexParts(R1, X1, R2, X2).rTotal,
+    describe: (v, r) => ({
+      formula: "Ztotal = Z1×Z2/(Z1+Z2)（Z1=R1+jX1, Z2=R2+jX2）の実部 Rtotal",
+      substituted: `R1=${v.R1}, X1=${v.X1}, R2=${v.R2}, X2=${v.X2}`,
+      resultLine: `Rtotal ≈ ${r} Ω`,
+    }),
+    source: PARALLEL_COMPLEX_IMPEDANCE_SOURCE,
+  },
+  {
+    output: "Xtotal",
+    inputs: ["R1", "X1", "R2", "X2"],
+    compute: ({ R1, X1, R2, X2 }) => parallelComplexParts(R1, X1, R2, X2).xTotal,
+    describe: (v, r) => ({
+      formula: "Ztotal = Z1×Z2/(Z1+Z2)（Z1=R1+jX1, Z2=R2+jX2）の虚部 Xtotal",
+      substituted: `R1=${v.R1}, X1=${v.X1}, R2=${v.R2}, X2=${v.X2}`,
+      resultLine: `Xtotal ≈ ${r} Ω`,
+    }),
+    source: PARALLEL_COMPLEX_IMPEDANCE_SOURCE,
+  },
+  {
+    output: "Ztotal",
+    inputs: ["R1", "X1", "R2", "X2"],
+    compute: ({ R1, X1, R2, X2 }) => {
+      const { rTotal, xTotal } = parallelComplexParts(R1, X1, R2, X2);
+      return Math.sqrt(rTotal * rTotal + xTotal * xTotal);
+    },
+    describe: (v, r) => ({
+      formula: "|Ztotal| = |Z1×Z2/(Z1+Z2)|",
+      substituted: `R1=${v.R1}, X1=${v.X1}, R2=${v.R2}, X2=${v.X2}`,
+      resultLine: `|Ztotal| ≈ ${r} Ω`,
+    }),
+    source: PARALLEL_COMPLEX_IMPEDANCE_SOURCE,
+  },
+];
+
+/**
+ * 前方向のみ（R1,X1,R2,X2 → Rtotal/Xtotal/Ztotal）。Xは符号付き実数
+ * （+誘導性・−容量性）として扱うため、R/X（大きさのみ）を前提とする他の
+ * 関数とは異なり requireNonNegative(X) は課さない。
+ */
+export function solveParallelComplexImpedance(
+  known: KnownValues<ParallelComplexImpedanceVar>,
+  target: ParallelComplexImpedanceVar,
+): SolveResult {
+  const invalid = firstValidationError(
+    requireNonNegative(known.R1, "抵抗R1"),
+    requireNonNegative(known.R2, "抵抗R2"),
+  );
+  if (invalid) return invalid;
+  return solveByRules(parallelComplexImpedanceRules, known, target);
 }

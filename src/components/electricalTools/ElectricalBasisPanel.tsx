@@ -77,6 +77,7 @@ function SourceBlock({
   t: (path: string, vars?: Record<string, string | number>) => string;
 }) {
   const isFundamental = source.sourceType === "engineering_fundamental";
+  const isLaw = source.sourceType === "law";
 
   return (
     <div className="rounded-lg border border-border-strong bg-surface px-3 py-2.5 text-[11.5px]">
@@ -91,10 +92,13 @@ function SourceBlock({
         ) : (
           <>
             <span className="text-[10.5px] font-semibold tracking-wide text-muted-2 uppercase">
-              {t("electricalTools.basis.relatedStandardLabel")}
+              {isLaw
+                ? t("electricalTools.basis.relatedLawLabel")
+                : t("electricalTools.basis.relatedStandardLabel")}
             </span>
             <span className="font-bold text-foreground">
-              {source.standard}:{source.edition}
+              {source.standard}
+              {source.edition !== "—" ? `:${source.edition}` : ""}
             </span>
             <span className={source.verified ? "badge-success" : "badge-warning"}>
               {source.verified

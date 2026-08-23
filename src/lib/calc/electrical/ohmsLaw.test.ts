@@ -53,10 +53,16 @@ describe("solveDcCircuit — Ohm's law + Joule's law", () => {
     expect(r.ok).toBe(false);
   });
 
-  it("negative resistance input still computes algebraically (engine does not silently clamp)", () => {
+  it("negative resistance is rejected as invalid input, not silently computed", () => {
     const r = solveDcCircuit({ I: 2, R: -5 }, "V");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
+  });
+
+  it("zero resistance is a valid physical state (short circuit) and is accepted", () => {
+    const r = solveDcCircuit({ I: 2, R: 0 }, "V");
     expect(r.ok).toBe(true);
-    if (r.ok) expect(r.value).toBeCloseTo(-10);
+    if (r.ok) expect(r.value).toBeCloseTo(0);
   });
 });
 
@@ -111,6 +117,45 @@ describe("solveAcPower — single/three-phase power triangle", () => {
   });
 });
 
+describe("solveAcPower — validation", () => {
+  it("rejects pf > 1 explicitly, not a silently-clamped garbage result", () => {
+    const r = solveAcPower({ S: 10, pf: 1.5 }, "P", "single");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
+  });
+
+  it("rejects pf = 0", () => {
+    const r = solveAcPower({ S: 10, pf: 0 }, "P", "single");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
+  });
+
+  it("rejects P > S — physically impossible (P must be ≤ S), never silently floored to 0 under a sqrt", () => {
+    const r = solveAcPower({ S: 5, P: 10 }, "Q", "single");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
+  });
+
+  it("rejects Q > S", () => {
+    const r = solveAcPower({ S: 5, Q: 10 }, "P", "single");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
+  });
+
+  it("rejects a negative voltage", () => {
+    const r = solveAcPower({ V: -200, I: 30 }, "S", "single");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
+  });
+
+  it("input values that mutually contradict each other are flagged inconsistent, not silently resolved", () => {
+    // V,I directly imply S=6kVA (single-phase), but S=999 is also supplied.
+    const r = solveAcPower({ V: 200, I: 30, S: 999 }, "P", "single");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("inconsistentInput");
+  });
+});
+
 describe("solveEfficiency", () => {
   it("η from input/output", () => {
     const r = solveEfficiency({ inputKw: 10, outputKw: 9 }, "eta");
@@ -128,5 +173,22 @@ describe("solveEfficiency", () => {
     const r = solveEfficiency({ outputKw: 9, eta: 0.9 }, "inputKw");
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.value).toBeCloseTo(10);
+  });
+
+  it("rejects η > 1 — no real machine exceeds 100% efficiency", () => {
+    const r = solveEfficiency({ inputKw: 10, eta: 1.2 }, "outputKw");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
+  });
+
+  it("rejects η = 0", () => {
+    const r = solveEfficiency({ inputKw: 10, eta: 0 }, "outputKw");
+    expect(r.ok).toBe(false);
+  });
+
+  it("rejects output exceeding input directly", () => {
+    const r = solveEfficiency({ inputKw: 10, outputKw: 15 }, "eta");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
   });
 });

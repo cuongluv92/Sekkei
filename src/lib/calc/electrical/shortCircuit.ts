@@ -10,6 +10,7 @@
  */
 import { engineeringFundamentalSource } from "@/lib/calc/technicalSource";
 import { solveByRules, type Rule } from "./ruleSolver";
+import { firstValidationError, requirePositive } from "./validation";
 import type { AcPhase } from "./ohmsLaw";
 import type { KnownValues, SolveResult, SolveSuccess } from "./types";
 
@@ -85,6 +86,12 @@ export function solveTransformerRatedCurrent(
   target: RatedCurrentVar,
   phase: AcPhase,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requirePositive(known.kva, "容量"),
+    requirePositive(known.voltage, "電圧"),
+    requirePositive(known.current, "定格電流"),
+  );
+  if (invalid) return invalid;
   return solveByRules(ratedCurrentRules(phase), known, target);
 }
 export type ShortCircuitVar = "ratedCurrentA" | "percentZ" | "shortCircuitCurrentA";
@@ -128,6 +135,12 @@ export function solveSimplifiedShortCircuit(
   known: KnownValues<ShortCircuitVar>,
   target: ShortCircuitVar,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requirePositive(known.ratedCurrentA, "定格電流"),
+    requirePositive(known.percentZ, "%インピーダンス"),
+    requirePositive(known.shortCircuitCurrentA, "短絡電流"),
+  );
+  if (invalid) return invalid;
   const result = solveByRules(shortCircuitRules, known, target);
   if (result.ok && target === "shortCircuitCurrentA") {
     (result as SolveSuccess).warnings = [SHORT_CIRCUIT_SIMPLIFIED_WARNING];
@@ -186,5 +199,48 @@ export function solvePercentZBaseConversion(
   known: KnownValues<PercentZBaseVar>,
   target: PercentZBaseVar,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requirePositive(known.percentZOld, "%Z（変換前）"),
+    requirePositive(known.kvaOld, "ベース容量（変換前）"),
+    requirePositive(known.percentZNew, "%Z（変換後）"),
+    requirePositive(known.kvaNew, "ベース容量（変換後）"),
+  );
+  if (invalid) return invalid;
   return solveByRules(percentZBaseRules, known, target);
+}
+
+// ---- 遮断容量チェック（純粋な算術比較のみ） ----
+
+export interface BreakingCapacityCheck {
+  shortCircuitCurrentA: number;
+  breakerRatedBreakingCapacityA: number;
+  sufficient: boolean;
+  /** rated − short-circuit（正なら余裕、負なら不足）。 */
+  marginA: number;
+}
+
+/**
+ * 計算された短絡電流Iscと、ユーザー自身が入力した遮断器の定格遮断容量とを
+ * 比較するだけの単純な算術判定。上記の通りIsc自体が変圧器%Zのみの簡易値
+ * （上位系統・ケーブル等未考慮）であるため、この判定だけで遮断器選定の
+ * 最終「OK/NG」を決めてはならない — 必ず詳細検討・メーカー資料で確認する
+ * こと。遮断容量の基準値そのものを本システムが規定・推測することはない。
+ */
+export function checkBreakingCapacity(
+  shortCircuitCurrentA: number,
+  breakerRatedBreakingCapacityA: number,
+): BreakingCapacityCheck | null {
+  if (!Number.isFinite(shortCircuitCurrentA) || shortCircuitCurrentA <= 0) return null;
+  if (
+    !Number.isFinite(breakerRatedBreakingCapacityA) ||
+    breakerRatedBreakingCapacityA <= 0
+  ) {
+    return null;
+  }
+  return {
+    shortCircuitCurrentA,
+    breakerRatedBreakingCapacityA,
+    sufficient: breakerRatedBreakingCapacityA >= shortCircuitCurrentA,
+    marginA: breakerRatedBreakingCapacityA - shortCircuitCurrentA,
+  };
 }

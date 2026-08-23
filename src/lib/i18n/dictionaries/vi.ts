@@ -191,6 +191,7 @@ const vi: Dictionary = {
       resultLabel: "Kết quả",
       fundamentalBadge: "Công thức kỹ thuật điện cơ bản",
       relatedStandardLabel: "Tiêu chuẩn liên quan",
+      relatedLawLabel: "Luật/quy định liên quan",
       verifiedBadge: "Đã xác minh",
       unverifiedBadge: "Cần xác minh",
       referenceLabel: "Điều khoản",

@@ -11,6 +11,12 @@
  */
 import { engineeringFundamentalSource } from "@/lib/calc/technicalSource";
 import { solveByRules, type Rule } from "./ruleSolver";
+import {
+  firstValidationError,
+  requireLessOrEqual,
+  requireNonNegative,
+  requireRatio01,
+} from "./validation";
 import type { KnownValues, SolveResult } from "./types";
 
 const OHM_SOURCE = engineeringFundamentalSource(
@@ -175,6 +181,11 @@ export function solveDcCircuit(
   known: KnownValues<DcVar>,
   target: DcVar,
 ): SolveResult {
+  // R is a passive resistor's value here — physically it cannot be
+  // negative. (V/I/P are left sign-flexible: DC source polarity or
+  // direction can legitimately make either negative.)
+  const invalid = firstValidationError(requireNonNegative(known.R, "抵抗R"));
+  if (invalid) return invalid;
   return solveByRules(dcRules, known, target);
 }
 
@@ -302,6 +313,20 @@ export function solveAcPower(
   target: AcPowerVar,
   phase: AcPhase,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requireNonNegative(known.V, "電圧V"),
+    requireNonNegative(known.I, "電流I"),
+    requireNonNegative(known.S, "皮相電力S"),
+    requireNonNegative(known.P, "有効電力P"),
+    requireNonNegative(known.Q, "無効電力Q"),
+    requireRatio01(known.pf, "力率cosφ"),
+    // P/Q ≤ S is a hard requirement of the power triangle (S²=P²+Q²) — an
+    // input violating it must be rejected explicitly, never silently
+    // floored to 0 inside a sqrt.
+    requireLessOrEqual(known.P, known.S, "有効電力P", "皮相電力S"),
+    requireLessOrEqual(known.Q, known.S, "無効電力Q", "皮相電力S"),
+  );
+  if (invalid) return invalid;
   return solveByRules(acPowerRules(phase), known, target);
 }
 
@@ -347,5 +372,13 @@ export function solveEfficiency(
   known: KnownValues<EfficiencyVar>,
   target: EfficiencyVar,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requireNonNegative(known.inputKw, "入力電力"),
+    requireNonNegative(known.outputKw, "出力電力"),
+    requireRatio01(known.eta, "効率η"),
+    // A machine cannot output more energy than it consumes.
+    requireLessOrEqual(known.outputKw, known.inputKw, "出力電力", "入力電力"),
+  );
+  if (invalid) return invalid;
   return solveByRules(efficiencyRules, known, target);
 }

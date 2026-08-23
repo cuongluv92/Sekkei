@@ -3,6 +3,7 @@ import {
   solveCapacitiveReactance,
   solveImpedance,
   solveInductiveReactance,
+  solveParallelComplexImpedance,
   solveParallelResistance,
   solveResonance,
   solveSeriesRX,
@@ -121,5 +122,89 @@ describe("solveParallelResistance", () => {
     const r = solveParallelResistance({ Rtotal: 5, R1: 10 }, "R2");
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.value).toBeCloseTo(10);
+  });
+
+  it("rejects zero resistance (division by zero in the parallel formula)", () => {
+    const r = solveParallelResistance({ R1: 0, R2: 10 }, "Rtotal");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
+  });
+});
+
+describe("solveImpedance — validation", () => {
+  it("rejects R exceeding Z (impossible: R is a leg of the Z right triangle)", () => {
+    const r = solveImpedance({ R: 10, Z: 5 }, "X");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
+  });
+
+  it("rejects a negative Z/R/X", () => {
+    expect(solveImpedance({ R: -3, X: 4 }, "Z").ok).toBe(false);
+  });
+
+  it("flags a directly-given Z that contradicts R,X", () => {
+    const r = solveImpedance({ R: 3, X: 4, Z: 999 }, "Z");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("inconsistentInput");
+  });
+});
+
+describe("solveInductiveReactance / solveCapacitiveReactance / solveResonance — validation", () => {
+  it("rejects zero or negative frequency/L/C/XL/XC/f0", () => {
+    expect(solveInductiveReactance({ f: 0, L: 0.1 }, "XL").ok).toBe(false);
+    expect(solveInductiveReactance({ f: 50, L: -0.1 }, "XL").ok).toBe(false);
+    expect(solveCapacitiveReactance({ f: 50, C: 0 }, "XC").ok).toBe(false);
+    expect(solveResonance({ L: -0.1, C: 100e-6 }, "f0").ok).toBe(false);
+  });
+});
+
+describe("solveParallelComplexImpedance — full complex-division parallel combination", () => {
+  it("two identical impedances Z1=Z2=3+j4 in parallel halve to 1.5+j2 (Z/2)", () => {
+    const rTotal = solveParallelComplexImpedance({ R1: 3, X1: 4, R2: 3, X2: 4 }, "Rtotal");
+    const xTotal = solveParallelComplexImpedance({ R1: 3, X1: 4, R2: 3, X2: 4 }, "Xtotal");
+    const zTotal = solveParallelComplexImpedance({ R1: 3, X1: 4, R2: 3, X2: 4 }, "Ztotal");
+    expect(rTotal.ok).toBe(true);
+    expect(xTotal.ok).toBe(true);
+    expect(zTotal.ok).toBe(true);
+    if (rTotal.ok) expect(rTotal.value).toBeCloseTo(1.5, 5);
+    if (xTotal.ok) expect(xTotal.value).toBeCloseTo(2, 5);
+    if (zTotal.ok) expect(zTotal.value).toBeCloseTo(2.5, 5);
+  });
+
+  it("pure resistors (X=0) reduce to the classic real-only parallel formula", () => {
+    const r = solveParallelComplexImpedance({ R1: 6, X1: 0, R2: 3, X2: 0 }, "Rtotal");
+    const x = solveParallelComplexImpedance({ R1: 6, X1: 0, R2: 3, X2: 0 }, "Xtotal");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value).toBeCloseTo(2, 5); // 6*3/(6+3)
+    expect(x.ok).toBe(true);
+    if (x.ok) expect(x.value).toBeCloseTo(0, 5);
+  });
+
+  it("conjugate impedances 4+j3 ‖ 4-j3 combine to a purely resistive result", () => {
+    const r = solveParallelComplexImpedance({ R1: 4, X1: 3, R2: 4, X2: -3 }, "Rtotal");
+    const x = solveParallelComplexImpedance({ R1: 4, X1: 3, R2: 4, X2: -3 }, "Xtotal");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value).toBeCloseTo(3.125, 5);
+    expect(x.ok).toBe(true);
+    if (x.ok) expect(x.value).toBeCloseTo(0, 5);
+  });
+
+  it("is forward-only — solving for an input variable (e.g. R1) is not supported", () => {
+    const r = solveParallelComplexImpedance(
+      { X1: 4, R2: 3, X2: 4, Rtotal: 1.5 },
+      "R1",
+    );
+    expect(r.ok).toBe(false);
+  });
+
+  it("rejects a negative branch resistance", () => {
+    expect(solveParallelComplexImpedance({ R1: -1, X1: 0, R2: 3, X2: 0 }, "Rtotal").ok).toBe(
+      false,
+    );
+  });
+
+  it("anti-resonant pure-reactance branches (zero total R and X) are not derivable, not a fabricated infinity", () => {
+    const r = solveParallelComplexImpedance({ R1: 0, X1: 10, R2: 0, X2: -10 }, "Ztotal");
+    expect(r.ok).toBe(false);
   });
 });

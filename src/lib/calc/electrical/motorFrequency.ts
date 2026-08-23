@@ -9,6 +9,15 @@
  */
 import { engineeringFundamentalSource } from "@/lib/calc/technicalSource";
 import { solveByRules, type Rule } from "./ruleSolver";
+import {
+  firstValidationError,
+  requireLessOrEqual,
+  requireNonNegative,
+  requirePositive,
+  requirePositiveEvenInteger,
+  requireRatio01,
+  requireRatio01Inclusive,
+} from "./validation";
 import type { KnownValues, SolveResult } from "./types";
 
 const SYNC_SPEED_SOURCE = engineeringFundamentalSource(
@@ -68,6 +77,12 @@ export function solveSyncSpeed(
   known: KnownValues<SyncSpeedVar>,
   target: SyncSpeedVar,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requirePositive(known.frequencyHz, "周波数"),
+    requirePositiveEvenInteger(known.poles, "極数"),
+    requirePositive(known.nsRpm, "同期速度"),
+  );
+  if (invalid) return invalid;
   return solveByRules(syncSpeedRules, known, target);
 }
 
@@ -111,6 +126,14 @@ export function solveSlip(
   known: KnownValues<SlipVar>,
   target: SlipVar,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requirePositive(known.nsRpm, "同期速度"),
+    requireNonNegative(known.actualRpm, "実回転数"),
+    requireRatio01Inclusive(known.slip, "すべり率"),
+    // A normal (motoring) induction motor never spins faster than its own sync speed.
+    requireLessOrEqual(known.actualRpm, known.nsRpm, "実回転数", "同期速度"),
+  );
+  if (invalid) return invalid;
   return solveByRules(slipRules, known, target);
 }
 
@@ -212,6 +235,16 @@ export function solveMotorPower(
   target: MotorPowerVar,
   phase: MotorPhase,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requirePositive(known.voltage, "電圧"),
+    requireNonNegative(known.current, "電流"),
+    requireRatio01(known.pf, "力率cosφ"),
+    requireRatio01(known.eta, "効率η"),
+    requireNonNegative(known.inputKw, "入力電力"),
+    requireNonNegative(known.outputKw, "出力電力"),
+    requireLessOrEqual(known.outputKw, known.inputKw, "出力電力", "入力電力"),
+  );
+  if (invalid) return invalid;
   return solveByRules(motorPowerRules(phase), known, target);
 }
 

@@ -31,10 +31,15 @@ export interface SolveSuccess {
 
 export interface SolveMissing {
   ok: false;
-  reasonKey: "missingVariables" | "invalidInput" | "notApplicable";
+  reasonKey:
+    | "missingVariables"
+    | "invalidInput"
+    /** Two or more supplied values disagree beyond rounding tolerance — see `message` for which ones. Never silently picks one and discards the other. */
+    | "inconsistentInput"
+    | "notApplicable";
   /** Which variable keys, if supplied, would let this resolve. */
   missing?: string[];
-  /** Free-text detail (e.g. why "notApplicable"). */
+  /** Free-text detail (e.g. why "notApplicable", which values conflicted, or exactly what about the input is invalid). */
   message?: string;
 }
 

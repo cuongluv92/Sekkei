@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import {
+  CT_ACCURACY_CLASS_NOTE,
+  CT_ACCURACY_CLASS_OPTIONS,
   CT_PURPOSE_NOTE,
   solveInstrumentTransformerRatio,
+  type InstrumentTransformerKind,
   type InstrumentTransformerPurpose,
   type InstrumentTransformerVar,
 } from "@/lib/calc/electrical/ctVt";
@@ -13,7 +16,7 @@ import { VariableSolverCard } from "@/components/electricalTools/VariableSolverC
 import { ElectricalBasisPanel } from "@/components/electricalTools/ElectricalBasisPanel";
 import { PillToggle } from "@/components/electricalTools/PillToggle";
 
-type Kind = "CT" | "VT";
+type Kind = InstrumentTransformerKind;
 
 const CT_VARS: CalcVariableDef<InstrumentTransformerVar>[] = [
   { key: "primary", labelJa: "一次側電流（実際の値）", labelVi: "Dòng điện sơ cấp (giá trị thực)", symbol: "I1", unit: "A" },
@@ -31,6 +34,19 @@ export function CtVtCalculator() {
   const [kind, setKind] = useState<Kind>("CT");
   const [purpose, setPurpose] = useState<InstrumentTransformerPurpose>("measurement");
   const [result, setResult] = useState<SolveResult | null>(null);
+  const [accuracyClass, setAccuracyClass] = useState<string>(
+    CT_ACCURACY_CLASS_OPTIONS.measurement[0],
+  );
+
+  useEffect(() => {
+    setAccuracyClass(CT_ACCURACY_CLASS_OPTIONS[purpose][0]);
+  }, [purpose]);
+
+  const solve = useCallback(
+    (known: Partial<Record<InstrumentTransformerVar, number>>, target: InstrumentTransformerVar) =>
+      solveInstrumentTransformerRatio(known, target, kind, purpose),
+    [kind, purpose],
+  );
 
   return (
     <div className="calc-layout">
@@ -38,7 +54,7 @@ export function CtVtCalculator() {
         <div className="panel-body flex flex-col gap-4">
           <VariableSolverCard
             variables={kind === "CT" ? CT_VARS : VT_VARS}
-            solve={solveInstrumentTransformerRatio}
+            solve={solve}
             onResult={setResult}
             resetKey={kind}
             defaultTarget="primary"
@@ -68,6 +84,23 @@ export function CtVtCalculator() {
           <div className="rounded-lg border border-border-strong bg-surface-2 px-3 py-2.5 text-[11.5px] text-muted">
             {CT_PURPOSE_NOTE[purpose]}
           </div>
+
+          {kind === "CT" && (
+            <div className="rounded-lg border border-border-strong bg-surface-2 px-3 py-2.5">
+              <PillToggle
+                label={locale === "vi" ? "Cấp chính xác (chỉ để tham khảo)" : "精度階級（参考表示のみ）"}
+                value={accuracyClass}
+                onChange={setAccuracyClass}
+                options={CT_ACCURACY_CLASS_OPTIONS[purpose].map((c) => ({
+                  value: c,
+                  label: c,
+                }))}
+              />
+              <p className="mt-2 border-t border-border pt-2 text-[11px] text-muted-2">
+                {CT_ACCURACY_CLASS_NOTE[purpose]}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

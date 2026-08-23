@@ -39,12 +39,27 @@ function dedupeSources(sources: TechnicalSource[]): TechnicalSource[] {
   return out;
 }
 
+/** Relative tolerance for treating two independently-derived values of the same variable as "the same" — loose enough to absorb ordinary rounding from a user typing a few significant digits, tight enough to still catch genuinely contradictory input. */
+const CONSISTENCY_RELATIVE_TOLERANCE = 0.005;
+
+function valuesAgree(a: number, b: number): boolean {
+  const scale = Math.max(Math.abs(a), Math.abs(b), 1e-9);
+  return Math.abs(a - b) <= scale * CONSISTENCY_RELATIVE_TOLERANCE;
+}
+
 /**
  * Forward-chains `rules` from `known` until `target` is derived or no rule
  * can make further progress. Never guesses: a rule only fires once every
  * one of its `inputs` is an actual finite number, and a result that comes
  * out non-finite (e.g. division by zero) is treated as "not derivable"
  * rather than surfaced as NaN/Infinity.
+ *
+ * Also never silently prefers one redundant input over another: whenever a
+ * rule's inputs are all known and its output is *also* already known
+ * (whether the user typed that value directly, or another rule already
+ * derived it), the two are compared — a mismatch beyond ordinary rounding
+ * stops the solve with `reasonKey: "inconsistentInput"` instead of quietly
+ * keeping whichever value happened to be computed/entered first.
  */
 export function solveByRules<K extends string>(
   rules: readonly Rule<K>[],
@@ -59,20 +74,46 @@ export function solveByRules<K extends string>(
 
   const steps: FormulaStep[] = [];
   const sources: TechnicalSource[] = [];
+  const checked = new Set<number>();
 
+  // Keeps iterating for as long as any rule still makes progress — not just
+  // until `target` becomes known — because a rule whose output is a
+  // *different*, already-known variable must still fire once its inputs
+  // are available, purely to cross-check it (see `checked`/`valuesAgree`
+  // below). Termination is guaranteed by `checked` only ever growing, up
+  // to `rules.length`.
   let progress = true;
-  while (progress && values[target] === undefined) {
+  while (progress) {
     progress = false;
-    for (const rule of rules) {
-      if (values[rule.output] !== undefined) continue;
+    for (let i = 0; i < rules.length; i++) {
+      if (checked.has(i)) continue;
+      const rule = rules[i];
       if (!rule.inputs.every((k) => values[k] !== undefined)) continue;
       const inputValues = {} as Record<K, number>;
       for (const k of rule.inputs) inputValues[k] = values[k]!;
       const result = rule.compute(inputValues);
-      if (!Number.isFinite(result)) continue;
+      if (!Number.isFinite(result)) {
+        checked.add(i);
+        continue;
+      }
+
+      const existing = values[rule.output];
+      if (existing !== undefined) {
+        checked.add(i);
+        if (!valuesAgree(existing, result)) {
+          return {
+            ok: false,
+            reasonKey: "inconsistentInput",
+            message: `${String(rule.output)}: ${formatNum(existing)} ≠ ${formatNum(result)}`,
+          };
+        }
+        continue;
+      }
+
       values[rule.output] = result;
       steps.push(rule.describe(inputValues, result));
       sources.push(rule.source);
+      checked.add(i);
       progress = true;
     }
   }

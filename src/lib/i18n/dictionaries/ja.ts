@@ -188,6 +188,7 @@ const ja: Dictionary = {
       resultLabel: "結果",
       fundamentalBadge: "電気工学基本式",
       relatedStandardLabel: "関連規格",
+      relatedLawLabel: "関連法令",
       verifiedBadge: "確認済み",
       unverifiedBadge: "要確認",
       referenceLabel: "根拠箇所",

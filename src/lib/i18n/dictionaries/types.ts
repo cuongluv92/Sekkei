@@ -182,6 +182,7 @@ export interface Dictionary {
       resultLabel: string;
       fundamentalBadge: string;
       relatedStandardLabel: string;
+      relatedLawLabel: string;
       verifiedBadge: string;
       unverifiedBadge: string;
       referenceLabel: string;

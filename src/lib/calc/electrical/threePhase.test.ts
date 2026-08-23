@@ -62,3 +62,25 @@ describe("solveThreePhaseConnection — Y and Δ never mix", () => {
     expect(r.ok).toBe(false);
   });
 });
+
+describe("solveThreePhaseConnection — validation", () => {
+  it("rejects zero or negative voltage/current", () => {
+    expect(solveThreePhaseConnection({ phaseVoltage: 0 }, "lineVoltage", "Y").ok).toBe(false);
+    expect(solveThreePhaseConnection({ phaseVoltage: -100 }, "lineVoltage", "Y").ok).toBe(false);
+    expect(solveThreePhaseConnection({ phaseCurrent: -5 }, "lineCurrent", "Delta").ok).toBe(false);
+  });
+
+  it("flags line/phase voltage pairs that don't actually satisfy √3 for the declared connection", () => {
+    // Under Y, 100V phase should imply ~173.2V line — supplying 200V line directly contradicts it.
+    const r = solveThreePhaseConnection({ phaseVoltage: 100, lineVoltage: 200 }, "lineCurrent", "Y");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("inconsistentInput");
+  });
+
+  it("a consistent line/phase pair for the declared connection solves normally", () => {
+    const lineVoltage = Math.sqrt(3) * 100;
+    const r = solveThreePhaseConnection({ phaseVoltage: 100, lineVoltage }, "phaseVoltage", "Y");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value).toBeCloseTo(100, 5);
+  });
+});

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  checkVoltageDropConformity,
   solveSimplifiedVoltageDrop,
   solveVoltageDrop,
 } from "./voltageDrop";
@@ -115,6 +116,40 @@ describe("solveVoltageDrop — %/末端電圧 relations, mode-independent", () =
   });
 });
 
+describe("solveVoltageDrop — validation", () => {
+  it("rejects zero or negative current/length/source voltage", () => {
+    expect(solveVoltageDrop({ current: 0, rOhmPerKm: 1, lengthM: 100 }, "deltaV", "dc").ok).toBe(false);
+    expect(solveVoltageDrop({ current: 50, rOhmPerKm: 1, lengthM: -100 }, "deltaV", "dc").ok).toBe(false);
+    expect(solveVoltageDrop({ sourceVoltage: -200, deltaV: 10 }, "endVoltage", "dc").ok).toBe(false);
+  });
+
+  it("rejects pf outside (0,1]", () => {
+    const r = solveVoltageDrop(
+      { current: 20, rOhmPerKm: 0.5, xOhmPerKm: 0.3, pf: 1.2, lengthM: 50 },
+      "deltaV",
+      "single",
+    );
+    expect(r.ok).toBe(false);
+  });
+
+  it("rejects an end voltage that exceeds the source voltage", () => {
+    const r = solveVoltageDrop({ sourceVoltage: 200, endVoltage: 210 }, "deltaV", "dc");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
+  });
+
+  it("flags a directly-supplied deltaV that contradicts current/r/length", () => {
+    // current=50, r=1.0, length=100 (dc) implies ΔV=10V exactly.
+    const r = solveVoltageDrop(
+      { current: 50, rOhmPerKm: 1.0, lengthM: 100, deltaV: 999 },
+      "deltaV",
+      "dc",
+    );
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("inconsistentInput");
+  });
+});
+
 describe("solveSimplifiedVoltageDrop — 単相2線式(35.6)/三相3線式(30.8), verified:false", () => {
   it("forward: ΔV from current,length,area (単相)", () => {
     const r = solveSimplifiedVoltageDrop(
@@ -159,5 +194,35 @@ describe("solveSimplifiedVoltageDrop — 単相2線式(35.6)/三相3線式(30.8)
     );
     expect(reverse.ok).toBe(true);
     if (reverse.ok) expect(reverse.value).toBeCloseTo(5.5, 3);
+  });
+});
+
+describe("checkVoltageDropConformity — pure arithmetic comparison against a user-supplied threshold", () => {
+  it("conforms when actual is within the user's allowed percent", () => {
+    const c = checkVoltageDropConformity(1.5, 2);
+    expect(c).not.toBeNull();
+    expect(c?.conforms).toBe(true);
+    expect(c?.marginPercent).toBeCloseTo(0.5, 5);
+  });
+
+  it("does not conform when actual exceeds the user's allowed percent", () => {
+    const c = checkVoltageDropConformity(3.2, 2);
+    expect(c?.conforms).toBe(false);
+    expect(c?.marginPercent).toBeCloseTo(-1.2, 5);
+  });
+
+  it("exactly at the threshold conforms (inclusive)", () => {
+    const c = checkVoltageDropConformity(2, 2);
+    expect(c?.conforms).toBe(true);
+    expect(c?.marginPercent).toBeCloseTo(0, 5);
+  });
+
+  it("rejects a non-positive allowed threshold rather than fabricating a default", () => {
+    expect(checkVoltageDropConformity(1, 0)).toBeNull();
+    expect(checkVoltageDropConformity(1, -2)).toBeNull();
+  });
+
+  it("rejects a negative actual percent", () => {
+    expect(checkVoltageDropConformity(-1, 2)).toBeNull();
   });
 });

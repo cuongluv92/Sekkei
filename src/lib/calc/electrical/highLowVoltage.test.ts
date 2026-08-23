@@ -64,4 +64,9 @@ describe("VOLTAGE_CLASS_SOURCE — honestly marked unverified", () => {
     expect(VOLTAGE_CLASS_SOURCE.verified).toBe(false);
     expect(VOLTAGE_CLASS_SOURCE.verificationNote).toBeTruthy();
   });
+
+  it("is classified as a law/ordinance (省令), not an industrial standard (JIS)", () => {
+    expect(VOLTAGE_CLASS_SOURCE.sourceType).toBe("law");
+    expect(VOLTAGE_CLASS_SOURCE.standard).toBe("電気設備に関する技術基準を定める省令");
+  });
 });

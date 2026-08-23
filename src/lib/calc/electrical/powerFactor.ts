@@ -10,6 +10,13 @@
  */
 import { engineeringFundamentalSource } from "@/lib/calc/technicalSource";
 import { solveByRules, type Rule } from "./ruleSolver";
+import {
+  firstValidationError,
+  requireLessOrEqual,
+  requireNonNegative,
+  requirePositive,
+  requireRatio01,
+} from "./validation";
 import type { KnownValues, SolveResult } from "./types";
 
 const POWER_TRIANGLE_SOURCE = engineeringFundamentalSource(
@@ -97,6 +104,15 @@ export function solvePowerTriangle(
   known: KnownValues<PowerTriangleVar>,
   target: PowerTriangleVar,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requireNonNegative(known.activeP, "有効電力P"),
+    requireNonNegative(known.reactiveQ, "無効電力Q"),
+    requireNonNegative(known.apparentS, "皮相電力S"),
+    requireRatio01(known.pf, "力率cosφ"),
+    requireLessOrEqual(known.activeP, known.apparentS, "有効電力P", "皮相電力S"),
+    requireLessOrEqual(known.reactiveQ, known.apparentS, "無効電力Q", "皮相電力S"),
+  );
+  if (invalid) return invalid;
   return solveByRules(powerTriangleRules, known, target);
 }
 
@@ -152,5 +168,12 @@ export function solveCapacitorCorrection(
   known: KnownValues<CapacitorCorrectionVar>,
   target: CapacitorCorrectionVar,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requirePositive(known.activePowerKw, "有効電力P"),
+    requireRatio01(known.pfBefore, "改善前の力率cosφ1"),
+    requireRatio01(known.pfAfter, "目標力率cosφ2"),
+    requireNonNegative(known.qcKvar, "必要コンデンサ容量Qc"),
+  );
+  if (invalid) return invalid;
   return solveByRules(capacitorCorrectionRules, known, target);
 }

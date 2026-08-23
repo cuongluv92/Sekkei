@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  CT_ACCURACY_CLASS_NOTE,
+  CT_ACCURACY_CLASS_OPTIONS,
+  CT_MEASUREMENT_SOURCE,
+  CT_PROTECTION_SOURCE,
   CT_PURPOSE_NOTE,
   solveInstrumentTransformerRatio,
+  VT_MEASUREMENT_SOURCE,
+  VT_PROTECTION_SOURCE,
 } from "./ctVt";
 
 describe("solveInstrumentTransformerRatio — CT 一次⇔二次", () => {
@@ -51,10 +57,113 @@ describe("solveInstrumentTransformerRatio — meter reading ↔ actual primary i
   });
 });
 
+describe("solveInstrumentTransformerRatio — validation", () => {
+  it("rejects zero or negative primary/secondary/ratio", () => {
+    expect(solveInstrumentTransformerRatio({ secondary: 0, ratio: 200 }, "primary").ok).toBe(false);
+    expect(solveInstrumentTransformerRatio({ secondary: 5, ratio: -200 }, "primary").ok).toBe(false);
+  });
+
+  it("flags a directly-given primary that contradicts secondary×ratio", () => {
+    const r = solveInstrumentTransformerRatio({ secondary: 5, ratio: 200, primary: 1 }, "primary");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("inconsistentInput");
+  });
+});
+
 describe("CT_PURPOSE_NOTE — measurement vs protection are kept distinct, never merged", () => {
   it("has separate, non-identical notes for each purpose", () => {
     expect(CT_PURPOSE_NOTE.measurement).not.toBe(CT_PURPOSE_NOTE.protection);
     expect(CT_PURPOSE_NOTE.measurement).toContain("計測用");
     expect(CT_PURPOSE_NOTE.protection).toContain("保護用");
+  });
+});
+
+describe("solveInstrumentTransformerRatio — kind/purpose-specific standard sourcing", () => {
+  it("defaults to CT + measurement → JIS C 1732-2:2025", () => {
+    const r = solveInstrumentTransformerRatio({ secondary: 5, ratio: 200 }, "primary");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.sources).toContainEqual(CT_MEASUREMENT_SOURCE);
+      expect(r.sources).not.toContainEqual(CT_PROTECTION_SOURCE);
+    }
+  });
+
+  it("CT + measurement explicitly → JIS C 1732-2:2025", () => {
+    const r = solveInstrumentTransformerRatio(
+      { secondary: 5, ratio: 200 },
+      "primary",
+      "CT",
+      "measurement",
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.sources).toContainEqual(CT_MEASUREMENT_SOURCE);
+  });
+
+  it("VT + measurement → JIS C 1732-3:2025, never the CT number", () => {
+    const r = solveInstrumentTransformerRatio(
+      { primary: 6600, secondary: 110 },
+      "ratio",
+      "VT",
+      "measurement",
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.sources).toContainEqual(VT_MEASUREMENT_SOURCE);
+      expect(r.sources).not.toContainEqual(CT_MEASUREMENT_SOURCE);
+    }
+  });
+
+  it("CT + protection never reuses the measurement JIS C 1732-2 table", () => {
+    const r = solveInstrumentTransformerRatio(
+      { secondary: 5, ratio: 200 },
+      "primary",
+      "CT",
+      "protection",
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.sources).toContainEqual(CT_PROTECTION_SOURCE);
+      expect(r.sources).not.toContainEqual(CT_MEASUREMENT_SOURCE);
+      expect(r.sources.find((s) => s === CT_PROTECTION_SOURCE)?.verified).toBe(false);
+      expect(r.sources.find((s) => s === CT_PROTECTION_SOURCE)?.standard).toBe("—");
+    }
+  });
+
+  it("VT + protection never reuses the measurement JIS C 1732-3 table", () => {
+    const r = solveInstrumentTransformerRatio(
+      { primary: 6600, secondary: 110 },
+      "ratio",
+      "VT",
+      "protection",
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.sources).toContainEqual(VT_PROTECTION_SOURCE);
+      expect(r.sources).not.toContainEqual(VT_MEASUREMENT_SOURCE);
+    }
+  });
+});
+
+describe("CT_ACCURACY_CLASS_OPTIONS / CT_ACCURACY_CLASS_NOTE — informational only, never numeric", () => {
+  it("measurement and protection have separate, non-overlapping class-name sets", () => {
+    expect(CT_ACCURACY_CLASS_OPTIONS.measurement).toContain("0.5級");
+    expect(CT_ACCURACY_CLASS_OPTIONS.protection).toContain("5P");
+    expect(CT_ACCURACY_CLASS_OPTIONS.measurement).not.toEqual(
+      CT_ACCURACY_CLASS_OPTIONS.protection,
+    );
+  });
+
+  it("options are plain class-name strings, never numbers (no fabricated tolerance values)", () => {
+    for (const opt of CT_ACCURACY_CLASS_OPTIONS.measurement) {
+      expect(typeof opt).toBe("string");
+    }
+    for (const opt of CT_ACCURACY_CLASS_OPTIONS.protection) {
+      expect(typeof opt).toBe("string");
+    }
+  });
+
+  it("protection note explicitly flags the standard as unconfirmed, distinct from measurement", () => {
+    expect(CT_ACCURACY_CLASS_NOTE.protection).not.toBe(CT_ACCURACY_CLASS_NOTE.measurement);
+    expect(CT_ACCURACY_CLASS_NOTE.protection).toContain("未特定");
   });
 });

@@ -24,6 +24,13 @@ import {
   type TechnicalSource,
 } from "@/lib/calc/technicalSource";
 import { solveByRules, type Rule } from "./ruleSolver";
+import {
+  firstValidationError,
+  requireLessOrEqual,
+  requireNonNegative,
+  requirePositive,
+  requireRatio01,
+} from "./validation";
 import type { KnownValues, SolveResult } from "./types";
 
 const VOLTAGE_DROP_RX_SOURCE = engineeringFundamentalSource(
@@ -210,6 +217,20 @@ export function solveVoltageDrop(
   target: VoltageDropVar,
   mode: VoltageDropMode,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requirePositive(known.current, "電流"),
+    requirePositive(known.rOhmPerKm, "抵抗r"),
+    requireNonNegative(known.xOhmPerKm, "リアクタンスx"),
+    requireRatio01(known.pf, "力率cosφ"),
+    requirePositive(known.lengthM, "こう長"),
+    requirePositive(known.sourceVoltage, "始端電圧"),
+    requireNonNegative(known.deltaV, "電圧降下"),
+    requireNonNegative(known.deltaVPercent, "電圧降下率"),
+    requirePositive(known.endVoltage, "末端電圧"),
+    // A line cannot end up at a higher voltage than it started (no negative drop in this model).
+    requireLessOrEqual(known.endVoltage, known.sourceVoltage, "末端電圧", "始端電圧"),
+  );
+  if (invalid) return invalid;
   const rules = [...physicalRules(mode), ...RELATION_RULES];
   return solveByRules(rules, known, target);
 }
@@ -302,5 +323,42 @@ export function solveSimplifiedVoltageDrop(
   target: SimplifiedVoltageDropVar,
   wiring: SimplifiedVoltageDropWiring,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requirePositive(known.current, "電流"),
+    requirePositive(known.lengthM, "こう長"),
+    requirePositive(known.areaMm2, "断面積"),
+    requireNonNegative(known.deltaV, "電圧降下"),
+  );
+  if (invalid) return invalid;
   return solveByRules(simplifiedRules(wiring), known, target);
+}
+
+// ---- 電圧降下率の適合判定（純粋な算術比較のみ） ----
+
+export interface VoltageDropConformityCheck {
+  actualPercent: number;
+  allowedPercent: number;
+  conforms: boolean;
+  /** allowedPercent − actualPercent（正なら余裕、負なら超過）。 */
+  marginPercent: number;
+}
+
+/**
+ * 計算されたΔV%と、ユーザー自身が入力した許容電圧降下率とを比較するだけの
+ * 単純な算術判定 — 許容値（2%/3%/5%等）そのものを本システムが規定・推測
+ * することは一切ない。内線規程・電気設備技術基準等の該当条項をユーザー
+ * 自身が確認した上で入力した許容値との比較にのみ用いること。
+ */
+export function checkVoltageDropConformity(
+  actualPercent: number,
+  allowedPercent: number,
+): VoltageDropConformityCheck | null {
+  if (!Number.isFinite(actualPercent) || actualPercent < 0) return null;
+  if (!Number.isFinite(allowedPercent) || allowedPercent <= 0) return null;
+  return {
+    actualPercent,
+    allowedPercent,
+    conforms: actualPercent <= allowedPercent,
+    marginPercent: allowedPercent - actualPercent,
+  };
 }

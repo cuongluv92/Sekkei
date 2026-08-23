@@ -10,6 +10,7 @@
  */
 import { engineeringFundamentalSource } from "@/lib/calc/technicalSource";
 import { solveByRules, type Rule } from "./ruleSolver";
+import { firstValidationError, requirePositive } from "./validation";
 import type { KnownValues, SolveResult } from "./types";
 
 export type ThreePhaseConnection = "Y" | "Delta";
@@ -140,5 +141,12 @@ export function solveThreePhaseConnection(
   target: ThreePhaseVar,
   connection: ThreePhaseConnection,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requirePositive(known.lineVoltage, "線間電圧"),
+    requirePositive(known.phaseVoltage, "相電圧"),
+    requirePositive(known.lineCurrent, "線電流"),
+    requirePositive(known.phaseCurrent, "相電流"),
+  );
+  if (invalid) return invalid;
   return solveByRules(rulesFor(connection), known, target);
 }

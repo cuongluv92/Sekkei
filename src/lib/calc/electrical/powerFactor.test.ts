@@ -33,6 +33,16 @@ describe("solvePowerTriangle", () => {
     const r = solvePowerTriangle({ activeP: 10 }, "apparentS");
     expect(r.ok).toBe(false);
   });
+
+  it("rejects P > S directly, instead of silently flooring Q to 0", () => {
+    const r = solvePowerTriangle({ activeP: 10, apparentS: 5 }, "reactiveQ");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
+  });
+
+  it("rejects negative P/Q/S", () => {
+    expect(solvePowerTriangle({ activeP: -3, reactiveQ: 4 }, "apparentS").ok).toBe(false);
+  });
 });
 
 describe("solveCapacitorCorrection", () => {
@@ -91,5 +101,15 @@ describe("solveCapacitorCorrection", () => {
       "qcKvar",
     );
     expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
+  });
+
+  it("rejects zero or negative active power", () => {
+    const r = solveCapacitorCorrection(
+      { activePowerKw: 0, pfBefore: 0.8, pfAfter: 0.95 },
+      "qcKvar",
+    );
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
   });
 });

@@ -78,3 +78,34 @@ describe("solveByRules", () => {
     if (r.ok) expect(r.sources.length).toBe(1);
   });
 });
+
+describe("solveByRules — consistency checking (入力値が一致していません)", () => {
+  it("flags a directly-given value that contradicts what the other inputs imply", () => {
+    // I=10, R=5 implies V=50, but the user also typed V=999 directly.
+    const r = solveByRules(rules, { I: 10, R: 5, V: 999 }, "V");
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.reasonKey).toBe("inconsistentInput");
+      expect(r.message).toContain("V");
+    }
+  });
+
+  it("flags two derived paths that disagree even when neither is the target", () => {
+    // R is over-determined: given V,I it should be 5, but the caller also supplies R=7 directly.
+    const r = solveByRules(rules, { V: 50, I: 10, R: 7 }, "I");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("inconsistentInput");
+  });
+
+  it("tolerates ordinary rounding noise instead of false-flagging every redundant input", () => {
+    // 50/5=10 exactly, but a value the user rounded when typing (10.001) should still pass.
+    const r = solveByRules(rules, { I: 10.001, R: 5, V: 50 }, "V");
+    expect(r.ok).toBe(true);
+  });
+
+  it("redundant but perfectly consistent inputs solve normally, no false positive", () => {
+    const r = solveByRules(rules, { I: 10, R: 5, V: 50 }, "V");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value).toBe(50);
+  });
+});

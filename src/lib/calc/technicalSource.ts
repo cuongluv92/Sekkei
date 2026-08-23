@@ -34,6 +34,15 @@
 
 /** What kind of document a rule is actually sourced from — determines how much trust the UI should imply. */
 export type SourceType =
+  /**
+   * A law, cabinet order, or ministerial ordinance (法令) — e.g. 電気設備に
+   * 関する技術基準を定める省令、電気事業法（施行規則）. Legally binding
+   * government regulation, categorically different from an industrial
+   * standard (JIS) or an industry association's own technical document:
+   * a JIS/JEAC document may be referenced BY a law but is not itself one.
+   * Rendered in the UI as 関連法令, never merged with 関連規格 (standard).
+   */
+  | "law"
   /** A published national/international standard (JIS, IEC, ...). */
   | "standard"
   /** An industry association's technical manual/publication (e.g. JSIA-T1006) — often not freely published, so frequently `verified: false` until purchased/read. */

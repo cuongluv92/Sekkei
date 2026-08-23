@@ -13,6 +13,7 @@
 import { engineeringFundamentalSource } from "@/lib/calc/technicalSource";
 import type { TechnicalSource } from "@/lib/calc/technicalSource";
 import { solveByRules, type Rule } from "./ruleSolver";
+import { firstValidationError, requirePositive } from "./validation";
 import type { KnownValues, SolveResult } from "./types";
 
 export type TransformerPhase = "single" | "three";
@@ -140,6 +141,15 @@ export function solveTransformer(
   target: TransformerVar,
   phase: TransformerPhase,
 ): SolveResult {
+  const invalid = firstValidationError(
+    requirePositive(known.kva, "容量"),
+    requirePositive(known.v1, "一次電圧"),
+    requirePositive(known.i1, "一次電流"),
+    requirePositive(known.v2, "二次電圧"),
+    requirePositive(known.i2, "二次電流"),
+    requirePositive(known.turnsRatio, "巻数比"),
+  );
+  if (invalid) return invalid;
   return solveByRules(rulesFor(phase), known, target);
 }
 

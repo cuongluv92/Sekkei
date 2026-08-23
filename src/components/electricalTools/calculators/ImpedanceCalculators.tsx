@@ -6,12 +6,14 @@ import {
   solveCapacitiveReactance,
   solveImpedance,
   solveInductiveReactance,
+  solveParallelComplexImpedance,
   solveParallelResistance,
   solveResonance,
   solveSeriesRX,
   type CapacitiveReactanceVar,
   type ImpedanceVar,
   type InductiveReactanceVar,
+  type ParallelComplexImpedanceVar,
   type ParallelResistanceVar,
   type ResonanceVar,
   type SeriesVar,
@@ -54,8 +56,59 @@ const PARALLEL_VARS: CalcVariableDef<ParallelResistanceVar>[] = [
   { key: "R2", labelJa: "抵抗2", labelVi: "Điện trở 2", symbol: "R2", unit: "Ω" },
   { key: "Rtotal", labelJa: "合成抵抗", labelVi: "Điện trở tổng", symbol: "R_total", unit: "Ω" },
 ];
+const PARALLEL_COMPLEX_VARS: CalcVariableDef<ParallelComplexImpedanceVar>[] = [
+  {
+    key: "R1",
+    labelJa: "抵抗1",
+    labelVi: "Điện trở 1",
+    symbol: "R1",
+    unit: "Ω",
+  },
+  {
+    key: "X1",
+    labelJa: "リアクタンス1（符号付き：+誘導性/−容量性）",
+    labelVi: "Điện kháng 1 (có dấu: +cảm/−dung)",
+    symbol: "X1",
+    unit: "Ω",
+  },
+  {
+    key: "R2",
+    labelJa: "抵抗2",
+    labelVi: "Điện trở 2",
+    symbol: "R2",
+    unit: "Ω",
+  },
+  {
+    key: "X2",
+    labelJa: "リアクタンス2（符号付き：+誘導性/−容量性）",
+    labelVi: "Điện kháng 2 (có dấu: +cảm/−dung)",
+    symbol: "X2",
+    unit: "Ω",
+  },
+  {
+    key: "Rtotal",
+    labelJa: "合成インピーダンス実部",
+    labelVi: "Phần thực tổng trở",
+    symbol: "Rtotal",
+    unit: "Ω",
+  },
+  {
+    key: "Xtotal",
+    labelJa: "合成インピーダンス虚部",
+    labelVi: "Phần ảo tổng trở",
+    symbol: "Xtotal",
+    unit: "Ω",
+  },
+  {
+    key: "Ztotal",
+    labelJa: "合成インピーダンスの大きさ",
+    labelVi: "Độ lớn tổng trở",
+    symbol: "|Ztotal|",
+    unit: "Ω",
+  },
+];
 
-type SubTool = "z" | "xl" | "xc" | "resonance" | "series" | "parallel";
+type SubTool = "z" | "xl" | "xc" | "resonance" | "series" | "parallel" | "parallelComplex";
 
 export function ImpedanceCalculators() {
   const { t, locale } = useTranslation();
@@ -77,6 +130,10 @@ export function ImpedanceCalculators() {
               { value: "resonance", label: locale === "vi" ? "Cộng hưởng" : "共振周波数" },
               { value: "series", label: locale === "vi" ? "Nối tiếp" : "直列合成" },
               { value: "parallel", label: locale === "vi" ? "Song song (R)" : "並列合成（純抵抗）" },
+              {
+                value: "parallelComplex",
+                label: locale === "vi" ? "Song song (R+jX)" : "並列合成（複素R+jX）",
+              },
             ]}
           />
 
@@ -97,6 +154,22 @@ export function ImpedanceCalculators() {
           )}
           {subTool === "parallel" && (
             <VariableSolverCard variables={PARALLEL_VARS} solve={solveParallelResistance} onResult={setResult} resetKey={subTool} defaultTarget="Rtotal" />
+          )}
+          {subTool === "parallelComplex" && (
+            <>
+              <VariableSolverCard
+                variables={PARALLEL_COMPLEX_VARS}
+                solve={solveParallelComplexImpedance}
+                onResult={setResult}
+                resetKey={subTool}
+                defaultTarget="Ztotal"
+              />
+              <p className="text-[11px] text-muted-2">
+                {locale === "vi"
+                  ? "Công cụ này chỉ tính theo một chiều: từ R1/X1/R2/X2 → Rtotal/Xtotal/Ztotal (phép chia số phức đầy đủ). Chiều ngược lại không xác định duy nhất nên không được hỗ trợ."
+                  : "本ツールはR1/X1/R2/X2 → Rtotal/Xtotal/Ztotalの一方向のみ計算します（複素数の除算による厳密解）。逆方向（合成値から個々のR1/X1/R2/X2を求める）は解が一意に定まらないため対応していません。"}
+              </p>
+            </>
           )}
         </div>
       </div>

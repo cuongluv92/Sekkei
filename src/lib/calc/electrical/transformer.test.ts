@@ -68,6 +68,19 @@ describe("solveTransformer — 三相 (never assumes turnsRatio)", () => {
   });
 });
 
+describe("solveTransformer — validation", () => {
+  it("rejects zero or negative voltage/current/capacity", () => {
+    expect(solveTransformer({ v1: -6600 }, "kva", "single").ok).toBe(false);
+    expect(solveTransformer({ kva: 0, v2: 200 }, "i2", "single").ok).toBe(false);
+  });
+
+  it("flags a contradicting kva against what v1,i1 already imply", () => {
+    const r = solveTransformer({ v1: 6600, i1: 15.15, kva: 999 }, "v2", "single");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("inconsistentInput");
+  });
+});
+
 describe("computeLineVoltageRatio — explicitly not called 巻数比", () => {
   it("computes the ratio and always attaches the winding-configuration caveat", () => {
     const r = computeLineVoltageRatio(6600, 200);
