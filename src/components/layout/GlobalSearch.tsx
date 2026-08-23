@@ -8,29 +8,30 @@ import { useTranslation } from "@/lib/i18n";
 /**
  * Always-visible top search bar. This is meant to become the entry point
  * for finding any technical data (parts, drawings, catalogs, ...) — for now
- * it simply forwards the query to the 検索 page, which is the only page
- * wired up to actually search mock data. The 定格・仕様 toggle carries the
- * same `spec=1` mode 検索's own toggle uses, so a query typed here can jump
- * straight into strict 定格・仕様 technical-token matching without first
- * landing on 検索 and re-enabling it there.
+ * it simply forwards both fields to the 検索 page, which is the only page
+ * wired up to actually search mock data. The dedicated 定格・仕様 field is a
+ * separate box (not a toggle over the same text) so a keyword typed here and
+ * an exact spec typed in the second box narrow results together — typing
+ * only a partial 型番 in the main box alone tends to return too many hits.
  */
 export function GlobalSearch() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
   const [value, setValue] = useState(searchParams.get("q") ?? "");
-  const [specOnly, setSpecOnly] = useState(searchParams.get("spec") === "1");
+  const [specValue, setSpecValue] = useState(searchParams.get("spec") ?? "");
 
   useEffect(() => {
     setValue(searchParams.get("q") ?? "");
-    setSpecOnly(searchParams.get("spec") === "1");
+    setSpecValue(searchParams.get("spec") ?? "");
   }, [searchParams]);
 
   function submit() {
     const q = value.trim();
+    const spec = specValue.trim();
     const params = new URLSearchParams();
     if (q) params.set("q", q);
-    if (specOnly) params.set("spec", "1");
+    if (spec) params.set("spec", spec);
     const qs = params.toString();
     router.push(qs ? `/search?${qs}` : "/search");
   }
@@ -50,19 +51,20 @@ export function GlobalSearch() {
           type="search"
         />
       </div>
-      <button
-        type="button"
-        onClick={() => setSpecOnly((v) => !v)}
-        title={t("search.specOnlyToggle")}
-        aria-pressed={specOnly}
-        className={
-          specOnly
-            ? "btn-secondary shrink-0 !border-accent !text-accent"
-            : "btn-secondary shrink-0"
-        }
-      >
-        <Ruler className="h-3.5 w-3.5" />
-      </button>
+      <div className="relative w-28 shrink-0 sm:w-40">
+        <Ruler className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-2" />
+        <input
+          value={specValue}
+          onChange={(e) => setSpecValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submit();
+          }}
+          placeholder={t("common.specification")}
+          title={t("search.specFieldHint")}
+          className="field-input pl-8"
+          type="search"
+        />
+      </div>
     </div>
   );
 }

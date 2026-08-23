@@ -79,7 +79,10 @@ export function DesignView() {
         <>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
             <div className="flex-1">
-              <CaseSelector autoNumberDrawingNumber />
+              {/* Only 設計依頼書 auto-numbers 図面番号 — 製作依頼書 shares this
+                  same workspace bar but must require manual entry like every
+                  other 案件-creation entry point in the app. */}
+              <CaseSelector autoNumberDrawingNumber={tab === "designRequest"} />
             </div>
             <Link href="/design/search" className="btn-secondary shrink-0">
               <SearchIcon className="h-3.5 w-3.5" />

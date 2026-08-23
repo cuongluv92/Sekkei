@@ -38,6 +38,10 @@ vi.mock("next/navigation", () => ({
 
 beforeEach(() => {
   currentSearch = new URLSearchParams("");
+  // case-2 starts each test blank — case-1's seeded record must survive
+  // (the reload/switching tests below depend on it), but a previous test
+  // adopting/saving into case-2 must never leak into the next one.
+  delete savedRecords["case-2"];
 });
 
 // A minimal, real (not stubbed) active-案件 context so BusbarCalculationView's
@@ -248,8 +252,8 @@ describe("BusbarCalculationView — Auto mode candidate search + adopt", () => {
   });
 });
 
-describe("BusbarCalculationView — >630A honest fallback (spec #10, #12, #33, #37)", () => {
-  it("switches to 高電流モード for 1000A, shows real geometry candidates marked 要確認 (never a fabricated OK), and still lets the user adopt one", async () => {
+describe("BusbarCalculationView — 定格電流 is two independent range-scoped boxes, not one auto-switching field (spec follow-up)", () => {
+  it("shows real geometry candidates marked 要確認 (never a fabricated OK) for a value typed into the 630A～ box, and still lets the user adopt one", async () => {
     const user = userEvent.setup();
     renderView();
 
@@ -258,14 +262,8 @@ describe("BusbarCalculationView — >630A honest fallback (spec #10, #12, #33, #
       expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
     );
 
-    const input = await screen.findByPlaceholderText("180");
-    await user.clear(input);
-    await user.type(input, "1000");
-
-    // Out-of-range messaging, never silently extrapolating the ≤630A table.
-    await waitFor(() => {
-      expect(screen.getByText("JIS C 8480 の簡易選定範囲外")).toBeInTheDocument();
-    });
+    const highInput = await screen.findByPlaceholderText("800");
+    await user.type(highInput, "1000");
 
     const table = await screen.findByRole("table");
     // Every judgment cell must read 要確認 — never ok/caution/ng for this range.
@@ -282,7 +280,7 @@ describe("BusbarCalculationView — >630A honest fallback (spec #10, #12, #33, #
     });
   });
 
-  it("手動検証 for 6×50×2本 against 1000A shows real geometry (no fabricated 許容電流/OK)", async () => {
+  it("directs the user to the 630A～ box instead of silently extrapolating, when a value over 630A is typed into the ～630A box", async () => {
     const user = userEvent.setup();
     renderView();
 
@@ -291,9 +289,29 @@ describe("BusbarCalculationView — >630A honest fallback (spec #10, #12, #33, #
       expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
     );
 
-    const input = await screen.findByPlaceholderText("180");
-    await user.clear(input);
-    await user.type(input, "1000");
+    const lowInput = await screen.findByPlaceholderText("180");
+    await user.type(lowInput, "1000");
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/定格電流（630A～）」欄をご利用ください/),
+      ).toBeInTheDocument();
+    });
+    // No JIS candidate list is offered for an out-of-range ～630A value.
+    expect(screen.queryByText("候補（～630A）")).toBeNull();
+  });
+
+  it("手動検証 for 6×50×2本 against a 630A～ target shows real geometry (no fabricated 許容電流/OK)", async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    await user.click(screen.getByText("switch-to-case-2"));
+    await waitFor(() =>
+      expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
+    );
+
+    const highInput = await screen.findByPlaceholderText("800");
+    await user.type(highInput, "1000");
 
     await user.click(screen.getByRole("button", { name: "手動検証" }));
 
@@ -314,7 +332,7 @@ describe("BusbarCalculationView — >630A honest fallback (spec #10, #12, #33, #
 });
 
 describe("BusbarCalculationView — 断面積→電流 reverse lookup (spec follow-up: menseki→A must be a real, discoverable mode)", () => {
-  it("shows a max-current readout for a directly-entered area, independent of the top 定格電流 field", async () => {
+  it("shows a max-current readout for a directly-entered area in the ～630A box, independent of the 定格電流 field", async () => {
     const user = userEvent.setup();
     renderView();
 
@@ -322,8 +340,6 @@ describe("BusbarCalculationView — 断面積→電流 reverse lookup (spec foll
     await waitFor(() =>
       expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
     );
-
-    await user.click(screen.getByRole("button", { name: "手動検証" }));
 
     const areaInput = await screen.findByPlaceholderText("72");
     await user.type(areaInput, "72");
@@ -343,13 +359,27 @@ describe("BusbarCalculationView — 断面積→電流 reverse lookup (spec foll
       expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
     );
 
-    await user.click(screen.getByRole("button", { name: "手動検証" }));
-
     const areaInput = await screen.findByPlaceholderText("72");
     await user.type(areaInput, "400");
 
     await waitFor(() => {
       expect(screen.getByText("630+ A")).toBeInTheDocument();
     });
+  });
+
+  it("never fabricates a number for the 630A～ reverse panel — shows the honest unavailable explanation instead", async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    await user.click(screen.getByText("switch-to-case-2"));
+    await waitFor(() =>
+      expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
+    );
+
+    expect(
+      await screen.findByText(
+        /630Aを超える範囲では断面積から電流を逆算できません/,
+      ),
+    ).toBeInTheDocument();
   });
 });

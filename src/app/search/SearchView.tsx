@@ -1,6 +1,6 @@
 "use client";
 
-import { Search as SearchIcon } from "lucide-react";
+import { Ruler, Search as SearchIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -37,22 +37,24 @@ export function SearchView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") ?? "";
-  const initialSpecOnly = searchParams.get("spec") === "1";
+  const initialSpecQuery = searchParams.get("spec") ?? "";
 
   const [inputValue, setInputValue] = useState(initialQuery);
+  const [specInputValue, setSpecInputValue] = useState(initialSpecQuery);
   const [query, setQuery] = useState(initialQuery);
-  const [specOnly, setSpecOnly] = useState(initialSpecOnly);
+  const [specQuery, setSpecQuery] = useState(initialSpecQuery);
   const [groups, setGroups] = useState<GroupedSearchResults>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setInputValue(initialQuery);
+    setSpecInputValue(initialSpecQuery);
     setQuery(initialQuery);
-    setSpecOnly(initialSpecOnly);
-  }, [initialQuery, initialSpecOnly]);
+    setSpecQuery(initialSpecQuery);
+  }, [initialQuery, initialSpecQuery]);
 
   useEffect(() => {
-    if (!query) {
+    if (!query && !specQuery) {
       setGroups([]);
       return;
     }
@@ -60,7 +62,7 @@ export function SearchView() {
     setLoading(true);
     Promise.all([
       preloadManufacturers(),
-      searchGlobal(query, { specOnly }),
+      searchGlobal(query, { specQuery }),
     ]).then(([, res]) => {
       if (!active) return;
       setGroups(res);
@@ -69,26 +71,22 @@ export function SearchView() {
     return () => {
       active = false;
     };
-  }, [query, specOnly]);
+  }, [query, specQuery]);
 
-  function buildUrl(q: string, spec: boolean) {
+  function buildUrl(q: string, spec: string) {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
-    if (spec) params.set("spec", "1");
+    if (spec) params.set("spec", spec);
     const qs = params.toString();
     return qs ? `/search?${qs}` : "/search";
   }
 
   function submit() {
     const q = inputValue.trim();
+    const spec = specInputValue.trim();
     setQuery(q);
-    router.replace(buildUrl(q, specOnly));
-  }
-
-  function toggleSpecOnly() {
-    const next = !specOnly;
-    setSpecOnly(next);
-    router.replace(buildUrl(query, next));
+    setSpecQuery(spec);
+    router.replace(buildUrl(q, spec));
   }
 
   const totalCount = groups.reduce((sum, g) => sum + g.hits.length, 0);
@@ -100,7 +98,7 @@ export function SearchView() {
         description={t("search.description")}
       />
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <div className="relative max-w-md flex-1">
           <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-2" />
           <input
@@ -113,25 +111,32 @@ export function SearchView() {
             className="field-input pl-8"
           />
         </div>
+        <div className="relative w-full max-w-xs sm:w-56">
+          <Ruler className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-2" />
+          <input
+            value={specInputValue}
+            onChange={(e) => setSpecInputValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submit();
+            }}
+            placeholder={t("common.specification")}
+            title={t("search.specFieldHint")}
+            className="field-input pl-8"
+          />
+        </div>
         <button onClick={submit} className="btn-primary">
           {t("search.button")}
         </button>
       </div>
 
-      <label className="flex w-fit items-center gap-1.5 text-[12px] text-muted">
-        <input
-          type="checkbox"
-          checked={specOnly}
-          onChange={toggleSpecOnly}
-          className="h-3.5 w-3.5 accent-accent"
-        />
-        {t("search.specOnlyToggle")}
-      </label>
-
-      {query && (
+      {(query || specQuery) && (
         <div className="flex items-center justify-between">
           <span className="text-[12px] text-muted">
-            {t("search.resultsFor", { query })}
+            {t("search.resultsFor", {
+              query: [query, specQuery && `${t("common.specification")}: ${specQuery}`]
+                .filter(Boolean)
+                .join(" / "),
+            })}
           </span>
           <span className="text-[12px] text-muted-2">
             {t("search.resultCount", { count: totalCount })}

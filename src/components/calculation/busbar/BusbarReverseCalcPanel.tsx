@@ -3,28 +3,68 @@
 import { useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { maxCurrentForArea } from "@/lib/calc/busbar/currentDensityRule";
+import { JSIA_T1006_SOURCE } from "@/lib/calc/busbar/highCurrentRule";
 
 function roundTo(n: number, decimals: number): number {
   const factor = 10 ** decimals;
   return Math.round(n * factor) / factor;
 }
 
+interface BusbarReverseCalcPanelProps {
+  /**
+   * "low" inverts the JIS C 8480 simplified table (≤630A) via
+   * `maxCurrentForArea` — a real computation. "high" has no verified source
+   * to invert (see highCurrentRule.ts: JSIA-T1006/JSIA 210 are unobtained
+   * paid publications) — rather than fabricate a number, it explains why
+   * none is shown, the same honesty principle the >630A candidate search
+   * already follows (judgment always "requiresVerification", never a
+   * invented pass/fail).
+   */
+  variant: "low" | "high";
+}
+
 /**
  * 断面積 → 電流 の逆算 — a standalone reverse-direction lookup, separate from
  * 手動検証's t×W×n what-if check. Takes a cross-section directly (mm²), not
- * derived from any t/W/n input, and answers "what current is this JIS
- * C 8480 simplified table good for" — the explicit reverse of 自動選定's
- * 定格電流→必要断面積 direction (spec follow-up: this must be a real,
- * discoverable mode, not just a column attached to a differently-derived
- * candidate list). Inverts the same table (`maxCurrentForArea`), never a
- * new/invented value — same `verified: false` source as the forward
- * direction. A quick reference tool, not part of the persisted calculation.
- * Rendered beside the 定格電流 I input in both 自動選定/手動検証 modes (not
- * mode-gated) so it's always reachable next to the field it complements.
+ * derived from any t/W/n input. Split into a ～630A variant (inverts the
+ * JIS C 8480 table, `maxCurrentForArea`) and a 630A～ variant (honest
+ * unavailable notice) — paired one-for-one with the ～630A/630A～ 定格電流
+ * inputs beside them (spec follow-up: 定格電流 itself is now two independent
+ * range-scoped boxes, not one auto-switching field).
  */
-export function BusbarReverseCalcPanel() {
+export function BusbarReverseCalcPanel({ variant }: BusbarReverseCalcPanelProps) {
   const { t } = useTranslation();
   const [areaRaw, setAreaRaw] = useState("");
+
+  if (variant === "high") {
+    return (
+      <div className="panel h-full">
+        <div className="panel-header">
+          <span className="panel-title">
+            {t("busbarCalc.reverseCalcHighTitle")}
+          </span>
+        </div>
+        <div className="panel-body flex flex-col gap-3">
+          <p className="text-[12px] text-muted">
+            {t("busbarCalc.reverseCalcHighUnavailable")}
+          </p>
+          <div className="rounded-lg border border-border-strong bg-surface px-3 py-2.5 text-[11.5px]">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-bold text-foreground">
+                {JSIA_T1006_SOURCE.standard}:{JSIA_T1006_SOURCE.edition}
+              </span>
+              <span className="badge-warning">
+                {t("busbarCalc.unverifiedBadge")}
+              </span>
+            </div>
+            <p className="mt-1.5 text-muted">
+              {JSIA_T1006_SOURCE.verificationNote}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const areaMm2 = Number(areaRaw);
   const result =
@@ -33,24 +73,26 @@ export function BusbarReverseCalcPanel() {
       : null;
 
   return (
-    <div className="panel">
+    <div className="panel h-full">
       <div className="panel-header">
-        <span className="panel-title">{t("busbarCalc.reverseCalcTitle")}</span>
+        <span className="panel-title">
+          {t("busbarCalc.reverseCalcLowTitle")}
+        </span>
       </div>
       <div className="panel-body flex flex-col gap-3">
         <p className="text-[12px] text-muted">
           {t("busbarCalc.reverseCalcHint")}
         </p>
-        <div className="max-w-[200px]">
+        <div className="flex max-w-[160px] items-center gap-1.5">
           <input
             type="number"
             step="0.1"
             value={areaRaw}
             onChange={(e) => setAreaRaw(e.target.value)}
             placeholder="72"
-            className="field-input"
+            className="field-input min-w-0"
           />
-          <span className="mt-1 block text-[11px] text-muted-2">mm²</span>
+          <span className="shrink-0 text-[12px] text-muted-2">mm²</span>
         </div>
 
         {result?.inRange && (

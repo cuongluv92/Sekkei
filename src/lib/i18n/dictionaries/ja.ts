@@ -101,7 +101,8 @@ const ja: Dictionary = {
     button: "検索",
     resultsFor: "「{query}」の検索結果",
     resultCount: "{count} 件ヒット",
-    specOnlyToggle: "定格・仕様で検索（部品データ・部品図）",
+    specFieldHint:
+      "定格・仕様を厳密一致で検索します（部品データ・部品図）。キーワードと併用すると絞り込めます。",
     fromPartData: "部品データ",
     fromPartDrawing: "部品図",
     fromCatalog: "カタログ",
@@ -307,6 +308,12 @@ const ja: Dictionary = {
     modeAuto: "自動選定",
     modeManual: "手動検証",
     ratedCurrentLabel: "定格電流",
+    ratedCurrentLowLabel: "定格電流（～630A）",
+    ratedCurrentHighLabel: "定格電流（630A～）",
+    lowRangeOverflowMessage:
+      "定格電流が630Aを超えています。「定格電流（630A～）」欄をご利用ください。",
+    highRangeUnderflowMessage:
+      "630A以下の場合は「定格電流（～630A）」欄をご利用ください。",
     requiredAreaLabel: "必要断面積",
     densityLabel: "電流密度",
     recommendedLabel: "推奨銅帯",
@@ -324,8 +331,7 @@ const ja: Dictionary = {
     cautionMessage: "使用可能ですが過大です",
     outOfRangeTitle: "JIS C 8480 の簡易選定範囲外",
     outOfRangeDescription:
-      "定格電流が630Aを超えているため、簡易電流密度法（JIS C 8480）は適用できません。高電流選定が必要です。",
-    highCurrentModeTitle: "高電流選定",
+      "定格電流が630Aを超えているため、簡易電流密度法（JIS C 8480）は適用できません。",
     highCurrentNotAvailable:
       "JSIA-T1006・JSIA 210等の原資料（許容電流表・複数枚配置の係数）が未入手・未検証のため、許容電流や余裕率は計算できません。以下は総断面積・実電流密度のみを実際に計算した参考候補です（判定はすべて「要確認」）。",
     thicknessLabel: "厚さ t (mm)",
@@ -348,6 +354,10 @@ const ja: Dictionary = {
     verifiedBadge: "確認済み",
     unverifiedBadge: "要確認",
     candidatesTitle: "候補",
+    candidatesLowTitle: "候補（～630A）",
+    candidatesHighTitle: "候補（630A～）",
+    manualResultLowTitle: "検証結果（～630A）",
+    manualResultHighTitle: "検証結果（630A～）",
     noCandidates:
       "条件を満たす候補が見つかりません。並列本数や銅帯選定マスタを見直してください。",
     noSizesConfigured:
@@ -361,6 +371,10 @@ const ja: Dictionary = {
     highCurrentCandidateDisclaimer:
       "許容電流・余裕率は未検証のため表示していません。採用する場合は設計者ご自身の技術判断・原資料確認のうえで決定してください。",
     reverseCalcTitle: "断面積 → 電流",
+    reverseCalcLowTitle: "断面積 → 電流（～630A）",
+    reverseCalcHighTitle: "断面積 → 電流（630A～）",
+    reverseCalcHighUnavailable:
+      "JSIA-T1006・JSIA 210等の原資料（許容電流表・複数枚配置の係数）が未入手・未検証のため、630Aを超える範囲では断面積から電流を逆算できません。実際の許容電流は設計者ご自身の技術判断・原資料確認のうえで決定してください。",
     reverseCalcHint:
       "実際の銅帯の断面積（mm²）を直接入力すると、JIS C 8480 簡易選定表から目安上限電流を逆算します（定格電流の入力は不要です）。",
     reverseCalcFormula: "断面積 × 電流密度 = 目安上限電流",

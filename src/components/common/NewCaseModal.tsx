@@ -64,12 +64,11 @@ export function NewCaseModal({
       .then(setDrawingNumberPreview);
   }, [year, autoNumberDrawingNumber]);
 
-  const canSubmit =
-    projectName.trim() !== "" &&
-    (autoNumberDrawingNumber || drawingNumberManual.trim() !== "");
-
+  // No field is required — whatever the user has filled in gets saved,
+  // matching every other 案件-creation entry point (spec follow-up: don't
+  // force 件名/図面番号 before 作成する is enabled).
   async function handleSubmit() {
-    if (!canSubmit) return;
+    if (submitting) return;
     setSubmitting(true);
     const created = await designCaseService.create({
       year,
@@ -206,7 +205,7 @@ export function NewCaseModal({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!canSubmit || submitting}
+            disabled={submitting}
             className="btn-primary"
           >
             {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}

@@ -80,19 +80,17 @@ export function PartLibraryView<T extends LibraryItem>({
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<PartFilterBarValue>(() => {
-    // Honors a `?q=<text>` deep link (e.g. from Global Search's 部品データ/部品図
-    // result) by prefilling the keyword filter — read once at mount, the
-    // user's own typing takes over after that. `?spec=1` (Global Search's
-    // 定格・仕様で検索 mode) routes the same query into 定格・仕様 instead, so
-    // the strict technical-token matcher (matchesSpecificationQuery) applies
-    // rather than the broader keyword match.
-    const q = searchParams.get("q") ?? "";
-    const specOnly = searchParams.get("spec") === "1";
+    // Honors a `?q=<text>&spec=<text>` deep link (e.g. from Global Search's
+    // 部品データ/部品図 result) by prefilling both filters — read once at
+    // mount, the user's own typing takes over after that. Global Search's
+    // 定格・仕様 field maps straight onto 定格・仕様 here (the strict
+    // technical-token matcher, matchesSpecificationQuery, applies), and both
+    // can be set together to narrow results the same way they did there.
     return {
       manufacturerId: "",
       category: "",
-      keyword: specOnly ? "" : q,
-      specification: specOnly ? q : "",
+      keyword: searchParams.get("q") ?? "",
+      specification: searchParams.get("spec") ?? "",
     };
   });
   const [selected, setSelected] = useState<T | null>(null);

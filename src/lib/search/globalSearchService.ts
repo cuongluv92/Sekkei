@@ -28,16 +28,18 @@ export type GroupedSearchResults = { kind: SearchSourceKind; hits: SearchHit[] }
  * parallel and grouping the results by source. Contains no source-specific
  * query logic itself — that all lives in the individual providers — so
  * adding a future source (盤/回路/...) means registering one more provider
- * here, never growing this function. `options.specOnly` switches 部品データ/
- * 部品図 to the same strict 定格・仕様-only technical-token matching their own
+ * here, never growing this function. `options.specQuery` AND-filters 部品データ/
+ * 部品図 with the same strict 定格・仕様-only technical-token matching their own
  * dedicated search bars use (see `SearchOptions`) — other providers ignore it.
+ * A search can run on `specQuery` alone with `query` left blank.
  */
 export async function searchGlobal(
   query: string,
   options: SearchOptions = {},
 ): Promise<GroupedSearchResults> {
   const q = query.trim();
-  if (!q) return [];
+  const specQuery = options.specQuery?.trim() ?? "";
+  if (!q && !specQuery) return [];
 
   const results = await Promise.all(PROVIDERS.map((p) => p.search(q, options)));
   return PROVIDERS.map((p, i) => ({ kind: p.kind, hits: results[i] })).filter(

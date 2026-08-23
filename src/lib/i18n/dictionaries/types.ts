@@ -102,7 +102,7 @@ export interface Dictionary {
     button: string;
     resultsFor: string;
     resultCount: string;
-    specOnlyToggle: string;
+    specFieldHint: string;
     fromPartData: string;
     fromPartDrawing: string;
     fromCatalog: string;
@@ -280,6 +280,10 @@ export interface Dictionary {
     modeAuto: string;
     modeManual: string;
     ratedCurrentLabel: string;
+    ratedCurrentLowLabel: string;
+    ratedCurrentHighLabel: string;
+    lowRangeOverflowMessage: string;
+    highRangeUnderflowMessage: string;
     requiredAreaLabel: string;
     densityLabel: string;
     recommendedLabel: string;
@@ -296,7 +300,6 @@ export interface Dictionary {
     cautionMessage: string;
     outOfRangeTitle: string;
     outOfRangeDescription: string;
-    highCurrentModeTitle: string;
     highCurrentNotAvailable: string;
     thicknessLabel: string;
     widthLabel: string;
@@ -317,6 +320,10 @@ export interface Dictionary {
     verifiedBadge: string;
     unverifiedBadge: string;
     candidatesTitle: string;
+    candidatesLowTitle: string;
+    candidatesHighTitle: string;
+    manualResultLowTitle: string;
+    manualResultHighTitle: string;
     noCandidates: string;
     noSizesConfigured: string;
     enterCurrentPrompt: string;
@@ -327,6 +334,9 @@ export interface Dictionary {
     arrangementLabel: string;
     highCurrentCandidateDisclaimer: string;
     reverseCalcTitle: string;
+    reverseCalcLowTitle: string;
+    reverseCalcHighTitle: string;
+    reverseCalcHighUnavailable: string;
     reverseCalcHint: string;
     reverseCalcFormula: string;
   };

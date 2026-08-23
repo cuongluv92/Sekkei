@@ -11,6 +11,7 @@ import {
   scheduleService,
 } from "@/lib/services/design";
 import { buildCaseDisplayLabel } from "@/lib/utils/designNumbering";
+import { DateInput } from "@/components/common/DateInput";
 import { SCHEDULE_SEGMENTS } from "@/lib/utils/schedule";
 import {
   addMonths,
@@ -247,12 +248,9 @@ export function ScheduleTimeline() {
                       <label className="field-label">
                         {t(`design.schedule.milestones.${labelKey}`)}
                       </label>
-                      <input
-                        type="date"
-                        value={(editingSchedule[key] as string | null) ?? ""}
-                        onChange={(e) =>
-                          updateEditingField(key, e.target.value)
-                        }
+                      <DateInput
+                        value={editingSchedule[key] as string | null}
+                        onChange={(v) => updateEditingField(key, v ?? "")}
                         className="field-input"
                       />
                     </div>

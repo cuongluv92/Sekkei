@@ -9,6 +9,7 @@ import {
   printDesignRequestForm,
 } from "@/lib/services/design";
 import { SpecCombobox } from "@/components/design/SpecCombobox";
+import { DateInput } from "@/components/common/DateInput";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import {
   CASE_STATUS_VALUES,
@@ -534,13 +535,10 @@ export function DesignRequestForm({ caseId }: { caseId: string }) {
                         />
                       </td>
                       <td>
-                        <input
-                          type="date"
-                          value={panel.designDueDate ?? ""}
-                          onChange={(e) =>
-                            updatePanel(panel.id, {
-                              designDueDate: e.target.value || null,
-                            })
+                        <DateInput
+                          value={panel.designDueDate}
+                          onChange={(v) =>
+                            updatePanel(panel.id, { designDueDate: v })
                           }
                           className="field-input py-1.5"
                         />

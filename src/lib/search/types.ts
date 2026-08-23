@@ -30,14 +30,16 @@ export interface SearchHit {
 
 export interface SearchOptions {
   /**
-   * When true, match only against 定格・仕様 using the same strict
-   * technical-token matching 部品データ/部品製作's own search bar uses
+   * A separate, dedicated 定格・仕様 query — always AND-ed with `query`
+   * rather than replacing it, so typing a partial 型番 in the main box and
+   * an exact spec here narrows results precisely instead of the broad
+   * keyword match alone returning too many hits. Uses the same strict
+   * technical-token matcher 部品データ/部品図's own search bars use
    * (`matchesSpecificationQuery` — exact match for number+unit tokens like
-   * "125AT", suffix match for bare unit tokens like "AT"), instead of each
-   * provider's normal broader/looser query. Providers with no 定格・仕様
-   * field (案件, カタログ, 計算) ignore this and search normally.
+   * "125AT", suffix match for bare unit tokens like "AT"). Providers with no
+   * 定格・仕様 field (案件, カタログ, 計算) ignore this and search normally.
    */
-  specOnly?: boolean;
+  specQuery?: string;
 }
 
 export interface SearchProvider {

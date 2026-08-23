@@ -48,17 +48,25 @@ function isBusbarMode(value: string | null): value is BusbarMode {
  * `HighCurrentBusbarCandidate`. `kind` defaults to "standard" on hydration
  * for records saved before this distinction existed (see the load effect
  * below) — every busbar record ever saved was on the ≤630A path back then.
+ * Only one construction is ever adopted at a time regardless of which of
+ * the two range-scoped candidate lists it came from.
  */
 export type AdoptedBusbar =
   | (BusbarCandidate & { kind: "standard"; adoptedAt: string })
   | (HighCurrentBusbarCandidate & { kind: "highCurrent"; adoptedAt: string });
 
 interface BusbarSavedInput {
-  ratedCurrentRaw: string;
+  ratedCurrentLowRaw: string;
+  ratedCurrentHighRaw: string;
   mode: BusbarMode;
   thicknessRaw: string;
   widthRaw: string;
   barsRaw: string;
+}
+
+/** Pre-split-input record shape — routed into low/high on load, see the load effect. */
+interface LegacyBusbarSavedInput {
+  ratedCurrentRaw?: string;
 }
 
 interface BusbarSavedResult {
@@ -79,6 +87,13 @@ function parsePositiveNumber(raw: string): number | null {
  * Persists via the shared `calculation_records` table
  * (case_id + calculation_type="busbar"), the same mechanism every other
  * calculation module already uses — no separate persistence system.
+ *
+ * 定格電流 is two independent range-scoped inputs (～630A / 630A～), not one
+ * field that auto-switches path at 630A (spec follow-up) — each drives its
+ * own 自動選定/手動検証 results, and each is paired with its own
+ * 断面積→電流 reverse-lookup box beside it. Both can be filled at once (e.g.
+ * comparing a ≤630A option against a >630A one for the same 案件); only one
+ * candidate is ever 採用 at a time regardless of which list it came from.
  */
 export interface BusbarCalculationViewProps {
   /** Route this view's own mode-tab switching (自動選定/手動検証) pushes to. Defaults to its own dedicated route; pass the host page's path (e.g. "/calculations/other") when embedding this view inline as a tab there instead of navigating away. */
@@ -111,7 +126,8 @@ export function BusbarCalculationView({
 
   const [sizes, setSizes] = useState<BusbarSize[]>([]);
   const [sizesLoaded, setSizesLoaded] = useState(false);
-  const [ratedCurrentRaw, setRatedCurrentRaw] = useState("");
+  const [ratedCurrentLowRaw, setRatedCurrentLowRaw] = useState("");
+  const [ratedCurrentHighRaw, setRatedCurrentHighRaw] = useState("");
   const [thicknessRaw, setThicknessRaw] = useState("");
   const [widthRaw, setWidthRaw] = useState("");
   const [barsRaw, setBarsRaw] = useState("1");
@@ -139,9 +155,25 @@ export function BusbarCalculationView({
       if (cancelled || initializedRef.current === caseId) return;
       initializedRef.current = caseId;
       if (record) {
-        const input = record.input as Partial<BusbarSavedInput>;
+        const input = record.input as Partial<BusbarSavedInput> &
+          LegacyBusbarSavedInput;
         const result = record.result as Partial<BusbarSavedResult>;
-        setRatedCurrentRaw(input.ratedCurrentRaw ?? "");
+        // Records saved before 定格電流 split into two boxes carried one
+        // `ratedCurrentRaw` — route it into whichever box its own value
+        // belongs in rather than losing it.
+        if (input.ratedCurrentRaw) {
+          const legacyValue = Number(input.ratedCurrentRaw);
+          if (Number.isFinite(legacyValue) && legacyValue > 630) {
+            setRatedCurrentLowRaw("");
+            setRatedCurrentHighRaw(input.ratedCurrentRaw);
+          } else {
+            setRatedCurrentLowRaw(input.ratedCurrentRaw);
+            setRatedCurrentHighRaw("");
+          }
+        } else {
+          setRatedCurrentLowRaw(input.ratedCurrentLowRaw ?? "");
+          setRatedCurrentHighRaw(input.ratedCurrentHighRaw ?? "");
+        }
         setThicknessRaw(input.thicknessRaw ?? "");
         setWidthRaw(input.widthRaw ?? "");
         setBarsRaw(input.barsRaw ?? "1");
@@ -158,7 +190,8 @@ export function BusbarCalculationView({
         setSavedAt(record.updatedAt);
         if (input.mode && input.mode !== mode) setTab(input.mode);
       } else {
-        setRatedCurrentRaw("");
+        setRatedCurrentLowRaw("");
+        setRatedCurrentHighRaw("");
         setThicknessRaw("");
         setWidthRaw("");
         setBarsRaw("1");
@@ -187,80 +220,84 @@ export function BusbarCalculationView({
     router.push(`${basePath}?${params.toString()}`);
   }
 
-  const ratedCurrentA = parsePositiveNumber(ratedCurrentRaw);
-  const withinSimpleRange =
-    ratedCurrentA !== null && isWithinSimpleSelectionRange(ratedCurrentA);
-  const densityResult =
-    ratedCurrentA !== null ? requiredCrossSectionArea(ratedCurrentA) : null;
-  const requiredAreaMm2 = densityResult?.inRange
-    ? densityResult.requiredAreaMm2
-    : null;
-  const outOfRange = ratedCurrentA !== null && !withinSimpleRange;
+  const ratedCurrentLowA = parsePositiveNumber(ratedCurrentLowRaw);
+  const ratedCurrentHighA = parsePositiveNumber(ratedCurrentHighRaw);
+  // A value >630A typed into the ～630A box — direct the user to the other
+  // box rather than silently applying/extrapolating the JIS table.
+  const lowOverflow =
+    ratedCurrentLowA !== null && !isWithinSimpleSelectionRange(ratedCurrentLowA);
+  // A value ≤630A typed into the 630A～ box — just a hint, doesn't block
+  // the (always-honest, requiresVerification) high-current search.
+  const highUnderflow =
+    ratedCurrentHighA !== null && isWithinSimpleSelectionRange(ratedCurrentHighA);
 
-  const candidates = useMemo(() => {
+  const densityResultLow =
+    ratedCurrentLowA !== null && !lowOverflow
+      ? requiredCrossSectionArea(ratedCurrentLowA)
+      : null;
+  const requiredAreaLowMm2 = densityResultLow?.inRange
+    ? densityResultLow.requiredAreaMm2
+    : null;
+
+  const candidatesLow = useMemo(() => {
     if (
       mode !== "auto" ||
-      outOfRange ||
-      requiredAreaMm2 === null ||
-      ratedCurrentA === null ||
+      requiredAreaLowMm2 === null ||
+      ratedCurrentLowA === null ||
       !sizesLoaded
     )
       return [];
-    return findBusbarCandidates(sizes, requiredAreaMm2, ratedCurrentA);
-  }, [mode, outOfRange, requiredAreaMm2, ratedCurrentA, sizes, sizesLoaded]);
+    return findBusbarCandidates(sizes, requiredAreaLowMm2, ratedCurrentLowA);
+  }, [mode, requiredAreaLowMm2, ratedCurrentLowA, sizes, sizesLoaded]);
 
   // >630A auto search — real geometry only, every candidate honestly
   // "requiresVerification" (see highCurrentCandidateSearch.ts); never
   // reuses the ≤630A JIS C 8480 table past its range.
-  const highCurrentCandidates = useMemo(() => {
-    if (
-      mode !== "auto" ||
-      !outOfRange ||
-      ratedCurrentA === null ||
-      !sizesLoaded
-    )
+  const candidatesHigh = useMemo(() => {
+    if (mode !== "auto" || ratedCurrentHighA === null || !sizesLoaded)
       return [];
-    return findHighCurrentCandidates(sizes, ratedCurrentA);
-  }, [mode, outOfRange, ratedCurrentA, sizes, sizesLoaded]);
+    return findHighCurrentCandidates(sizes, ratedCurrentHighA);
+  }, [mode, ratedCurrentHighA, sizes, sizesLoaded]);
 
   const manualThickness = parsePositiveNumber(thicknessRaw);
   const manualWidth = parsePositiveNumber(widthRaw);
   const manualBars = Math.max(1, parseInt(barsRaw, 10) || 1);
 
-  const manualCandidateStandard = useMemo(() => {
-    if (outOfRange) return null;
+  const manualCandidateLow = useMemo(() => {
+    if (ratedCurrentLowA === null || lowOverflow) return null;
     if (manualThickness === null || manualWidth === null) return null;
     return evaluateBusbarCandidate(
       { id: "manual", thicknessMm: manualThickness, widthMm: manualWidth },
       manualBars,
-      requiredAreaMm2,
-      ratedCurrentA,
+      requiredAreaLowMm2,
+      ratedCurrentLowA,
     );
   }, [
-    outOfRange,
+    ratedCurrentLowA,
+    lowOverflow,
     manualThickness,
     manualWidth,
     manualBars,
-    requiredAreaMm2,
-    ratedCurrentA,
+    requiredAreaLowMm2,
   ]);
 
-  const manualCandidateHighCurrent = useMemo(() => {
-    if (!outOfRange || ratedCurrentA === null) return null;
+  const manualCandidateHigh = useMemo(() => {
+    if (ratedCurrentHighA === null) return null;
     if (manualThickness === null || manualWidth === null) return null;
     return evaluateHighCurrentCandidate(
       { id: "manual", thicknessMm: manualThickness, widthMm: manualWidth },
       manualBars,
-      ratedCurrentA,
+      ratedCurrentHighA,
     );
-  }, [outOfRange, manualThickness, manualWidth, manualBars, ratedCurrentA]);
+  }, [ratedCurrentHighA, manualThickness, manualWidth, manualBars]);
 
   async function persist(nextAdopted: AdoptedBusbar | null) {
     if (!caseId) return;
     setSaving(true);
     try {
       const input: BusbarSavedInput = {
-        ratedCurrentRaw,
+        ratedCurrentLowRaw,
+        ratedCurrentHighRaw,
         mode,
         thicknessRaw,
         widthRaw,
@@ -308,6 +345,8 @@ export function BusbarCalculationView({
   const adoptedStandard = adopted?.kind === "standard" ? adopted : null;
   const adoptedHighCurrent = adopted?.kind === "highCurrent" ? adopted : null;
 
+  const hasAnyRatedCurrent = ratedCurrentLowA !== null || ratedCurrentHighA !== null;
+
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
@@ -330,105 +369,135 @@ export function BusbarCalculationView({
           </div>
         </div>
       ) : (
-        <div className="calc-layout">
-          <div className="calc-layout-input flex flex-col gap-3 lg:flex-row lg:items-start">
-            <div className="panel flex-1">
-              <div className="panel-header flex items-center justify-between gap-2">
-                <span className="panel-title">
-                  {t("busbarCalc.ratedCurrentLabel")}
-                </span>
-                <div className="flex items-center gap-2">
-                  {savedAt && (
-                    <span className="text-[11px] text-muted-2">
-                      {t("busbarCalc.saved")}{" "}
-                      {formatJaTime(savedAt)}
-                    </span>
+        <>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[4fr_6fr] lg:items-start">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-end gap-2">
+                {savedAt && (
+                  <span className="text-[11px] text-muted-2">
+                    {t("busbarCalc.saved")} {formatJaTime(savedAt)}
+                  </span>
+                )}
+                <button
+                  onClick={() => persist(adopted)}
+                  disabled={saving}
+                  className="btn-secondary !py-1 !text-[12px]"
+                >
+                  {saving ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Save className="h-3.5 w-3.5" />
                   )}
-                  <button
-                    onClick={() => persist(adopted)}
-                    disabled={saving}
-                    className="btn-secondary !py-1 !text-[12px]"
-                  >
-                    {saving ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Save className="h-3.5 w-3.5" />
+                  {t("common.save")}
+                </button>
+              </div>
+
+              {/* ～630A row: 定格電流 input + 断面積→電流 reverse lookup, height-matched */}
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
+                <div className="panel h-full flex-1">
+                  <div className="panel-header">
+                    <span className="panel-title">
+                      {t("busbarCalc.ratedCurrentLowLabel")}
+                    </span>
+                  </div>
+                  <div className="panel-body flex flex-col gap-3">
+                    <div className="flex max-w-[160px] items-center gap-1.5">
+                      <input
+                        type="number"
+                        step="1"
+                        value={ratedCurrentLowRaw}
+                        onChange={(e) => {
+                          setRatedCurrentLowRaw(e.target.value);
+                          markDirty();
+                        }}
+                        placeholder="180"
+                        className={
+                          lowOverflow
+                            ? "field-input min-w-0 !border-danger"
+                            : "field-input min-w-0"
+                        }
+                      />
+                      <span className="shrink-0 text-[12px] text-muted-2">
+                        A
+                      </span>
+                    </div>
+                    {lowOverflow && (
+                      <p className="text-[11.5px] text-warning">
+                        {t("busbarCalc.lowRangeOverflowMessage")}
+                      </p>
                     )}
-                    {t("common.save")}
-                  </button>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <BusbarReverseCalcPanel variant="low" />
                 </div>
               </div>
-              <div className="panel-body flex flex-col gap-3">
-                <div className="max-w-[200px]">
-                  <input
-                    type="number"
-                    step="1"
-                    value={ratedCurrentRaw}
-                    onChange={(e) => {
-                      setRatedCurrentRaw(e.target.value);
-                      markDirty();
-                    }}
-                    placeholder="180"
-                    className={
-                      ratedCurrentRaw.trim() !== "" && ratedCurrentA === null
-                        ? "field-input !border-danger"
-                        : "field-input"
-                    }
-                  />
-                  <span className="mt-1 block text-[11px] text-muted-2">
-                    A
+
+              {/* 630A～ row: same shape, honest unverified path */}
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
+                <div className="panel h-full flex-1">
+                  <div className="panel-header">
+                    <span className="panel-title">
+                      {t("busbarCalc.ratedCurrentHighLabel")}
+                    </span>
+                  </div>
+                  <div className="panel-body flex flex-col gap-3">
+                    <div className="flex max-w-[160px] items-center gap-1.5">
+                      <input
+                        type="number"
+                        step="1"
+                        value={ratedCurrentHighRaw}
+                        onChange={(e) => {
+                          setRatedCurrentHighRaw(e.target.value);
+                          markDirty();
+                        }}
+                        placeholder="800"
+                        className="field-input min-w-0"
+                      />
+                      <span className="shrink-0 text-[12px] text-muted-2">
+                        A
+                      </span>
+                    </div>
+                    {highUnderflow && (
+                      <p className="text-[11.5px] text-muted">
+                        {t("busbarCalc.highRangeUnderflowMessage")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <BusbarReverseCalcPanel variant="high" />
+                </div>
+              </div>
+            </div>
+
+            {(densityResultLow?.inRange || ratedCurrentHighA !== null) && (
+              <div className="panel">
+                <div className="panel-header">
+                  <span className="panel-title">
+                    {t("busbarCalc.basisSectionTitle")}
                   </span>
                 </div>
-
-                {outOfRange && (
-                  <div className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5">
-                    <p className="text-[13px] font-bold text-warning">
-                      {t("busbarCalc.outOfRangeTitle")}
-                    </p>
-                    <p className="mt-1 text-[12px] text-muted">
-                      {t("busbarCalc.outOfRangeDescription")}
-                    </p>
-                    <p className="mt-2 text-[12px] font-semibold text-foreground">
-                      {t("busbarCalc.highCurrentModeTitle")}
-                    </p>
-                    <p className="mt-1 text-[11.5px] text-muted">
-                      {t("busbarCalc.highCurrentNotAvailable")}
-                    </p>
-                  </div>
-                )}
+                <div className="panel-body flex flex-col gap-4">
+                  {densityResultLow?.inRange && (
+                    <BusbarBasisPanel
+                      ratedCurrentA={densityResultLow.ratedCurrentA}
+                      densityAPerMm2={densityResultLow.densityAPerMm2}
+                      requiredAreaMm2={densityResultLow.requiredAreaMm2}
+                      currentDensitySource={densityResultLow.source}
+                      materialSource={JIS_H_3140_COPPER_SOURCE}
+                    />
+                  )}
+                  {ratedCurrentHighA !== null && (
+                    <BusbarBasisPanel highCurrentSource={JSIA_T1006_SOURCE} />
+                  )}
+                </div>
               </div>
-            </div>
-
-            <div className="flex-1">
-              <BusbarReverseCalcPanel />
-            </div>
+            )}
           </div>
 
-          {(densityResult?.inRange || outOfRange) && (
-            <div className="calc-layout-basis panel">
-              <div className="panel-header">
-                <span className="panel-title">
-                  {t("busbarCalc.basisSectionTitle")}
-                </span>
-              </div>
-              <div className="panel-body flex flex-col gap-3">
-                {densityResult?.inRange && (
-                  <BusbarBasisPanel
-                    ratedCurrentA={densityResult.ratedCurrentA}
-                    densityAPerMm2={densityResult.densityAPerMm2}
-                    requiredAreaMm2={densityResult.requiredAreaMm2}
-                    currentDensitySource={densityResult.source}
-                    materialSource={JIS_H_3140_COPPER_SOURCE}
-                  />
-                )}
-                {outOfRange && (
-                  <BusbarBasisPanel highCurrentSource={JSIA_T1006_SOURCE} />
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="calc-layout-results flex flex-col gap-4">
+          {/* 候補 — full width, independent of the 4:6 split above */}
+          <div className="flex flex-col gap-4">
             <div className="-mx-1 overflow-x-auto px-1">
               <div className="flex w-max min-w-full gap-1 border-b border-border pb-0">
                 {BUSBAR_MODES.map((key) => {
@@ -453,47 +522,69 @@ export function BusbarCalculationView({
             </div>
 
             {mode === "auto" ? (
-              <div className="panel">
-                <div className="panel-header">
-                  <span className="panel-title">
-                    {t("busbarCalc.candidatesTitle")}
-                  </span>
-                </div>
-                <div className="panel-body">
-                  {!sizesLoaded ? (
+              !sizesLoaded ? (
+                <div className="panel">
+                  <div className="panel-body">
                     <p className="text-[12px] text-muted">
                       {t("common.loading")}
                     </p>
-                  ) : sizes.length === 0 ? (
+                  </div>
+                </div>
+              ) : sizes.length === 0 ? (
+                <div className="panel">
+                  <div className="panel-body">
                     <p className="text-[12px] text-warning">
                       {t("busbarCalc.noSizesConfigured")}
                     </p>
-                  ) : ratedCurrentA === null ? (
-                    <p className="text-[12px] text-muted-2">
-                      {t("busbarCalc.enterCurrentPrompt")}
-                    </p>
-                  ) : outOfRange ? (
-                    <HighCurrentBusbarCandidateList
-                      candidates={highCurrentCandidates}
-                      adopted={adoptedHighCurrent}
-                      onAdopt={handleAdoptHighCurrent}
-                      saving={saving}
-                    />
-                  ) : requiredAreaMm2 === null ? (
-                    <p className="text-[12px] text-muted-2">
-                      {t("busbarCalc.enterCurrentPrompt")}
-                    </p>
-                  ) : (
-                    <BusbarCandidateList
-                      candidates={candidates}
-                      adopted={adoptedStandard}
-                      onAdopt={handleAdoptStandard}
-                      saving={saving}
-                      ratedCurrentA={ratedCurrentA}
-                    />
-                  )}
+                  </div>
                 </div>
-              </div>
+              ) : !hasAnyRatedCurrent ? (
+                <div className="panel">
+                  <div className="panel-body">
+                    <p className="text-[12px] text-muted-2">
+                      {t("busbarCalc.enterCurrentPrompt")}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {ratedCurrentLowA !== null && !lowOverflow && (
+                    <div className="panel">
+                      <div className="panel-header">
+                        <span className="panel-title">
+                          {t("busbarCalc.candidatesLowTitle")}
+                        </span>
+                      </div>
+                      <div className="panel-body">
+                        <BusbarCandidateList
+                          candidates={candidatesLow}
+                          adopted={adoptedStandard}
+                          onAdopt={handleAdoptStandard}
+                          saving={saving}
+                          ratedCurrentA={ratedCurrentLowA}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {ratedCurrentHighA !== null && (
+                    <div className="panel">
+                      <div className="panel-header">
+                        <span className="panel-title">
+                          {t("busbarCalc.candidatesHighTitle")}
+                        </span>
+                      </div>
+                      <div className="panel-body">
+                        <HighCurrentBusbarCandidateList
+                          candidates={candidatesHigh}
+                          adopted={adoptedHighCurrent}
+                          onAdopt={handleAdoptHighCurrent}
+                          saving={saving}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
+              )
             ) : (
               <div className="panel">
                 <div className="panel-header">
@@ -556,29 +647,46 @@ export function BusbarCalculationView({
                     </div>
                   </div>
 
-                  {manualCandidateHighCurrent ? (
-                    <HighCurrentBusbarCandidateList
-                      candidates={[manualCandidateHighCurrent]}
-                      adopted={adoptedHighCurrent}
-                      onAdopt={handleAdoptHighCurrent}
-                      saving={saving}
-                    />
+                  {!hasAnyRatedCurrent ? (
+                    <p className="text-[12px] text-muted-2">
+                      {t("busbarCalc.enterCurrentPrompt")}
+                    </p>
                   ) : (
-                    manualCandidateStandard && (
-                      <BusbarCandidateList
-                        candidates={[manualCandidateStandard]}
-                        adopted={adoptedStandard}
-                        onAdopt={handleAdoptStandard}
-                        saving={saving}
-                        ratedCurrentA={ratedCurrentA}
-                      />
-                    )
+                    <>
+                      {manualCandidateLow && (
+                        <div className="flex flex-col gap-1.5">
+                          <span className="field-label">
+                            {t("busbarCalc.manualResultLowTitle")}
+                          </span>
+                          <BusbarCandidateList
+                            candidates={[manualCandidateLow]}
+                            adopted={adoptedStandard}
+                            onAdopt={handleAdoptStandard}
+                            saving={saving}
+                            ratedCurrentA={ratedCurrentLowA}
+                          />
+                        </div>
+                      )}
+                      {manualCandidateHigh && (
+                        <div className="flex flex-col gap-1.5">
+                          <span className="field-label">
+                            {t("busbarCalc.manualResultHighTitle")}
+                          </span>
+                          <HighCurrentBusbarCandidateList
+                            candidates={[manualCandidateHigh]}
+                            adopted={adoptedHighCurrent}
+                            onAdopt={handleAdoptHighCurrent}
+                            saving={saving}
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
             )}
           </div>
-        </div>
+        </>
       )}
     </div>
   );

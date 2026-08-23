@@ -76,7 +76,7 @@ describe("NewCaseModal — 図面番号 auto-numbering is 設計依頼-only (spe
     expect(screen.queryByPlaceholderText("26-004")).toBeNull();
   });
 
-  it("requires the user to type 図面番号 by hand when autoNumberDrawingNumber is false (every other 案件-creation entry point)", async () => {
+  it("lets the user type 図面番号 by hand when autoNumberDrawingNumber is false (every other 案件-creation entry point), without requiring it", async () => {
     const user = userEvent.setup();
     const { onCreated } = renderModal(false);
 
@@ -86,8 +86,10 @@ describe("NewCaseModal — 図面番号 auto-numbering is 設計依頼-only (spe
     const projectNameInput = screen.getByLabelText("件名", { exact: false });
     await user.type(projectNameInput, "新しい案件");
 
+    // No field is required to submit (spec follow-up: 新規案件 saves
+    // whatever's filled in, nothing blocks 作成する).
     const submitButton = screen.getByRole("button", { name: /作成|Tạo/i });
-    expect(submitButton).toBeDisabled();
+    expect(submitButton).not.toBeDisabled();
 
     await user.type(drawingNumberInput, "26-005");
     expect(submitButton).not.toBeDisabled();
@@ -108,5 +110,21 @@ describe("NewCaseModal — 図面番号 auto-numbering is 設計依頼-only (spe
       "26-004",
     )) as HTMLInputElement;
     expect(drawingNumberInput.value).toBe("");
+  });
+
+  it("submits with 図面番号 left blank as an empty string, never as undefined (which the service reads as 'auto-number this')", async () => {
+    const user = userEvent.setup();
+    renderModal(false);
+
+    const submitButton = await screen.findByRole("button", {
+      name: /作成|Tạo/i,
+    });
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ drawingNumber: "" }),
+      );
+    });
   });
 });

@@ -286,9 +286,14 @@ export const designCaseService = {
    * sequence_no is computed and inserted inside one transaction, serialized
    * per-year with an advisory lock, so two concurrent creates for the same
    * year can never collide — the mock's known limitation, now closed.
-   * `input.drawingNumber`, when supplied, is used verbatim as the stored
-   * 図面番号 instead of the server's auto-derived year+sequence string (see
-   * `CreateCaseInput.drawingNumber` — only 設計依頼's own flow omits it).
+   * `input.drawingNumber`, when supplied, is used verbatim (even blank) as
+   * the stored 図面番号 instead of the server's auto-derived year+sequence
+   * string. `p_auto_number` carries the caller's actual intent explicitly —
+   * only 設計依頼's own flow omits `drawingNumber` entirely, which is the
+   * one case that should auto-number; every other flow always sends a
+   * (possibly empty) string, which must be stored as-is and never silently
+   * promoted to an auto-numbered value just because it's blank (見出し follow-
+   * up: 新規案件 no longer requires 図面番号 to be filled in).
    */
   async create(input: CreateCaseInput): Promise<DesignCase> {
     const { data, error } = await requireSupabase().rpc("create_design_case", {
@@ -301,6 +306,7 @@ export const designCaseService = {
       p_project_name: input.projectName,
       p_index_category: input.indexCategory,
       p_drawing_number: input.drawingNumber ?? null,
+      p_auto_number: input.drawingNumber === undefined,
     });
     if (error) throw error;
     return caseFromRow(data as DesignCaseRow);

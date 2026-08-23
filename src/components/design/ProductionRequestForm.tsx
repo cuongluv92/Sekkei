@@ -11,6 +11,7 @@ import {
   scheduleService,
 } from "@/lib/services/design";
 import { SpecCombobox } from "@/components/design/SpecCombobox";
+import { DateInput } from "@/components/common/DateInput";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { CasePanel, CaseSchedule, DesignCase, ProductionRequest } from "@/lib/types/design";
 
@@ -315,10 +316,9 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
                     className="field-input py-1.5"
                   />
                 )}
-                <input
-                  type="date"
-                  value={schedule[f.key] ?? ""}
-                  onChange={(e) => updateSchedule(f.key, e.target.value || null)}
+                <DateInput
+                  value={schedule[f.key]}
+                  onChange={(v) => updateSchedule(f.key, v)}
                   className="field-input py-1.5"
                 />
               </div>
