@@ -66,6 +66,7 @@ export interface Dictionary {
     selectFile: string;
     fileUploaded: string;
     uploadError: string;
+    settings: string;
     moveToTrash: string;
     movedToTrash: string;
     deleteToTrashConfirm: string;
@@ -477,6 +478,8 @@ export interface Dictionary {
   };
   settings: {
     title: string;
+    description: string;
+    quickLinksTitle: string;
     languageSection: string;
     languageDescription: string;
     templateSection: string;

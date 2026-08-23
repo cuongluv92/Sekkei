@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { Settings } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { PageHeader } from "@/components/common/PageHeader";
 import { CaseSelector } from "@/components/common/CaseSelector";
+import { Modal } from "@/components/common/Modal";
+import { WeightMaterialSettings } from "@/components/settings/WeightMaterialSettings";
 import { useActiveCase, useEffectiveCaseId } from "@/lib/store/ActiveCaseProvider";
 import { BasicWeightCalc } from "@/components/calculation/BasicWeightCalc";
 import { PanelWeightCalc } from "@/components/calculation/PanelWeightCalc";
@@ -28,6 +31,7 @@ export function WeightCalculationView() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const tab: WeightTopTab = isWeightTopTab(tabParam) ? tabParam : "basic";
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const {
     caseId: activeCaseId,
     setCaseId: setActiveCaseId,
@@ -59,6 +63,15 @@ export function WeightCalculationView() {
       <PageHeader
         title={t("weightCalc.title")}
         description={t("weightCalc.description")}
+        actions={
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="btn-secondary"
+          >
+            <Settings className="h-3.5 w-3.5" />
+            {t("common.settings")}
+          </button>
+        }
       />
 
       <CaseSelector />
@@ -100,6 +113,16 @@ export function WeightCalculationView() {
         <BasicWeightCalc caseId={caseId} />
       ) : (
         <PanelWeightCalc caseId={caseId} />
+      )}
+
+      {settingsOpen && (
+        <Modal
+          title={t("common.settings")}
+          onClose={() => setSettingsOpen(false)}
+          widthClassName="max-w-2xl"
+        >
+          <WeightMaterialSettings />
+        </Modal>
       )}
     </div>
   );

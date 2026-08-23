@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Trash2, Upload } from "lucide-react";
+import { Loader2, Settings, Trash2, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
@@ -15,11 +15,13 @@ import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
 import { FileActions } from "@/components/common/FileActions";
 import { FilePreview } from "@/components/common/FilePreview";
+import { Modal } from "@/components/common/Modal";
 import { PageHeader } from "@/components/common/PageHeader";
 import {
   PartFilterBar,
   type PartFilterBarValue,
 } from "@/components/common/PartFilterBar";
+import { PartMasterSettings } from "@/components/settings/PartMasterSettings";
 import {
   distinctCategories,
   distinctManufacturerIds,
@@ -98,6 +100,7 @@ export function PartLibraryView<T extends LibraryItem>({
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { message, show } = useMockFeedback();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -329,7 +332,19 @@ export function PartLibraryView<T extends LibraryItem>({
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title={title} description={description} />
+      <PageHeader
+        title={title}
+        description={description}
+        actions={
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="btn-secondary"
+          >
+            <Settings className="h-3.5 w-3.5" />
+            {t("common.settings")}
+          </button>
+        }
+      />
 
       <PartFilterBar
         value={filters}
@@ -469,6 +484,16 @@ export function PartLibraryView<T extends LibraryItem>({
       )}
 
       {message && <div className="text-[12px] text-success">{message}</div>}
+
+      {settingsOpen && (
+        <Modal
+          title={t("common.settings")}
+          onClose={() => setSettingsOpen(false)}
+          widthClassName="max-w-3xl"
+        >
+          <PartMasterSettings />
+        </Modal>
+      )}
     </div>
   );
 }

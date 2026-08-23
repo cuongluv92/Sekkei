@@ -64,6 +64,7 @@ const ja: Dictionary = {
     selectFile: "ファイルを選択",
     fileUploaded: "{fileName} を添付しました",
     uploadError: "アップロードに失敗しました",
+    settings: "設定",
     moveToTrash: "ゴミ箱に移動",
     movedToTrash: "ゴミ箱に移動しました",
     deleteToTrashConfirm:
@@ -532,6 +533,9 @@ const ja: Dictionary = {
   },
   settings: {
     title: "設定",
+    description:
+      "ここには言語やバックアップなど、アプリ全体に関わる共通設定だけをまとめています。設計管理・部品データ・部品図・カタログ・部品製作・選定・各計算など、機能ごとの設定はそれぞれの画面右上にある「設定」ボタンから行えます。",
+    quickLinksTitle: "各画面の設定はこちら",
     languageSection: "言語設定",
     languageDescription: "アプリの表示言語を切り替えます。",
     templateSection: "Excelテンプレート",

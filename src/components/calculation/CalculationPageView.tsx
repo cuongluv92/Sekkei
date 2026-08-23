@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Settings } from "lucide-react";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
@@ -13,8 +13,10 @@ import {
 import { CalculationForm } from "@/components/calculation/CalculationForm";
 import { CalculationResult } from "@/components/calculation/CalculationResult";
 import { ExportActions } from "@/components/common/ExportActions";
+import { Modal } from "@/components/common/Modal";
 import { PageHeader } from "@/components/common/PageHeader";
 import { CaseSelector } from "@/components/common/CaseSelector";
+import { CalculationTemplateSettings } from "@/components/settings/CalculationTemplateSettings";
 import { useActiveCase, useEffectiveCaseId } from "@/lib/store/ActiveCaseProvider";
 import type { CalculationDefinition, CalculationTemplate } from "@/lib/types";
 
@@ -70,6 +72,7 @@ function CalculationPageViewInner({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const loadTokenRef = useRef(0);
 
   useEffect(() => {
@@ -149,7 +152,19 @@ function CalculationPageViewInner({
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title={title} description={description} />
+      <PageHeader
+        title={title}
+        description={description}
+        actions={
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="btn-secondary"
+          >
+            <Settings className="h-3.5 w-3.5" />
+            {t("common.settings")}
+          </button>
+        }
+      />
 
       <CaseSelector />
 
@@ -248,6 +263,16 @@ function CalculationPageViewInner({
             </div>
           </div>
         </>
+      )}
+
+      {settingsOpen && (
+        <Modal
+          title={t("common.settings")}
+          onClose={() => setSettingsOpen(false)}
+          widthClassName="max-w-2xl"
+        >
+          <CalculationTemplateSettings keys={[calculationKey]} />
+        </Modal>
       )}
     </div>
   );

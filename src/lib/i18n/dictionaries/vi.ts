@@ -65,6 +65,7 @@ const vi: Dictionary = {
     selectFile: "Chọn file",
     fileUploaded: "Đã đính kèm {fileName}",
     uploadError: "Tải lên thất bại",
+    settings: "Cài đặt",
     moveToTrash: "Chuyển vào thùng rác",
     movedToTrash: "Đã chuyển vào thùng rác",
     deleteToTrashConfirm:
@@ -535,6 +536,9 @@ const vi: Dictionary = {
   },
   settings: {
     title: "Cài đặt",
+    description:
+      "Đây chỉ là các cài đặt chung cho toàn bộ ứng dụng (ngôn ngữ, sao lưu...). Cài đặt riêng của từng chức năng (設計管理, 部品データ, 部品図, カタログ, 部品製作, 選定, các mục 計算...) nằm ngay trong màn hình đó, ở nút \"Cài đặt\" phía trên bên phải.",
+    quickLinksTitle: "Cài đặt riêng của từng màn hình",
     languageSection: "Ngôn ngữ",
     languageDescription: "Chuyển đổi ngôn ngữ hiển thị của ứng dụng.",
     templateSection: "Template Excel",

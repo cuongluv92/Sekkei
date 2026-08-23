@@ -5,6 +5,7 @@ import {
   CornerLeftUp,
   GripVertical,
   Plus,
+  Settings,
   Trash2,
 } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
@@ -24,7 +25,9 @@ import { PartMasterSearch } from "@/components/common/PartMasterSearch";
 import { ExportActions } from "@/components/common/ExportActions";
 import { PageHeader } from "@/components/common/PageHeader";
 import { CaseSelector } from "@/components/common/CaseSelector";
+import { Modal } from "@/components/common/Modal";
 import { Toast } from "@/components/common/Toast";
+import { PartTemplateSettings } from "@/components/settings/PartTemplateSettings";
 import type { PartAssemblyRow, SearchResultItem } from "@/lib/types";
 
 const BLANK_ROW: Omit<PartAssemblyRow, "id"> = {
@@ -102,6 +105,7 @@ function PartAssemblyView() {
   const [, forceRerender] = useState(0);
   const { toast, showToast } = useToast();
   const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     preloadManufacturers().then(() => forceRerender((v) => v + 1));
@@ -183,6 +187,15 @@ function PartAssemblyView() {
       <PageHeader
         title={t("partAssembly.title")}
         description={t("partAssembly.description")}
+        actions={
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="btn-secondary"
+          >
+            <Settings className="h-3.5 w-3.5" />
+            {t("common.settings")}
+          </button>
+        }
       />
 
       <CaseSelector />
@@ -438,6 +451,16 @@ function PartAssemblyView() {
           onInsertBlank={handleInsertBlank}
           onPick={handleInsertPick}
         />
+      )}
+
+      {settingsOpen && (
+        <Modal
+          title={t("common.settings")}
+          onClose={() => setSettingsOpen(false)}
+          widthClassName="max-w-2xl"
+        >
+          <PartTemplateSettings />
+        </Modal>
       )}
     </div>
   );

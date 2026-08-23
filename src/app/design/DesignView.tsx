@@ -1,13 +1,14 @@
 "use client";
 
-import { Search as SearchIcon } from "lucide-react";
+import { Search as SearchIcon, Settings } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { useActiveCase, useEffectiveCaseId } from "@/lib/store/ActiveCaseProvider";
 import { PageHeader } from "@/components/common/PageHeader";
 import { CaseSelector } from "@/components/common/CaseSelector";
+import { Modal } from "@/components/common/Modal";
 import {
   DesignTabBar,
   isDesignTopTab,
@@ -19,6 +20,9 @@ import { CaseLedgerTable } from "@/components/design/CaseLedgerTable";
 import { DesignRequestIndexTable } from "@/components/design/DesignRequestIndexTable";
 import { ScheduleTimeline } from "@/components/design/ScheduleTimeline";
 import { CostLaborTable } from "@/components/design/CostLaborTable";
+import { MasterListEditor } from "@/components/design/MasterListEditor";
+import { ScheduleColorSettings } from "@/components/design/ScheduleColorSettings";
+import { TemplateManagementSettings } from "@/components/settings/TemplateManagementSettings";
 
 /**
  * 設計管理 entry point. A single page with a top-level tab strip (order fixed:
@@ -33,6 +37,7 @@ export function DesignView() {
   const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const tabParam = searchParams.get("tab");
   const tab: DesignTopTab = isDesignTopTab(tabParam)
@@ -72,7 +77,18 @@ export function DesignView() {
 
   return (
     <div className="flex flex-col gap-3">
-      <PageHeader title={t("design.title")} />
+      <PageHeader
+        title={t("design.title")}
+        actions={
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="btn-secondary"
+          >
+            <Settings className="h-3.5 w-3.5" />
+            {t("common.settings")}
+          </button>
+        }
+      />
       <DesignTabBar
         active={tab}
         onChange={(nextTab) => setParams({ tab: nextTab })}
@@ -121,6 +137,35 @@ export function DesignView() {
       )}
       {tab === "schedule" && <ScheduleTimeline />}
       {tab === "costLabor" && <CostLaborTable />}
+
+      {settingsOpen && (
+        <Modal
+          title={t("common.settings")}
+          onClose={() => setSettingsOpen(false)}
+          widthClassName="max-w-3xl"
+        >
+          <div className="flex flex-col gap-5">
+            <div>
+              <span className="mb-2 block text-[13px] font-bold text-foreground">
+                {t("designSettings.title")}
+              </span>
+              <MasterListEditor />
+            </div>
+            <div className="border-t border-border pt-4">
+              <span className="mb-2 block text-[13px] font-bold text-foreground">
+                {t("scheduleColorSettings.title")}
+              </span>
+              <ScheduleColorSettings />
+            </div>
+            <div className="border-t border-border pt-4">
+              <span className="mb-2 block text-[13px] font-bold text-foreground">
+                {t("settings.templateManagement.title")}
+              </span>
+              <TemplateManagementSettings />
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

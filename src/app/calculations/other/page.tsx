@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense } from "react";
+import { Settings } from "lucide-react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
@@ -8,7 +9,11 @@ import { BusbarCalculationView } from "@/components/calculation/busbar/BusbarCal
 import { EarthWireCalculationView } from "@/components/calculation/earthWire/EarthWireCalculationView";
 import { EarthBarCalculationView } from "@/components/calculation/earthBar/EarthBarCalculationView";
 import { SavedCasesList } from "@/components/common/SavedCasesList";
+import { Modal } from "@/components/common/Modal";
 import { PageHeader } from "@/components/common/PageHeader";
+import { BusbarSizeSettings } from "@/components/settings/BusbarSizeSettings";
+import { EarthWireSizeSettings } from "@/components/settings/EarthWireSizeSettings";
+import { EarthBarSizeSettings } from "@/components/settings/EarthBarSizeSettings";
 
 const BASE_PATH = "/calculations/other";
 
@@ -35,11 +40,18 @@ const MODULE_LABEL_KEYS: Record<ModuleKey, string> = {
   saved: "otherCalc.savedTab",
 };
 
+const MODULE_SETTINGS_TITLE_KEYS: Partial<Record<ModuleKey, string>> = {
+  busbar: "busbarSizeSettings.title",
+  "earth-wire": "earthWireSizeSettings.title",
+  "earth-bar": "earthBarSizeSettings.title",
+};
+
 function OtherCalculationContent() {
   const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setCaseId } = useActiveCase();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const moduleParam = searchParams.get("module");
   const activeModule: ModuleKey = isModuleKey(moduleParam)
@@ -68,6 +80,17 @@ function OtherCalculationContent() {
       <PageHeader
         title={t("otherCalc.title")}
         description={t("otherCalc.description")}
+        actions={
+          activeModule !== "saved" && (
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="btn-secondary"
+            >
+              <Settings className="h-3.5 w-3.5" />
+              {t("common.settings")}
+            </button>
+          )
+        }
       />
 
       <div className="-mx-1 overflow-x-auto px-1">
@@ -109,6 +132,18 @@ function OtherCalculationContent() {
             <SavedCasesList onOpen={handleOpenSavedCase} />
           </div>
         </div>
+      )}
+
+      {settingsOpen && activeModule !== "saved" && (
+        <Modal
+          title={t(MODULE_SETTINGS_TITLE_KEYS[activeModule] ?? "common.settings")}
+          onClose={() => setSettingsOpen(false)}
+          widthClassName="max-w-2xl"
+        >
+          {activeModule === "busbar" && <BusbarSizeSettings />}
+          {activeModule === "earth-wire" && <EarthWireSizeSettings />}
+          {activeModule === "earth-bar" && <EarthBarSizeSettings />}
+        </Modal>
       )}
     </div>
   );

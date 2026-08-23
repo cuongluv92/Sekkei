@@ -5,6 +5,7 @@ import {
   Eye,
   Loader2,
   Search as SearchIcon,
+  Settings,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -20,7 +21,9 @@ import { openFileAsset } from "@/lib/utils/fileDownload";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
 import { FilePreview } from "@/components/common/FilePreview";
+import { Modal } from "@/components/common/Modal";
 import { PageHeader } from "@/components/common/PageHeader";
+import { PartMasterSettings } from "@/components/settings/PartMasterSettings";
 import { distinctCategories } from "@/lib/utils/partSearch";
 import type { Catalog } from "@/lib/types";
 
@@ -37,6 +40,7 @@ function CatalogView() {
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { message, show } = useMockFeedback();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -205,6 +209,15 @@ function CatalogView() {
       <PageHeader
         title={t("catalog.title")}
         description={t("catalog.description")}
+        actions={
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="btn-secondary"
+          >
+            <Settings className="h-3.5 w-3.5" />
+            {t("common.settings")}
+          </button>
+        }
       />
 
       <div className="flex flex-wrap gap-2">
@@ -316,6 +329,16 @@ function CatalogView() {
       )}
 
       {message && <div className="text-[12px] text-success">{message}</div>}
+
+      {settingsOpen && (
+        <Modal
+          title={t("common.settings")}
+          onClose={() => setSettingsOpen(false)}
+          widthClassName="max-w-3xl"
+        >
+          <PartMasterSettings />
+        </Modal>
+      )}
     </div>
   );
 }

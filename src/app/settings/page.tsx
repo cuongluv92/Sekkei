@@ -1,76 +1,43 @@
 "use client";
 
-import { Upload } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useTranslation } from "@/lib/i18n";
-import { calculationDefinitions } from "@/lib/mock/calculationDefinitions";
-import {
-  calculationTemplateService,
-  partTemplateService,
-} from "@/lib/services";
-import { getPublicUrl } from "@/lib/supabase/storage";
+import { navItems } from "@/lib/nav";
 import { LanguageSwitcher } from "@/components/settings/LanguageSwitcher";
-import { MasterListEditor } from "@/components/design/MasterListEditor";
-import { ScheduleColorSettings } from "@/components/design/ScheduleColorSettings";
-import { ManufacturerSettings } from "@/components/settings/ManufacturerSettings";
 import { BackupSettings } from "@/components/settings/BackupSettings";
-import { SelectionRuleSettings } from "@/components/settings/SelectionRuleSettings";
-import { TemplateManagementSettings } from "@/components/settings/TemplateManagementSettings";
-import { WeightMaterialSettings } from "@/components/settings/WeightMaterialSettings";
-import { BusbarSizeSettings } from "@/components/settings/BusbarSizeSettings";
-import { EarthWireSizeSettings } from "@/components/settings/EarthWireSizeSettings";
-import { EarthBarSizeSettings } from "@/components/settings/EarthBarSizeSettings";
 import { PageHeader } from "@/components/common/PageHeader";
-import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
-import type {
-  CalculationTemplate,
-  PartTemplate,
-  PartTemplateKind,
-} from "@/lib/types";
 
-const PART_TEMPLATE_KINDS: { kind: PartTemplateKind; accept: string }[] = [
-  { kind: "excel", accept: ".xlsx,.xls" },
-  { kind: "dwg", accept: ".dwg" },
-];
+/**
+ * Every feature-specific settings that used to live here (設計管理設定,
+ * 部品設定, 選定設定, 重量/母線銅帯/接地線/アースバー size settings, テンプレート管理
+ * etc.) has moved to a "設定" button inside the screen it actually
+ * configures — see each page's own PageHeader actions. This page keeps only
+ * settings that apply to the whole app, not one feature: 言語設定 and
+ * バックアップ. The quick-link panel below just helps people who are used to
+ * finding everything here find the new location.
+ */
+const QUICK_LINK_KEYS = [
+  "designManagement",
+  "partData",
+  "partDrawing",
+  "catalog",
+  "partAssembly",
+  "selection",
+  "weightCalc",
+  "ventilationCalc",
+  "seismicCalc",
+  "otherCalc",
+] as const;
 
 export default function SettingsPage() {
-  const { t, locale } = useTranslation();
-  const [templates, setTemplates] = useState<
-    Record<string, CalculationTemplate>
-  >({});
-  const [partTemplates, setPartTemplates] = useState<
-    Record<string, PartTemplate>
-  >({});
-  const { message, show } = useMockFeedback();
-  const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
-  const partFileInputs = useRef<Record<string, HTMLInputElement | null>>({});
-
-  useEffect(() => {
-    calculationTemplateService.list().then((list) => {
-      setTemplates(
-        Object.fromEntries(list.map((tpl) => [tpl.calculationKey, tpl])),
-      );
-    });
-    partTemplateService.list().then((list) => {
-      setPartTemplates(Object.fromEntries(list.map((tpl) => [tpl.kind, tpl])));
-    });
-  }, []);
-
-  async function handleUpload(key: string, file: File) {
-    const tpl = await calculationTemplateService.upload(key, file.name);
-    setTemplates((prev) => ({ ...prev, [key]: tpl }));
-    show(`${file.name} を登録しました`);
-  }
-
-  async function handlePartUpload(kind: PartTemplateKind, file: File) {
-    const tpl = await partTemplateService.upload(kind, file);
-    setPartTemplates((prev) => ({ ...prev, [kind]: tpl }));
-    show(`${file.name} を登録しました`);
-  }
+  const { t } = useTranslation();
+  const quickLinks = QUICK_LINK_KEYS.map((key) =>
+    navItems.find((item) => item.key === key),
+  ).filter((item) => item !== undefined);
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title={t("settings.title")} />
+      <PageHeader title={t("settings.title")} description={t("settings.description")} />
 
       <div className="panel">
         <div className="panel-header">
@@ -86,95 +53,6 @@ export default function SettingsPage() {
 
       <div className="panel">
         <div className="panel-header">
-          <span className="panel-title">{t("designSettings.title")}</span>
-        </div>
-        <div className="panel-body">
-          <MasterListEditor />
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header">
-          <span className="panel-title">
-            {t("scheduleColorSettings.title")}
-          </span>
-        </div>
-        <div className="panel-body">
-          <ScheduleColorSettings />
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header">
-          <span className="panel-title">{t("partSettings.title")}</span>
-        </div>
-        <div className="panel-body flex flex-col gap-5">
-          <MasterListEditor
-            keys={["category", "symbol"]}
-            namespace="partSettings"
-          />
-          <div className="border-t border-border pt-4">
-            <span className="mb-2 block text-[13px] font-bold text-foreground">
-              {t("partSettings.manufacturers.title")}
-            </span>
-            <ManufacturerSettings />
-          </div>
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header">
-          <span className="panel-title">{t("selectionSettings.title")}</span>
-        </div>
-        <div className="panel-body">
-          <SelectionRuleSettings />
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header">
-          <span className="panel-title">
-            {t("weightMaterialSettings.title")}
-          </span>
-        </div>
-        <div className="panel-body">
-          <WeightMaterialSettings />
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header">
-          <span className="panel-title">{t("busbarSizeSettings.title")}</span>
-        </div>
-        <div className="panel-body">
-          <BusbarSizeSettings />
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header">
-          <span className="panel-title">
-            {t("earthWireSizeSettings.title")}
-          </span>
-        </div>
-        <div className="panel-body">
-          <EarthWireSizeSettings />
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header">
-          <span className="panel-title">
-            {t("earthBarSizeSettings.title")}
-          </span>
-        </div>
-        <div className="panel-body">
-          <EarthBarSizeSettings />
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header">
           <span className="panel-title">{t("backupSettings.title")}</span>
         </div>
         <div className="panel-body">
@@ -184,149 +62,26 @@ export default function SettingsPage() {
 
       <div className="panel">
         <div className="panel-header">
-          <span className="panel-title">
-            {t("settings.templateManagement.title")}
-          </span>
+          <span className="panel-title">{t("settings.quickLinksTitle")}</span>
         </div>
         <div className="panel-body">
-          <TemplateManagementSettings />
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header">
-          <span className="panel-title">{t("settings.templateSection")}</span>
-        </div>
-        <div className="panel-body flex flex-col gap-3">
-          <p className="text-[12px] text-muted">
-            {t("settings.templateDescription")}
-          </p>
-          <div className="data-table-wrap">
-            <table className="data-table" style={{ minWidth: 560 }}>
-              <thead>
-                <tr>
-                  <th>{t("common.name")}</th>
-                  <th>{t("settings.templateSection")}</th>
-                  <th style={{ width: "160px" }} />
-                </tr>
-              </thead>
-              <tbody>
-                {calculationDefinitions.map((def) => {
-                  const tpl = templates[def.key];
-                  return (
-                    <tr key={def.id}>
-                      <td>
-                        {locale === "vi" && def.nameVi ? def.nameVi : def.name}
-                      </td>
-                      <td className={tpl ? "text-foreground" : "text-muted-2"}>
-                        {tpl ? tpl.fileName : t("settings.templateEmpty")}
-                      </td>
-                      <td>
-                        <button
-                          onClick={() => fileInputs.current[def.key]?.click()}
-                          className="btn-secondary"
-                        >
-                          <Upload className="h-3.5 w-3.5" />
-                          {t("settings.templateUpload")}
-                        </button>
-                        <input
-                          ref={(el) => {
-                            fileInputs.current[def.key] = el;
-                          }}
-                          type="file"
-                          accept=".xlsx,.xls"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleUpload(def.key, file);
-                            e.target.value = "";
-                          }}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            {quickLinks.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  className="btn-secondary justify-start"
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {t(`nav.${item.key}`)}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>
-
-      <div className="panel">
-        <div className="panel-header">
-          <span className="panel-title">
-            {t("settings.partTemplateSection")}
-          </span>
-        </div>
-        <div className="panel-body flex flex-col gap-3">
-          <p className="text-[12px] text-muted">
-            {t("settings.partTemplateDescription")}
-          </p>
-          <div className="data-table-wrap">
-            <table className="data-table" style={{ minWidth: 480 }}>
-              <thead>
-                <tr>
-                  <th style={{ width: "100px" }}>{t("common.kind")}</th>
-                  <th>{t("settings.templateSection")}</th>
-                  <th style={{ width: "160px" }} />
-                </tr>
-              </thead>
-              <tbody>
-                {PART_TEMPLATE_KINDS.map(({ kind, accept }) => {
-                  const tpl = partTemplates[kind];
-                  return (
-                    <tr key={kind}>
-                      <td>
-                        {kind === "excel"
-                          ? t("settings.kindExcel")
-                          : t("settings.kindDwg")}
-                      </td>
-                      <td className={tpl ? "text-foreground" : "text-muted-2"}>
-                        {tpl ? (
-                          <a
-                            href={getPublicUrl(tpl.storagePath)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-accent hover:underline"
-                          >
-                            {tpl.fileName}
-                          </a>
-                        ) : (
-                          t("settings.templateEmpty")
-                        )}
-                      </td>
-                      <td>
-                        <button
-                          onClick={() => partFileInputs.current[kind]?.click()}
-                          className="btn-secondary"
-                        >
-                          <Upload className="h-3.5 w-3.5" />
-                          {t("settings.templateUpload")}
-                        </button>
-                        <input
-                          ref={(el) => {
-                            partFileInputs.current[kind] = el;
-                          }}
-                          type="file"
-                          accept={accept}
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handlePartUpload(kind, file);
-                            e.target.value = "";
-                          }}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {message && <div className="text-[12px] text-success">{message}</div>}
     </div>
   );
 }
