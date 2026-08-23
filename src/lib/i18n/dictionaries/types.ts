@@ -11,6 +11,7 @@ export interface Dictionary {
   nav: {
     search: string;
     selection: string;
+    electricalTools: string;
     designManagement: string;
     partAssembly: string;
     partData: string;
@@ -169,6 +170,24 @@ export interface Dictionary {
     resultTitle: string;
     resultEmpty: string;
     ruleNotice: string;
+  };
+  electricalTools: {
+    title: string;
+    description: string;
+    searchPlaceholder: string;
+    searchEmpty: string;
+    basisSectionTitle: string;
+    basis: {
+      formulaLabel: string;
+      resultLabel: string;
+      fundamentalBadge: string;
+      relatedStandardLabel: string;
+      verifiedBadge: string;
+      unverifiedBadge: string;
+      referenceLabel: string;
+      applicabilityLabel: string;
+      emptyMessage: string;
+    };
   };
   partAssembly: {
     title: string;

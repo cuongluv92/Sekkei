@@ -9,6 +9,7 @@ const ja: Dictionary = {
   nav: {
     search: "検索",
     selection: "選定",
+    electricalTools: "電気技術計算",
     designManagement: "設計管理",
     partAssembly: "部品製作",
     partData: "部品データ",
@@ -174,6 +175,25 @@ const ja: Dictionary = {
     resultEmpty: "「計算」を押すと結果がここに表示されます",
     ruleNotice:
       "選定ロジックは未設定です。設定画面から選定ルールを登録してください。",
+  },
+  electricalTools: {
+    title: "電気技術計算",
+    description:
+      "電圧・電流・電力など、異なる電気の物理量どうしを技術式で相互変換します（単位換算ではありません）。求める値を選ぶと、他の値から双方向に計算します。",
+    searchPlaceholder: "例）kW、電流、変圧器、Y-Δ、電圧降下、CT",
+    searchEmpty: "該当するツールが見つかりません",
+    basisSectionTitle: "計算根拠",
+    basis: {
+      formulaLabel: "計算式",
+      resultLabel: "結果",
+      fundamentalBadge: "電気工学基本式",
+      relatedStandardLabel: "関連規格",
+      verifiedBadge: "確認済み",
+      unverifiedBadge: "要確認",
+      referenceLabel: "根拠箇所",
+      applicabilityLabel: "適用条件",
+      emptyMessage: "十分な値を入力すると、ここに計算式と根拠が表示されます",
+    },
   },
   partAssembly: {
     title: "部品製作",

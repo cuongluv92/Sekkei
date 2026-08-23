@@ -41,7 +41,17 @@ export type SourceType =
   /** A secondary source (catalog, engineering blog, web calculator) used only to locate/cross-check a rule — never the final source of truth for a production value. */
   | "secondary_reference"
   /** User-editable company preference data (e.g. "which busbar sizes we stock") — not a technical/safety rule at all. */
-  | "company_master";
+  | "company_master"
+  /**
+   * A basic electrical-engineering identity (Ohm's law, power triangle,
+   * √3 three-phase relations, Z=√(R²+X²), ...) — true by circuit-theory
+   * derivation, not because any standards body declared it. Always
+   * `verified: true` and rendered as 根拠: 電気工学基本式, never alongside a
+   * 関連規格 standard/edition/clause line (there isn't one) — keeps this
+   * class of rule visually distinct from a standard-sourced one so neither
+   * is ever mistaken for the other.
+   */
+  | "engineering_fundamental";
 
 export interface TechnicalSource {
   /** e.g. "JIS C 8480" */
@@ -57,4 +67,27 @@ export interface TechnicalSource {
   verified: boolean;
   /** Required when `verified` is false — what's missing and what to check before production use. */
   verificationNote?: string;
+}
+
+/**
+ * Builds a `TechnicalSource` for a basic electrical-engineering identity —
+ * `standard`/`edition` are left as "—" (there is no standards document to
+ * cite), `sourceType` is fixed to `"engineering_fundamental"`, and
+ * `verified` is always `true` since these formulas are true by derivation,
+ * not by anyone's confirmation. `reference` should name the identity itself
+ * (e.g. "オームの法則 V = IR"), `applicability` the scope it holds in
+ * (e.g. "線形・定常状態の回路").
+ */
+export function engineeringFundamentalSource(
+  reference: string,
+  applicability: string,
+): TechnicalSource {
+  return {
+    standard: "—",
+    edition: "—",
+    reference,
+    applicability,
+    sourceType: "engineering_fundamental",
+    verified: true,
+  };
 }

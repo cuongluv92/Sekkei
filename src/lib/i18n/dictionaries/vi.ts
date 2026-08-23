@@ -9,6 +9,7 @@ const vi: Dictionary = {
   nav: {
     search: "Tra cứu",
     selection: "Chọn thiết bị",
+    electricalTools: "Tính toán kỹ thuật điện",
     designManagement: "Quản lý thiết kế",
     partAssembly: "Tạo bảng linh kiện",
     partData: "Dữ liệu linh kiện",
@@ -177,6 +178,25 @@ const vi: Dictionary = {
     resultEmpty: "Nhấn “Tính toán” để hiển thị kết quả tại đây",
     ruleNotice:
       "Quy tắc chọn thiết bị chưa được thiết lập. Vui lòng cấu hình trong Cài đặt.",
+  },
+  electricalTools: {
+    title: "Tính toán kỹ thuật điện",
+    description:
+      "Chuyển đổi qua lại giữa các đại lượng điện khác nhau (điện áp, dòng điện, công suất...) bằng công thức kỹ thuật — không phải đổi đơn vị đơn thuần. Chọn giá trị cần tìm, hệ thống sẽ tính hai chiều từ các giá trị còn lại.",
+    searchPlaceholder: "Ví dụ: kW, dòng điện, máy biến áp, Y-Δ, sụt áp, CT",
+    searchEmpty: "Không tìm thấy công cụ phù hợp",
+    basisSectionTitle: "Căn cứ tính toán",
+    basis: {
+      formulaLabel: "Công thức",
+      resultLabel: "Kết quả",
+      fundamentalBadge: "Công thức kỹ thuật điện cơ bản",
+      relatedStandardLabel: "Tiêu chuẩn liên quan",
+      verifiedBadge: "Đã xác minh",
+      unverifiedBadge: "Cần xác minh",
+      referenceLabel: "Điều khoản",
+      applicabilityLabel: "Phạm vi áp dụng",
+      emptyMessage: "Nhập đủ giá trị để hiển thị công thức và căn cứ tại đây",
+    },
   },
   partAssembly: {
     title: "Tạo bảng linh kiện",

@@ -1,6 +1,7 @@
 import {
   Search,
   SlidersHorizontal,
+  Zap,
   DraftingCompass,
   ListChecks,
   Database,
@@ -21,6 +22,7 @@ export interface NavItem {
   key:
     | "search"
     | "selection"
+    | "electricalTools"
     | "designManagement"
     | "partAssembly"
     | "partData"
@@ -49,6 +51,7 @@ export interface NavItem {
 export const navItems: NavItem[] = [
   { key: "search", href: "/search", icon: Search },
   { key: "selection", href: "/selection", icon: SlidersHorizontal },
+  { key: "electricalTools", href: "/electrical-tools", icon: Zap },
   { key: "designManagement", href: "/design", icon: DraftingCompass },
   { key: "partAssembly", href: "/part-assembly", icon: ListChecks },
   { key: "partData", href: "/part-data", icon: Database },
