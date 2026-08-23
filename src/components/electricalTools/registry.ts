@@ -13,24 +13,6 @@ import { BusbarCalculationView } from "@/components/calculation/busbar/BusbarCal
 import { EarthWireCalculationView } from "@/components/calculation/earthWire/EarthWireCalculationView";
 import { EarthBarCalculationView } from "@/components/calculation/earthBar/EarthBarCalculationView";
 
-/**
- * 母線銅帯/接地線/アースバー are real, standard-backed 案件-scoped modules (own
- * 案件選択・自動選定/手動検証・採用・保存), not simple bidirectional formula
- * solvers like the other 10 categories — so unlike those, their `component`
- * here is a thin wrapper that just fixes `basePath` to this page so their
- * own mode-tab (自動選定/手動検証) URL updates stay on 電気技術計算 instead of
- * navigating to their old dedicated routes.
- */
-function BusbarCategory() {
-  return <BusbarCalculationView basePath="/electrical-tools" />;
-}
-function EarthWireCategory() {
-  return <EarthWireCalculationView basePath="/electrical-tools" />;
-}
-function EarthBarCategory() {
-  return <EarthBarCalculationView basePath="/electrical-tools" />;
-}
-
 export interface ElectricalToolCategory {
   id: string;
   titleJa: string;
@@ -152,7 +134,7 @@ export const ELECTRICAL_TOOL_CATEGORIES: ElectricalToolCategory[] = [
       "母線銅帯", "バスバー", "busbar", "jis c 8480", "630a", "電流密度", "断面積",
       "thanh cai dong",
     ],
-    component: BusbarCategory,
+    component: BusbarCalculationView,
   },
   {
     id: "earthWire",
@@ -161,7 +143,7 @@ export const ELECTRICAL_TOOL_CATEGORIES: ElectricalToolCategory[] = [
     keywords: [
       "接地線", "接地工事", "a種", "b種", "c種", "d種", "day tiep dia",
     ],
-    component: EarthWireCategory,
+    component: EarthWireCalculationView,
   },
   {
     id: "earthBar",
@@ -170,7 +152,7 @@ export const ELECTRICAL_TOOL_CATEGORIES: ElectricalToolCategory[] = [
     keywords: [
       "アースバー", "盤内接地母線", "短絡耐量", "thanh cai tiep dia",
     ],
-    component: EarthBarCategory,
+    component: EarthBarCalculationView,
   },
 ];
 

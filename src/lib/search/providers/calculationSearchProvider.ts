@@ -9,9 +9,6 @@ const CALCULATION_TYPE_ROUTES: {
   label: string;
   href: (caseId: string) => string;
 }[] = [
-  { match: (t) => t === "busbar", label: "母線銅帯", href: (id) => `/electrical-tools?category=busbar&case=${id}` },
-  { match: (t) => t === "earth-wire", label: "接地線", href: (id) => `/electrical-tools?category=earthWire&case=${id}` },
-  { match: (t) => t === "earth-bar", label: "アースバー", href: (id) => `/electrical-tools?category=earthBar&case=${id}` },
   {
     match: (t) => t.startsWith("weight-basic-"),
     label: "基本重量計算",
@@ -24,7 +21,12 @@ const CALCULATION_TYPE_ROUTES: {
   },
   { match: (t) => t === "ventilation", label: "換気計算", href: (id) => `/calculations/ventilation?case=${id}` },
   { match: (t) => t === "seismic", label: "耐震計算", href: (id) => `/calculations/seismic?case=${id}` },
-  { match: () => true, label: "計算", href: (id) => `/electrical-tools?case=${id}` },
+  // 母線銅帯/接地線/アースバー are stateless calculators now (no 案件-scoped
+  // persistence, see BusbarCalculationView etc.) so they never create new
+  // records here — this catch-all only still matches old records saved
+  // before that change, and just lands on 電気技術計算 generically since
+  // there's no more per-案件 state to deep-link into.
+  { match: () => true, label: "計算", href: () => `/electrical-tools` },
 ];
 
 function routeFor(calculationType: string) {

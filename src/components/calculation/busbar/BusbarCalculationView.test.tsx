@@ -1,105 +1,15 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useSyncExternalStore,
-  type ReactNode,
-} from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
 import { BusbarCalculationView } from "./BusbarCalculationView";
 import type { BusbarSize } from "@/lib/types";
 
-// A minimal reactive query-string store so `router.push("...?mode=manual")`
-// (used by the real タブ切り替え UI) actually flows back into
-// `useSearchParams()` and re-renders — real Next.js does this via
-// navigation; a static mock would leave `mode` stuck on "auto" forever and
-// make it impossible to test the 手動検証 tab at all.
-let currentSearch = new URLSearchParams("");
-const searchListeners = new Set<() => void>();
-function pushSearch(url: string) {
-  const qIndex = url.indexOf("?");
-  currentSearch = new URLSearchParams(qIndex >= 0 ? url.slice(qIndex + 1) : "");
-  searchListeners.forEach((l) => l());
-}
+// PageHeader's own "← 戻る" button calls useRouter().back() — this view no
+// longer uses next/navigation itself (no more 案件/URL-driven state), but
+// PageHeader still needs an App Router context to render at all.
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: pushSearch }),
-  useSearchParams: () =>
-    useSyncExternalStore(
-      (onStoreChange) => {
-        searchListeners.add(onStoreChange);
-        return () => searchListeners.delete(onStoreChange);
-      },
-      () => currentSearch,
-    ),
-}));
-
-beforeEach(() => {
-  currentSearch = new URLSearchParams("");
-  // case-2 starts each test blank — case-1's seeded record must survive
-  // (the reload/switching tests below depend on it), but a previous test
-  // adopting/saving into case-2 must never leak into the next one.
-  delete savedRecords["case-2"];
-});
-
-// A minimal, real (not stubbed) active-案件 context so BusbarCalculationView's
-// own case-switch effect (resetting the hydrate guard, reloading the saved
-// record) runs exactly as it does in the app — only the underlying
-// designCaseService/calculationRecordService calls are faked below.
-interface FakeActiveCaseValue {
-  caseId: string;
-  setCaseId: (id: string) => void;
-  loading: boolean;
-  dirty: boolean;
-  registerSaveHandler: (
-    id: string,
-    handler: (() => Promise<void>) | null,
-  ) => void;
-  runSaveHandler: () => Promise<void>;
-}
-const FakeActiveCaseContext = createContext<FakeActiveCaseValue | null>(null);
-function FakeActiveCaseProvider({ children }: { children: ReactNode }) {
-  const [caseId, setCaseId] = useState("case-1");
-  return (
-    <FakeActiveCaseContext.Provider
-      value={{
-        caseId,
-        setCaseId,
-        loading: false,
-        dirty: false,
-        registerSaveHandler: () => {},
-        runSaveHandler: async () => {},
-      }}
-    >
-      {children}
-    </FakeActiveCaseContext.Provider>
-  );
-}
-function useFakeActiveCase() {
-  const ctx = useContext(FakeActiveCaseContext);
-  if (!ctx) throw new Error("missing FakeActiveCaseProvider in test");
-  return ctx;
-}
-vi.mock("@/lib/store/ActiveCaseProvider", () => ({
-  useActiveCase: () => useFakeActiveCase(),
-  // This test suite cares about BusbarCalculationView's own logic given a
-  // caseId, not the suppression mechanism itself (covered separately by
-  // ActiveCaseProvider.test.tsx) — mirrors the fake caseId directly.
-  useEffectiveCaseId: () => useFakeActiveCase().caseId,
-}));
-
-vi.mock("@/components/common/CaseSelector", () => ({
-  CaseSelector: () => {
-    const { caseId, setCaseId } = useFakeActiveCase();
-    return (
-      <div>
-        <span data-testid="current-case">{caseId}</span>
-        <button onClick={() => setCaseId("case-2")}>switch-to-case-2</button>
-      </div>
-    );
-  },
+  useRouter: () => ({ back: vi.fn() }),
 }));
 
 const sizes: BusbarSize[] = [
@@ -107,136 +17,33 @@ const sizes: BusbarSize[] = [
   { id: "s2", thicknessMm: 6, widthMm: 50, order: 1 },
 ];
 
-const savedRecords: Record<
-  string,
-  {
-    input: Record<string, unknown>;
-    result: Record<string, unknown>;
-    updatedAt: string;
-  }
-> = {
-  "case-1": {
-    input: {
-      ratedCurrentRaw: "180",
-      mode: "auto",
-      thicknessRaw: "",
-      widthRaw: "",
-      barsRaw: "1",
-    },
-    result: {
-      adopted: {
-        sizeId: "s1",
-        thicknessMm: 4,
-        widthMm: 20,
-        barsPerPhase: 1,
-        totalAreaMm2: 80,
-        actualDensityAPerMm2: 2.25,
-        marginPercent: 11.1,
-        judgment: "ok",
-        adoptedAt: "2026-01-01T00:00:00.000Z",
-      },
-    },
-    updatedAt: "2026-01-01T00:00:00.000Z",
-  },
-};
-
 vi.mock("@/lib/services", () => ({
   busbarSizeService: { list: vi.fn(async () => sizes) },
-  calculationRecordService: {
-    get: vi.fn(async (caseId: string, calculationType: string) => {
-      const record = savedRecords[caseId];
-      if (!record || calculationType !== "busbar") return null;
-      return { id: "r1", caseId, calculationType, ...record };
-    }),
-    save: vi.fn(
-      async (
-        caseId: string,
-        calculationType: string,
-        input: Record<string, unknown>,
-        result: Record<string, unknown>,
-      ) => {
-        const updatedAt = new Date().toISOString();
-        savedRecords[caseId] = { input, result, updatedAt };
-        return {
-          id: "r1",
-          caseId,
-          calculationType,
-          input,
-          result,
-          updatedAt,
-        };
-      },
-    ),
-  },
 }));
 
 function renderView() {
   render(
     <LanguageProvider>
-      <FakeActiveCaseProvider>
-        <BusbarCalculationView />
-      </FakeActiveCaseProvider>
+      <BusbarCalculationView />
     </LanguageProvider>,
   );
 }
 
-describe("BusbarCalculationView — saved calculation reload (spec #25)", () => {
-  it("restores the saved rated current and adopted candidate for a 案件 that already has one", async () => {
+describe("BusbarCalculationView — stateless calculator (no 案件/save, like every other 電気技術計算 tool)", () => {
+  it("renders directly with no 案件 selection gating", async () => {
     renderView();
-
-    const currentInput = (await screen.findByPlaceholderText(
-      "180",
-    )) as HTMLInputElement;
-    await waitFor(() => expect(currentInput.value).toBe("180"));
-
-    // The previously-adopted 4×20×1本 should show as adopted, not re-offered with a 採用 button.
-    await waitFor(() => {
-      expect(screen.getByText("採用済み")).toBeInTheDocument();
-    });
+    // No CaseSelector / 案件選択 prompt — the input is available immediately.
+    expect(await screen.findByPlaceholderText("180")).toBeInTheDocument();
+    expect(screen.queryByText("案件を選択してください")).toBeNull();
   });
 });
 
-describe("BusbarCalculationView — 案件 switching never mixes data (spec #18, #25)", () => {
-  it("clears case-1's rated current/adopted state when switching to a 案件 with no saved calculation", async () => {
-    const user = userEvent.setup();
-    renderView();
-
-    const currentInput = (await screen.findByPlaceholderText(
-      "180",
-    )) as HTMLInputElement;
-    await waitFor(() => expect(currentInput.value).toBe("180"));
-    await waitFor(() =>
-      expect(screen.getByText("採用済み")).toBeInTheDocument(),
-    );
-
-    await user.click(screen.getByText("switch-to-case-2"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("current-case").textContent).toBe("case-2");
-    });
-    // case-2 has no saved record — the rated current field must be blank, not
-    // carrying over case-1's "180", and there must be no lingering 採用済み.
-    await waitFor(() => {
-      const freshInput = screen.getByPlaceholderText("180") as HTMLInputElement;
-      expect(freshInput.value).toBe("");
-    });
-    expect(screen.queryByText("採用済み")).toBeNull();
-  });
-});
-
-describe("BusbarCalculationView — Auto mode candidate search + adopt", () => {
+describe("BusbarCalculationView — Auto mode candidate search + adopt (purely local, no persistence)", () => {
   it("shows candidates for a valid rated current and lets the user adopt one", async () => {
     const user = userEvent.setup();
     renderView();
 
-    // Switch to case-2 (blank slate) to test the full type→search→adopt flow independent of preloaded case-1 data.
-    await user.click(screen.getByText("switch-to-case-2"));
-    await waitFor(() =>
-      expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
-    );
-
     const input = await screen.findByPlaceholderText("180");
-    await user.clear(input);
     await user.type(input, "180");
 
     const table = await screen.findByRole("table");
@@ -260,11 +67,6 @@ describe("BusbarCalculationView — 定格電流 is two independent range-scoped
   it("filling the ～630A box disables the 630A～ box, and vice versa, so only one range is ever active at once", async () => {
     const user = userEvent.setup();
     renderView();
-
-    await user.click(screen.getByText("switch-to-case-2"));
-    await waitFor(() =>
-      expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
-    );
 
     const lowInput = (await screen.findByPlaceholderText(
       "180",
@@ -291,11 +93,6 @@ describe("BusbarCalculationView — 定格電流 is two independent range-scoped
     const user = userEvent.setup();
     renderView();
 
-    await user.click(screen.getByText("switch-to-case-2"));
-    await waitFor(() =>
-      expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
-    );
-
     const lowInput = await screen.findByPlaceholderText("180");
     await user.type(lowInput, "180");
 
@@ -309,11 +106,6 @@ describe("BusbarCalculationView — 定格電流 is two independent range-scoped
   it("shows real geometry candidates marked 要確認 (never a fabricated OK) for a value typed into the 630A～ box, and still lets the user adopt one", async () => {
     const user = userEvent.setup();
     renderView();
-
-    await user.click(screen.getByText("switch-to-case-2"));
-    await waitFor(() =>
-      expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
-    );
 
     const highInput = await screen.findByPlaceholderText("800");
     await user.type(highInput, "1000");
@@ -337,11 +129,6 @@ describe("BusbarCalculationView — 定格電流 is two independent range-scoped
     const user = userEvent.setup();
     renderView();
 
-    await user.click(screen.getByText("switch-to-case-2"));
-    await waitFor(() =>
-      expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
-    );
-
     const lowInput = await screen.findByPlaceholderText("180");
     await user.type(lowInput, "1000");
 
@@ -357,11 +144,6 @@ describe("BusbarCalculationView — 定格電流 is two independent range-scoped
   it("手動検証 for 6×50×2本 against a 630A～ target shows real geometry (no fabricated 許容電流/OK)", async () => {
     const user = userEvent.setup();
     renderView();
-
-    await user.click(screen.getByText("switch-to-case-2"));
-    await waitFor(() =>
-      expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
-    );
 
     const highInput = await screen.findByPlaceholderText("800");
     await user.type(highInput, "1000");
@@ -389,11 +171,6 @@ describe("BusbarCalculationView — 断面積→電流 reverse lookup (spec foll
     const user = userEvent.setup();
     renderView();
 
-    await user.click(screen.getByText("switch-to-case-2"));
-    await waitFor(() =>
-      expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
-    );
-
     const areaInput = await screen.findByPlaceholderText("72");
     await user.type(areaInput, "72");
 
@@ -407,11 +184,6 @@ describe("BusbarCalculationView — 断面積→電流 reverse lookup (spec foll
     const user = userEvent.setup();
     renderView();
 
-    await user.click(screen.getByText("switch-to-case-2"));
-    await waitFor(() =>
-      expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
-    );
-
     const areaInput = await screen.findByPlaceholderText("72");
     await user.type(areaInput, "400");
 
@@ -423,11 +195,6 @@ describe("BusbarCalculationView — 断面積→電流 reverse lookup (spec foll
   it("never fabricates a number for an area implying >630A — shows the honest unavailable explanation alongside the capped 630+A reading, in the same panel", async () => {
     const user = userEvent.setup();
     renderView();
-
-    await user.click(screen.getByText("switch-to-case-2"));
-    await waitFor(() =>
-      expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
-    );
 
     const areaInput = await screen.findByPlaceholderText("72");
     await user.type(areaInput, "400");

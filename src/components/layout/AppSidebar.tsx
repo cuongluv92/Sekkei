@@ -62,7 +62,7 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
               O
             </span>
             <span className="flex items-baseline gap-1.5">
-              <span className="text-[32px] font-extrabold tracking-tight text-accent">oku</span>
+              <span className="text-[32px] font-extrabold tracking-tight text-accent">OKU</span>
               <span className="text-[22px] font-semibold tracking-tight text-foreground">pro</span>
             </span>
           </Link>

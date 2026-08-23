@@ -6,7 +6,7 @@ import type { HighCurrentBusbarCandidate } from "@/lib/calc/busbar/highCurrentCa
 
 interface HighCurrentBusbarCandidateListProps {
   candidates: HighCurrentBusbarCandidate[];
-  adopted: (HighCurrentBusbarCandidate & { adoptedAt: string }) | null;
+  adopted: HighCurrentBusbarCandidate | null;
   onAdopt: (candidate: HighCurrentBusbarCandidate) => void;
   saving: boolean;
 }
@@ -18,7 +18,7 @@ function roundTo(n: number, decimals: number): number {
 
 function isSameConfig(
   a: HighCurrentBusbarCandidate,
-  b: (HighCurrentBusbarCandidate & { adoptedAt: string }) | null,
+  b: HighCurrentBusbarCandidate | null,
 ): boolean {
   if (!b) return false;
   return (

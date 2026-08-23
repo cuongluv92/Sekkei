@@ -1,32 +1,22 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 /**
  * 接地線 no longer has its own standalone page — it's a category inside
- * 電気技術計算 (see `/electrical-tools`). This route only redirects there
- * (preserving `case`/`mode`) so any existing bookmark or deep link still
+ * 電気技術計算 (see `/electrical-tools`), and no longer 案件-scoped (a
+ * stateless calculator like V/I/A/U, so there's nothing left to deep-link
+ * into). This route only redirects there so any existing bookmark still
  * lands somewhere useful instead of 404ing.
  */
-function EarthWireRedirect() {
+export default function EarthWireCalculationPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("category", "earthWire");
-    router.replace(`/electrical-tools?${params.toString()}`);
+    router.replace("/electrical-tools?category=earthWire");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return null;
-}
-
-export default function EarthWireCalculationPage() {
-  return (
-    <Suspense fallback={null}>
-      <EarthWireRedirect />
-    </Suspense>
-  );
 }

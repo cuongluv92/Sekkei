@@ -2,7 +2,7 @@ import type { Dictionary } from "./types";
 
 const vi: Dictionary = {
   app: {
-    name: "oku-pro",
+    name: "OKU-pro",
     tagline: "Hệ thống quản lý dữ liệu kỹ thuật",
     welcomeTitle: "Chào mừng đến với OKU Pro",
   },
@@ -398,7 +398,6 @@ const vi: Dictionary = {
     adoptButton: "この構成を採用",
     adoptedLabel: "採用済み",
     adoptedAt: "採用日時",
-    saved: "保存済み",
     arrangementLabel: "配置",
     highCurrentCandidateDisclaimer:
       "許容電流・余裕率は未検証のため表示していません。採用する場合は設計者ご自身の技術判断・原資料確認のうえで決定してください。",
@@ -421,7 +420,6 @@ const vi: Dictionary = {
     groundingTypeC: "C種接地工事",
     groundingTypeD: "D種接地工事",
     ratedCurrentLabel: "定格電流 In",
-    prefilledFromBusbar: "母線銅帯の定格電流から自動入力されました（変更可能）",
     unsupportedGroundingType:
       "A種・B種接地工事の接地線太さ選定には対応していません（0.052×In式はC種・D種接地工事にのみ適用されます）。個別に技術確認のうえ選定してください。",
     enterInputPrompt: "接地工事種別（C種またはD種）と定格電流を入力してください",
@@ -447,7 +445,6 @@ const vi: Dictionary = {
     cautionMessage: "使用可能ですが過大です",
     adoptButton: "この構成を採用",
     adoptedLabel: "採用済み",
-    saved: "保存済み",
     manualSizeLabel: "検証するサイズ",
     manualHint:
       "サイズを選択すると、その構成が要件を満たすかすぐに確認できます。",
@@ -477,7 +474,6 @@ const vi: Dictionary = {
     groundingTypeLabel: "接地工事種別",
     faultCurrentLabel: "事故電流 (kA)",
     clearingTimeLabel: "遮断時間 (s)",
-    prefilledFromEarthWire: "接地線の接地工事種別から自動入力されました（変更可能）",
     requiresVerificationNotice:
       "短絡耐量（断熱法 S = I√t / k）のk値が未確認のため、必要断面積・許容電流・判定（OK/NG）は計算できません。以下は総断面積のみを実際に計算した参考候補です（判定はすべて「要確認」）。事故電流・遮断時間は記録用であり、この計算には使用していません。",
     basisSectionTitle: "計算根拠",
@@ -502,7 +498,6 @@ const vi: Dictionary = {
       "厚さ・幅・本数を入力すると、その構成の総断面積を確認できます（例：3×25、3×30、3×40）。",
     adoptButton: "この構成を採用",
     adoptedLabel: "採用済み",
-    saved: "保存済み",
   },
   earthBarSizeSettings: {
     title: "アースバー選定マスタ",

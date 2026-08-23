@@ -356,7 +356,6 @@ export interface Dictionary {
     adoptButton: string;
     adoptedLabel: string;
     adoptedAt: string;
-    saved: string;
     arrangementLabel: string;
     highCurrentCandidateDisclaimer: string;
     reverseCalcTitle: string;
@@ -375,7 +374,6 @@ export interface Dictionary {
     groundingTypeC: string;
     groundingTypeD: string;
     ratedCurrentLabel: string;
-    prefilledFromBusbar: string;
     unsupportedGroundingType: string;
     enterInputPrompt: string;
     formulaSectionTitle: string;
@@ -398,7 +396,6 @@ export interface Dictionary {
     cautionMessage: string;
     adoptButton: string;
     adoptedLabel: string;
-    saved: string;
     manualSizeLabel: string;
     manualHint: string;
     manualSelectPlaceholder: string;
@@ -425,7 +422,6 @@ export interface Dictionary {
     groundingTypeLabel: string;
     faultCurrentLabel: string;
     clearingTimeLabel: string;
-    prefilledFromEarthWire: string;
     requiresVerificationNotice: string;
     basisSectionTitle: string;
     referenceLabel: string;
@@ -447,7 +443,6 @@ export interface Dictionary {
     manualHint: string;
     adoptButton: string;
     adoptedLabel: string;
-    saved: string;
   };
   earthBarSizeSettings: {
     title: string;
