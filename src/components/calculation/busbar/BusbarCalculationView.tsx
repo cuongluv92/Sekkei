@@ -78,6 +78,11 @@ function parsePositiveNumber(raw: string): number | null {
   return raw.trim() !== "" && Number.isFinite(n) && n > 0 ? n : null;
 }
 
+function roundTo(n: number, decimals: number): number {
+  const factor = 10 ** decimals;
+  return Math.round(n * factor) / factor;
+}
+
 /**
  * 母線銅帯 — 案件 → 定格電流 → 必要断面積（JIS C 8480 簡易選定, ≤630A）→
  * 自動選定 or 手動検証 → 採用 → 案件 に保存. Bypasses the generic
@@ -322,6 +327,21 @@ export function BusbarCalculationView({
     registerSaveHandler(CALCULATION_TYPE, () => persist(adopted));
   }
 
+  // ～630A and 630A～ each apply a different formula/standard — filling one
+  // clears the other so the candidate list, 計算根拠, and adopted result can
+  // never be ambiguous about which range is actually being calculated.
+  function handleRatedCurrentLowChange(value: string) {
+    setRatedCurrentLowRaw(value);
+    if (value.trim() !== "") setRatedCurrentHighRaw("");
+    markDirty();
+  }
+
+  function handleRatedCurrentHighChange(value: string) {
+    setRatedCurrentHighRaw(value);
+    if (value.trim() !== "") setRatedCurrentLowRaw("");
+    markDirty();
+  }
+
   async function handleAdoptStandard(candidate: BusbarCandidate) {
     const next: AdoptedBusbar = {
       ...candidate,
@@ -406,10 +426,10 @@ export function BusbarCalculationView({
                         type="number"
                         step="1"
                         value={ratedCurrentLowRaw}
-                        onChange={(e) => {
-                          setRatedCurrentLowRaw(e.target.value);
-                          markDirty();
-                        }}
+                        onChange={(e) =>
+                          handleRatedCurrentLowChange(e.target.value)
+                        }
+                        disabled={ratedCurrentHighRaw.trim() !== ""}
                         placeholder="180"
                         className={
                           lowOverflow
@@ -426,47 +446,60 @@ export function BusbarCalculationView({
                         {t("busbarCalc.lowRangeOverflowMessage")}
                       </p>
                     )}
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <BusbarReverseCalcPanel variant="low" />
-                </div>
-              </div>
-
-              {/* 630A～ row: same shape, honest unverified path */}
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
-                <div className="panel h-full flex-1">
-                  <div className="panel-header">
-                    <span className="panel-title">
-                      {t("busbarCalc.ratedCurrentHighLabel")}
-                    </span>
-                  </div>
-                  <div className="panel-body flex flex-col gap-3">
-                    <div className="flex max-w-[160px] items-center gap-1.5">
-                      <input
-                        type="number"
-                        step="1"
-                        value={ratedCurrentHighRaw}
-                        onChange={(e) => {
-                          setRatedCurrentHighRaw(e.target.value);
-                          markDirty();
-                        }}
-                        placeholder="800"
-                        className="field-input min-w-0"
-                      />
-                      <span className="shrink-0 text-[12px] text-muted-2">
-                        A
-                      </span>
-                    </div>
-                    {highUnderflow && (
-                      <p className="text-[11.5px] text-muted">
-                        {t("busbarCalc.highRangeUnderflowMessage")}
-                      </p>
+                    {densityResultLow?.inRange && (
+                      <div className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
+                        <span className="field-label">
+                          {t("busbarCalc.formulaSectionTitle")}
+                        </span>
+                        <div className="flex flex-col gap-1 font-mono text-[12px] text-muted">
+                          <span>{t("busbarCalc.requiredAreaFormula")}</span>
+                          <span className="text-foreground">
+                            {densityResultLow.ratedCurrentA} /{" "}
+                            {densityResultLow.densityAPerMm2} ={" "}
+                            {roundTo(densityResultLow.requiredAreaMm2, 3)} mm²
+                          </span>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
                 <div className="flex-1">
-                  <BusbarReverseCalcPanel variant="high" />
+                  <BusbarReverseCalcPanel />
+                </div>
+              </div>
+
+              {/* 630A～ row: 定格電流 input only — no verified source exists
+                  to invert 断面積→電流 past 630A (see the capped-state
+                  explanation folded into the ～630A panel above instead of a
+                  second always-empty panel here). */}
+              <div className="panel">
+                <div className="panel-header">
+                  <span className="panel-title">
+                    {t("busbarCalc.ratedCurrentHighLabel")}
+                  </span>
+                </div>
+                <div className="panel-body flex flex-col gap-3">
+                  <div className="flex max-w-[160px] items-center gap-1.5">
+                    <input
+                      type="number"
+                      step="1"
+                      value={ratedCurrentHighRaw}
+                      onChange={(e) =>
+                        handleRatedCurrentHighChange(e.target.value)
+                      }
+                      disabled={ratedCurrentLowRaw.trim() !== ""}
+                      placeholder="800"
+                      className="field-input min-w-0"
+                    />
+                    <span className="shrink-0 text-[12px] text-muted-2">
+                      A
+                    </span>
+                  </div>
+                  {highUnderflow && (
+                    <p className="text-[11.5px] text-muted">
+                      {t("busbarCalc.highRangeUnderflowMessage")}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -486,6 +519,7 @@ export function BusbarCalculationView({
                       requiredAreaMm2={densityResultLow.requiredAreaMm2}
                       currentDensitySource={densityResultLow.source}
                       materialSource={JIS_H_3140_COPPER_SOURCE}
+                      hideFormula
                     />
                   )}
                   {ratedCurrentHighA !== null && (

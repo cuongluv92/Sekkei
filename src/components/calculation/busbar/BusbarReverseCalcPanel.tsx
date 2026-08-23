@@ -10,61 +10,20 @@ function roundTo(n: number, decimals: number): number {
   return Math.round(n * factor) / factor;
 }
 
-interface BusbarReverseCalcPanelProps {
-  /**
-   * "low" inverts the JIS C 8480 simplified table (≤630A) via
-   * `maxCurrentForArea` — a real computation. "high" has no verified source
-   * to invert (see highCurrentRule.ts: JSIA-T1006/JSIA 210 are unobtained
-   * paid publications) — rather than fabricate a number, it explains why
-   * none is shown, the same honesty principle the >630A candidate search
-   * already follows (judgment always "requiresVerification", never a
-   * invented pass/fail).
-   */
-  variant: "low" | "high";
-}
-
 /**
  * 断面積 → 電流 の逆算 — a standalone reverse-direction lookup, separate from
  * 手動検証's t×W×n what-if check. Takes a cross-section directly (mm²), not
- * derived from any t/W/n input. Split into a ～630A variant (inverts the
- * JIS C 8480 table, `maxCurrentForArea`) and a 630A～ variant (honest
- * unavailable notice) — paired one-for-one with the ～630A/630A～ 定格電流
- * inputs beside them (spec follow-up: 定格電流 itself is now two independent
- * range-scoped boxes, not one auto-switching field).
+ * derived from any t/W/n input, and inverts the JIS C 8480 simplified table
+ * (`maxCurrentForArea`). One tool, not two: an area that implies more than
+ * 630A (`cappedAtCeiling`) has no verified source to invert past that point
+ * (JSIA-T1006/JSIA 210 are unobtained paid publications — see
+ * highCurrentRule.ts), so rather than a separate always-visible "630A～"
+ * panel that can never produce a number, this same panel explains why none
+ * is shown right where the capped reading already appears.
  */
-export function BusbarReverseCalcPanel({ variant }: BusbarReverseCalcPanelProps) {
+export function BusbarReverseCalcPanel() {
   const { t } = useTranslation();
   const [areaRaw, setAreaRaw] = useState("");
-
-  if (variant === "high") {
-    return (
-      <div className="panel h-full">
-        <div className="panel-header">
-          <span className="panel-title">
-            {t("busbarCalc.reverseCalcHighTitle")}
-          </span>
-        </div>
-        <div className="panel-body flex flex-col gap-3">
-          <p className="text-[12px] text-muted">
-            {t("busbarCalc.reverseCalcHighUnavailable")}
-          </p>
-          <div className="rounded-lg border border-border-strong bg-surface px-3 py-2.5 text-[11.5px]">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-bold text-foreground">
-                {JSIA_T1006_SOURCE.standard}:{JSIA_T1006_SOURCE.edition}
-              </span>
-              <span className="badge-warning">
-                {t("busbarCalc.unverifiedBadge")}
-              </span>
-            </div>
-            <p className="mt-1.5 text-muted">
-              {JSIA_T1006_SOURCE.verificationNote}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const areaMm2 = Number(areaRaw);
   const result =
@@ -75,9 +34,7 @@ export function BusbarReverseCalcPanel({ variant }: BusbarReverseCalcPanelProps)
   return (
     <div className="panel h-full">
       <div className="panel-header">
-        <span className="panel-title">
-          {t("busbarCalc.reverseCalcLowTitle")}
-        </span>
+        <span className="panel-title">{t("busbarCalc.reverseCalcTitle")}</span>
       </div>
       <div className="panel-body flex flex-col gap-3">
         <p className="text-[12px] text-muted">
@@ -121,6 +78,25 @@ export function BusbarReverseCalcPanel({ variant }: BusbarReverseCalcPanelProps)
                 {t("busbarCalc.unverifiedBadge")}
               </span>
             </div>
+          </div>
+        )}
+
+        {result?.inRange && result.cappedAtCeiling && (
+          <div className="rounded-lg border border-border-strong bg-surface px-3 py-2.5 text-[11.5px]">
+            <p className="text-muted">
+              {t("busbarCalc.reverseCalcHighUnavailable")}
+            </p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <span className="font-bold text-foreground">
+                {JSIA_T1006_SOURCE.standard}:{JSIA_T1006_SOURCE.edition}
+              </span>
+              <span className="badge-warning">
+                {t("busbarCalc.unverifiedBadge")}
+              </span>
+            </div>
+            <p className="mt-1.5 text-muted">
+              {JSIA_T1006_SOURCE.verificationNote}
+            </p>
           </div>
         )}
       </div>

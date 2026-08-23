@@ -375,8 +375,6 @@ const vi: Dictionary = {
     highCurrentCandidateDisclaimer:
       "許容電流・余裕率は未検証のため表示していません。採用する場合は設計者ご自身の技術判断・原資料確認のうえで決定してください。",
     reverseCalcTitle: "断面積 → 電流",
-    reverseCalcLowTitle: "断面積 → 電流（～630A）",
-    reverseCalcHighTitle: "断面積 → 電流（630A～）",
     reverseCalcHighUnavailable:
       "JSIA-T1006・JSIA 210等の原資料（許容電流表・複数枚配置の係数）が未入手・未検証のため、630Aを超える範囲では断面積から電流を逆算できません。実際の許容電流は設計者ご自身の技術判断・原資料確認のうえで決定してください。",
     reverseCalcHint:

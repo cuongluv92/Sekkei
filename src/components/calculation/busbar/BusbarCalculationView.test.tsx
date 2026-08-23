@@ -253,6 +253,55 @@ describe("BusbarCalculationView — Auto mode candidate search + adopt", () => {
 });
 
 describe("BusbarCalculationView — 定格電流 is two independent range-scoped boxes, not one auto-switching field (spec follow-up)", () => {
+  it("filling the ～630A box disables the 630A～ box, and vice versa, so only one range is ever active at once", async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    await user.click(screen.getByText("switch-to-case-2"));
+    await waitFor(() =>
+      expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
+    );
+
+    const lowInput = (await screen.findByPlaceholderText(
+      "180",
+    )) as HTMLInputElement;
+    const highInput = (await screen.findByPlaceholderText(
+      "800",
+    )) as HTMLInputElement;
+    expect(lowInput).not.toBeDisabled();
+    expect(highInput).not.toBeDisabled();
+
+    await user.type(lowInput, "180");
+    await waitFor(() => expect(highInput).toBeDisabled());
+    expect(highInput.value).toBe("");
+
+    await user.clear(lowInput);
+    await waitFor(() => expect(highInput).not.toBeDisabled());
+
+    await user.type(highInput, "1000");
+    await waitFor(() => expect(lowInput).toBeDisabled());
+    expect(lowInput.value).toBe("");
+  });
+
+  it("shows the 計算式 (with real substituted numbers) inside the ～630A 定格電流 panel itself, not only in 計算根拠", async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    await user.click(screen.getByText("switch-to-case-2"));
+    await waitFor(() =>
+      expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
+    );
+
+    const lowInput = await screen.findByPlaceholderText("180");
+    await user.type(lowInput, "180");
+
+    const lowPanelTitle = await screen.findByText("定格電流（～630A）");
+    const lowPanel = lowPanelTitle.closest(".panel") as HTMLElement;
+    await waitFor(() => {
+      expect(within(lowPanel).getByText("180 / 2.5 = 72 mm²")).toBeInTheDocument();
+    });
+  });
+
   it("shows real geometry candidates marked 要確認 (never a fabricated OK) for a value typed into the 630A～ box, and still lets the user adopt one", async () => {
     const user = userEvent.setup();
     renderView();
@@ -367,7 +416,7 @@ describe("BusbarCalculationView — 断面積→電流 reverse lookup (spec foll
     });
   });
 
-  it("never fabricates a number for the 630A～ reverse panel — shows the honest unavailable explanation instead", async () => {
+  it("never fabricates a number for an area implying >630A — shows the honest unavailable explanation alongside the capped 630+A reading, in the same panel", async () => {
     const user = userEvent.setup();
     renderView();
 
@@ -376,10 +425,18 @@ describe("BusbarCalculationView — 断面積→電流 reverse lookup (spec foll
       expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
     );
 
+    const areaInput = await screen.findByPlaceholderText("72");
+    await user.type(areaInput, "400");
+
+    await waitFor(() => {
+      expect(screen.getByText("630+ A")).toBeInTheDocument();
+    });
     expect(
-      await screen.findByText(
-        /630Aを超える範囲では断面積から電流を逆算できません/,
-      ),
+      screen.getByText(/630Aを超える範囲では断面積から電流を逆算できません/),
     ).toBeInTheDocument();
+    // There is only ever one 断面積→電流 panel now — no separate always-empty
+    // "630A～" tool duplicating this explanation.
+    expect(screen.queryByPlaceholderText("800")).not.toBeNull();
+    expect(screen.getAllByText("断面積 → 電流").length).toBe(1);
   });
 });

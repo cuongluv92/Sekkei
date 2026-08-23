@@ -12,6 +12,8 @@ interface BusbarBasisPanelProps {
   materialSource?: TechnicalSource;
   /** Out-of-range (>630A) case: only the high-current source is shown (no formula — none is implemented yet). */
   highCurrentSource?: TechnicalSource;
+  /** Suppresses the 計算式 card even when the in-range props are supplied — used when the caller renders that formula itself, right beside the 定格電流 input it belongs to, instead of duplicating it here. */
+  hideFormula?: boolean;
 }
 
 function roundTo(n: number, decimals: number): number {
@@ -36,6 +38,7 @@ export function BusbarBasisPanel({
   currentDensitySource,
   materialSource,
   highCurrentSource,
+  hideFormula,
 }: BusbarBasisPanelProps) {
   const { t } = useTranslation();
   const sources = [
@@ -46,7 +49,8 @@ export function BusbarBasisPanel({
 
   return (
     <div className="flex flex-col gap-3">
-      {currentDensitySource &&
+      {!hideFormula &&
+        currentDensitySource &&
         ratedCurrentA !== undefined &&
         densityAPerMm2 !== undefined &&
         requiredAreaMm2 !== undefined && (

@@ -334,8 +334,6 @@ export interface Dictionary {
     arrangementLabel: string;
     highCurrentCandidateDisclaimer: string;
     reverseCalcTitle: string;
-    reverseCalcLowTitle: string;
-    reverseCalcHighTitle: string;
     reverseCalcHighUnavailable: string;
     reverseCalcHint: string;
     reverseCalcFormula: string;
