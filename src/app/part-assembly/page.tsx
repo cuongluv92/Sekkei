@@ -17,6 +17,7 @@ import {
 } from "@/lib/mock/manufacturers";
 import { findFileByKind, openFileAsset } from "@/lib/utils/fileDownload";
 import { usePartAssembly } from "@/lib/store/PartAssemblyProvider";
+import { useEffectiveCaseId } from "@/lib/store/ActiveCaseProvider";
 import { useToast } from "@/lib/hooks/useToast";
 import { InsertPartModal } from "@/components/common/InsertPartModal";
 import { PartMasterSearch } from "@/components/common/PartMasterSearch";
@@ -63,7 +64,7 @@ function rowFromMasterItem(
 function PartAssemblyView() {
   const { t, locale } = useTranslation();
   const {
-    caseId,
+    caseId: rawCaseId,
     setCaseId,
     caseLoading,
     rows,
@@ -76,15 +77,24 @@ function PartAssemblyView() {
     clear,
   } = usePartAssembly();
   const searchParams = useSearchParams();
+  // PartAssemblyProvider is mounted once above the router (so switching
+  // pages never loses the in-progress table) — it can't suppress on its
+  // own, since it doesn't remount per page visit. This screen must still
+  // never silently show whatever 案件 was left active elsewhere, so the
+  // suppression lives here instead (see useEffectiveCaseId); an explicit
+  // `?case=` deep link (e.g. Global Search's 部品製作 result) always wins
+  // over that, exactly like DesignView.
+  const effectiveActiveCaseId = useEffectiveCaseId(true);
+  const caseIdParam = searchParams.get("case") ?? "";
+  const caseId = caseIdParam || effectiveActiveCaseId;
 
   // Honors a `?case=<id>` deep link (e.g. from Global Search's 部品製作 result)
   // by resolving it as the app-wide active 案件 — never a page-local override,
   // so every other module stays in sync too.
   useEffect(() => {
-    const fromUrl = searchParams.get("case");
-    if (fromUrl && fromUrl !== caseId) setCaseId(fromUrl);
+    if (caseId && caseId !== rawCaseId) setCaseId(caseId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [caseId]);
   const [masterItems, setMasterItems] = useState<SearchResultItem[]>([]);
   const [masterLoading, setMasterLoading] = useState(true);
   const [dragIndex, setDragIndex] = useState<number | null>(null);

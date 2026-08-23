@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { PageHeader } from "@/components/common/PageHeader";
 import { CaseSelector } from "@/components/common/CaseSelector";
-import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
+import { useActiveCase, useEffectiveCaseId } from "@/lib/store/ActiveCaseProvider";
 import { BasicWeightCalc } from "@/components/calculation/BasicWeightCalc";
 import { PanelWeightCalc } from "@/components/calculation/PanelWeightCalc";
 
@@ -28,15 +28,25 @@ export function WeightCalculationView() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const tab: WeightTopTab = isWeightTopTab(tabParam) ? tabParam : "basic";
-  const { caseId, setCaseId, loading: caseLoading } = useActiveCase();
+  const {
+    caseId: activeCaseId,
+    setCaseId: setActiveCaseId,
+    loading: caseLoading,
+  } = useActiveCase();
+  // This screen must never silently show whatever 案件 was left active
+  // elsewhere — opening it always starts at 案件選択 until the user
+  // genuinely picks one here (see useEffectiveCaseId). An explicit
+  // `?case=` deep link (e.g. Global Search's 計算 result) always wins over
+  // that, exactly like DesignView.
+  const effectiveActiveCaseId = useEffectiveCaseId(true);
+  const caseIdParam = searchParams.get("case") ?? "";
+  const caseId = caseIdParam || effectiveActiveCaseId;
 
-  // Honors a `?case=<id>` deep link (e.g. from Global Search's 計算 result)
-  // by resolving it as the app-wide active 案件.
+  // Broadcast the effective 案件 (URL-provided or a genuine pick here) up
+  // to the app-wide active 案件 so it's what other modules resume.
   useEffect(() => {
-    const fromUrl = searchParams.get("case");
-    if (fromUrl && fromUrl !== caseId) setCaseId(fromUrl);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+    if (caseId && caseId !== activeCaseId) setActiveCaseId(caseId);
+  }, [caseId, activeCaseId, setActiveCaseId]);
 
   function setTab(next: WeightTopTab) {
     const params = new URLSearchParams(searchParams.toString());

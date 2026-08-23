@@ -26,8 +26,14 @@ import type { DesignCase } from "@/lib/types/design";
  * Collapsed by default to a plain "現在の案件：…" line + 変更/保存済み案件/選択解除
  * buttons so it never crowds the page; expands into the searchable list only
  * when changing. "＋ 新規案件" opens a real form (`NewCaseModal`) instead of
- * an always-visible inline input. Never auto-picks on the user's behalf —
- * leaving nothing selected is a normal, expected state.
+ * an always-visible inline input.
+ *
+ * Every mount starts on the picker, never silently preselected — the 案件
+ * left active from browsing elsewhere only reappears once the user
+ * genuinely picks one on THIS screen (see `useEffectiveCaseId`). Opening
+ * any 案件-scoped screen (設計管理, 部品製作, every 計算 module) always means
+ * choosing a 案件 explicitly first, never resuming whatever was last open
+ * somewhere else.
  *
  * Switching away from a 案件 (変更/選択解除/開くfrom 保存済み案件) while the
  * current screen has unsaved local edits (`dirty`) prompts
@@ -43,15 +49,12 @@ import type { DesignCase } from "@/lib/types/design";
  */
 export function CaseSelector({
   autoNumberDrawingNumber = false,
-  suppressInitialCaseId = false,
 }: {
   autoNumberDrawingNumber?: boolean;
-  /** When true, the 案件 this instance first sees restored (left active from browsing elsewhere) starts unselected — the picker shows, not a silently-preselected 案件 — until the user genuinely picks one here (or it changes elsewhere). Only 設計依頼書/製作依頼書 pass this; every other call site keeps the normal "stays active across modules" behavior. See `useEffectiveCaseId`. */
-  suppressInitialCaseId?: boolean;
 } = {}) {
   const { t } = useTranslation();
   const { setCaseId, dirty, runSaveHandler } = useActiveCase();
-  const caseId = useEffectiveCaseId(suppressInitialCaseId);
+  const caseId = useEffectiveCaseId(true);
   const [options, setOptions] = useState<CaseOption[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [picking, setPicking] = useState(!caseId);

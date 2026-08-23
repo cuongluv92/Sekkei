@@ -135,17 +135,13 @@ vi.mock("@/lib/store/ActiveCaseProvider", () => ({
     if (!ctx) throw new Error("missing FakeActiveCaseProvider in test");
     return ctx;
   },
-  // None of these tests pass suppressInitialCaseId, so this only needs to
-  // cover the pass-through (suppress=false) case — the real hook's
-  // suppression behavior is exercised elsewhere.
-  useEffectiveCaseId: (suppress: boolean) => {
+  // These tests care about CaseSelector's own rendering logic given a
+  // caseId, not the suppression mechanism itself (that's covered by
+  // ActiveCaseProvider.test.tsx) — this mock just mirrors the fake
+  // context's caseId directly, regardless of `suppress`.
+  useEffectiveCaseId: () => {
     const ctx = useContext(FakeActiveCaseContext);
     if (!ctx) throw new Error("missing FakeActiveCaseProvider in test");
-    if (suppress) {
-      throw new Error(
-        "CaseSelector.test.tsx's useEffectiveCaseId mock only supports suppress=false",
-      );
-    }
     return ctx.caseId;
   },
 }));

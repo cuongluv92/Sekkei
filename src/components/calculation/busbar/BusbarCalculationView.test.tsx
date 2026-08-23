@@ -84,6 +84,10 @@ function useFakeActiveCase() {
 }
 vi.mock("@/lib/store/ActiveCaseProvider", () => ({
   useActiveCase: () => useFakeActiveCase(),
+  // This test suite cares about BusbarCalculationView's own logic given a
+  // caseId, not the suppression mechanism itself (covered separately by
+  // ActiveCaseProvider.test.tsx) — mirrors the fake caseId directly.
+  useEffectiveCaseId: () => useFakeActiveCase().caseId,
 }));
 
 vi.mock("@/components/common/CaseSelector", () => ({

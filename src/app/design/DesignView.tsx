@@ -42,11 +42,9 @@ export function DesignView() {
   const usesWorkspace = tab === "designRequest" || tab === "productionRequest";
   // 設計依頼書/製作依頼書 must never silently jump straight into whatever 案件
   // was left active elsewhere — opening either tab always starts at the
-  // 案件選択 prompt/picker until the user explicitly picks one here, even
-  // though every other module (部品製作, 計算) keeps the normal "stays
-  // active across modules" behavior. `suppress` only applies on these two
-  // tabs (see useEffectiveCaseId).
-  const effectiveActiveCaseId = useEffectiveCaseId(usesWorkspace);
+  // 案件選択 prompt/picker until the user explicitly picks one here (see
+  // useEffectiveCaseId; every 案件-scoped screen app-wide works this way now).
+  const effectiveActiveCaseId = useEffectiveCaseId(true);
   // The URL is still the source of truth when it names a 案件 (deep links /
   // Global Search's "open this 案件" navigation keep working exactly as
   // before) — it only falls back to the (possibly-suppressed) app-wide
@@ -86,13 +84,8 @@ export function DesignView() {
             <div className="flex-1">
               {/* Only 設計依頼書 auto-numbers 図面番号 — 製作依頼書 shares this
                   same workspace bar but must require manual entry like every
-                  other 案件-creation entry point in the app. suppressInitialCaseId
-                  keeps this bar (and the form below) from silently
-                  preselecting whatever 案件 was left active elsewhere. */}
-              <CaseSelector
-                autoNumberDrawingNumber={tab === "designRequest"}
-                suppressInitialCaseId
-              />
+                  other 案件-creation entry point in the app. */}
+              <CaseSelector autoNumberDrawingNumber={tab === "designRequest"} />
             </div>
             <Link href="/design/search" className="btn-secondary shrink-0">
               <SearchIcon className="h-3.5 w-3.5" />

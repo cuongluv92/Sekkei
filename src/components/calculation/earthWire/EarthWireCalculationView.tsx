@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { formatJaTime } from "@/lib/utils/dateFormat";
 import { earthWireSizeService, calculationRecordService } from "@/lib/services";
-import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
+import { useActiveCase, useEffectiveCaseId } from "@/lib/store/ActiveCaseProvider";
 import { PageHeader } from "@/components/common/PageHeader";
 import { CaseSelector } from "@/components/common/CaseSelector";
 import {
@@ -80,20 +80,28 @@ export function EarthWireCalculationView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
-    caseId,
-    setCaseId,
+    caseId: activeCaseId,
+    setCaseId: setActiveCaseId,
     loading: caseLoading,
     registerSaveHandler,
   } = useActiveCase();
+  // This screen must never silently show whatever 案件 was left active
+  // elsewhere — opening it always starts at 案件選択 until the user
+  // genuinely picks one here (see useEffectiveCaseId). An explicit
+  // `?case=` deep link (e.g. Global Search's 計算 result) always wins over
+  // that, exactly like DesignView.
+  const effectiveActiveCaseId = useEffectiveCaseId(true);
+  const caseIdParam = searchParams.get("case") ?? "";
+  const caseId = caseIdParam || effectiveActiveCaseId;
 
   const modeParam = searchParams.get("mode");
   const mode: EarthWireMode = isEarthWireMode(modeParam) ? modeParam : "auto";
 
+  // Broadcast the effective 案件 (URL-provided or a genuine pick here) up
+  // to the app-wide active 案件 so it's what other modules resume.
   useEffect(() => {
-    const fromUrl = searchParams.get("case");
-    if (fromUrl && fromUrl !== caseId) setCaseId(fromUrl);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+    if (caseId && caseId !== activeCaseId) setActiveCaseId(caseId);
+  }, [caseId, activeCaseId, setActiveCaseId]);
 
   const [sizes, setSizes] = useState<EarthWireSize[]>([]);
   const [sizesLoaded, setSizesLoaded] = useState(false);

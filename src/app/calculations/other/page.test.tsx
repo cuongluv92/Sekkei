@@ -73,6 +73,7 @@ function useFakeActiveCase() {
 }
 vi.mock("@/lib/store/ActiveCaseProvider", () => ({
   useActiveCase: () => useFakeActiveCase(),
+  useEffectiveCaseId: () => useFakeActiveCase().caseId,
 }));
 
 vi.mock("@/components/common/CaseSelector", () => ({
