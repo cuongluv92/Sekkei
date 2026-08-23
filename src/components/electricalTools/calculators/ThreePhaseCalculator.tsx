@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import {
   solveThreePhaseConnection,
@@ -29,6 +29,15 @@ export function ThreePhaseCalculator() {
   const [quantity, setQuantity] = useState<Quantity>("voltage");
   const [result, setResult] = useState<SolveResult | null>(null);
 
+  // Stabilized so VariableSolverCard's result-effect never sees a "new"
+  // solve function on every render — an inline arrow here would loop
+  // forever (setResult → re-render → new arrow → recompute → setResult…).
+  const solveConnection = useCallback(
+    (known: Partial<Record<ThreePhaseVar, number>>, target: ThreePhaseVar) =>
+      solveThreePhaseConnection(known, target, connection),
+    [connection],
+  );
+
   return (
     <div className="calc-layout">
       <div className="calc-layout-input panel">
@@ -44,7 +53,7 @@ export function ThreePhaseCalculator() {
           />
           <VariableSolverCard
             variables={quantity === "voltage" ? VOLTAGE_VARS : CURRENT_VARS}
-            solve={(known, target) => solveThreePhaseConnection(known, target, connection)}
+            solve={solveConnection}
             onResult={setResult}
             resetKey={`${connection}-${quantity}`}
             extra={

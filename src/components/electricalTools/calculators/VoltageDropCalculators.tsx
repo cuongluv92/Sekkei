@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import {
   checkVoltageDropConformity,
@@ -72,6 +72,22 @@ export function VoltageDropCalculators() {
       ? checkVoltageDropConformity(actualDeltaVPercent, allowedPercent)
       : null;
 
+  // Stabilized so VariableSolverCard's result-effect never sees a "new"
+  // solve function on every render — an inline arrow here would loop
+  // forever (setResult → re-render → new arrow → recompute → setResult…).
+  const solveRx = useCallback(
+    (known: Partial<Record<VoltageDropVar, number>>, target: VoltageDropVar) =>
+      solveVoltageDrop(known, target, mode, loadType),
+    [mode, loadType],
+  );
+  const solveSimplified = useCallback(
+    (
+      known: Partial<Record<SimplifiedVoltageDropVar, number>>,
+      target: SimplifiedVoltageDropVar,
+    ) => solveSimplifiedVoltageDrop(known, target, wiring),
+    [wiring],
+  );
+
   return (
     <div className="calc-layout">
       <div className="calc-layout-input panel">
@@ -96,7 +112,7 @@ export function VoltageDropCalculators() {
             <>
               <VariableSolverCard
                 variables={mode === "dc" ? RX_VARS_DC : RX_VARS_AC}
-                solve={(known, target) => solveVoltageDrop(known, target, mode, loadType)}
+                solve={solveRx}
                 onResult={setResult}
                 onValuesChange={setRxKnown}
                 resetKey={`rx-${mode}-${loadType}`}
@@ -199,7 +215,7 @@ export function VoltageDropCalculators() {
           {method === "simplified" && (
             <VariableSolverCard
               variables={SIMPLIFIED_VARS}
-              solve={(known, target) => solveSimplifiedVoltageDrop(known, target, wiring)}
+              solve={solveSimplified}
               onResult={setResult}
               resetKey={`simplified-${wiring}`}
               defaultTarget="deltaV"

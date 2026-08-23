@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import {
   computeLineVoltageRatio,
@@ -47,13 +47,22 @@ export function TransformerCalculator() {
     ((known.v1 !== undefined && known.v1 >= 6000 && known.v1 <= 7000) ||
       (known.v2 !== undefined && known.v2 >= 6000 && known.v2 <= 7000));
 
+  // Stabilized so VariableSolverCard's result-effect never sees a "new"
+  // solve function on every render — an inline arrow here would loop
+  // forever (setResult → re-render → new arrow → recompute → setResult…).
+  const solve = useCallback(
+    (k: Partial<Record<TransformerVar, number>>, target: TransformerVar) =>
+      solveTransformer(k, target, phase),
+    [phase],
+  );
+
   return (
     <div className="calc-layout">
       <div className="calc-layout-input panel">
         <div className="panel-body flex flex-col gap-4">
           <VariableSolverCard
             variables={phase === "single" ? SINGLE_VARS : THREE_VARS}
-            solve={(k, target) => solveTransformer(k, target, phase)}
+            solve={solve}
             onResult={setResult}
             onValuesChange={setKnown}
             resetKey={phase}

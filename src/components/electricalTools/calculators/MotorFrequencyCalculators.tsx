@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import {
   compareSyncSpeed,
@@ -47,6 +47,15 @@ export function MotorFrequencyCalculators() {
 
   const comparison = compareSyncSpeed(Number(comparePoles));
 
+  // Stabilized so VariableSolverCard's result-effect never sees a "new"
+  // solve function on every render — an inline arrow here would loop
+  // forever (setResult → re-render → new arrow → recompute → setResult…).
+  const solvePower = useCallback(
+    (known: Partial<Record<MotorPowerVar, number>>, target: MotorPowerVar) =>
+      solveMotorPower(known, target, phase),
+    [phase],
+  );
+
   return (
     <div className="calc-layout">
       <div className="calc-layout-input panel">
@@ -84,7 +93,7 @@ export function MotorFrequencyCalculators() {
           {subTool === "power" && (
             <VariableSolverCard
               variables={MOTOR_POWER_VARS}
-              solve={(known, target) => solveMotorPower(known, target, phase)}
+              solve={solvePower}
               onResult={setResult}
               resetKey={`power-${phase}`}
               defaultTarget="current"

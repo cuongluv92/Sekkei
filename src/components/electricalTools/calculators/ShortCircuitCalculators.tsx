@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import {
@@ -61,6 +61,15 @@ export function ShortCircuitCalculators() {
       ? checkBreakingCapacity(actualIsc, breakerCapacity)
       : null;
 
+  // Stabilized so VariableSolverCard's result-effect never sees a "new"
+  // solve function on every render — an inline arrow here would loop
+  // forever (setResult → re-render → new arrow → recompute → setResult…).
+  const solveRatedCurrent = useCallback(
+    (known: Partial<Record<RatedCurrentVar, number>>, target: RatedCurrentVar) =>
+      solveTransformerRatedCurrent(known, target, phase),
+    [phase],
+  );
+
   return (
     <div className="calc-layout">
       <div className="calc-layout-input panel">
@@ -88,7 +97,7 @@ export function ShortCircuitCalculators() {
           {subTool === "rated" && (
             <VariableSolverCard
               variables={RATED_CURRENT_VARS}
-              solve={(known, target) => solveTransformerRatedCurrent(known, target, phase)}
+              solve={solveRatedCurrent}
               onResult={setResult}
               resetKey={`rated-${phase}`}
               defaultTarget="current"

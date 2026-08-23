@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import {
   solveAcPower,
@@ -46,6 +46,17 @@ export function OhmsLawCalculators() {
   const [phase, setPhase] = useState<AcPhase>("three");
   const [result, setResult] = useState<SolveResult | null>(null);
 
+  // Stabilized so VariableSolverCard's result-effect never sees a "new"
+  // solve function on every render — an inline arrow here would recompute
+  // `result` every render, re-fire onResult, cause setResult, cause a
+  // re-render, recreate the inline arrow, and loop forever (React's "Maximum
+  // update depth exceeded").
+  const solveAc = useCallback(
+    (known: Partial<Record<AcPowerVar, number>>, target: AcPowerVar) =>
+      solveAcPower(known, target, phase),
+    [phase],
+  );
+
   return (
     <div className="calc-layout">
       <div className="calc-layout-input panel">
@@ -73,7 +84,7 @@ export function OhmsLawCalculators() {
           {subTool === "ac" && (
             <VariableSolverCard
               variables={AC_VARS}
-              solve={(known, target) => solveAcPower(known, target, phase)}
+              solve={solveAc}
               onResult={setResult}
               resetKey={`ac-${phase}`}
               extra={

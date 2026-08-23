@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { solveAcPower, type AcPhase, type AcPowerVar } from "@/lib/calc/electrical/ohmsLaw";
 import {
@@ -39,6 +39,15 @@ export function HighLowVoltageCalculator() {
   const voltageClass = classifyVoltage(Number(classifyInput), currentType);
   const cubicleContext = isHighVoltageReceivingContext(Number(classifyInput));
 
+  // Stabilized so VariableSolverCard's result-effect never sees a "new"
+  // solve function on every render — an inline arrow here would loop
+  // forever (setResult → re-render → new arrow → recompute → setResult…).
+  const solvePower = useCallback(
+    (known: Partial<Record<AcPowerVar, number>>, target: AcPowerVar) =>
+      solveAcPower(known, target, phase),
+    [phase],
+  );
+
   return (
     <div className="calc-layout">
       <div className="calc-layout-input panel">
@@ -56,7 +65,7 @@ export function HighLowVoltageCalculator() {
           {subTool === "power" && (
             <VariableSolverCard
               variables={POWER_VARS}
-              solve={(known, target) => solveAcPower(known, target, phase)}
+              solve={solvePower}
               onResult={setResult}
               resetKey={`power-${phase}`}
               extra={
