@@ -4,7 +4,7 @@ import { Check, Loader2, Plus, Search as SearchIcon, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { designCaseService } from "@/lib/services/design";
-import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
+import { useActiveCase, useEffectiveCaseId } from "@/lib/store/ActiveCaseProvider";
 import {
   buildCaseOptionLabel,
   buildCaseOptions,
@@ -43,11 +43,15 @@ import type { DesignCase } from "@/lib/types/design";
  */
 export function CaseSelector({
   autoNumberDrawingNumber = false,
+  suppressInitialCaseId = false,
 }: {
   autoNumberDrawingNumber?: boolean;
+  /** When true, the 案件 this instance first sees restored (left active from browsing elsewhere) starts unselected — the picker shows, not a silently-preselected 案件 — until the user genuinely picks one here (or it changes elsewhere). Only 設計依頼書/製作依頼書 pass this; every other call site keeps the normal "stays active across modules" behavior. See `useEffectiveCaseId`. */
+  suppressInitialCaseId?: boolean;
 } = {}) {
   const { t } = useTranslation();
-  const { caseId, setCaseId, dirty, runSaveHandler } = useActiveCase();
+  const { setCaseId, dirty, runSaveHandler } = useActiveCase();
+  const caseId = useEffectiveCaseId(suppressInitialCaseId);
   const [options, setOptions] = useState<CaseOption[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [picking, setPicking] = useState(!caseId);

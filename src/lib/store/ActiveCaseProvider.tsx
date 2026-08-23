@@ -137,3 +137,42 @@ export function useActiveCase() {
   }
   return ctx;
 }
+
+/**
+ * `useActiveCase().caseId`, except when `suppress` is true: the one 案件
+ * this hook instance first sees once the async localStorage restore
+ * settles is treated as unselected — it was left active by browsing
+ * elsewhere, not something the user just picked in the screen calling this
+ * — until it genuinely changes (a real pick, here or elsewhere), after
+ * which this behaves exactly like the raw `caseId` for the rest of this
+ * mount. `suppress=false` is a complete no-op (always returns the raw
+ * `caseId`), so passing it selectively (e.g. only 設計依頼書/製作依頼書) never
+ * touches the app-wide "stays active across modules" behavior everywhere
+ * else. Two instances called with the same `suppress` value in the same
+ * render pass (e.g. a page and the CaseSelector it renders) converge on the
+ * same result independently — both watch the same context value with the
+ * same rule, no coordination needed.
+ */
+export function useEffectiveCaseId(suppress: boolean): string {
+  const { caseId, loading } = useActiveCase();
+  const [suppressing, setSuppressing] = useState(suppress);
+  const capturedRef = useRef(false);
+  const staleValueRef = useRef("");
+
+  useEffect(() => {
+    if (!suppress) {
+      setSuppressing(false);
+      return;
+    }
+    if (capturedRef.current || loading) return;
+    capturedRef.current = true;
+    staleValueRef.current = caseId;
+    setSuppressing(!!caseId);
+  }, [suppress, loading, caseId]);
+
+  useEffect(() => {
+    if (suppressing && caseId !== staleValueRef.current) setSuppressing(false);
+  }, [suppressing, caseId]);
+
+  return suppressing ? "" : caseId;
+}
