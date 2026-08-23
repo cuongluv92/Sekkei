@@ -3,6 +3,7 @@
 import { Check, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import type { BusbarCandidate } from "@/lib/calc/busbar/candidateSearch";
+import { maxCurrentForArea } from "@/lib/calc/busbar/currentDensityRule";
 import type { AdoptedBusbar } from "./BusbarCalculationView";
 
 interface BusbarCandidateListProps {
@@ -28,7 +29,15 @@ function isSameConfig(a: BusbarCandidate, b: AdoptedBusbar | null): boolean {
   );
 }
 
-/** Shared candidate table for both Auto mode's proposals and Manual mode's single what-if — one candidate per row, always showing 総断面積/実電流密度/余裕率/判定 with a 採用 action, never just a bare recommended size (spec #8, #12). */
+/**
+ * Shared candidate table for both Auto mode's proposals and Manual mode's
+ * single what-if — one candidate per row, always showing
+ * 総断面積/実電流密度/余裕率/判定 with a 採用 action, never just a bare recommended
+ * size (spec #8, #12). Also shows 目安上限電流 — the reverse direction of the
+ * same JIS C 8480 table (断面積 → 電流, via `maxCurrentForArea`), so a
+ * configuration's own maximum current rating is visible even when it was
+ * found by starting from area rather than from current.
+ */
 export function BusbarCandidateList({
   candidates,
   adopted,
@@ -46,7 +55,7 @@ export function BusbarCandidateList({
 
   return (
     <div className="data-table-wrap">
-      <table className="data-table" style={{ minWidth: 720 }}>
+      <table className="data-table" style={{ minWidth: 850 }}>
         <thead>
           <tr>
             <th style={{ width: "140px" }}>
@@ -54,6 +63,9 @@ export function BusbarCandidateList({
             </th>
             <th style={{ width: "110px" }} className="text-right">
               {t("busbarCalc.actualAreaLabel")}
+            </th>
+            <th style={{ width: "130px" }} className="text-right">
+              {t("busbarCalc.maxCurrentForAreaLabel")}
             </th>
             <th style={{ width: "120px" }} className="text-right">
               {t("busbarCalc.actualDensityLabel")}
@@ -68,6 +80,7 @@ export function BusbarCandidateList({
         <tbody>
           {candidates.map((c, i) => {
             const isAdopted = isSameConfig(c, adopted);
+            const reverse = maxCurrentForArea(c.totalAreaMm2);
             return (
               <tr
                 key={`${c.sizeId}-${c.barsPerPhase}-${i}`}
@@ -78,6 +91,18 @@ export function BusbarCandidateList({
                   {t("busbarCalc.barsUnit")}
                 </td>
                 <td className="text-right">{roundTo(c.totalAreaMm2, 2)} mm²</td>
+                <td
+                  className="text-right"
+                  title={
+                    reverse.inRange && reverse.cappedAtCeiling
+                      ? t("busbarCalc.maxCurrentCappedNote")
+                      : undefined
+                  }
+                >
+                  {reverse.inRange
+                    ? `${roundTo(reverse.maxCurrentA, 1)} A${reverse.cappedAtCeiling ? "+" : ""}`
+                    : "—"}
+                </td>
                 <td className="text-right">
                   {c.actualDensityAPerMm2 !== null
                     ? `${roundTo(c.actualDensityAPerMm2, 3)} A/mm²`

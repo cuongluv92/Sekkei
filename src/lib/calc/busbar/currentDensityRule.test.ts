@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   JIS_C_8480_2016_STRIP_BANDS,
   JIS_C_8480_SIMPLE_SELECTION_MAX_CURRENT_A,
+  maxCurrentForArea,
   requiredCrossSectionArea,
 } from "./currentDensityRule";
 
@@ -108,6 +109,78 @@ describe("requiredCrossSectionArea — invalid input", () => {
     const r = requiredCrossSectionArea(Infinity);
     expect(r.inRange).toBe(false);
     if (!r.inRange) expect(r.reasonKey).toBe("invalidInput");
+  });
+});
+
+describe("maxCurrentForArea — reverse direction (area → current)", () => {
+  it("round-trips 180A → 72mm² → 180A", () => {
+    const forward = requiredCrossSectionArea(180);
+    expect(forward.inRange).toBe(true);
+    if (!forward.inRange) return;
+    const reverse = maxCurrentForArea(forward.requiredAreaMm2);
+    expect(reverse.inRange).toBe(true);
+    if (reverse.inRange) {
+      expect(reverse.maxCurrentA).toBeCloseTo(180, 6);
+      expect(reverse.densityAPerMm2).toBe(2.5);
+      expect(reverse.cappedAtCeiling).toBe(false);
+    }
+  });
+
+  it("round-trips every band boundary current exactly (125/250/400/630A)", () => {
+    for (const currentA of [125, 250, 400, 630]) {
+      const forward = requiredCrossSectionArea(currentA);
+      expect(forward.inRange).toBe(true);
+      if (!forward.inRange) continue;
+      const reverse = maxCurrentForArea(forward.requiredAreaMm2);
+      expect(reverse.inRange).toBe(true);
+      if (reverse.inRange) {
+        expect(reverse.maxCurrentA).toBeCloseTo(currentA, 6);
+      }
+    }
+  });
+
+  it("a tiny area still resolves to a small current in the first (3.0 A/mm²) band", () => {
+    const reverse = maxCurrentForArea(1);
+    expect(reverse.inRange).toBe(true);
+    if (reverse.inRange) {
+      expect(reverse.densityAPerMm2).toBe(3.0);
+      expect(reverse.maxCurrentA).toBeCloseTo(3, 6);
+    }
+  });
+
+  it("an area far larger than the 630A ceiling requires (400mm²) is capped at 630A, not extrapolated", () => {
+    const reverse = maxCurrentForArea(400);
+    expect(reverse.inRange).toBe(true);
+    if (reverse.inRange) {
+      expect(reverse.maxCurrentA).toBe(630);
+      expect(reverse.cappedAtCeiling).toBe(true);
+    }
+  });
+
+  it("the exact area the 630A boundary requires is not reported as capped (it genuinely is the boundary)", () => {
+    const exactArea = 630 / 1.7;
+    const reverse = maxCurrentForArea(exactArea);
+    expect(reverse.inRange).toBe(true);
+    if (reverse.inRange) {
+      expect(reverse.maxCurrentA).toBe(630);
+      expect(reverse.cappedAtCeiling).toBe(false);
+    }
+  });
+
+  it("rejects invalid input", () => {
+    expect(maxCurrentForArea(0).inRange).toBe(false);
+    expect(maxCurrentForArea(-5).inRange).toBe(false);
+    expect(maxCurrentForArea(NaN).inRange).toBe(false);
+    expect(maxCurrentForArea(Infinity).inRange).toBe(false);
+  });
+
+  it("every in-range result carries the same JIS C 8480 source with its real verified state", () => {
+    const reverse = maxCurrentForArea(72);
+    expect(reverse.inRange).toBe(true);
+    if (reverse.inRange) {
+      expect(reverse.source.standard).toBe("JIS C 8480");
+      expect(reverse.source.verified).toBe(false);
+    }
   });
 });
 

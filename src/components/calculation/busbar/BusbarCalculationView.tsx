@@ -78,7 +78,14 @@ function parsePositiveNumber(raw: string): number | null {
  * (case_id + calculation_type="busbar"), the same mechanism every other
  * calculation module already uses — no separate persistence system.
  */
-export function BusbarCalculationView() {
+export interface BusbarCalculationViewProps {
+  /** Route this view's own mode-tab switching (自動選定/手動検証) pushes to. Defaults to its own dedicated route; pass the host page's path (e.g. "/calculations/other") when embedding this view inline as a tab there instead of navigating away. */
+  basePath?: string;
+}
+
+export function BusbarCalculationView({
+  basePath = "/calculations/busbar",
+}: BusbarCalculationViewProps = {}) {
   const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -175,7 +182,7 @@ export function BusbarCalculationView() {
   function setTab(next: BusbarMode) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("mode", next);
-    router.push(`/calculations/busbar?${params.toString()}`);
+    router.push(`${basePath}?${params.toString()}`);
   }
 
   const ratedCurrentA = parsePositiveNumber(ratedCurrentRaw);

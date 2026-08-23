@@ -67,7 +67,14 @@ function parsePositiveNumber(raw: string): number | null {
  * spec #29 (never force re-entry of already-known data) — the field stays
  * fully editable, and the prefill is clearly labeled in the UI.
  */
-export function EarthWireCalculationView() {
+export interface EarthWireCalculationViewProps {
+  /** Route this view's own mode-tab switching (自動選定/手動検証) pushes to. Defaults to its own dedicated route; pass the host page's path (e.g. "/calculations/other") when embedding this view inline as a tab there instead of navigating away. */
+  basePath?: string;
+}
+
+export function EarthWireCalculationView({
+  basePath = "/calculations/earth-wire",
+}: EarthWireCalculationViewProps = {}) {
   const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -165,7 +172,7 @@ export function EarthWireCalculationView() {
   function setTab(next: EarthWireMode) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("mode", next);
-    router.push(`/calculations/earth-wire?${params.toString()}`);
+    router.push(`${basePath}?${params.toString()}`);
   }
 
   const ratedCurrentA = parsePositiveNumber(ratedCurrentRaw);

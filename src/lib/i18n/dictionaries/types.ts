@@ -283,6 +283,8 @@ export interface Dictionary {
     densityLabel: string;
     recommendedLabel: string;
     actualAreaLabel: string;
+    maxCurrentForAreaLabel: string;
+    maxCurrentCappedNote: string;
     actualDensityLabel: string;
     marginLabel: string;
     judgmentLabel: string;
@@ -422,9 +424,7 @@ export interface Dictionary {
   otherCalc: {
     title: string;
     description: string;
-    empty: string;
-    modules: Record<string, string>;
-    addModuleHint: string;
+    savedTab: string;
   };
   importPage: {
     title: string;

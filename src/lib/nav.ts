@@ -9,9 +9,6 @@ import {
   Weight,
   Wind,
   Activity,
-  Zap,
-  ArrowDownToLine,
-  Rows3,
   Grid2x2,
   FolderInput,
   Trash2,
@@ -32,9 +29,6 @@ export interface NavItem {
     | "weightCalc"
     | "ventilationCalc"
     | "seismicCalc"
-    | "busbarCalc"
-    | "earthWireCalc"
-    | "earthBarCalc"
     | "otherCalc"
     | "import"
     | "trash"
@@ -43,6 +37,15 @@ export interface NavItem {
   icon: LucideIcon;
 }
 
+/**
+ * 母線銅帯/接地線/アースバー have no sidebar entry of their own — they live as
+ * tabs inside 他計算 (`/calculations/other?module=busbar|earth-wire|earth-bar`)
+ * per explicit request, rather than as separate top-level pages. Their old
+ * dedicated routes still exist but only to redirect into 他計算 (see
+ * `src/app/calculations/{busbar,earth-wire,earth-bar}/page.tsx`) so any
+ * existing bookmark or search-provider deep link still lands somewhere
+ * useful.
+ */
 export const navItems: NavItem[] = [
   { key: "search", href: "/search", icon: Search },
   { key: "selection", href: "/selection", icon: SlidersHorizontal },
@@ -54,13 +57,6 @@ export const navItems: NavItem[] = [
   { key: "weightCalc", href: "/calculations/weight", icon: Weight },
   { key: "ventilationCalc", href: "/calculations/ventilation", icon: Wind },
   { key: "seismicCalc", href: "/calculations/seismic", icon: Activity },
-  { key: "busbarCalc", href: "/calculations/busbar", icon: Zap },
-  {
-    key: "earthWireCalc",
-    href: "/calculations/earth-wire",
-    icon: ArrowDownToLine,
-  },
-  { key: "earthBarCalc", href: "/calculations/earth-bar", icon: Rows3 },
   { key: "otherCalc", href: "/calculations/other", icon: Grid2x2 },
   { key: "import", href: "/import", icon: FolderInput },
   { key: "trash", href: "/trash", icon: Trash2 },

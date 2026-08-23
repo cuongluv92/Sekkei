@@ -310,6 +310,9 @@ const ja: Dictionary = {
     densityLabel: "電流密度",
     recommendedLabel: "推奨銅帯",
     actualAreaLabel: "実断面積",
+    maxCurrentForAreaLabel: "目安上限電流",
+    maxCurrentCappedNote:
+      "この断面積は630A時点の必要断面積を上回っています。JIS C 8480 簡易選定法の適用上限が630Aのため、630Aとして表示しています（実際の許容電流はこれより大きい可能性がありますが未検証です）。",
     actualDensityLabel: "実電流密度",
     marginLabel: "余裕率",
     judgmentLabel: "判定",
@@ -465,12 +468,8 @@ const ja: Dictionary = {
   },
   otherCalc: {
     title: "他計算",
-    description: "その他の計算モジュールです。",
-    empty:
-      "現在、他計算に登録されているモジュールはありません。母線銅帯・接地線・アースバーは専用ページに移動しました。",
-    modules: {},
-    addModuleHint:
-      "新しい計算モジュールは設定から追加できます（この段階ではモック）",
+    description: "母線銅帯・接地線・アースバーの計算と、保存済み案件の一覧をここでまとめて扱います。",
+    savedTab: "保存済み",
   },
   importPage: {
     title: "インポート",

@@ -71,7 +71,14 @@ function parsePositiveNumber(raw: string): number | null {
  * app (no ブレーカー module yet) so they start blank and are recorded only
  * for traceability, never used to compute a fabricated required area.
  */
-export function EarthBarCalculationView() {
+export interface EarthBarCalculationViewProps {
+  /** Route this view's own mode-tab switching (自動選定/手動検証) pushes to. Defaults to its own dedicated route; pass the host page's path (e.g. "/calculations/other") when embedding this view inline as a tab there instead of navigating away. */
+  basePath?: string;
+}
+
+export function EarthBarCalculationView({
+  basePath = "/calculations/earth-bar",
+}: EarthBarCalculationViewProps = {}) {
   const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -173,7 +180,7 @@ export function EarthBarCalculationView() {
   function setTab(next: EarthBarMode) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("mode", next);
-    router.push(`/calculations/earth-bar?${params.toString()}`);
+    router.push(`${basePath}?${params.toString()}`);
   }
 
   const faultCurrentKA = parsePositiveNumber(faultCurrentRaw);

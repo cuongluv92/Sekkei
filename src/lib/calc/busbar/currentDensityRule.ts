@@ -91,3 +91,83 @@ export function requiredCrossSectionArea(
     source: JIS_C_8480_STRIP_CURRENT_DENSITY_SOURCE,
   };
 }
+
+export type MaxCurrentForAreaResult =
+  | {
+      inRange: true;
+      areaMm2: number;
+      maxCurrentA: number;
+      densityAPerMm2: number;
+      /** True when `maxCurrentA` is capped at the table's 630A ceiling rather than a value the area itself limits — the area may support more than 630A, but that is outside this simplified method's verified range (never extrapolated; see highCurrentRule.ts). */
+      cappedAtCeiling: boolean;
+      source: TechnicalSource;
+    }
+  | {
+      inRange: false;
+      areaMm2: number;
+      reasonKey: "invalidInput";
+    };
+
+/**
+ * The reverse direction of `requiredCrossSectionArea` — given a real
+ * cross-section (e.g. from an actual t×W×n busbar configuration), what is
+ * the largest current the JIS C 8480 simplified table considers this area
+ * good for. Since `requiredCrossSectionArea` is a monotonically
+ * non-decreasing step function of I (area jumps up whenever I crosses a
+ * band boundary, and rises linearly with I inside a band), for a given area
+ * there is always exactly one largest I with `requiredCrossSectionArea(I)
+ * <= areaMm2` — found here by taking, for each band in turn, the highest
+ * current inside that band whose own required area still fits, and keeping
+ * the last (highest) band that qualifies.
+ *
+ * Never extrapolates past 630A: an area that would support more than 630A
+ * under this table's slope still reports 630A, with `cappedAtCeiling: true`
+ * so the caller can show this is the simplified method's own ceiling, not a
+ * property of the area — real capacity above 630A is unverified in this
+ * environment (see highCurrentRule.ts).
+ */
+export function maxCurrentForArea(areaMm2: number): MaxCurrentForAreaResult {
+  if (!Number.isFinite(areaMm2) || areaMm2 <= 0) {
+    return { inRange: false, areaMm2, reasonKey: "invalidInput" };
+  }
+
+  let bestCurrentA = 0;
+  let bestBand: CurrentDensityBand | null = null;
+  let bandLowerBoundA = 0;
+  for (const band of JIS_C_8480_2016_STRIP_BANDS) {
+    const candidateCurrentA = Math.min(
+      band.maxCurrentA,
+      areaMm2 * band.densityAPerMm2,
+    );
+    if (candidateCurrentA > bandLowerBoundA && candidateCurrentA > bestCurrentA) {
+      bestCurrentA = candidateCurrentA;
+      bestBand = band;
+    }
+    bandLowerBoundA = band.maxCurrentA;
+  }
+
+  if (!bestBand) {
+    // Unreachable for any positive finite area given band 1 starts at 0A,
+    // but keeps this function total.
+    return { inRange: false, areaMm2, reasonKey: "invalidInput" };
+  }
+
+  // Epsilon guard: at the exact 630A boundary area (630 / 1.7), floating-
+  // point rounding of `areaMm2 * densityAPerMm2` can land a hair above 630
+  // even though the area was computed as exactly the 630A requirement —
+  // that must read as "exactly the ceiling", not "capped below what the
+  // area could support".
+  const rawCurrentAtBestBandA = areaMm2 * bestBand.densityAPerMm2;
+  const cappedAtCeiling =
+    bestCurrentA === JIS_C_8480_SIMPLE_SELECTION_MAX_CURRENT_A &&
+    rawCurrentAtBestBandA - JIS_C_8480_SIMPLE_SELECTION_MAX_CURRENT_A > 1e-9;
+
+  return {
+    inRange: true,
+    areaMm2,
+    maxCurrentA: bestCurrentA,
+    densityAPerMm2: bestBand.densityAPerMm2,
+    cappedAtCeiling,
+    source: JIS_C_8480_STRIP_CURRENT_DENSITY_SOURCE,
+  };
+}
