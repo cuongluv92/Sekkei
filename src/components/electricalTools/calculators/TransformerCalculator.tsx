@@ -39,8 +39,11 @@ export function TransformerCalculator() {
     phase === "three" && known.v1 !== undefined && known.v2 !== undefined
       ? computeLineVoltageRatio(known.v1, known.v2)
       : null;
+  const kvaInJisScope =
+    known.kva !== undefined &&
+    (phase === "single" ? known.kva >= 10 && known.kva <= 500 : known.kva >= 20 && known.kva <= 2000);
   const showSixSixKvNote =
-    phase === "three" &&
+    kvaInJisScope &&
     ((known.v1 !== undefined && known.v1 >= 6000 && known.v1 <= 7000) ||
       (known.v2 !== undefined && known.v2 >= 6000 && known.v2 <= 7000));
 
@@ -86,15 +89,12 @@ export function TransformerCalculator() {
               <p>
                 {JIS_C4304_DISTRIBUTION_TRANSFORMER_SOURCE.standard}:
                 {JIS_C4304_DISTRIBUTION_TRANSFORMER_SOURCE.edition} —{" "}
-                {JIS_C4304_DISTRIBUTION_TRANSFORMER_SOURCE.reference}
+                {JIS_C4304_DISTRIBUTION_TRANSFORMER_SOURCE.applicability}
               </p>
               <p>
                 {JIS_C4306_DISTRIBUTION_TRANSFORMER_SOURCE.standard}:
                 {JIS_C4306_DISTRIBUTION_TRANSFORMER_SOURCE.edition} —{" "}
-                {JIS_C4306_DISTRIBUTION_TRANSFORMER_SOURCE.reference}
-              </p>
-              <p className="mt-1.5 border-t border-border pt-1.5 text-warning">
-                {JIS_C4304_DISTRIBUTION_TRANSFORMER_SOURCE.verificationNote}
+                {JIS_C4306_DISTRIBUTION_TRANSFORMER_SOURCE.applicability}
               </p>
             </div>
           )}
@@ -123,7 +123,10 @@ export function TransformerCalculator() {
           <span className="panel-title">{t("electricalTools.basisSectionTitle")}</span>
         </div>
         <div className="panel-body">
-          <ElectricalBasisPanel result={result} />
+          <ElectricalBasisPanel
+            result={result}
+            variables={phase === "single" ? SINGLE_VARS : THREE_VARS}
+          />
         </div>
       </div>
     </div>

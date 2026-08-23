@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   CT_ACCURACY_CLASS_NOTE,
-  CT_ACCURACY_CLASS_OPTIONS,
   CT_MEASUREMENT_SOURCE,
   CT_PROTECTION_SOURCE,
   CT_PURPOSE_NOTE,
@@ -144,22 +143,11 @@ describe("solveInstrumentTransformerRatio — kind/purpose-specific standard sou
   });
 });
 
-describe("CT_ACCURACY_CLASS_OPTIONS / CT_ACCURACY_CLASS_NOTE — informational only, never numeric", () => {
-  it("measurement and protection have separate, non-overlapping class-name sets", () => {
-    expect(CT_ACCURACY_CLASS_OPTIONS.measurement).toContain("0.5級");
-    expect(CT_ACCURACY_CLASS_OPTIONS.protection).toContain("5P");
-    expect(CT_ACCURACY_CLASS_OPTIONS.measurement).not.toEqual(
-      CT_ACCURACY_CLASS_OPTIONS.protection,
-    );
-  });
-
-  it("options are plain class-name strings, never numbers (no fabricated tolerance values)", () => {
-    for (const opt of CT_ACCURACY_CLASS_OPTIONS.measurement) {
-      expect(typeof opt).toBe("string");
-    }
-    for (const opt of CT_ACCURACY_CLASS_OPTIONS.protection) {
-      expect(typeof opt).toBe("string");
-    }
+describe("CT_ACCURACY_CLASS_NOTE — free-text reference only, no curated/authoritative-looking option list", () => {
+  it("measurement and protection notes are distinct and both point to the nameplate/test report, not a selectable list", () => {
+    expect(CT_ACCURACY_CLASS_NOTE.measurement).not.toBe(CT_ACCURACY_CLASS_NOTE.protection);
+    expect(CT_ACCURACY_CLASS_NOTE.measurement).toContain("銘板");
+    expect(CT_ACCURACY_CLASS_NOTE.protection).toContain("銘板");
   });
 
   it("protection note explicitly flags the standard as unconfirmed, distinct from measurement", () => {

@@ -17,8 +17,14 @@ import type { SourceType } from "@/lib/calc/technicalSource";
  * — 台帳とコードが食い違うくらいなら、台帳を持たない方がまだ安全である。
  */
 
-export type Phase = "dc" | "single" | "three" | "n/a";
+/**
+ * "both" = the engine takes a phase parameter and actually solves both 1φ
+ * and 3φ with the correct √3 factor for each — never write "single" or
+ * "three" for a formula the calculator itself lets the user switch between.
+ */
+export type Phase = "dc" | "single" | "three" | "both" | "n/a";
 export type Connection = "Y" | "Delta" | "n/a";
+/** Only meaningful for the 3φ side of a formula — describes that side's assumption, even when `phase` is "both". */
 export type Balance = "balanced" | "unbalanced" | "n/a";
 export type LoadType = "lagging" | "leading" | "both" | "n/a";
 export type Direction = "forward" | "reverse" | "bidirectional";
@@ -120,8 +126,8 @@ export const FORMULA_REGISTRY: readonly FormulaRegistryEntry[] = [
     ],
     resultUnit: "kVA",
     direction: "bidirectional",
-    applicability: "交流回路（正弦波・定常状態）。3φは対称三相（平衡三相）を前提とする。",
-    phase: "single",
+    applicability: "交流回路（正弦波・定常状態）。1φ・3φ両方をsolveAcPowerのphase引数で切り替える。3φは対称三相（平衡三相）を前提とする。",
+    phase: "both",
     balance: "balanced",
     sourceType: "engineering_fundamental",
     standard: "—",
@@ -147,7 +153,7 @@ export const FORMULA_REGISTRY: readonly FormulaRegistryEntry[] = [
       "ここでのPは電気入力側の有効電力であり、電動機の軸出力（銘板kW）ではない — " +
       "軸出力を扱う場合は電動機・周波数モジュール（η付き）を使用すること。",
     domain: "cosφ ∈ (0, 1]",
-    phase: "single",
+    phase: "both",
     balance: "balanced",
     sourceType: "engineering_fundamental",
     standard: "—",
@@ -159,16 +165,16 @@ export const FORMULA_REGISTRY: readonly FormulaRegistryEntry[] = [
   {
     id: "ac_power_triangle",
     nameJa: "電力三角形",
-    expression: "S² = P² + Q²",
+    expression: "S² = P² + |Q|²",
     variables: [
       { symbol: "S", unit: "kVA", descriptionJa: "皮相電力" },
       { symbol: "P", unit: "kW", descriptionJa: "有効電力" },
-      { symbol: "Q", unit: "kvar", descriptionJa: "無効電力（大きさのみ。遅れ/進みの符号は持たない）" },
+      { symbol: "|Q|", unit: "kvar", descriptionJa: "無効電力の大きさ（√(S²−P²)の主値・非負のみ。遅れ/進みの符号は持たない）" },
     ],
     resultUnit: "kvar",
     direction: "bidirectional",
-    applicability: "交流回路（正弦波・定常状態）。Qは√(S²−P²)の主値（非負）のみを返し、遅れ/進みの判定は行わない。",
-    domain: "P ≤ S, Q ≤ S",
+    applicability: "交流回路（正弦波・定常状態）。|Q|は√(S²−P²)の主値（非負）のみを返し、遅れ/進みの判定は行わない。",
+    domain: "P ≤ S, |Q| ≤ S",
     phase: "n/a",
     sourceType: "engineering_fundamental",
     standard: "—",
@@ -319,8 +325,9 @@ export const FORMULA_REGISTRY: readonly FormulaRegistryEntry[] = [
     resultUnit: "kVA",
     direction: "bidirectional",
     applicability:
-      "変圧器の一次・二次間（結線方式を問わない、線間電圧×線電流ベース）。無損失・励磁電流無視の理想変圧器を前提とする。",
-    phase: "single",
+      "変圧器の一次・二次間（結線方式を問わない、線間電圧×線電流ベース）。solveTransformerのphase引数で1φ/3φ両方に対応。" +
+      "無損失・励磁電流無視の理想変圧器を前提とする。",
+    phase: "both",
     balance: "balanced",
     sourceType: "engineering_fundamental",
     standard: "—",
@@ -407,9 +414,11 @@ export const FORMULA_REGISTRY: readonly FormulaRegistryEntry[] = [
     ],
     resultUnit: "kW",
     direction: "bidirectional",
-    applicability: "交流電動機（正弦波・定常状態）。Pinは入力電力であり、Pout（軸出力）とはηを介してのみ関係する。",
+    applicability:
+      "交流電動機（正弦波・定常状態）。solveMotorPowerのphase引数で1φ/3φ両方に対応。" +
+      "Pinは入力電力であり、Pout（軸出力）とはηを介してのみ関係する。",
     domain: "cosφ ∈ (0, 1]",
-    phase: "single",
+    phase: "both",
     balance: "balanced",
     sourceType: "engineering_fundamental",
     standard: "—",
@@ -422,7 +431,7 @@ export const FORMULA_REGISTRY: readonly FormulaRegistryEntry[] = [
   // ---- voltageDrop.ts ----
   {
     id: "voltage_drop_rx",
-    nameJa: "R/X法（線路定数による電圧降下）",
+    nameJa: "R/X法（線路定数による近似計算）",
     expression: "ΔV = k × I × (r·cosφ ± x·sinφ) × L / 1000（k: DC/1φ=2、3φ=√3。遅れ=+、進み=−）",
     variables: [
       { symbol: "ΔV", unit: "V", descriptionJa: "電圧降下" },
@@ -436,10 +445,14 @@ export const FORMULA_REGISTRY: readonly FormulaRegistryEntry[] = [
     direction: "bidirectional",
     applicability:
       "電線路のこう長・線路定数（R・X）が既知の回路（キルヒホッフの電圧則に基づく一般式）。" +
-      "Lは片道こう長。負荷が遅れ（誘導性）か進み（容量性）かで符号が変わるため、呼び出し側は" +
-      "loadTypeを明示的に選ばせ、遅れを暗黙のデフォルトとして決め打ちしない。",
-    domain: "cosφ ∈ (0, 1]、x ≥ 0（DCではxを使用しない）",
-    phase: "single",
+      "solveVoltageDropのmode引数でDC/1φ/3φすべてに対応。Lは片道こう長。負荷が遅れ（誘導性）か" +
+      "進み（容量性）かで符号が変わるため、呼び出し側はloadTypeを明示的に選ばせ、遅れを暗黙の" +
+      "デフォルトとして決め打ちしない。ΔVは符号付き — 負の値は電圧降下ではなく電圧上昇を意味し、" +
+      "非負に丸めたり別途ブロックしたりしない。ΔV/I/r/L/xはすべて相互に解ける（xも含む）が、" +
+      "cosφだけは入力専用 — ΔVからcosφを逆算するには非線形方程式（2次式）を解く必要があり、" +
+      "誤った推定を避けるため本システムは未対応。UIでもcosφは求める値として選べない。",
+    domain: "cosφ ∈ (0, 1]、x ≥ 0（DCではxを使用しない）。ΔVは符号付き（負＝電圧上昇）。",
+    phase: "both",
     loadType: "both",
     sourceType: "engineering_fundamental",
     standard: "—",
@@ -460,8 +473,9 @@ export const FORMULA_REGISTRY: readonly FormulaRegistryEntry[] = [
     ],
     resultUnit: "%",
     direction: "bidirectional",
-    applicability: "配電線路全般",
-    domain: "末端電圧 ≤ 始端電圧",
+    applicability:
+      "配電線路全般。ΔVは符号付き（負＝電圧上昇）を許容するため、末端電圧が始端電圧を上回るケースも" +
+      "有効な結果として扱う — 末端電圧 ≤ 始端電圧という制約は課さない。",
     phase: "n/a",
     sourceType: "engineering_fundamental",
     standard: "—",
@@ -482,8 +496,10 @@ export const FORMULA_REGISTRY: readonly FormulaRegistryEntry[] = [
     ],
     resultUnit: "V",
     direction: "bidirectional",
-    applicability: "低圧配電線路・軟銅線を用いた簡易概算（正確な計算にはR/X法を推奨）",
-    phase: "single",
+    applicability:
+      "低圧配電線路・軟銅線を用いた簡易概算（正確な計算にはR/X法を推奨）。solveSimplifiedVoltageDropの" +
+      "wiring引数で単相2線式・三相3線式両方に対応。",
+    phase: "both",
     sourceType: "association_technical_document",
     standard: "JEAC 8001",
     edition: "2022",
@@ -527,16 +543,16 @@ export const FORMULA_REGISTRY: readonly FormulaRegistryEntry[] = [
   {
     id: "impedance_magnitude",
     nameJa: "インピーダンスの大きさ",
-    expression: "|Z| = √(R² + X²)",
+    expression: "|Z| = √(R² + |X|²)",
     variables: [
       { symbol: "|Z|", unit: "Ω", descriptionJa: "インピーダンスの大きさ（Z=R+jXの絶対値。Zそのもの＝複素数と混同しない）" },
       { symbol: "R", unit: "Ω", descriptionJa: "抵抗成分" },
-      { symbol: "X", unit: "Ω", descriptionJa: "リアクタンス成分（大きさのみを扱う。符号付きXはparallelComplexのみ）" },
+      { symbol: "|X|", unit: "Ω", descriptionJa: "リアクタンス成分の大きさのみを扱う（符号付きXはparallelComplexImpedanceのみ）" },
     ],
     resultUnit: "Ω",
     direction: "bidirectional",
     applicability: "R・Xの直列回路（RとXが直交成分であることを前提とする一般式）",
-    domain: "R, X ≥ 0、R ≤ |Z|、X ≤ |Z|",
+    domain: "R, |X| ≥ 0、R ≤ |Z|、|X| ≤ |Z|",
     phase: "n/a",
     sourceType: "engineering_fundamental",
     standard: "—",
@@ -613,21 +629,23 @@ export const FORMULA_REGISTRY: readonly FormulaRegistryEntry[] = [
   },
   {
     id: "series_rx_combination",
-    nameJa: "R・Xの直列合成",
-    expression: "R_total = R1 + R2、X_total = X1 + X2",
+    nameJa: "R・|X|の直列合成（大きさのみ）",
+    expression: "R_total = R1 + R2、|X_total| = |X1| + |X2|",
     variables: [
       { symbol: "R_total", unit: "Ω", descriptionJa: "合成抵抗" },
-      { symbol: "X_total", unit: "Ω", descriptionJa: "合成リアクタンス（大きさのみ）" },
+      { symbol: "|X_total|", unit: "Ω", descriptionJa: "合成リアクタンスの大きさ（大きさのみの単純加算。符号付き複素数の一般的な直列合成ではない）" },
     ],
     resultUnit: "Ω",
     direction: "bidirectional",
-    applicability: "2素子の直列接続（R成分・X成分はそれぞれ独立に加算される）",
-    domain: "R1, R2, X1, X2 ≥ 0",
+    applicability:
+      "2素子の直列接続で、R成分・|X|成分（大きさのみ）をそれぞれ独立に加算する場合。符号付き（+誘導性/−容量性）の" +
+      "直列合成には対応していない — その場合は並列合成（複素R+jX、並列のみ対応）を参照。",
+    domain: "R1, R2, |X1|, |X2| ≥ 0",
     phase: "n/a",
     sourceType: "engineering_fundamental",
     standard: "—",
     edition: "—",
-    reference: "直列合成 R_total = R1 + R2、X_total = X1 + X2",
+    reference: "直列合成 R_total = R1 + R2、|X_total| = |X1| + |X2|",
     verified: true,
     engineFiles: ["impedanceRLC.ts"],
   },
@@ -689,8 +707,10 @@ export const FORMULA_REGISTRY: readonly FormulaRegistryEntry[] = [
     ],
     resultUnit: "A",
     direction: "bidirectional",
-    applicability: "変圧器の一次または二次側、定格電圧V・定格容量kVAが既知の場合",
-    phase: "single",
+    applicability:
+      "変圧器の一次または二次側、定格電圧V・定格容量kVAが既知の場合。solveTransformerRatedCurrentの" +
+      "phase引数で1φ/3φ両方に対応。",
+    phase: "both",
     balance: "balanced",
     sourceType: "engineering_fundamental",
     standard: "—",
@@ -748,22 +768,23 @@ export const FORMULA_REGISTRY: readonly FormulaRegistryEntry[] = [
   },
   {
     id: "breaking_capacity_check",
-    nameJa: "遮断容量チェック（算術比較のみ）",
-    expression: "sufficient ⟺ 定格遮断容量 ≥ Isc",
+    nameJa: "定格遮断電流チェック（算術比較のみ）",
+    expression: "sufficient ⟺ 定格遮断電流 ≥ Isc",
     variables: [
       { symbol: "Isc", unit: "A", descriptionJa: "短絡電流（簡易値）" },
-      { symbol: "定格遮断容量", unit: "A", descriptionJa: "ユーザーが入力する遮断器の定格遮断容量" },
+      { symbol: "定格遮断電流", unit: "A/kA", descriptionJa: "ユーザーが入力する遮断器の定格遮断電流（対象機器の同一定格電圧・同一条件の値を使用）" },
     ],
     resultUnit: "—",
     direction: "forward",
     applicability:
-      "計算されたIsc（簡易値）とユーザー自身が入力した遮断器の定格遮断容量との単純な数値比較のみ。" +
-      "正式なOK/NG判定ではなく、遮断容量の基準値そのものを本システムが規定・推測することはない。",
+      "計算されたIsc（簡易値）とユーザー自身が入力した遮断器の定格遮断電流との単純な数値比較のみ。" +
+      "定格遮断電流は必ず対象機器の同一定格電圧・同一条件で読み取った値を使用すること。" +
+      "正式なOK/NG判定ではなく、定格遮断電流の基準値そのものを本システムが規定・推測することはない。",
     phase: "n/a",
     sourceType: "engineering_fundamental",
     standard: "—",
     edition: "—",
-    reference: "遮断容量チェック sufficient ⟺ 定格遮断容量 ≥ Isc",
+    reference: "定格遮断電流チェック sufficient ⟺ 定格遮断電流 ≥ Isc",
     verified: true,
     engineFiles: ["shortCircuit.ts"],
   },

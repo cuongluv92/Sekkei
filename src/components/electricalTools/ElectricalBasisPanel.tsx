@@ -3,10 +3,18 @@
 import { AlertTriangle } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import type { TechnicalSource } from "@/lib/calc/technicalSource";
-import type { SolveResult } from "@/lib/calc/electrical/types";
+import type { CalcVariableDef, SolveResult } from "@/lib/calc/electrical/types";
 
 interface ElectricalBasisPanelProps {
   result: SolveResult | null;
+  /**
+   * The active calculator/sub-tool's variable list — rendered as a plain-
+   * language glossary (記号の説明) below the formula/sources so a beginner
+   * never has to guess what a bare symbol like "η", "Pin", "%Z", "cosφ"
+   * actually means. Optional so this stays backward-compatible for any
+   * call site not yet passing it.
+   */
+  variables?: readonly CalcVariableDef<string>[];
 }
 
 /**
@@ -20,50 +28,81 @@ interface ElectricalBasisPanelProps {
  * 持つ。この区別を曖昧にすると、規格が定めていない式まで「JIS準拠」と
  * 誤解される危険があるため。
  */
-export function ElectricalBasisPanel({ result }: ElectricalBasisPanelProps) {
+export function ElectricalBasisPanel({ result, variables }: ElectricalBasisPanelProps) {
   const { t, locale } = useTranslation();
-
-  if (!result || !result.ok) {
-    return (
-      <p className="text-[12.5px] text-muted-2">
-        {t("electricalTools.basis.emptyMessage")}
-      </p>
-    );
-  }
 
   return (
     <div className="flex flex-col gap-3">
-      {result.warnings && result.warnings.length > 0 && (
-        <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-          <div className="flex flex-col gap-1">
-            {result.warnings.map((w, i) => (
-              <p key={i} className="text-[12px] text-warning">
-                {w}
-              </p>
+      {!result || !result.ok ? (
+        <p className="text-[12.5px] text-muted-2">
+          {t("electricalTools.basis.emptyMessage")}
+        </p>
+      ) : (
+        <>
+          {result.warnings && result.warnings.length > 0 && (
+            <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+              <div className="flex flex-col gap-1">
+                {result.warnings.map((w, i) => (
+                  <p key={i} className="text-[12px] text-warning">
+                    {w}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
+            <span className="field-label">{t("electricalTools.basis.formulaLabel")}</span>
+            <div className="flex flex-col gap-2.5">
+              {result.steps.map((step, i) => (
+                <div key={i} className="flex flex-col gap-0.5 font-mono text-[12px]">
+                  <span className="text-muted">{step.formula}</span>
+                  <span className="text-muted">{step.substituted}</span>
+                  <span className="font-bold text-foreground">{step.resultLine}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {result.sources.map((source, i) => (
+              <SourceBlock key={i} source={source} locale={locale} t={t} />
             ))}
           </div>
-        </div>
+        </>
       )}
 
-      <div className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
-        <span className="field-label">{t("electricalTools.basis.formulaLabel")}</span>
-        <div className="flex flex-col gap-2.5">
-          {result.steps.map((step, i) => (
-            <div key={i} className="flex flex-col gap-0.5 font-mono text-[12px]">
-              <span className="text-muted">{step.formula}</span>
-              <span className="text-muted">{step.substituted}</span>
-              <span className="font-bold text-foreground">{step.resultLine}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      {variables && variables.length > 0 && (
+        <GlossaryBlock variables={variables} locale={locale} t={t} />
+      )}
+    </div>
+  );
+}
 
-      <div className="flex flex-col gap-2">
-        {result.sources.map((source, i) => (
-          <SourceBlock key={i} source={source} locale={locale} t={t} />
+function GlossaryBlock({
+  variables,
+  locale,
+  t,
+}: {
+  variables: readonly CalcVariableDef<string>[];
+  locale: string;
+  t: (path: string, vars?: Record<string, string | number>) => string;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
+      <span className="field-label">{t("electricalTools.basis.glossaryLabel")}</span>
+      <dl className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
+        {variables.map((v) => (
+          <div key={v.key} className="flex items-baseline gap-1.5 text-[11.5px]">
+            <dt className="shrink-0 font-mono font-bold text-foreground">{v.symbol || v.key}</dt>
+            <dd className="text-muted">
+              {locale === "vi" ? v.labelVi : v.labelJa}
+              {v.unit ? ` [${v.unit}]` : ""}
+            </dd>
+          </div>
         ))}
-      </div>
+      </dl>
     </div>
   );
 }

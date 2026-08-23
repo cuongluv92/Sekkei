@@ -21,7 +21,6 @@ const ja: Dictionary = {
     busbarCalc: "母線銅帯計算",
     earthWireCalc: "接地線計算",
     earthBarCalc: "アースバー計算",
-    otherCalc: "他計算",
     import: "インポート",
     trash: "ゴミ箱",
     settings: "設定",
@@ -194,6 +193,7 @@ const ja: Dictionary = {
       referenceLabel: "根拠箇所",
       applicabilityLabel: "適用条件",
       emptyMessage: "十分な値を入力すると、ここに計算式と根拠が表示されます",
+      glossaryLabel: "記号の説明",
     },
   },
   partAssembly: {
@@ -510,11 +510,6 @@ const ja: Dictionary = {
     },
     emptyList: "登録されているサイズがありません。",
     addButton: "追加",
-  },
-  otherCalc: {
-    title: "他計算",
-    description: "母線銅帯・接地線・アースバーの計算と、保存済み案件の一覧をここでまとめて扱います。",
-    savedTab: "保存済み",
   },
   importPage: {
     title: "インポート",

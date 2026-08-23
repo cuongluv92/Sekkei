@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Settings } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
@@ -9,6 +9,8 @@ import { busbarSizeService, calculationRecordService } from "@/lib/services";
 import { useActiveCase, useEffectiveCaseId } from "@/lib/store/ActiveCaseProvider";
 import { PageHeader } from "@/components/common/PageHeader";
 import { CaseSelector } from "@/components/common/CaseSelector";
+import { Modal } from "@/components/common/Modal";
+import { BusbarSizeSettings } from "@/components/settings/BusbarSizeSettings";
 import {
   evaluateBusbarCandidate,
   findBusbarCandidates,
@@ -101,7 +103,7 @@ function roundTo(n: number, decimals: number): number {
  * candidate is ever 採用 at a time regardless of which list it came from.
  */
 export interface BusbarCalculationViewProps {
-  /** Route this view's own mode-tab switching (自動選定/手動検証) pushes to. Defaults to its own dedicated route; pass the host page's path (e.g. "/calculations/other") when embedding this view inline as a tab there instead of navigating away. */
+  /** Route this view's own mode-tab switching (自動選定/手動検証) pushes to. Defaults to its own dedicated route; pass the host page's path (e.g. "/electrical-tools") when embedding this view inline as a category there instead of navigating away. */
   basePath?: string;
 }
 
@@ -145,6 +147,7 @@ export function BusbarCalculationView({
   const [adopted, setAdopted] = useState<AdoptedBusbar | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const initializedRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -378,6 +381,12 @@ export function BusbarCalculationView({
       <PageHeader
         title={t("busbarCalc.title")}
         description={t("busbarCalc.description")}
+        actions={
+          <button onClick={() => setSettingsOpen(true)} className="btn-secondary">
+            <Settings className="h-3.5 w-3.5" />
+            {t("common.settings")}
+          </button>
+        }
       />
 
       <CaseSelector />
@@ -727,6 +736,16 @@ export function BusbarCalculationView({
             )}
           </div>
         </>
+      )}
+
+      {settingsOpen && (
+        <Modal
+          title={t("busbarSizeSettings.title")}
+          onClose={() => setSettingsOpen(false)}
+          widthClassName="max-w-2xl"
+        >
+          <BusbarSizeSettings />
+        </Modal>
       )}
     </div>
   );

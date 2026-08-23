@@ -239,3 +239,206 @@ describe("FORMULA_REGISTRY — cross-checked against actual engine computations"
     expect(classifyVoltage(7001)).toBe("extraHigh");
   });
 });
+
+/**
+ * For every variable a registry entry declares, leave that one out of a
+ * self-consistent full value set and confirm the engine actually solves it
+ * — not just that ONE example value happens to check out. This is what
+ * caught two real bugs during this audit: `solveMotorPower`'s declared "pf"
+ * variable had no rule that could ever produce it, and `solveVoltageDrop`'s
+ * declared "xOhmPerKm" was the same — both are fixed above; this harness
+ * exists so a future formula added to a `direction:"bidirectional"` entry
+ * without a matching rule fails CI immediately instead of silently shipping
+ * a 求める値 option that can never actually resolve.
+ */
+function expectAllTargetsSolvable<K extends string>(
+  solve: (known: Partial<Record<K, number>>, target: K) => { ok: boolean },
+  fullValues: Record<K, number>,
+) {
+  const keys = Object.keys(fullValues) as K[];
+  for (const target of keys) {
+    const known: Partial<Record<K, number>> = {};
+    for (const k of keys) if (k !== target) known[k] = fullValues[k];
+    const r = solve(known, target);
+    expect(r.ok, `expected target "${String(target)}" to be solvable from {${keys.filter((k) => k !== target).join(", ")}}`).toBe(true);
+  }
+}
+
+describe("FORMULA_REGISTRY — declared 'bidirectional' entries: every variable is actually solvable by the engine", () => {
+  it("dc_ohms_law: V,I,R,P all solvable from the other three", () => {
+    expectAllTargetsSolvable(solveDcCircuit, { V: 50, I: 10, R: 5, P: 500 });
+  });
+
+  it("ac_apparent_power / ac_active_power_direct / ac_power_triangle / ac_power_factor_def: V,I,S,P,Q,pf all solvable", () => {
+    // V=200,I=30,pf=0.8 => S=6,P=4.8,Q=sqrt(36-23.04)=3.6 (self-consistent)
+    expectAllTargetsSolvable(
+      (known, target) => solveAcPower(known, target, "single"),
+      { V: 200, I: 30, S: 6, P: 4.8, Q: 3.6, pf: 0.8 },
+    );
+  });
+
+  it("efficiency_def: inputKw,outputKw,eta all solvable", () => {
+    expectAllTargetsSolvable(solveEfficiency, { inputKw: 10, outputKw: 9, eta: 0.9 });
+  });
+
+  it("three_phase_y_*: lineVoltage,phaseVoltage,lineCurrent,phaseCurrent all solvable (Y)", () => {
+    expectAllTargetsSolvable(
+      (known, target) => solveThreePhaseConnection(known, target, "Y"),
+      { lineVoltage: Math.sqrt(3) * 100, phaseVoltage: 100, lineCurrent: 10, phaseCurrent: 10 },
+    );
+  });
+
+  it("three_phase_delta_*: lineVoltage,phaseVoltage,lineCurrent,phaseCurrent all solvable (Δ)", () => {
+    expectAllTargetsSolvable(
+      (known, target) => solveThreePhaseConnection(known, target, "Delta"),
+      { lineVoltage: 100, phaseVoltage: 100, lineCurrent: Math.sqrt(3) * 10, phaseCurrent: 10 },
+    );
+  });
+
+  it("transformer_capacity_conservation / transformer_turns_ratio_single_phase: kva,v1,i1,v2,i2,turnsRatio all solvable (1φ)", () => {
+    // v1=200,i1=5 => kva=1; v2=100,turnsRatio=2 => i2=10 (i2/i1=2=turnsRatio, consistent)
+    expectAllTargetsSolvable(
+      (known, target) => solveTransformer(known, target, "single"),
+      { kva: 1, v1: 200, i1: 5, v2: 100, i2: 10, turnsRatio: 2 },
+    );
+  });
+
+  it("motor_sync_speed: frequencyHz,poles,nsRpm all solvable", () => {
+    expectAllTargetsSolvable(solveSyncSpeed, { frequencyHz: 50, poles: 4, nsRpm: 1500 });
+  });
+
+  it("motor_slip: nsRpm,actualRpm,slip all solvable", () => {
+    expectAllTargetsSolvable(solveSlip, { nsRpm: 1500, actualRpm: 1450, slip: 1 / 30 });
+  });
+
+  it("motor_input_power / efficiency_def (motor side): voltage,current,pf,eta,inputKw,outputKw all solvable (3φ)", () => {
+    const k = Math.sqrt(3);
+    const inputKw = (k * 400 * 20 * 0.85) / 1000;
+    expectAllTargetsSolvable(
+      (known, target) => solveMotorPower(known, target, "three"),
+      { voltage: 400, current: 20, pf: 0.85, eta: 0.9, inputKw, outputKw: inputKw * 0.9 },
+    );
+  });
+
+  it("voltage_drop_rx: current,rOhmPerKm,xOhmPerKm,lengthM,deltaV all solvable (pf is intentionally input-only, checked separately)", () => {
+    const sinPhi = Math.sqrt(1 - 0.8 * 0.8);
+    const deltaV = (2 * 20 * (0.5 * 0.8 + 0.3 * sinPhi) * 50) / 1000;
+    expectAllTargetsSolvable(
+      (known: Partial<Record<"current" | "rOhmPerKm" | "xOhmPerKm" | "lengthM" | "deltaV", number>>, target) =>
+        solveVoltageDrop({ ...known, pf: 0.8 }, target, "single", "lagging"),
+      { current: 20, rOhmPerKm: 0.5, xOhmPerKm: 0.3, lengthM: 50, deltaV },
+    );
+  });
+
+  it("voltage_drop_rx: pf is deliberately NOT solvable (documented exception, not a gap)", () => {
+    const r = solveVoltageDrop(
+      { deltaV: 1.16, current: 20, rOhmPerKm: 0.5, xOhmPerKm: 0.3, lengthM: 50 },
+      "pf",
+      "single",
+      "lagging",
+    );
+    expect(r.ok).toBe(false);
+  });
+
+  it("voltage_drop_relations: deltaV,deltaVPercent,sourceVoltage,endVoltage all solvable", () => {
+    expectAllTargetsSolvable(
+      (known: Partial<Record<"deltaV" | "deltaVPercent" | "sourceVoltage" | "endVoltage", number>>, target) =>
+        solveVoltageDrop(known, target, "dc"),
+      { deltaV: 10, deltaVPercent: 5, sourceVoltage: 200, endVoltage: 190 },
+    );
+  });
+
+  it("voltage_drop_simplified_coefficient: current,lengthM,areaMm2,deltaV all solvable (単相2線式)", () => {
+    expectAllTargetsSolvable(
+      (known, target) => solveSimplifiedVoltageDrop(known, target, "single2wire"),
+      { current: 20, lengthM: 50, areaMm2: 5.5, deltaV: (35.6 * 50 * 20) / (1000 * 5.5) },
+    );
+  });
+
+  it("capacitor_correction: activePowerKw,pfBefore,pfAfter,qcKvar all solvable (previously pfBefore was not)", () => {
+    const tan1 = Math.sqrt(1 - 0.8 * 0.8) / 0.8;
+    const tan2 = Math.sqrt(1 - 0.95 * 0.95) / 0.95;
+    expectAllTargetsSolvable(solveCapacitorCorrection, {
+      activePowerKw: 100,
+      pfBefore: 0.8,
+      pfAfter: 0.95,
+      qcKvar: 100 * (tan1 - tan2),
+    });
+  });
+
+  it("impedance_magnitude: R,X,Z all solvable", () => {
+    expectAllTargetsSolvable(solveImpedance, { R: 3, X: 4, Z: 5 });
+  });
+
+  it("inductive_reactance: XL,L,f all solvable", () => {
+    expectAllTargetsSolvable(solveInductiveReactance, { XL: 2 * Math.PI * 50 * 0.1, L: 0.1, f: 50 });
+  });
+
+  it("capacitive_reactance: XC,C,f all solvable", () => {
+    expectAllTargetsSolvable(solveCapacitiveReactance, {
+      XC: 1 / (2 * Math.PI * 50 * 100e-6),
+      C: 100e-6,
+      f: 50,
+    });
+  });
+
+  it("lc_resonance: f0,L,C all solvable", () => {
+    expectAllTargetsSolvable(solveResonance, {
+      f0: 1 / (2 * Math.PI * Math.sqrt(1e-3 * 1e-6)),
+      L: 1e-3,
+      C: 1e-6,
+    });
+  });
+
+  it("series_rx_combination: R1,R2,Rtotal,X1,X2,Xtotal all solvable", () => {
+    expectAllTargetsSolvable(solveSeriesRX, { R1: 3, R2: 4, Rtotal: 7, X1: 2, X2: 5, Xtotal: 7 });
+  });
+
+  it("parallel_resistance_pure: R1,R2,Rtotal all solvable", () => {
+    expectAllTargetsSolvable(solveParallelResistance, { R1: 6, R2: 3, Rtotal: 2 });
+  });
+
+  it("transformer_rated_current: kva,voltage,current all solvable (1φ)", () => {
+    expectAllTargetsSolvable(
+      (known, target) => solveTransformerRatedCurrent(known, target, "single"),
+      { kva: 100, voltage: 200, current: 500 },
+    );
+  });
+
+  it("simplified_short_circuit_current: ratedCurrentA,percentZ,shortCircuitCurrentA all solvable", () => {
+    expectAllTargetsSolvable(solveSimplifiedShortCircuit, {
+      ratedCurrentA: 500,
+      percentZ: 5,
+      shortCircuitCurrentA: 10000,
+    });
+  });
+
+  it("percent_z_base_conversion: percentZOld,kvaOld,percentZNew,kvaNew all solvable", () => {
+    expectAllTargetsSolvable(solvePercentZBaseConversion, {
+      percentZOld: 5,
+      kvaOld: 100,
+      percentZNew: 10,
+      kvaNew: 200,
+    });
+  });
+
+  it("instrument_transformer_ratio: primary,secondary,ratio all solvable", () => {
+    expectAllTargetsSolvable(solveInstrumentTransformerRatio, { primary: 1000, secondary: 5, ratio: 200 });
+  });
+
+  it("parallel_complex_impedance (direction:forward): Rtotal/Xtotal/Ztotal solvable, but R1/X1/R2/X2 are NOT (documented, not a gap)", () => {
+    const full = { R1: 3, X1: 4, R2: 3, X2: 4, Rtotal: 1.5, Xtotal: 2, Ztotal: 2.5 };
+    for (const target of ["Rtotal", "Xtotal", "Ztotal"] as const) {
+      const known = { ...full };
+      delete (known as Record<string, number | undefined>)[target];
+      const r = solveParallelComplexImpedance(known, target);
+      expect(r.ok, `expected ${target} to be solvable`).toBe(true);
+    }
+    for (const target of ["R1", "X1", "R2", "X2"] as const) {
+      const known = { ...full };
+      delete (known as Record<string, number | undefined>)[target];
+      const r = solveParallelComplexImpedance(known, target);
+      expect(r.ok, `expected ${target} to remain unsolvable (forward-only by design)`).toBe(false);
+    }
+  });
+});

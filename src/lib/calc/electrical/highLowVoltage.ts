@@ -68,13 +68,15 @@ export const JEAC8011_HIGH_VOLTAGE_RECEIVING_SOURCE: TechnicalSource = {
 export const JIS_C4620_CUBICLE_SOURCE: TechnicalSource = {
   standard: "JIS C 4620",
   edition: "2023",
-  reference: "キュービクル式高圧受電設備の適用範囲",
-  applicability: "6.6kV級キュービクル式高圧受電設備",
+  reference:
+    "キュービクル式高圧受電設備の適用範囲（公称電圧6.6kV、50/60Hz、系統短絡電流12.5kA以下、受電設備容量4000kVA以下）" +
+    "（2024年3月付訂正票あり）",
+  applicability:
+    "公称電圧6.6kV、50/60Hz、系統短絡電流12.5kA以下、受電設備容量4000kVA以下のキュービクル式高圧受電設備。" +
+    "この範囲外（系統短絡電流・受電容量が上記を超える等）の設備には安易に適用範囲を広げないこと。",
   sourceType: "standard",
-  verified: false,
-  verificationNote:
-    "規格番号・対象（キュービクル式高圧受電設備）までは把握しているが、2023年版原文の適用範囲・仕様詳細は未確認。" +
-    "本番運用前にJIS C 4620:2023原本で確認すること。",
+  verified: true,
+  verificationNote: "2024年3月付訂正票が存在するため、本番運用前に訂正票の内容もあわせて確認すること。",
 };
 
 /** 6.6kV級など高圧受電設備の文脈かどうかの簡易判定（キュービクル関連の参考情報を出すかどうかの目安）。 */

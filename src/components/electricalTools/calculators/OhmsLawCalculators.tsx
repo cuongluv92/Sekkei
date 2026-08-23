@@ -28,7 +28,7 @@ const AC_VARS: CalcVariableDef<AcPowerVar>[] = [
   { key: "I", labelJa: "電流", labelVi: "Dòng điện", symbol: "I", unit: "A" },
   { key: "S", labelJa: "皮相電力", labelVi: "Công suất biểu kiến", symbol: "S", unit: "kVA" },
   { key: "P", labelJa: "有効電力", labelVi: "Công suất hữu công", symbol: "P", unit: "kW" },
-  { key: "Q", labelJa: "無効電力", labelVi: "Công suất vô công", symbol: "Q", unit: "kvar" },
+  { key: "Q", labelJa: "無効電力の大きさ", labelVi: "Độ lớn công suất vô công", symbol: "|Q|", unit: "kvar" },
   { key: "pf", labelJa: "力率", labelVi: "Hệ số công suất", symbol: "cosφ", unit: "" },
 ];
 
@@ -106,7 +106,10 @@ export function OhmsLawCalculators() {
           <span className="panel-title">{t("electricalTools.basisSectionTitle")}</span>
         </div>
         <div className="panel-body">
-          <ElectricalBasisPanel result={result} />
+          <ElectricalBasisPanel
+            result={result}
+            variables={subTool === "dc" ? DC_VARS : subTool === "ac" ? AC_VARS : EFFICIENCY_VARS}
+          />
         </div>
       </div>
     </div>

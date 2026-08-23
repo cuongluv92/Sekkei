@@ -30,7 +30,6 @@ import {
 import { solveByRules, type Rule } from "./ruleSolver";
 import {
   firstValidationError,
-  requireLessOrEqual,
   requireNonNegative,
   requirePositive,
   requireRatio01,
@@ -38,9 +37,11 @@ import {
 import type { KnownValues, SolveResult } from "./types";
 
 const VOLTAGE_DROP_RX_SOURCE = engineeringFundamentalSource(
-  "電線こう長あたりのR・Xによる電圧降下 ΔV = k × I × (r·cosφ + x·sinφ) × L / 1000" +
-    "（k: 直流/単相=2、三相=√3）",
-  "電線路のこう長・線路定数（R・X）が既知の回路（キルヒホッフの電圧則に基づく一般式）",
+  "電線こう長あたりのR・Xによる電圧降下 ΔV = k × I × (r·cosφ ± x·sinφ) × L / 1000" +
+    "（k: 直流/単相=2、三相=√3。遅れ負荷=+、進み負荷=−。ΔVが負になる場合は電圧降下ではなく電圧上昇を意味する）",
+  "電線路のこう長・線路定数（R・X）が既知の回路（キルヒホッフの電圧則に基づく一般式）。" +
+    "ΔVは符号付き — 遅れ負荷（誘導性）でも軽負荷・進み成分の影響で理論上は負（電圧上昇）になり得るため、" +
+    "本ツールは符号を強制的に非負へ丸めず、そのまま返す。",
 );
 const VOLTAGE_RELATION_SOURCE = engineeringFundamentalSource(
   "電圧降下率・末端電圧の定義 ΔV% = ΔV / V0 × 100、末端電圧 = V0 − ΔV",
@@ -174,6 +175,26 @@ function physicalRules(
       }),
       source: VOLTAGE_DROP_RX_SOURCE,
     },
+    // xOhmPerKm has no meaning in DC mode, so this rule is only added for AC.
+    ...(isDc
+      ? []
+      : [
+          {
+            output: "xOhmPerKm" as const,
+            inputs: ["deltaV", "current", "lengthM", "rOhmPerKm", "pf"] as const,
+            compute: (v: Record<VoltageDropVar, number>) => {
+              const sinPhi = Math.sqrt(Math.max(1 - v.pf * v.pf, 0));
+              const rEffNeeded = (v.deltaV * 1000) / (k * v.current * v.lengthM);
+              return (rEffNeeded - v.rOhmPerKm * v.pf) / (sign * sinPhi);
+            },
+            describe: (v: Record<VoltageDropVar, number>, r: number) => ({
+              formula: `x = (必要なr_eff − r·cosφ) / (${signSymbol}sinφ)`,
+              substituted: `x ≈ ${r} Ω/km（ΔV=${v.deltaV}Vを満たす必要値）`,
+              resultLine: `x ≈ ${r} Ω/km`,
+            }),
+            source: VOLTAGE_DROP_RX_SOURCE,
+          },
+        ]),
   ];
 }
 
@@ -235,6 +256,11 @@ const RELATION_RULES: readonly Rule<VoltageDropVar>[] = [
   },
 ];
 
+const VOLTAGE_RISE_WARNING =
+  "計算結果は負のΔVです — これは電圧降下ではなく電圧上昇（末端電圧が始端電圧より高くなる）を意味します。" +
+  "進み負荷（容量性）や、遅れ負荷でもリアクタンス成分の影響が抵抗成分より大きい軽負荷条件などで理論上生じ得ます。" +
+  "符号を反転させず、そのままの値としてご確認ください。";
+
 export function solveVoltageDrop(
   known: KnownValues<VoltageDropVar>,
   target: VoltageDropVar,
@@ -248,15 +274,23 @@ export function solveVoltageDrop(
     requireRatio01(known.pf, "力率cosφ"),
     requirePositive(known.lengthM, "こう長"),
     requirePositive(known.sourceVoltage, "始端電圧"),
-    requireNonNegative(known.deltaV, "電圧降下"),
-    requireNonNegative(known.deltaVPercent, "電圧降下率"),
     requirePositive(known.endVoltage, "末端電圧"),
-    // A line cannot end up at a higher voltage than it started (no negative drop in this model).
-    requireLessOrEqual(known.endVoltage, known.sourceVoltage, "末端電圧", "始端電圧"),
+    // deltaV/deltaVPercent are intentionally signed — a negative value is a
+    // legitimate voltage RISE (leading load, or a lagging load whose x-term
+    // dominates), not an error to reject. endVoltage is likewise not
+    // capped at sourceVoltage: with a signed ΔV, endVoltage can exceed it.
   );
   if (invalid) return invalid;
   const rules = [...physicalRules(mode, loadType), ...RELATION_RULES];
-  return solveByRules(rules, known, target);
+  const result = solveByRules(rules, known, target);
+  if (
+    result.ok &&
+    (target === "deltaV" || target === "deltaVPercent") &&
+    result.value < 0
+  ) {
+    result.warnings = [...(result.warnings ?? []), VOLTAGE_RISE_WARNING];
+  }
+  return result;
 }
 
 // ---- 簡易係数法（要確認） ----

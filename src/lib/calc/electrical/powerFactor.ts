@@ -20,7 +20,7 @@ import {
 import type { KnownValues, SolveResult } from "./types";
 
 const POWER_TRIANGLE_SOURCE = engineeringFundamentalSource(
-  "電力三角形 S² = P² + Q²、cosφ = P / S",
+  "電力三角形 S² = P² + |Q|²、cosφ = P / S（|Q|は無効電力の大きさ。√(S²−P²)は主値〈非負〉のみを返すため、遅れ/進みの符号は表さない）",
   "交流回路（正弦波・定常状態）",
 );
 const CAPACITOR_CORRECTION_SOURCE = engineeringFundamentalSource(
@@ -36,7 +36,7 @@ export const powerTriangleRules: readonly Rule<PowerTriangleVar>[] = [
     inputs: ["activeP", "reactiveQ"],
     compute: ({ activeP, reactiveQ }) => Math.sqrt(activeP * activeP + reactiveQ * reactiveQ),
     describe: (v, r) => ({
-      formula: "S = √(P² + Q²)",
+      formula: "S = √(P² + |Q|²)",
       substituted: `S = √(${v.activeP}² + ${v.reactiveQ}²)`,
       resultLine: `S ≈ ${r} kVA`,
     }),
@@ -48,7 +48,7 @@ export const powerTriangleRules: readonly Rule<PowerTriangleVar>[] = [
     compute: ({ apparentS, reactiveQ }) =>
       Math.sqrt(Math.max(apparentS * apparentS - reactiveQ * reactiveQ, 0)),
     describe: (v, r) => ({
-      formula: "P = √(S² − Q²)",
+      formula: "P = √(S² − |Q|²)",
       substituted: `P = √(${v.apparentS}² − ${v.reactiveQ}²)`,
       resultLine: `P ≈ ${r} kW`,
     }),
@@ -60,9 +60,9 @@ export const powerTriangleRules: readonly Rule<PowerTriangleVar>[] = [
     compute: ({ apparentS, activeP }) =>
       Math.sqrt(Math.max(apparentS * apparentS - activeP * activeP, 0)),
     describe: (v, r) => ({
-      formula: "Q = √(S² − P²)",
-      substituted: `Q = √(${v.apparentS}² − ${v.activeP}²)`,
-      resultLine: `Q ≈ ${r} kvar`,
+      formula: "|Q| = √(S² − P²)",
+      substituted: `|Q| = √(${v.apparentS}² − ${v.activeP}²)`,
+      resultLine: `|Q| ≈ ${r} kvar`,
     }),
     source: POWER_TRIANGLE_SOURCE,
   },
@@ -160,6 +160,21 @@ export const capacitorCorrectionRules: readonly Rule<CapacitorCorrectionVar>[] =
       formula: "P = Qc / (tanφ1 − tanφ2)",
       substituted: `P = ${v.qcKvar} / (tanφ(${v.pfBefore}) − tanφ(${v.pfAfter}))`,
       resultLine: `P ≈ ${r} kW`,
+    }),
+    source: CAPACITOR_CORRECTION_SOURCE,
+  },
+  {
+    output: "pfBefore",
+    inputs: ["activePowerKw", "pfAfter", "qcKvar"],
+    compute: ({ activePowerKw, pfAfter, qcKvar }) => {
+      const tan1 = tanFromPf(pfAfter) + qcKvar / activePowerKw;
+      if (tan1 < 0) return NaN; // would require a leading pfBefore — outside this basic formula's intended use
+      return 1 / Math.sqrt(1 + tan1 * tan1);
+    },
+    describe: (v, r) => ({
+      formula: "cosφ1 = 1 / √(1 + tanφ1²)、tanφ1 = tanφ2 + Qc/P",
+      substituted: `tanφ1 = tanφ(${v.pfAfter}) + ${v.qcKvar}/${v.activePowerKw}`,
+      resultLine: `cosφ1 ≈ ${r}`,
     }),
     source: CAPACITOR_CORRECTION_SOURCE,
   },

@@ -26,7 +26,6 @@ const QUICK_LINK_KEYS = [
   "weightCalc",
   "ventilationCalc",
   "seismicCalc",
-  "otherCalc",
 ] as const;
 
 export default function SettingsPage() {

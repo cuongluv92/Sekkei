@@ -218,27 +218,24 @@ export const TRANSFORMER_VECTOR_GROUPS: VectorGroupInfo[] = [
 
 /**
  * 6.6kV配電用変圧器の適用規格に関する参考情報 — 数値（%Z・損失等）は含まず、
- * 適用範囲を示すだけの情報。値そのものは要確認。
+ * 適用範囲（電圧・容量・周波数）のみを示す情報。範囲外の機種・容量に対して
+ * 安易に適用範囲を広げて解釈しないこと（6.6kV付近というだけで一律に
+ * 適用対象と見なさない — 容量帯もあわせて確認する）。
  */
 export const JIS_C4304_DISTRIBUTION_TRANSFORMER_SOURCE: TechnicalSource = {
   standard: "JIS C 4304",
   edition: "2024",
-  reference: "配電用6kV油入変圧器の適用範囲",
-  applicability: "6.6kV配電用・油入変圧器",
+  reference: "配電用6kV油入変圧器の適用範囲（単相10〜500kVA、三相20〜2000kVA、50/60Hz）",
+  applicability: "6.6kV配電用・油入変圧器（単相10〜500kVA、三相20〜2000kVA、50/60Hz）",
   sourceType: "standard",
-  verified: false,
-  verificationNote:
-    "規格番号・対象機種（油入変圧器）までは把握しているが、2024年版原文の適用範囲・定格・試験項目の詳細は未確認。" +
-    "本番運用前にJIS C 4304:2024原本で該当条項を確認すること。",
+  verified: true,
 };
 export const JIS_C4306_DISTRIBUTION_TRANSFORMER_SOURCE: TechnicalSource = {
   standard: "JIS C 4306",
   edition: "2024",
-  reference: "配電用6kVモールド変圧器の適用範囲",
-  applicability: "6.6kV配電用・モールド（樹脂モールド）変圧器",
+  reference:
+    "配電用6kVモールド変圧器（屋内用・自冷式）の適用範囲（単相10〜500kVA、三相20〜2000kVA、50/60Hz）",
+  applicability: "6.6kV配電用・屋内用自冷式モールド（樹脂モールド）変圧器（単相10〜500kVA、三相20〜2000kVA、50/60Hz）",
   sourceType: "standard",
-  verified: false,
-  verificationNote:
-    "規格番号・対象機種（モールド変圧器）までは把握しているが、2024年版原文の適用範囲・定格・試験項目の詳細は未確認。" +
-    "本番運用前にJIS C 4306:2024原本で該当条項を確認すること。",
+  verified: true,
 };

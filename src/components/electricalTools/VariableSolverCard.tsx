@@ -18,6 +18,14 @@ interface VariableSolverCardProps<K extends string> {
   defaultTarget?: K;
   /** Bump this to reset all entered values (e.g. when the parent switches calculator mode). */
   resetKey?: string | number;
+  /**
+   * Keys that must remain visible as input fields but are never offered as
+   * 求める値 — for a variable the engine genuinely cannot solve for (e.g.
+   * voltageDrop's `pf`, which would require a nonlinear/ambiguous inverse
+   * this system does not implement), so the picker never offers an option
+   * that can only ever return "missing variables" with nothing to fill in.
+   */
+  nonTargetKeys?: readonly K[];
 }
 
 /**
@@ -39,6 +47,7 @@ export function VariableSolverCard<K extends string>({
   defaultTarget,
   resetKey,
   onValuesChange,
+  nonTargetKeys,
 }: VariableSolverCardProps<K>) {
   const { locale } = useTranslation();
   const [target, setTarget] = useState<K>(
@@ -90,20 +99,22 @@ export function VariableSolverCard<K extends string>({
         <span className="field-label !mb-0">
           {locale === "vi" ? "Giá trị cần tìm" : "求める値"}
         </span>
-        {variables.map((v) => (
-          <button
-            key={v.key}
-            type="button"
-            onClick={() => setTarget(v.key)}
-            className={
-              v.key === target
-                ? "rounded-full border border-accent bg-accent/15 px-3 py-1 text-[12.5px] font-bold text-accent"
-                : "rounded-full border border-border-strong bg-surface-2 px-3 py-1 text-[12.5px] font-semibold text-muted hover:text-foreground"
-            }
-          >
-            {v.symbol}
-          </button>
-        ))}
+        {variables
+          .filter((v) => !nonTargetKeys?.includes(v.key))
+          .map((v) => (
+            <button
+              key={v.key}
+              type="button"
+              onClick={() => setTarget(v.key)}
+              className={
+                v.key === target
+                  ? "rounded-full border border-accent bg-accent/15 px-3 py-1 text-[12.5px] font-bold text-accent"
+                  : "rounded-full border border-border-strong bg-surface-2 px-3 py-1 text-[12.5px] font-semibold text-muted hover:text-foreground"
+              }
+            >
+              {v.symbol}
+            </button>
+          ))}
       </div>
 
       <div

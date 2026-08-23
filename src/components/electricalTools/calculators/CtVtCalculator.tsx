@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import {
   CT_ACCURACY_CLASS_NOTE,
-  CT_ACCURACY_CLASS_OPTIONS,
   CT_PURPOSE_NOTE,
   solveInstrumentTransformerRatio,
   type InstrumentTransformerKind,
@@ -34,13 +33,7 @@ export function CtVtCalculator() {
   const [kind, setKind] = useState<Kind>("CT");
   const [purpose, setPurpose] = useState<InstrumentTransformerPurpose>("measurement");
   const [result, setResult] = useState<SolveResult | null>(null);
-  const [accuracyClass, setAccuracyClass] = useState<string>(
-    CT_ACCURACY_CLASS_OPTIONS.measurement[0],
-  );
-
-  useEffect(() => {
-    setAccuracyClass(CT_ACCURACY_CLASS_OPTIONS[purpose][0]);
-  }, [purpose]);
+  const [accuracyClass, setAccuracyClass] = useState("");
 
   const solve = useCallback(
     (known: Partial<Record<InstrumentTransformerVar, number>>, target: InstrumentTransformerVar) =>
@@ -87,14 +80,17 @@ export function CtVtCalculator() {
 
           {kind === "CT" && (
             <div className="rounded-lg border border-border-strong bg-surface-2 px-3 py-2.5">
-              <PillToggle
-                label={locale === "vi" ? "Cấp chính xác (chỉ để tham khảo)" : "精度階級（参考表示のみ）"}
+              <label className="field-label">
+                {locale === "vi"
+                  ? "Cấp chính xác (ghi chú tham khảo, tự nhập theo銘板/仕様書)"
+                  : "精度階級（参考メモ・銘板/仕様書の記載をそのまま入力）"}
+              </label>
+              <input
+                type="text"
                 value={accuracyClass}
-                onChange={setAccuracyClass}
-                options={CT_ACCURACY_CLASS_OPTIONS[purpose].map((c) => ({
-                  value: c,
-                  label: c,
-                }))}
+                onChange={(e) => setAccuracyClass(e.target.value)}
+                placeholder={purpose === "measurement" ? "例: 0.5級" : "例: 5P10"}
+                className="field-input"
               />
               <p className="mt-2 border-t border-border pt-2 text-[11px] text-muted-2">
                 {CT_ACCURACY_CLASS_NOTE[purpose]}
@@ -109,7 +105,7 @@ export function CtVtCalculator() {
           <span className="panel-title">{t("electricalTools.basisSectionTitle")}</span>
         </div>
         <div className="panel-body">
-          <ElectricalBasisPanel result={result} />
+          <ElectricalBasisPanel result={result} variables={kind === "CT" ? CT_VARS : VT_VARS} />
         </div>
       </div>
     </div>

@@ -67,7 +67,10 @@ export function ThreePhaseCalculator() {
           <span className="panel-title">{t("electricalTools.basisSectionTitle")}</span>
         </div>
         <div className="panel-body">
-          <ElectricalBasisPanel result={result} />
+          <ElectricalBasisPanel
+            result={result}
+            variables={quantity === "voltage" ? VOLTAGE_VARS : CURRENT_VARS}
+          />
         </div>
       </div>
     </div>

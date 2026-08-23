@@ -85,8 +85,8 @@ export function VoltageDropCalculators() {
                 value: "rx",
                 label:
                   locale === "vi"
-                    ? "R/X (theo hằng số đường dây r/x)"
-                    : "R/X法（線路定数による計算）",
+                    ? "R/X (gần đúng theo hằng số đường dây r/x)"
+                    : "R/X法（線路定数による近似計算）",
               },
               { value: "simplified", label: locale === "vi" ? "Hệ số đơn giản (要確認)" : "簡易係数法（要確認）" },
             ]}
@@ -101,6 +101,7 @@ export function VoltageDropCalculators() {
                 onValuesChange={setRxKnown}
                 resetKey={`rx-${mode}-${loadType}`}
                 defaultTarget="deltaV"
+                nonTargetKeys={["pf"]}
                 extra={
                   <div className="flex flex-col gap-3">
                     <PillToggle
@@ -133,6 +134,13 @@ export function VoltageDropCalculators() {
                   </div>
                 }
               />
+              {mode !== "dc" && (
+                <p className="text-[11px] text-muted-2">
+                  {locale === "vi"
+                    ? "cosφ chỉ dùng làm giá trị đầu vào — không thể chọn làm giá trị cần tìm (việc suy ngược cosφ từ ΔV là phương trình phi tuyến, hệ thống chưa hỗ trợ để tránh suy đoán sai)."
+                    : "cosφ（力率）は入力専用です — 求める値には選べません（ΔVからcosφを逆算するには非線形方程式を解く必要があり、誤った推定を避けるため本システムでは未対応です）。"}
+                </p>
+              )}
 
               <div className="rounded-lg border border-border-strong bg-surface-2 px-3 py-2.5">
                 <label className="field-label">
@@ -222,7 +230,12 @@ export function VoltageDropCalculators() {
           <span className="panel-title">{t("electricalTools.basisSectionTitle")}</span>
         </div>
         <div className="panel-body">
-          <ElectricalBasisPanel result={result} />
+          <ElectricalBasisPanel
+            result={result}
+            variables={
+              method === "rx" ? (mode === "dc" ? RX_VARS_DC : RX_VARS_AC) : SIMPLIFIED_VARS
+            }
+          />
         </div>
       </div>
     </div>

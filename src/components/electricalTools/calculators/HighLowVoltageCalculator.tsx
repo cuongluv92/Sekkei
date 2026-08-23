@@ -22,7 +22,7 @@ const POWER_VARS: CalcVariableDef<AcPowerVar>[] = [
   { key: "I", labelJa: "電流", labelVi: "Dòng điện", symbol: "I", unit: "A" },
   { key: "S", labelJa: "皮相電力", labelVi: "Công suất biểu kiến", symbol: "S", unit: "kVA" },
   { key: "P", labelJa: "有効電力", labelVi: "Công suất hữu công", symbol: "P", unit: "kW" },
-  { key: "Q", labelJa: "無効電力", labelVi: "Công suất vô công", symbol: "Q", unit: "kvar" },
+  { key: "Q", labelJa: "無効電力の大きさ", labelVi: "Độ lớn công suất vô công", symbol: "|Q|", unit: "kvar" },
   { key: "pf", labelJa: "力率", labelVi: "Hệ số công suất", symbol: "cosφ", unit: "" },
 ];
 
@@ -124,6 +124,9 @@ export function HighLowVoltageCalculator() {
                   <p className="mt-1.5 border-t border-border pt-1.5 text-warning">
                     {JEAC8011_HIGH_VOLTAGE_RECEIVING_SOURCE.verificationNote}
                   </p>
+                  {JIS_C4620_CUBICLE_SOURCE.verificationNote && (
+                    <p className="mt-1 text-warning">{JIS_C4620_CUBICLE_SOURCE.verificationNote}</p>
+                  )}
                 </div>
               )}
             </div>
@@ -159,7 +162,7 @@ export function HighLowVoltageCalculator() {
               </p>
             </div>
           ) : (
-            <ElectricalBasisPanel result={result} />
+            <ElectricalBasisPanel result={result} variables={POWER_VARS} />
           )}
         </div>
       </div>

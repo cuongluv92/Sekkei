@@ -25,8 +25,20 @@ import { PillToggle } from "@/components/electricalTools/PillToggle";
 
 const Z_VARS: CalcVariableDef<ImpedanceVar>[] = [
   { key: "R", labelJa: "抵抗", labelVi: "Điện trở", symbol: "R", unit: "Ω" },
-  { key: "X", labelJa: "リアクタンス", labelVi: "Điện kháng", symbol: "X", unit: "Ω" },
-  { key: "Z", labelJa: "インピーダンス", labelVi: "Tổng trở", symbol: "Z", unit: "Ω" },
+  {
+    key: "X",
+    labelJa: "リアクタンスの大きさ",
+    labelVi: "Độ lớn điện kháng",
+    symbol: "|X|",
+    unit: "Ω",
+  },
+  {
+    key: "Z",
+    labelJa: "インピーダンスの大きさ",
+    labelVi: "Độ lớn tổng trở",
+    symbol: "|Z|",
+    unit: "Ω",
+  },
 ];
 const XL_VARS: CalcVariableDef<InductiveReactanceVar>[] = [
   { key: "f", labelJa: "周波数", labelVi: "Tần số", symbol: "f", unit: "Hz" },
@@ -47,9 +59,27 @@ const SERIES_VARS: CalcVariableDef<SeriesVar>[] = [
   { key: "R1", labelJa: "抵抗1", labelVi: "Điện trở 1", symbol: "R1", unit: "Ω" },
   { key: "R2", labelJa: "抵抗2", labelVi: "Điện trở 2", symbol: "R2", unit: "Ω" },
   { key: "Rtotal", labelJa: "合成抵抗", labelVi: "Điện trở tổng", symbol: "R_total", unit: "Ω" },
-  { key: "X1", labelJa: "リアクタンス1", labelVi: "Điện kháng 1", symbol: "X1", unit: "Ω" },
-  { key: "X2", labelJa: "リアクタンス2", labelVi: "Điện kháng 2", symbol: "X2", unit: "Ω" },
-  { key: "Xtotal", labelJa: "合成リアクタンス", labelVi: "Điện kháng tổng", symbol: "X_total", unit: "Ω" },
+  {
+    key: "X1",
+    labelJa: "リアクタンス1の大きさ",
+    labelVi: "Độ lớn điện kháng 1",
+    symbol: "|X1|",
+    unit: "Ω",
+  },
+  {
+    key: "X2",
+    labelJa: "リアクタンス2の大きさ",
+    labelVi: "Độ lớn điện kháng 2",
+    symbol: "|X2|",
+    unit: "Ω",
+  },
+  {
+    key: "Xtotal",
+    labelJa: "合成リアクタンスの大きさ",
+    labelVi: "Độ lớn điện kháng tổng",
+    symbol: "|X_total|",
+    unit: "Ω",
+  },
 ];
 const PARALLEL_VARS: CalcVariableDef<ParallelResistanceVar>[] = [
   { key: "R1", labelJa: "抵抗1", labelVi: "Điện trở 1", symbol: "R1", unit: "Ω" },
@@ -150,7 +180,14 @@ export function ImpedanceCalculators() {
             <VariableSolverCard variables={RESONANCE_VARS} solve={solveResonance} onResult={setResult} resetKey={subTool} defaultTarget="f0" />
           )}
           {subTool === "series" && (
-            <VariableSolverCard variables={SERIES_VARS} solve={solveSeriesRX} onResult={setResult} resetKey={subTool} defaultTarget="Rtotal" />
+            <>
+              <VariableSolverCard variables={SERIES_VARS} solve={solveSeriesRX} onResult={setResult} resetKey={subTool} defaultTarget="Rtotal" />
+              <p className="text-[11px] text-muted-2">
+                {locale === "vi"
+                  ? "Công cụ này chỉ cộng độ lớn (giá trị tuyệt đối) của R và X riêng biệt — không phải phép cộng số phức tổng quát (không phân biệt cảm kháng/dung kháng bằng dấu). Nếu cần tính đúng dấu (+L/−C), dùng công cụ \"Song song (R+jX)\" ở trên (chỉ hỗ trợ song song, không hỗ trợ nối tiếp có dấu)."
+                  : "本ツールはR成分・|X|成分それぞれの大きさを単純加算するのみで、符号付きの一般的な複素数加算（誘導性/容量性を符号で区別する計算）ではありません。符号付き（+誘導性/−容量性）の計算が必要な場合は上の「並列合成（複素R+jX）」を使用してください（並列のみ対応、符号付き直列合成には対応していません）。"}
+              </p>
+            </>
           )}
           {subTool === "parallel" && (
             <VariableSolverCard variables={PARALLEL_VARS} solve={solveParallelResistance} onResult={setResult} resetKey={subTool} defaultTarget="Rtotal" />
@@ -179,7 +216,24 @@ export function ImpedanceCalculators() {
           <span className="panel-title">{t("electricalTools.basisSectionTitle")}</span>
         </div>
         <div className="panel-body">
-          <ElectricalBasisPanel result={result} />
+          <ElectricalBasisPanel
+            result={result}
+            variables={
+              subTool === "z"
+                ? Z_VARS
+                : subTool === "xl"
+                  ? XL_VARS
+                  : subTool === "xc"
+                    ? XC_VARS
+                    : subTool === "resonance"
+                      ? RESONANCE_VARS
+                      : subTool === "series"
+                        ? SERIES_VARS
+                        : subTool === "parallel"
+                          ? PARALLEL_VARS
+                          : PARALLEL_COMPLEX_VARS
+            }
+          />
         </div>
       </div>
     </div>

@@ -15,7 +15,7 @@ import { PillToggle } from "@/components/electricalTools/PillToggle";
 
 const TRIANGLE_VARS: CalcVariableDef<PowerTriangleVar>[] = [
   { key: "activeP", labelJa: "有効電力", labelVi: "Công suất hữu công", symbol: "P", unit: "kW" },
-  { key: "reactiveQ", labelJa: "無効電力", labelVi: "Công suất vô công", symbol: "Q", unit: "kvar" },
+  { key: "reactiveQ", labelJa: "無効電力の大きさ", labelVi: "Độ lớn công suất vô công", symbol: "|Q|", unit: "kvar" },
   { key: "apparentS", labelJa: "皮相電力", labelVi: "Công suất biểu kiến", symbol: "S", unit: "kVA" },
   { key: "pf", labelJa: "力率", labelVi: "Hệ số công suất", symbol: "cosφ", unit: "" },
 ];
@@ -82,7 +82,10 @@ export function PowerFactorCalculators() {
           <span className="panel-title">{t("electricalTools.basisSectionTitle")}</span>
         </div>
         <div className="panel-body">
-          <ElectricalBasisPanel result={result} />
+          <ElectricalBasisPanel
+            result={result}
+            variables={subTool === "triangle" ? TRIANGLE_VARS : CAPACITOR_VARS}
+          />
         </div>
       </div>
     </div>

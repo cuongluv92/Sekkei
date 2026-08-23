@@ -23,7 +23,6 @@ export interface Dictionary {
     busbarCalc: string;
     earthWireCalc: string;
     earthBarCalc: string;
-    otherCalc: string;
     import: string;
     trash: string;
     settings: string;
@@ -188,6 +187,7 @@ export interface Dictionary {
       referenceLabel: string;
       applicabilityLabel: string;
       emptyMessage: string;
+      glossaryLabel: string;
     };
   };
   partAssembly: {
@@ -458,11 +458,6 @@ export interface Dictionary {
     };
     emptyList: string;
     addButton: string;
-  };
-  otherCalc: {
-    title: string;
-    description: string;
-    savedTab: string;
   };
   importPage: {
     title: string;

@@ -11,6 +11,7 @@ import { engineeringFundamentalSource } from "@/lib/calc/technicalSource";
 import { solveByRules, type Rule } from "./ruleSolver";
 import {
   firstValidationError,
+  invalidInput,
   requireLessOrEqual,
   requireNonNegative,
   requirePositive,
@@ -83,7 +84,24 @@ export function solveSyncSpeed(
     requirePositive(known.nsRpm, "同期速度"),
   );
   if (invalid) return invalid;
-  return solveByRules(syncSpeedRules, known, target);
+  const result = solveByRules(syncSpeedRules, known, target);
+  if (result.ok && target === "poles") {
+    // f, ns can be any real motor's nameplate values, but a real pole count
+    // must always be a positive even integer — a computed value like 5
+    // (e.g. f=50, ns=1200) is not a valid motor and must be rejected, never
+    // returned as if it were a legitimate pole count. Rounding-tolerant
+    // (division can leave float noise like 3.9999999999996) but still
+    // strict about actually being an even integer once rounded.
+    const rounded = Math.round(result.value);
+    const closeToInteger =
+      Math.abs(result.value - rounded) <= Math.max(Math.abs(result.value), 1) * 1e-6;
+    if (!closeToInteger || rounded <= 0 || rounded % 2 !== 0) {
+      return invalidInput(
+        `与えられた周波数・同期速度からは有効な極数（正の偶数）が求まりません（計算値: ${result.value}）`,
+      );
+    }
+  }
+  return result;
 }
 
 export type SlipVar = "nsRpm" | "actualRpm" | "slip";
@@ -196,6 +214,21 @@ function motorPowerRules(phase: MotorPhase): readonly Rule<MotorPowerVar>[] {
       source: MOTOR_POWER_SOURCE,
     },
     {
+      output: "pf",
+      inputs: ["inputKw", "voltage", "current"],
+      compute: ({ inputKw, voltage, current }) => (inputKw * 1000) / (k * voltage * current),
+      describe: (v, r) => ({
+        formula: isThree
+          ? "cosφ = Pin × 1000 / (√3 × V × I)"
+          : "cosφ = Pin × 1000 / (V × I)",
+        substituted: isThree
+          ? `cosφ = ${v.inputKw} × 1000 / (√3 × ${v.voltage} × ${v.current})`
+          : `cosφ = ${v.inputKw} × 1000 / (${v.voltage} × ${v.current})`,
+        resultLine: `cosφ ≈ ${r}`,
+      }),
+      source: MOTOR_POWER_SOURCE,
+    },
+    {
       output: "outputKw",
       inputs: ["inputKw", "eta"],
       compute: ({ inputKw, eta }) => inputKw * eta,
@@ -245,7 +278,15 @@ export function solveMotorPower(
     requireLessOrEqual(known.outputKw, known.inputKw, "出力電力", "入力電力"),
   );
   if (invalid) return invalid;
-  return solveByRules(motorPowerRules(phase), known, target);
+  const result = solveByRules(motorPowerRules(phase), known, target);
+  if (result.ok && target === "pf") {
+    // A derived cosφ (from Pin, V, I) can come out > 1 for physically
+    // inconsistent inputs — that is not a valid power factor and must be
+    // rejected, never returned as if it were real.
+    const err = requireRatio01(result.value, "力率cosφ");
+    if (err) return invalidInput(`与えられた入力電力・電圧・電流からは有効な力率が求まりません（${err}）`);
+  }
+  return result;
 }
 
 /**
@@ -260,7 +301,7 @@ export interface SyncSpeedComparison {
   note: string;
 }
 export function compareSyncSpeed(poles: number): SyncSpeedComparison | null {
-  if (!Number.isFinite(poles) || poles <= 0) return null;
+  if (requirePositiveEvenInteger(poles, "極数") !== null) return null;
   return {
     poles,
     ns50: (120 * 50) / poles,

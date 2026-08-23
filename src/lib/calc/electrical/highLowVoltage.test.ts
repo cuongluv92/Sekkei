@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   classifyVoltage,
   isHighVoltageReceivingContext,
+  JIS_C4620_CUBICLE_SOURCE,
   VOLTAGE_CLASS_SOURCE,
 } from "./highLowVoltage";
 
@@ -74,5 +75,18 @@ describe("VOLTAGE_CLASS_SOURCE — honestly marked unverified", () => {
   it("is classified as a law/ordinance (省令), not an industrial standard (JIS)", () => {
     expect(VOLTAGE_CLASS_SOURCE.sourceType).toBe("law");
     expect(VOLTAGE_CLASS_SOURCE.standard).toBe("電気設備に関する技術基準を定める省令");
+  });
+});
+
+describe("JIS_C4620_CUBICLE_SOURCE — confirmed scope, now verified:true", () => {
+  it("states the confirmed voltage/frequency/short-circuit-current/capacity scope", () => {
+    expect(JIS_C4620_CUBICLE_SOURCE.verified).toBe(true);
+    expect(JIS_C4620_CUBICLE_SOURCE.applicability).toContain("6.6kV");
+    expect(JIS_C4620_CUBICLE_SOURCE.applicability).toContain("12.5kA");
+    expect(JIS_C4620_CUBICLE_SOURCE.applicability).toContain("4000kVA");
+  });
+
+  it("still carries a note about the 2024/03 correction sheet despite being verified", () => {
+    expect(JIS_C4620_CUBICLE_SOURCE.verificationNote).toContain("訂正票");
   });
 });

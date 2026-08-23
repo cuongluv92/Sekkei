@@ -37,6 +37,18 @@ describe("solveSyncSpeed — ns = 120f/p", () => {
     if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
   });
 
+  it("rejects a DERIVED odd pole count too — f=50,ns=1200 implies p=5, which is not a valid motor", () => {
+    const r = solveSyncSpeed({ frequencyHz: 50, nsRpm: 1200 }, "poles");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
+  });
+
+  it("accepts a derived pole count that lands cleanly on an even integer (f=50,ns=1500 -> p=4)", () => {
+    const r = solveSyncSpeed({ frequencyHz: 50, nsRpm: 1500 }, "poles");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value).toBeCloseTo(4, 6);
+  });
+
   it("rejects a non-integer pole count", () => {
     const r = solveSyncSpeed({ frequencyHz: 50, poles: 4.5 }, "nsRpm");
     expect(r.ok).toBe(false);
@@ -98,6 +110,29 @@ describe("solveMotorPower", () => {
     if (r.ok) expect(r.value).toBeCloseTo((17 * 1000) / (200 * 0.85), 2);
   });
 
+  it("pf is solvable from inputKw,voltage,current (previously an unsolvable declared target)", () => {
+    const r = solveMotorPower({ inputKw: 17, voltage: 200, current: 100 }, "pf", "single");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value).toBeCloseTo((17 * 1000) / (200 * 100), 6);
+  });
+
+  it("pf: 3φ variant uses √3", () => {
+    const r = solveMotorPower(
+      { inputKw: 11.7779456, voltage: 400, current: 20 },
+      "pf",
+      "three",
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value).toBeCloseTo(0.85, 3);
+  });
+
+  it("rejects a derived pf outside (0,1] instead of returning a physically impossible power factor", () => {
+    // inputKw way too large for V*I to represent any real cosφ ≤ 1.
+    const r = solveMotorPower({ inputKw: 100, voltage: 200, current: 10 }, "pf", "single");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
+  });
+
   it("multi-hop: outputKw,eta,voltage,pf → current (3φ)", () => {
     const r = solveMotorPower(
       { outputKw: 30, eta: 0.9, voltage: 200, pf: 0.85 },
@@ -149,5 +184,10 @@ describe("compareSyncSpeed — never claims real rpm scales 50/60", () => {
   it("returns null for invalid pole count", () => {
     expect(compareSyncSpeed(0)).toBeNull();
     expect(compareSyncSpeed(-4)).toBeNull();
+  });
+
+  it("returns null for a non-even-integer pole count (odd or fractional)", () => {
+    expect(compareSyncSpeed(5)).toBeNull();
+    expect(compareSyncSpeed(3.5)).toBeNull();
   });
 });

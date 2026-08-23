@@ -74,6 +74,21 @@ describe("solveCapacitorCorrection", () => {
     if (reverse.ok) expect(reverse.value).toBeCloseTo(0.95, 3);
   });
 
+  it("reverse: pfBefore recovered from a known Qc and pfAfter (was previously unsolvable)", () => {
+    const forward = solveCapacitorCorrection(
+      { activePowerKw: 100, pfBefore: 0.8, pfAfter: 0.95 },
+      "qcKvar",
+    );
+    expect(forward.ok).toBe(true);
+    if (!forward.ok) return;
+    const reverse = solveCapacitorCorrection(
+      { activePowerKw: 100, pfAfter: 0.95, qcKvar: forward.value },
+      "pfBefore",
+    );
+    expect(reverse.ok).toBe(true);
+    if (reverse.ok) expect(reverse.value).toBeCloseTo(0.8, 3);
+  });
+
   it("reverse: required P from Qc and pf1→pf2", () => {
     const tan1 = Math.sqrt(1 - 0.8 * 0.8) / 0.8;
     const tan2 = Math.sqrt(1 - 0.95 * 0.95) / 0.95;

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   computeLineVoltageRatio,
+  JIS_C4304_DISTRIBUTION_TRANSFORMER_SOURCE,
+  JIS_C4306_DISTRIBUTION_TRANSFORMER_SOURCE,
   solveTransformer,
   TRANSFORMER_VECTOR_GROUP_SOURCE,
   TRANSFORMER_VECTOR_GROUPS,
@@ -132,5 +134,21 @@ describe("TRANSFORMER_VECTOR_GROUPS — clock number only, no unverified signed 
   it("source stays unverified and its note explains why signed angles are withheld", () => {
     expect(TRANSFORMER_VECTOR_GROUP_SOURCE.verified).toBe(false);
     expect(TRANSFORMER_VECTOR_GROUP_SOURCE.verificationNote).toContain("符号");
+  });
+});
+
+describe("JIS_C4304 / JIS_C4306 distribution transformer sources — confirmed scope, now verified:true", () => {
+  it("JIS C4304 (oil-immersed) states the confirmed kVA ranges and frequency", () => {
+    expect(JIS_C4304_DISTRIBUTION_TRANSFORMER_SOURCE.verified).toBe(true);
+    expect(JIS_C4304_DISTRIBUTION_TRANSFORMER_SOURCE.applicability).toContain("単相10〜500kVA");
+    expect(JIS_C4304_DISTRIBUTION_TRANSFORMER_SOURCE.applicability).toContain("三相20〜2000kVA");
+    expect(JIS_C4304_DISTRIBUTION_TRANSFORMER_SOURCE.applicability).toContain("50/60Hz");
+  });
+
+  it("JIS C4306 (molded) states indoor self-cooled scope plus the same confirmed kVA ranges", () => {
+    expect(JIS_C4306_DISTRIBUTION_TRANSFORMER_SOURCE.verified).toBe(true);
+    expect(JIS_C4306_DISTRIBUTION_TRANSFORMER_SOURCE.applicability).toContain("屋内用自冷式");
+    expect(JIS_C4306_DISTRIBUTION_TRANSFORMER_SOURCE.applicability).toContain("単相10〜500kVA");
+    expect(JIS_C4306_DISTRIBUTION_TRANSFORMER_SOURCE.applicability).toContain("三相20〜2000kVA");
   });
 });

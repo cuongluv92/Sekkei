@@ -62,6 +62,35 @@ describe("solveVoltageDrop — 単相2線式 (R/X method, pf=1 means x term vani
       expect(r.value).toBeCloseTo(expected, 5);
     }
   });
+
+  it("reverse: xOhmPerKm is solvable from ΔV,current,length,r,pf (previously an unsolvable declared target)", () => {
+    const forward = solveVoltageDrop(
+      { current: 20, rOhmPerKm: 0.5, xOhmPerKm: 0.3, pf: 0.8, lengthM: 50 },
+      "deltaV",
+      "single",
+      "lagging",
+    );
+    expect(forward.ok).toBe(true);
+    if (!forward.ok) return;
+    const reverse = solveVoltageDrop(
+      { deltaV: forward.value, current: 20, rOhmPerKm: 0.5, pf: 0.8, lengthM: 50 },
+      "xOhmPerKm",
+      "single",
+      "lagging",
+    );
+    expect(reverse.ok).toBe(true);
+    if (reverse.ok) expect(reverse.value).toBeCloseTo(0.3, 4);
+  });
+
+  it("xOhmPerKm is not derivable at pf=1 (sinφ=0 makes it genuinely indeterminate, not a bug)", () => {
+    const r = solveVoltageDrop(
+      { deltaV: 1, current: 20, rOhmPerKm: 0.1, pf: 1, lengthM: 50 },
+      "xOhmPerKm",
+      "single",
+      "lagging",
+    );
+    expect(r.ok).toBe(false);
+  });
 });
 
 describe("solveVoltageDrop — leading (進み/capacitive) load flips the reactance sign", () => {
@@ -143,6 +172,45 @@ describe("solveVoltageDrop — leading (進み/capacitive) load flips the reacta
       expect(leading.value).toBeCloseTo(expected, 5);
     }
   });
+
+  it("a dominant reactive term (r·cosφ − x·sinφ < 0) produces a genuine voltage RISE, flagged with a warning", () => {
+    // r=0.1, x=0.5, pf=0.6 (sinφ=0.8): 0.1*0.6 - 0.5*0.8 = 0.06 - 0.4 = -0.34 < 0.
+    const forward = solveVoltageDrop(
+      { current: 20, rOhmPerKm: 0.1, xOhmPerKm: 0.5, pf: 0.6, lengthM: 50 },
+      "deltaV",
+      "single",
+      "leading",
+    );
+    expect(forward.ok).toBe(true);
+    if (forward.ok) {
+      expect(forward.value).toBeLessThan(0);
+      expect(forward.value).toBeCloseTo((2 * 20 * (0.1 * 0.6 - 0.5 * 0.8) * 50) / 1000, 6);
+      expect(forward.warnings?.some((w) => w.includes("電圧上昇"))).toBe(true);
+    }
+  });
+
+  it("forward/reverse are consistent — a negative ΔV from the forward case can be fed back in as a known input", () => {
+    const forward = solveVoltageDrop(
+      { current: 20, rOhmPerKm: 0.1, xOhmPerKm: 0.5, pf: 0.6, lengthM: 50 },
+      "deltaV",
+      "single",
+      "leading",
+    );
+    expect(forward.ok).toBe(true);
+    if (!forward.ok) return;
+    expect(forward.value).toBeLessThan(0);
+    // Previously this reverse call would have been rejected outright because
+    // known.deltaV was negative — that inconsistency (allowed forward,
+    // blocked reverse) is exactly what this fix removes.
+    const reverse = solveVoltageDrop(
+      { deltaV: forward.value, rOhmPerKm: 0.1, xOhmPerKm: 0.5, pf: 0.6, lengthM: 50 },
+      "current",
+      "single",
+      "leading",
+    );
+    expect(reverse.ok).toBe(true);
+    if (reverse.ok) expect(reverse.value).toBeCloseTo(20, 4);
+  });
 });
 
 describe("solveVoltageDrop — 三相3線式 uses √3", () => {
@@ -213,10 +281,16 @@ describe("solveVoltageDrop — validation", () => {
     expect(r.ok).toBe(false);
   });
 
-  it("rejects an end voltage that exceeds the source voltage", () => {
+  it("an end voltage exceeding the source voltage is now a valid voltage RISE, not an error", () => {
+    // endVoltage > sourceVoltage implies a negative ΔV (voltage rise) — this must be
+    // accepted, not blocked, and must carry a warning explaining what a negative
+    // ΔV means rather than silently flipping its sign.
     const r = solveVoltageDrop({ sourceVoltage: 200, endVoltage: 210 }, "deltaV", "dc");
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.reasonKey).toBe("invalidInput");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.value).toBeCloseTo(-10, 6);
+      expect(r.warnings?.some((w) => w.includes("電圧上昇"))).toBe(true);
+    }
   });
 
   it("flags a directly-supplied deltaV that contradicts current/r/length", () => {

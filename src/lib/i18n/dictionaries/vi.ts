@@ -21,7 +21,6 @@ const vi: Dictionary = {
     busbarCalc: "Tính thanh cái đồng",
     earthWireCalc: "Tính dây tiếp đất",
     earthBarCalc: "Tính thanh cái tiếp đất",
-    otherCalc: "Tính toán khác",
     import: "Nhập dữ liệu",
     trash: "Thùng rác",
     settings: "Cài đặt",
@@ -197,6 +196,7 @@ const vi: Dictionary = {
       referenceLabel: "Điều khoản",
       applicabilityLabel: "Phạm vi áp dụng",
       emptyMessage: "Nhập đủ giá trị để hiển thị công thức và căn cứ tại đây",
+      glossaryLabel: "Giải thích ký hiệu",
     },
   },
   partAssembly: {
@@ -514,11 +514,6 @@ const vi: Dictionary = {
     },
     emptyList: "登録されているサイズがありません。",
     addButton: "追加",
-  },
-  otherCalc: {
-    title: "他計算",
-    description: "母線銅帯・接地線・アースバーの計算と、保存済み案件の一覧をここでまとめて扱います。",
-    savedTab: "保存済み",
   },
   importPage: {
     title: "Nhập dữ liệu",

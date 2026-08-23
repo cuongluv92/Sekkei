@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Settings } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
@@ -9,6 +9,8 @@ import { earthBarSizeService, calculationRecordService } from "@/lib/services";
 import { useActiveCase, useEffectiveCaseId } from "@/lib/store/ActiveCaseProvider";
 import { PageHeader } from "@/components/common/PageHeader";
 import { CaseSelector } from "@/components/common/CaseSelector";
+import { Modal } from "@/components/common/Modal";
+import { EarthBarSizeSettings } from "@/components/settings/EarthBarSizeSettings";
 import {
   evaluateEarthBarCandidate,
   findEarthBarCandidates,
@@ -73,7 +75,7 @@ function parsePositiveNumber(raw: string): number | null {
  * for traceability, never used to compute a fabricated required area.
  */
 export interface EarthBarCalculationViewProps {
-  /** Route this view's own mode-tab switching (自動選定/手動検証) pushes to. Defaults to its own dedicated route; pass the host page's path (e.g. "/calculations/other") when embedding this view inline as a tab there instead of navigating away. */
+  /** Route this view's own mode-tab switching (自動選定/手動検証) pushes to. Defaults to its own dedicated route; pass the host page's path (e.g. "/electrical-tools") when embedding this view inline as a category there instead of navigating away. */
   basePath?: string;
 }
 
@@ -120,6 +122,7 @@ export function EarthBarCalculationView({
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [prefilledFromEarthWire, setPrefilledFromEarthWire] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const initializedRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -260,6 +263,12 @@ export function EarthBarCalculationView({
       <PageHeader
         title={t("earthBarCalc.title")}
         description={t("earthBarCalc.description")}
+        actions={
+          <button onClick={() => setSettingsOpen(true)} className="btn-secondary">
+            <Settings className="h-3.5 w-3.5" />
+            {t("common.settings")}
+          </button>
+        }
       />
 
       <CaseSelector />
@@ -547,6 +556,16 @@ export function EarthBarCalculationView({
             )}
           </div>
         </div>
+      )}
+
+      {settingsOpen && (
+        <Modal
+          title={t("earthBarSizeSettings.title")}
+          onClose={() => setSettingsOpen(false)}
+          widthClassName="max-w-2xl"
+        >
+          <EarthBarSizeSettings />
+        </Modal>
       )}
     </div>
   );

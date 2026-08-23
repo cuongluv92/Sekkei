@@ -119,8 +119,8 @@ export function ShortCircuitCalculators() {
               <div className="rounded-lg border border-border-strong bg-surface-2 px-3 py-2.5">
                 <label className="field-label">
                   {locale === "vi"
-                    ? "Khả năng cắt định mức của thiết bị bảo vệ (tự nhập, theo銘板/仕様書)"
-                    : "遮断器の定格遮断容量（銘板・仕様書の値をご自身で入力）"}
+                    ? "Dòng cắt định mức của thiết bị bảo vệ [A/kA] (tự nhập theo銘板/仕様書)"
+                    : "遮断器の定格遮断電流 [A/kA]（銘板・仕様書の値をご自身で入力）"}
                 </label>
                 <div className="relative w-32">
                   <input
@@ -135,6 +135,11 @@ export function ShortCircuitCalculators() {
                     A
                   </span>
                 </div>
+                <p className="mt-1 text-[11px] text-muted-2">
+                  {locale === "vi"
+                    ? "Nhập theo đơn vị A (nếu銘板ghi kA, hãy tự đổi ×1000 trước khi nhập). Giá trị này phải lấy ở cùng điện áp định mức/điều kiện của thiết bị — không so sánh chéo với thiết bị hoặc điện áp khác."
+                    : "A単位で入力してください（銘板がkA表記の場合は×1000して入力）。この値は必ず対象機器の同一定格電圧・同一条件で読み取った値を使用し、異なる機器・異なる電圧の値と混同しないでください。"}
+                </p>
 
                 {actualIsc !== undefined && breakingCapacityCheck && (
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px]">
@@ -145,30 +150,30 @@ export function ShortCircuitCalculators() {
                     >
                       {breakingCapacityCheck.sufficient
                         ? locale === "vi"
-                          ? "Đủ khả năng cắt so với Isc (簡易値)"
-                          : "簡易Iscに対して遮断容量は足りている"
+                          ? "Đủ so với Isc (簡易値)"
+                          : "簡易Iscに対して定格遮断電流は足りている"
                         : locale === "vi"
-                          ? "Không đủ khả năng cắt so với Isc (簡易値)"
-                          : "簡易Iscに対して遮断容量が不足（要確認）"}
+                          ? "Không đủ so với Isc (簡易値)"
+                          : "簡易Iscに対して定格遮断電流が不足（要確認）"}
                     </span>
                     <span className="text-muted">
                       {locale === "vi"
-                        ? `Isc (ước tính) ${actualIsc.toFixed(1)}A / định mức cắt ${breakingCapacityCheck.breakerRatedBreakingCapacityA}A`
-                        : `簡易Isc ${actualIsc.toFixed(1)}A ／ 定格遮断容量 ${breakingCapacityCheck.breakerRatedBreakingCapacityA}A`}
+                        ? `Isc (ước tính) ${actualIsc.toFixed(1)}A / dòng cắt định mức ${breakingCapacityCheck.breakerRatedBreakingCapacityA}A`
+                        : `簡易Isc ${actualIsc.toFixed(1)}A ／ 定格遮断電流 ${breakingCapacityCheck.breakerRatedBreakingCapacityA}A`}
                     </span>
                   </div>
                 )}
                 {actualIsc !== undefined && !breakingCapacityCheck && breakerCapacityRaw.trim() === "" && (
                   <p className="mt-2 text-[11px] text-muted-2">
                     {locale === "vi"
-                      ? `Isc (ước tính) hiện tại: ${actualIsc.toFixed(1)}A — nhập khả năng cắt định mức ở trên để so sánh.`
-                      : `現在の簡易Isc: ${actualIsc.toFixed(1)}A — 上に定格遮断容量を入力すると比較できます。`}
+                      ? `Isc (ước tính) hiện tại: ${actualIsc.toFixed(1)}A — nhập dòng cắt định mức ở trên để so sánh.`
+                      : `現在の簡易Isc: ${actualIsc.toFixed(1)}A — 上に定格遮断電流を入力すると比較できます。`}
                   </p>
                 )}
                 <p className="mt-2 border-t border-border pt-2 text-[11px] text-warning">
                   {locale === "vi"
-                    ? "Đây chỉ là phép so sánh số học giữa Isc (giá trị đơn giản, chỉ dựa trên %Z máy biến áp) và khả năng cắt định mức bạn tự nhập — không phải kết luận OK/NG chính thức. Isc đơn giản này chưa xét trở kháng hệ thống thượng nguồn/cáp/thanh cái/dòng góp động cơ, nên tuyệt đối không dùng riêng phép so sánh này để quyết định chọn thiết bị bảo vệ."
-                    : "これは「変圧器%Zのみの簡易Isc」と、ご自身で入力した定格遮断容量との単純な数値比較であり、正式なOK/NG判定ではありません。この簡易Iscは上位系統・ケーブル/母線インピーダンス・電動機の逆流電流を考慮していないため、この比較結果だけで保護機器の選定を決定しないでください。"}
+                    ? "Đây chỉ là phép so sánh số học giữa Isc (giá trị đơn giản, chỉ dựa trên %Z máy biến áp) và dòng cắt định mức bạn tự nhập — không phải kết luận OK/NG chính thức. Isc đơn giản này chưa xét trở kháng hệ thống thượng nguồn/cáp/thanh cái/dòng góp động cơ, nên tuyệt đối không dùng riêng phép so sánh này để quyết định chọn thiết bị bảo vệ."
+                    : "これは「変圧器%Zのみの簡易Isc」と、ご自身で入力した定格遮断電流との単純な数値比較であり、正式なOK/NG判定ではありません。この簡易Iscは上位系統・ケーブル/母線インピーダンス・電動機の逆流電流を考慮していないため、この比較結果だけで保護機器の選定を決定しないでください。"}
                 </p>
               </div>
             </>
@@ -197,7 +202,16 @@ export function ShortCircuitCalculators() {
           <span className="panel-title">{t("electricalTools.basisSectionTitle")}</span>
         </div>
         <div className="panel-body">
-          <ElectricalBasisPanel result={result} />
+          <ElectricalBasisPanel
+            result={result}
+            variables={
+              subTool === "rated"
+                ? RATED_CURRENT_VARS
+                : subTool === "shortCircuit"
+                  ? SHORT_CIRCUIT_VARS
+                  : BASE_CONVERSION_VARS
+            }
+          />
         </div>
       </div>
     </div>

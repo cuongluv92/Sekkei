@@ -24,8 +24,8 @@ import {
 import type { KnownValues, SolveResult } from "./types";
 
 const IMPEDANCE_SOURCE = engineeringFundamentalSource(
-  "インピーダンスの大きさ Z = √(R² + X²)",
-  "R・Xの直列回路（RとXが直交成分であることを前提とする一般式）",
+  "インピーダンスの大きさ |Z| = √(R² + |X|²)",
+  "R・Xの直列回路（RとXが直交成分であることを前提とする一般式）。R・|X|は大きさのみを扱い、誘導性/容量性の符号は表さない。",
 );
 const INDUCTIVE_REACTANCE_SOURCE = engineeringFundamentalSource(
   "誘導性リアクタンス XL = 2π × f × L",
@@ -40,8 +40,10 @@ const RESONANCE_SOURCE = engineeringFundamentalSource(
   "L・Cを含む回路（共振条件）",
 );
 const SERIES_SOURCE = engineeringFundamentalSource(
-  "直列合成 R_total = R1 + R2、X_total = X1 + X2",
-  "2素子の直列接続（R成分・X成分はそれぞれ独立に加算される）",
+  "直列合成 R_total = R1 + R2、|X_total| = |X1| + |X2|",
+  "2素子の直列接続で、R成分・|X|成分（大きさのみ）をそれぞれ独立に加算する場合。" +
+    "符号付き複素数としての一般的な直列合成（+誘導性/−容量性を区別する計算）ではない — " +
+    "符号付きが必要な場合は並列合成（複素R+jX）を参照（並列のみ対応）。",
 );
 const PARALLEL_RESISTANCE_SOURCE = engineeringFundamentalSource(
   "純抵抗2つの並列合成 R_total = R1 × R2 / (R1 + R2)",
@@ -59,9 +61,9 @@ export const impedanceRules: readonly Rule<ImpedanceVar>[] = [
     inputs: ["R", "X"],
     compute: ({ R, X }) => Math.sqrt(R * R + X * X),
     describe: (v, r) => ({
-      formula: "Z = √(R² + X²)",
-      substituted: `Z = √(${v.R}² + ${v.X}²)`,
-      resultLine: `Z ≈ ${r} Ω`,
+      formula: "|Z| = √(R² + |X|²)",
+      substituted: `|Z| = √(${v.R}² + ${v.X}²)`,
+      resultLine: `|Z| ≈ ${r} Ω`,
     }),
     source: IMPEDANCE_SOURCE,
   },
@@ -70,7 +72,7 @@ export const impedanceRules: readonly Rule<ImpedanceVar>[] = [
     inputs: ["Z", "X"],
     compute: ({ Z, X }) => Math.sqrt(Math.max(Z * Z - X * X, 0)),
     describe: (v, r) => ({
-      formula: "R = √(Z² − X²)",
+      formula: "R = √(|Z|² − |X|²)",
       substituted: `R = √(${v.Z}² − ${v.X}²)`,
       resultLine: `R ≈ ${r} Ω`,
     }),
@@ -81,9 +83,9 @@ export const impedanceRules: readonly Rule<ImpedanceVar>[] = [
     inputs: ["Z", "R"],
     compute: ({ Z, R }) => Math.sqrt(Math.max(Z * Z - R * R, 0)),
     describe: (v, r) => ({
-      formula: "X = √(Z² − R²)",
-      substituted: `X = √(${v.Z}² − ${v.R}²)`,
-      resultLine: `X ≈ ${r} Ω`,
+      formula: "|X| = √(|Z|² − R²)",
+      substituted: `|X| = √(${v.Z}² − ${v.R}²)`,
+      resultLine: `|X| ≈ ${r} Ω`,
     }),
     source: IMPEDANCE_SOURCE,
   },
@@ -94,11 +96,11 @@ export function solveImpedance(
 ): SolveResult {
   const invalid = firstValidationError(
     requireNonNegative(known.R, "抵抗R"),
-    requireNonNegative(known.X, "リアクタンスX"),
-    requireNonNegative(known.Z, "インピーダンスZ"),
+    requireNonNegative(known.X, "リアクタンスの大きさ|X|"),
+    requireNonNegative(known.Z, "インピーダンスの大きさ|Z|"),
     // R and X are the orthogonal legs of Z — neither can exceed the hypotenuse.
-    requireLessOrEqual(known.R, known.Z, "抵抗R", "インピーダンスZ"),
-    requireLessOrEqual(known.X, known.Z, "リアクタンスX", "インピーダンスZ"),
+    requireLessOrEqual(known.R, known.Z, "抵抗R", "インピーダンスの大きさ|Z|"),
+    requireLessOrEqual(known.X, known.Z, "リアクタンスの大きさ|X|", "インピーダンスの大きさ|Z|"),
   );
   if (invalid) return invalid;
   return solveByRules(impedanceRules, known, target);
@@ -291,9 +293,9 @@ export const seriesRules: readonly Rule<SeriesVar>[] = [
     inputs: ["X1", "X2"],
     compute: ({ X1, X2 }) => X1 + X2,
     describe: (v, r) => ({
-      formula: "X_total = X1 + X2",
-      substituted: `X_total = ${v.X1} + ${v.X2}`,
-      resultLine: `X_total ≈ ${r} Ω`,
+      formula: "|X_total| = |X1| + |X2|",
+      substituted: `|X_total| = ${v.X1} + ${v.X2}`,
+      resultLine: `|X_total| ≈ ${r} Ω`,
     }),
     source: SERIES_SOURCE,
   },
@@ -302,9 +304,9 @@ export const seriesRules: readonly Rule<SeriesVar>[] = [
     inputs: ["Xtotal", "X2"],
     compute: ({ Xtotal, X2 }) => Xtotal - X2,
     describe: (v, r) => ({
-      formula: "X1 = X_total − X2",
-      substituted: `X1 = ${v.Xtotal} − ${v.X2}`,
-      resultLine: `X1 ≈ ${r} Ω`,
+      formula: "|X1| = |X_total| − |X2|",
+      substituted: `|X1| = ${v.Xtotal} − ${v.X2}`,
+      resultLine: `|X1| ≈ ${r} Ω`,
     }),
     source: SERIES_SOURCE,
   },
@@ -313,9 +315,9 @@ export const seriesRules: readonly Rule<SeriesVar>[] = [
     inputs: ["Xtotal", "X1"],
     compute: ({ Xtotal, X1 }) => Xtotal - X1,
     describe: (v, r) => ({
-      formula: "X2 = X_total − X1",
-      substituted: `X2 = ${v.Xtotal} − ${v.X1}`,
-      resultLine: `X2 ≈ ${r} Ω`,
+      formula: "|X2| = |X_total| − |X1|",
+      substituted: `|X2| = ${v.Xtotal} − ${v.X1}`,
+      resultLine: `|X2| ≈ ${r} Ω`,
     }),
     source: SERIES_SOURCE,
   },
@@ -328,9 +330,9 @@ export function solveSeriesRX(
     requireNonNegative(known.R1, "抵抗R1"),
     requireNonNegative(known.R2, "抵抗R2"),
     requireNonNegative(known.Rtotal, "合成抵抗"),
-    requireNonNegative(known.X1, "リアクタンスX1"),
-    requireNonNegative(known.X2, "リアクタンスX2"),
-    requireNonNegative(known.Xtotal, "合成リアクタンス"),
+    requireNonNegative(known.X1, "リアクタンスの大きさ|X1|"),
+    requireNonNegative(known.X2, "リアクタンスの大きさ|X2|"),
+    requireNonNegative(known.Xtotal, "合成リアクタンスの大きさ|X_total|"),
   );
   if (invalid) return invalid;
   return solveByRules(seriesRules, known, target);

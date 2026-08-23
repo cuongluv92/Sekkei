@@ -2,6 +2,7 @@
 
 import { Search as SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { PageHeader } from "@/components/common/PageHeader";
 import { CategoryNav } from "./CategoryNav";
@@ -19,8 +20,18 @@ import {
  */
 export function ElectricalToolsView() {
   const { t } = useTranslation();
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
-  const [activeId, setActiveId] = useState(ELECTRICAL_TOOL_CATEGORIES[0].id);
+  // `?category=` lets old 母線銅帯/接地線/アースバー bookmarks (and 計算 search
+  // results) land directly on the right category instead of always opening
+  // to the first one — see the redirect routes under src/app/calculations/*
+  // and calculationSearchProvider.ts.
+  const [activeId, setActiveId] = useState(() => {
+    const fromUrl = searchParams.get("category");
+    return ELECTRICAL_TOOL_CATEGORIES.some((c) => c.id === fromUrl)
+      ? (fromUrl as string)
+      : ELECTRICAL_TOOL_CATEGORIES[0].id;
+  });
 
   const filtered = useMemo(() => searchElectricalToolCategories(query), [query]);
 

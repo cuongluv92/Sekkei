@@ -135,6 +135,13 @@ export function MotorFrequencyCalculators() {
                   <p className="text-[12px] text-warning">{comparison.note}</p>
                 </div>
               )}
+              {!comparison && comparePoles.trim() !== "" && (
+                <p className="text-[12px] text-danger">
+                  {locale === "vi"
+                    ? "Số cực phải là số nguyên dương chẵn (2, 4, 6, ...)."
+                    : "極数は正の偶数（2, 4, 6...）を入力してください。"}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -152,7 +159,12 @@ export function MotorFrequencyCalculators() {
                 : "この比較は同期速度の表示のみで、双方向計算の対象ではありません。"}
             </p>
           ) : (
-            <ElectricalBasisPanel result={result} />
+            <ElectricalBasisPanel
+              result={result}
+              variables={
+                subTool === "sync" ? SYNC_VARS : subTool === "slip" ? SLIP_VARS : MOTOR_POWER_VARS
+              }
+            />
           )}
         </div>
       </div>

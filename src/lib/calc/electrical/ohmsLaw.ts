@@ -32,7 +32,7 @@ const AC_POWER_SOURCE = engineeringFundamentalSource(
   "交流回路（正弦波・定常状態）",
 );
 const POWER_TRIANGLE_SOURCE = engineeringFundamentalSource(
-  "電力三角形 S² = P² + Q²",
+  "電力三角形 S² = P² + |Q|²（|Q|は無効電力の大きさ。√(S²−P²)は主値〈非負〉のみを返すため、遅れ/進みの符号は表さない）",
   "交流回路（正弦波・定常状態）",
 );
 const EFFICIENCY_SOURCE = engineeringFundamentalSource(
@@ -328,9 +328,9 @@ function acPowerRules(phase: AcPhase): readonly Rule<AcPowerVar>[] {
       inputs: ["S", "P"],
       compute: ({ S, P }) => Math.sqrt(Math.max(S * S - P * P, 0)),
       describe: (v, r) => ({
-        formula: "Q = √(S² − P²)",
-        substituted: `Q = √(${v.S}² − ${v.P}²)`,
-        resultLine: `Q ≈ ${r} kvar`,
+        formula: "|Q| = √(S² − P²)",
+        substituted: `|Q| = √(${v.S}² − ${v.P}²)`,
+        resultLine: `|Q| ≈ ${r} kvar`,
       }),
       source: POWER_TRIANGLE_SOURCE,
     },
@@ -339,7 +339,7 @@ function acPowerRules(phase: AcPhase): readonly Rule<AcPowerVar>[] {
       inputs: ["P", "Q"],
       compute: ({ P, Q }) => Math.sqrt(P * P + Q * Q),
       describe: (v, r) => ({
-        formula: "S = √(P² + Q²)",
+        formula: "S = √(P² + |Q|²)",
         substituted: `S = √(${v.P}² + ${v.Q}²)`,
         resultLine: `S ≈ ${r} kVA`,
       }),
@@ -350,7 +350,7 @@ function acPowerRules(phase: AcPhase): readonly Rule<AcPowerVar>[] {
       inputs: ["S", "Q"],
       compute: ({ S, Q }) => Math.sqrt(Math.max(S * S - Q * Q, 0)),
       describe: (v, r) => ({
-        formula: "P = √(S² − Q²)",
+        formula: "P = √(S² − |Q|²)",
         substituted: `P = √(${v.S}² − ${v.Q}²)`,
         resultLine: `P ≈ ${r} kW`,
       }),
