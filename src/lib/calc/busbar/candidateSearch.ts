@@ -74,10 +74,12 @@ export function evaluateBusbarCandidate(
 
 /**
  * Every (master size × 1..maxParallel bars) combination that meets
- * `requiredAreaMm2`, sorted smallest-total-area first so the most
- * economical adequate candidate leads — but every candidate that qualifies
- * is returned, not just the top pick, per spec (propose a few, let the
- * designer choose).
+ * `requiredAreaMm2`, sorted by 本数 (bar count) first — every adequate 1本
+ * option ahead of every 2本 option, then 3本, etc., since fewer parallel
+ * bars is simpler to fabricate — and by total area within the same bar
+ * count so the most economical adequate size leads within that group.
+ * Every candidate that qualifies is returned, not just the top pick, per
+ * spec (propose a few, let the designer choose).
  */
 export function findBusbarCandidates(
   sizes: BusbarSizeOption[],
@@ -97,5 +99,7 @@ export function findBusbarCandidates(
       if (candidate.judgment !== "ng") candidates.push(candidate);
     }
   }
-  return candidates.sort((a, b) => a.totalAreaMm2 - b.totalAreaMm2);
+  return candidates.sort(
+    (a, b) => a.barsPerPhase - b.barsPerPhase || a.totalAreaMm2 - b.totalAreaMm2,
+  );
 }

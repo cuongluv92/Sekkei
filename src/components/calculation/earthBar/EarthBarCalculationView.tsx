@@ -268,8 +268,8 @@ export function EarthBarCalculationView({
           </div>
         </div>
       ) : (
-        <>
-          <div className="panel">
+        <div className="calc-layout">
+          <div className="calc-layout-input panel">
             <div className="panel-header flex items-center justify-between gap-2">
               <span className="panel-title">
                 {t("earthBarCalc.inputSectionTitle")}
@@ -298,7 +298,10 @@ export function EarthBarCalculationView({
             <div className="panel-body flex flex-col gap-3">
               <div className="grid grid-cols-2 gap-2.5 sm:max-w-[440px] sm:grid-cols-4">
                 <div>
-                  <label htmlFor="earth-bar-equipment-type" className="field-label">
+                  <label
+                    htmlFor="earth-bar-equipment-type"
+                    className="field-label"
+                  >
                     {t("earthBarCalc.equipmentTypeLabel")}
                   </label>
                   <select
@@ -323,7 +326,10 @@ export function EarthBarCalculationView({
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="earth-bar-grounding-type" className="field-label">
+                  <label
+                    htmlFor="earth-bar-grounding-type"
+                    className="field-label"
+                  >
                     {t("earthBarCalc.groundingTypeLabel")}
                   </label>
                   <select
@@ -388,7 +394,16 @@ export function EarthBarCalculationView({
                   {t("earthBarCalc.requiresVerificationNotice")}
                 </p>
               </div>
+            </div>
+          </div>
 
+          <div className="calc-layout-basis panel">
+            <div className="panel-header">
+              <span className="panel-title">
+                {t("earthBarCalc.basisSectionTitle")}
+              </span>
+            </div>
+            <div className="panel-body">
               <EarthBarBasisPanel
                 sources={[
                   JIS_C60364_5_54_ADIABATIC_SOURCE,
@@ -398,129 +413,131 @@ export function EarthBarCalculationView({
             </div>
           </div>
 
-          <div className="-mx-1 overflow-x-auto px-1">
-            <div className="flex w-max min-w-full gap-1 border-b border-border pb-0">
-              {EARTH_BAR_MODES.map((key) => {
-                const isActive = key === mode;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setTab(key)}
-                    className={
-                      isActive
-                        ? "shrink-0 whitespace-nowrap border-b-2 border-accent px-3.5 py-2.5 text-[14px] font-bold text-accent"
-                        : "shrink-0 whitespace-nowrap border-b-2 border-transparent px-3.5 py-2.5 text-[14px] font-semibold text-muted hover:text-foreground"
-                    }
-                  >
-                    {t(
-                      `earthBarCalc.mode${key === "auto" ? "Auto" : "Manual"}`,
-                    )}
-                  </button>
-                );
-              })}
+          <div className="calc-layout-results flex flex-col gap-4">
+            <div className="-mx-1 overflow-x-auto px-1">
+              <div className="flex w-max min-w-full gap-1 border-b border-border pb-0">
+                {EARTH_BAR_MODES.map((key) => {
+                  const isActive = key === mode;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setTab(key)}
+                      className={
+                        isActive
+                          ? "shrink-0 whitespace-nowrap border-b-2 border-accent px-3.5 py-2.5 text-[14px] font-bold text-accent"
+                          : "shrink-0 whitespace-nowrap border-b-2 border-transparent px-3.5 py-2.5 text-[14px] font-semibold text-muted hover:text-foreground"
+                      }
+                    >
+                      {t(
+                        `earthBarCalc.mode${key === "auto" ? "Auto" : "Manual"}`,
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {mode === "auto" ? (
-            <div className="panel">
-              <div className="panel-header">
-                <span className="panel-title">
-                  {t("earthBarCalc.candidatesTitle")}
-                </span>
-              </div>
-              <div className="panel-body">
-                {!sizesLoaded ? (
-                  <p className="text-[12px] text-muted">
-                    {t("common.loading")}
-                  </p>
-                ) : sizes.length === 0 ? (
-                  <p className="text-[12px] text-warning">
-                    {t("earthBarCalc.noSizesConfigured")}
-                  </p>
-                ) : (
-                  <EarthBarCandidateList
-                    candidates={candidates}
-                    adopted={adopted}
-                    onAdopt={handleAdopt}
-                    saving={saving}
-                  />
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="panel">
-              <div className="panel-header">
-                <span className="panel-title">
-                  {t("earthBarCalc.modeManual")}
-                </span>
-              </div>
-              <div className="panel-body flex flex-col gap-3.5">
-                <p className="text-[12px] text-muted">
-                  {t("earthBarCalc.manualHint")}
-                </p>
-                <div className="grid grid-cols-3 gap-2.5 sm:max-w-[380px]">
-                  <div>
-                    <label className="field-label">
-                      {t("earthBarCalc.thicknessLabel")}
-                    </label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={thicknessRaw}
-                      onChange={(e) => {
-                        setThicknessRaw(e.target.value);
-                        markDirty();
-                      }}
-                      placeholder="3"
-                      className="field-input"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">
-                      {t("earthBarCalc.widthLabel")}
-                    </label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={widthRaw}
-                      onChange={(e) => {
-                        setWidthRaw(e.target.value);
-                        markDirty();
-                      }}
-                      placeholder="25"
-                      className="field-input"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">
-                      {t("earthBarCalc.barsLabel")}
-                    </label>
-                    <input
-                      type="number"
-                      step="1"
-                      min="1"
-                      value={barsRaw}
-                      onChange={(e) => {
-                        setBarsRaw(e.target.value);
-                        markDirty();
-                      }}
-                      className="field-input"
-                    />
-                  </div>
+            {mode === "auto" ? (
+              <div className="panel">
+                <div className="panel-header">
+                  <span className="panel-title">
+                    {t("earthBarCalc.candidatesTitle")}
+                  </span>
                 </div>
-
-                {manualCandidate && (
-                  <EarthBarCandidateList
-                    candidates={[manualCandidate]}
-                    adopted={adopted}
-                    onAdopt={handleAdopt}
-                    saving={saving}
-                  />
-                )}
+                <div className="panel-body">
+                  {!sizesLoaded ? (
+                    <p className="text-[12px] text-muted">
+                      {t("common.loading")}
+                    </p>
+                  ) : sizes.length === 0 ? (
+                    <p className="text-[12px] text-warning">
+                      {t("earthBarCalc.noSizesConfigured")}
+                    </p>
+                  ) : (
+                    <EarthBarCandidateList
+                      candidates={candidates}
+                      adopted={adopted}
+                      onAdopt={handleAdopt}
+                      saving={saving}
+                    />
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-        </>
+            ) : (
+              <div className="panel">
+                <div className="panel-header">
+                  <span className="panel-title">
+                    {t("earthBarCalc.modeManual")}
+                  </span>
+                </div>
+                <div className="panel-body flex flex-col gap-3.5">
+                  <p className="text-[12px] text-muted">
+                    {t("earthBarCalc.manualHint")}
+                  </p>
+                  <div className="grid grid-cols-3 gap-2.5 sm:max-w-[380px]">
+                    <div>
+                      <label className="field-label">
+                        {t("earthBarCalc.thicknessLabel")}
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={thicknessRaw}
+                        onChange={(e) => {
+                          setThicknessRaw(e.target.value);
+                          markDirty();
+                        }}
+                        placeholder="3"
+                        className="field-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="field-label">
+                        {t("earthBarCalc.widthLabel")}
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={widthRaw}
+                        onChange={(e) => {
+                          setWidthRaw(e.target.value);
+                          markDirty();
+                        }}
+                        placeholder="25"
+                        className="field-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="field-label">
+                        {t("earthBarCalc.barsLabel")}
+                      </label>
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        value={barsRaw}
+                        onChange={(e) => {
+                          setBarsRaw(e.target.value);
+                          markDirty();
+                        }}
+                        className="field-input"
+                      />
+                    </div>
+                  </div>
+
+                  {manualCandidate && (
+                    <EarthBarCandidateList
+                      candidates={[manualCandidate]}
+                      adopted={adopted}
+                      onAdopt={handleAdopt}
+                      saving={saving}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

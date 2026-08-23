@@ -24,6 +24,10 @@ function roundTo(n: number, decimals: number): number {
  * real substituted numbers (not just the symbolic form) and exactly which
  * standard/edition/clause it's based on, including whether that source has
  * actually been verified against the standard's own text (spec #17, #18).
+ * Always rendered inside a panel already titled 計算根拠
+ * (BusbarCalculationView's `.calc-layout-basis` block), so this component
+ * itself doesn't repeat that heading — only 計算式 (a genuinely distinct
+ * sub-section) gets its own label.
  */
 export function BusbarBasisPanel({
   ratedCurrentA,
@@ -61,7 +65,6 @@ export function BusbarBasisPanel({
         )}
 
       <div className="flex flex-col gap-2">
-        <span className="field-label">{t("busbarCalc.basisSectionTitle")}</span>
         {sources.map((source, i) => (
           <div
             key={i}

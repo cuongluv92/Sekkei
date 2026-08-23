@@ -11,14 +11,15 @@ interface EarthBarBasisPanelProps {
  * 計算根拠 for アースバー — always shows every candidate source considered
  * (JIS C 60364-5-54 adiabatic method, JIS C 4620 for reference) with its
  * real verified/unverified state, never presenting either as "JIS準拠"
- * (spec #20, #21, #30, #31, #33).
+ * (spec #20, #21, #30, #31, #33). Always rendered inside a panel already
+ * titled 計算根拠 (EarthBarCalculationView's `.calc-layout-basis` block),
+ * so this component doesn't repeat that heading itself.
  */
 export function EarthBarBasisPanel({ sources }: EarthBarBasisPanelProps) {
   const { t } = useTranslation();
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="field-label">{t("earthBarCalc.basisSectionTitle")}</span>
       {sources.map((source, i) => (
         <div
           key={i}

@@ -28,7 +28,19 @@ export interface SearchHit {
   href: string;
 }
 
+export interface SearchOptions {
+  /**
+   * When true, match only against 定格・仕様 using the same strict
+   * technical-token matching 部品データ/部品製作's own search bar uses
+   * (`matchesSpecificationQuery` — exact match for number+unit tokens like
+   * "125AT", suffix match for bare unit tokens like "AT"), instead of each
+   * provider's normal broader/looser query. Providers with no 定格・仕様
+   * field (案件, カタログ, 計算) ignore this and search normally.
+   */
+  specOnly?: boolean;
+}
+
 export interface SearchProvider {
   kind: SearchSourceKind;
-  search(query: string): Promise<SearchHit[]>;
+  search(query: string, options?: SearchOptions): Promise<SearchHit[]>;
 }

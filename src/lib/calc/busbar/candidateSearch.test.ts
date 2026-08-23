@@ -79,10 +79,20 @@ describe("findBusbarCandidates — tries multiple parallel-bar counts, not just 
     expect(smallTriple?.totalAreaMm2).toBe(240);
   });
 
-  it("sorts candidates smallest-adequate-area first", () => {
+  it("sorts by bar count first (every adequate 1本 ahead of every 2本, etc.), then by area within the same bar count", () => {
     const candidates = findBusbarCandidates(sizes, 200, 300, 4);
-    const areas = candidates.map((c) => c.totalAreaMm2);
-    expect(areas).toEqual([...areas].sort((a, b) => a - b));
+    const barCounts = candidates.map((c) => c.barsPerPhase);
+    expect(barCounts).toEqual([...barCounts].sort((a, b) => a - b));
+
+    const byBarCount = new Map<number, number[]>();
+    for (const c of candidates) {
+      const list = byBarCount.get(c.barsPerPhase) ?? [];
+      list.push(c.totalAreaMm2);
+      byBarCount.set(c.barsPerPhase, list);
+    }
+    for (const areas of byBarCount.values()) {
+      expect(areas).toEqual([...areas].sort((a, b) => a - b));
+    }
   });
 
   it("never searches beyond the configured max parallel-bar count", () => {

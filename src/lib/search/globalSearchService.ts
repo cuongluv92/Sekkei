@@ -4,7 +4,11 @@ import { partDrawingSearchProvider } from "@/lib/search/providers/partDrawingSea
 import { catalogSearchProvider } from "@/lib/search/providers/catalogSearchProvider";
 import { partAssemblySearchProvider } from "@/lib/search/providers/partAssemblySearchProvider";
 import { calculationSearchProvider } from "@/lib/search/providers/calculationSearchProvider";
-import type { SearchHit, SearchSourceKind } from "@/lib/search/types";
+import type {
+  SearchHit,
+  SearchOptions,
+  SearchSourceKind,
+} from "@/lib/search/types";
 
 /** Registration order also controls display order in the grouped results. */
 const PROVIDERS = [
@@ -24,13 +28,18 @@ export type GroupedSearchResults = { kind: SearchSourceKind; hits: SearchHit[] }
  * parallel and grouping the results by source. Contains no source-specific
  * query logic itself — that all lives in the individual providers — so
  * adding a future source (盤/回路/...) means registering one more provider
- * here, never growing this function.
+ * here, never growing this function. `options.specOnly` switches 部品データ/
+ * 部品図 to the same strict 定格・仕様-only technical-token matching their own
+ * dedicated search bars use (see `SearchOptions`) — other providers ignore it.
  */
-export async function searchGlobal(query: string): Promise<GroupedSearchResults> {
+export async function searchGlobal(
+  query: string,
+  options: SearchOptions = {},
+): Promise<GroupedSearchResults> {
   const q = query.trim();
   if (!q) return [];
 
-  const results = await Promise.all(PROVIDERS.map((p) => p.search(q)));
+  const results = await Promise.all(PROVIDERS.map((p) => p.search(q, options)));
   return PROVIDERS.map((p, i) => ({ kind: p.kind, hits: results[i] })).filter(
     (group) => group.hits.length > 0,
   );

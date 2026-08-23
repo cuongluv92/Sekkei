@@ -148,6 +148,39 @@ body {
     @apply p-3.5;
   }
 
+  /* ---- Calculation page layout ----
+     Shared by 母線銅帯/接地線/アースバー (and any future calc module following
+     the same 入力条件/計算根拠/自動選定・手動検証 shape). On mobile this simply
+     stacks input → basis(計算根拠) → results in that order, unchanged from
+     the original single-column layout. From the lg breakpoint up, it
+     reflows into a 4:6 split: the input panel occupies its own column on
+     the left spanning both rows, while 計算根拠 sits above the mode-tabs+
+     results column on the right — a single grid (not two separately
+     positioned/duplicated trees), so there is exactly one instance of each
+     panel in the DOM at any viewport width. */
+  .calc-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-areas: "input" "basis" "results";
+    gap: 1rem;
+  }
+  @media (min-width: 1024px) {
+    .calc-layout {
+      grid-template-columns: 4fr 6fr;
+      grid-template-areas: "input basis" "input results";
+      align-items: start;
+    }
+  }
+  .calc-layout-input {
+    grid-area: input;
+  }
+  .calc-layout-basis {
+    grid-area: basis;
+  }
+  .calc-layout-results {
+    grid-area: results;
+  }
+
   /* ---- Tables ---- */
   .data-table-wrap {
     @apply w-full overflow-x-auto;

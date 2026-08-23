@@ -41,10 +41,17 @@ describe("findHighCurrentCandidates — honest >630A fallback (spec #10, #12, #3
     expect(candidates.every((c) => c.source.verified === false)).toBe(true);
   });
 
-  it("sorts by total area ascending (browsability only, never implies suitability)", () => {
+  it("sorts by bar count first, then by total area ascending within the same bar count (browsability only, never implies suitability)", () => {
     const candidates = findHighCurrentCandidates(sizes, 1000, 3);
     for (let i = 1; i < candidates.length; i++) {
-      expect(candidates[i].totalAreaMm2).toBeGreaterThanOrEqual(candidates[i - 1].totalAreaMm2);
+      expect(candidates[i].barsPerPhase).toBeGreaterThanOrEqual(
+        candidates[i - 1].barsPerPhase,
+      );
+      if (candidates[i].barsPerPhase === candidates[i - 1].barsPerPhase) {
+        expect(candidates[i].totalAreaMm2).toBeGreaterThanOrEqual(
+          candidates[i - 1].totalAreaMm2,
+        );
+      }
     }
   });
 

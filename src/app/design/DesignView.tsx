@@ -79,7 +79,7 @@ export function DesignView() {
         <>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
             <div className="flex-1">
-              <CaseSelector />
+              <CaseSelector allowCreate />
             </div>
             <Link href="/design/search" className="btn-secondary shrink-0">
               <SearchIcon className="h-3.5 w-3.5" />

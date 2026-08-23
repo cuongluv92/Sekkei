@@ -32,8 +32,18 @@ import type { DesignCase } from "@/lib/types/design";
  * Switching away from a 案件 (変更/選択解除/開くfrom 保存済み案件) while the
  * current screen has unsaved local edits (`dirty`) prompts
  * 未保存の変更があります。案件を変更しますか？ with 保存して変更/保存せず変更/キャンセル.
+ *
+ * `allowCreate` gates "＋新規案件" — a brand-new 案件 mints a brand-new
+ * 図面番号, and only 設計依頼 (設計管理) is allowed to do that. Every other
+ * call site (部品製作, 計算 modules, ...) defaults to `false`: those screens
+ * can only pick an existing 案件, never create one — so 設計管理 is the one
+ * place that needs to opt in explicitly.
  */
-export function CaseSelector() {
+export function CaseSelector({
+  allowCreate = false,
+}: {
+  allowCreate?: boolean;
+} = {}) {
   const { t } = useTranslation();
   const { caseId, setCaseId, dirty, runSaveHandler } = useActiveCase();
   const [options, setOptions] = useState<CaseOption[]>([]);
@@ -256,13 +266,19 @@ export function CaseSelector() {
             )}
           </div>
           <div className="flex items-center justify-between gap-2">
-            <button
-              onClick={() => setShowNewCaseModal(true)}
-              className="btn-ghost"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              {t("caseSelector.newCaseButton")}
-            </button>
+            {allowCreate ? (
+              <button
+                onClick={() => setShowNewCaseModal(true)}
+                className="btn-ghost"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {t("caseSelector.newCaseButton")}
+              </button>
+            ) : (
+              <span className="text-[11.5px] text-muted-2">
+                {t("caseSelector.createElsewhereHint")}
+              </span>
+            )}
             {caseId && (
               <button onClick={() => setPicking(false)} className="btn-ghost">
                 {t("common.cancel")}

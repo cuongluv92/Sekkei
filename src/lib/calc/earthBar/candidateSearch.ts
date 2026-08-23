@@ -103,5 +103,7 @@ export function findEarthBarCandidates(
       candidates.push(buildCandidate(size, n, faultCurrentKA, clearingTimeS));
     }
   }
-  return candidates.sort((a, b) => a.totalAreaMm2 - b.totalAreaMm2);
+  return candidates.sort(
+    (a, b) => a.barsPerPhase - b.barsPerPhase || a.totalAreaMm2 - b.totalAreaMm2,
+  );
 }

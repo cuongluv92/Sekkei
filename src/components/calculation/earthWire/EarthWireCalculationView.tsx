@@ -194,8 +194,7 @@ export function EarthWireCalculationView({
     requiredResult.reasonKey === "unsupportedGroundingType";
 
   const candidates = useMemo(() => {
-    if (mode !== "auto" || requiredAreaMm2 === null || !sizesLoaded)
-      return [];
+    if (mode !== "auto" || requiredAreaMm2 === null || !sizesLoaded) return [];
     return findEarthWireCandidates(sizes, requiredAreaMm2);
   }, [mode, requiredAreaMm2, sizes, sizesLoaded]);
 
@@ -264,8 +263,8 @@ export function EarthWireCalculationView({
           </div>
         </div>
       ) : (
-        <>
-          <div className="panel">
+        <div className="calc-layout">
+          <div className="calc-layout-input panel">
             <div className="panel-header flex items-center justify-between gap-2">
               <span className="panel-title">
                 {t("earthWireCalc.ratedCurrentLabel")}
@@ -294,7 +293,10 @@ export function EarthWireCalculationView({
             <div className="panel-body flex flex-col gap-3">
               <div className="grid grid-cols-2 gap-2.5 sm:max-w-[360px]">
                 <div>
-                  <label htmlFor="earth-wire-grounding-type" className="field-label">
+                  <label
+                    htmlFor="earth-wire-grounding-type"
+                    className="field-label"
+                  >
                     {t("earthWireCalc.groundingTypeLabel")}
                   </label>
                   <select
@@ -341,9 +343,7 @@ export function EarthWireCalculationView({
                         : "field-input"
                     }
                   />
-                  <span className="mt-1 block text-[11px] text-muted-2">
-                    A
-                  </span>
+                  <span className="mt-1 block text-[11px] text-muted-2">A</span>
                 </div>
               </div>
 
@@ -360,120 +360,134 @@ export function EarthWireCalculationView({
                   </p>
                 </div>
               )}
+            </div>
+          </div>
 
-              {requiredResult?.applicable && (
+          {requiredResult?.applicable && (
+            <div className="calc-layout-basis panel">
+              <div className="panel-header">
+                <span className="panel-title">
+                  {t("earthWireCalc.basisSectionTitle")}
+                </span>
+              </div>
+              <div className="panel-body">
                 <EarthWireBasisPanel
                   ratedCurrentA={requiredResult.ratedCurrentA}
                   coefficientPerA={requiredResult.coefficientPerA}
                   requiredAreaMm2={requiredResult.requiredAreaMm2}
                   source={requiredResult.source}
                 />
-              )}
-            </div>
-          </div>
-
-          <div className="-mx-1 overflow-x-auto px-1">
-            <div className="flex w-max min-w-full gap-1 border-b border-border pb-0">
-              {EARTH_WIRE_MODES.map((key) => {
-                const isActive = key === mode;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setTab(key)}
-                    className={
-                      isActive
-                        ? "shrink-0 whitespace-nowrap border-b-2 border-accent px-3.5 py-2.5 text-[14px] font-bold text-accent"
-                        : "shrink-0 whitespace-nowrap border-b-2 border-transparent px-3.5 py-2.5 text-[14px] font-semibold text-muted hover:text-foreground"
-                    }
-                  >
-                    {t(
-                      `earthWireCalc.mode${key === "auto" ? "Auto" : "Manual"}`,
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {mode === "auto" ? (
-            <div className="panel">
-              <div className="panel-header">
-                <span className="panel-title">
-                  {t("earthWireCalc.candidatesTitle")}
-                </span>
-              </div>
-              <div className="panel-body">
-                {!sizesLoaded ? (
-                  <p className="text-[12px] text-muted">
-                    {t("common.loading")}
-                  </p>
-                ) : sizes.length === 0 ? (
-                  <p className="text-[12px] text-warning">
-                    {t("earthWireCalc.noSizesConfigured")}
-                  </p>
-                ) : requiredAreaMm2 === null ? (
-                  <p className="text-[12px] text-muted-2">
-                    {t("earthWireCalc.enterInputPrompt")}
-                  </p>
-                ) : (
-                  <EarthWireCandidateList
-                    candidates={candidates}
-                    adopted={adopted}
-                    onAdopt={handleAdopt}
-                    saving={saving}
-                    requiredAreaMm2={requiredAreaMm2}
-                  />
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="panel">
-              <div className="panel-header">
-                <span className="panel-title">
-                  {t("earthWireCalc.modeManual")}
-                </span>
-              </div>
-              <div className="panel-body flex flex-col gap-3.5">
-                <p className="text-[12px] text-muted">
-                  {t("earthWireCalc.manualHint")}
-                </p>
-                <div className="sm:max-w-[220px]">
-                  <label htmlFor="earth-wire-manual-size" className="field-label">
-                    {t("earthWireCalc.manualSizeLabel")}
-                  </label>
-                  <select
-                    id="earth-wire-manual-size"
-                    value={manualSizeId}
-                    onChange={(e) => {
-                      setManualSizeId(e.target.value);
-                      markDirty();
-                    }}
-                    className="field-input"
-                  >
-                    <option value="">
-                      {t("earthWireCalc.manualSelectPlaceholder")}
-                    </option>
-                    {sizes.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.areaMm2} mm²
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {manualCandidate && (
-                  <EarthWireCandidateList
-                    candidates={[manualCandidate]}
-                    adopted={adopted}
-                    onAdopt={handleAdopt}
-                    saving={saving}
-                    requiredAreaMm2={requiredAreaMm2}
-                  />
-                )}
               </div>
             </div>
           )}
-        </>
+
+          <div className="calc-layout-results flex flex-col gap-4">
+            <div className="-mx-1 overflow-x-auto px-1">
+              <div className="flex w-max min-w-full gap-1 border-b border-border pb-0">
+                {EARTH_WIRE_MODES.map((key) => {
+                  const isActive = key === mode;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setTab(key)}
+                      className={
+                        isActive
+                          ? "shrink-0 whitespace-nowrap border-b-2 border-accent px-3.5 py-2.5 text-[14px] font-bold text-accent"
+                          : "shrink-0 whitespace-nowrap border-b-2 border-transparent px-3.5 py-2.5 text-[14px] font-semibold text-muted hover:text-foreground"
+                      }
+                    >
+                      {t(
+                        `earthWireCalc.mode${key === "auto" ? "Auto" : "Manual"}`,
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {mode === "auto" ? (
+              <div className="panel">
+                <div className="panel-header">
+                  <span className="panel-title">
+                    {t("earthWireCalc.candidatesTitle")}
+                  </span>
+                </div>
+                <div className="panel-body">
+                  {!sizesLoaded ? (
+                    <p className="text-[12px] text-muted">
+                      {t("common.loading")}
+                    </p>
+                  ) : sizes.length === 0 ? (
+                    <p className="text-[12px] text-warning">
+                      {t("earthWireCalc.noSizesConfigured")}
+                    </p>
+                  ) : requiredAreaMm2 === null ? (
+                    <p className="text-[12px] text-muted-2">
+                      {t("earthWireCalc.enterInputPrompt")}
+                    </p>
+                  ) : (
+                    <EarthWireCandidateList
+                      candidates={candidates}
+                      adopted={adopted}
+                      onAdopt={handleAdopt}
+                      saving={saving}
+                      requiredAreaMm2={requiredAreaMm2}
+                    />
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="panel">
+                <div className="panel-header">
+                  <span className="panel-title">
+                    {t("earthWireCalc.modeManual")}
+                  </span>
+                </div>
+                <div className="panel-body flex flex-col gap-3.5">
+                  <p className="text-[12px] text-muted">
+                    {t("earthWireCalc.manualHint")}
+                  </p>
+                  <div className="sm:max-w-[220px]">
+                    <label
+                      htmlFor="earth-wire-manual-size"
+                      className="field-label"
+                    >
+                      {t("earthWireCalc.manualSizeLabel")}
+                    </label>
+                    <select
+                      id="earth-wire-manual-size"
+                      value={manualSizeId}
+                      onChange={(e) => {
+                        setManualSizeId(e.target.value);
+                        markDirty();
+                      }}
+                      className="field-input"
+                    >
+                      <option value="">
+                        {t("earthWireCalc.manualSelectPlaceholder")}
+                      </option>
+                      {sizes.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.areaMm2} mm²
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {manualCandidate && (
+                    <EarthWireCandidateList
+                      candidates={[manualCandidate]}
+                      adopted={adopted}
+                      onAdopt={handleAdopt}
+                      saving={saving}
+                      requiredAreaMm2={requiredAreaMm2}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

@@ -103,5 +103,7 @@ export function findHighCurrentCandidates(
       });
     }
   }
-  return candidates.sort((a, b) => a.totalAreaMm2 - b.totalAreaMm2);
+  return candidates.sort(
+    (a, b) => a.barsPerPhase - b.barsPerPhase || a.totalAreaMm2 - b.totalAreaMm2,
+  );
 }

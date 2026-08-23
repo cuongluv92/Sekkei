@@ -133,11 +133,11 @@ function labelMatcher(label: string): RegExp {
   return new RegExp(`^${escaped}$`);
 }
 
-function Harness() {
+function Harness({ allowCreate }: { allowCreate?: boolean } = {}) {
   return (
     <LanguageProvider>
       <FakeActiveCaseProvider>
-        <CaseSelector />
+        <CaseSelector allowCreate={allowCreate} />
       </FakeActiveCaseProvider>
     </LanguageProvider>
   );
@@ -230,5 +230,27 @@ describe("CaseSelector — 26-0001/26-0002/26-0003 each independently findable (
       expect(screen.getByPlaceholderText(/図面番号/)).toBeInTheDocument();
     });
     expect(screen.queryByText("現在の案件")).toBeNull();
+  });
+});
+
+describe("CaseSelector — allowCreate gates ＋新規案件 (only 設計依頼/設計管理 mints a new 図面番号)", () => {
+  it("hides ＋新規案件 by default and shows the create-elsewhere hint instead", async () => {
+    render(<Harness />);
+
+    await screen.findByPlaceholderText(/図面番号/);
+    expect(screen.queryByRole("button", { name: /新規案件/ })).toBeNull();
+    expect(
+      screen.getByText("新しい案件（図面番号）は設計管理からのみ作成できます。"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows ＋新規案件 when allowCreate is passed (設計管理's own CaseSelector)", async () => {
+    render(<Harness allowCreate />);
+
+    const button = await screen.findByRole("button", { name: /新規案件/ });
+    expect(button).toBeInTheDocument();
+    expect(
+      screen.queryByText("新しい案件（図面番号）は設計管理からのみ作成できます。"),
+    ).toBeNull();
   });
 });

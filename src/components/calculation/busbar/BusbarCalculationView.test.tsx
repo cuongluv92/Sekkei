@@ -312,3 +312,44 @@ describe("BusbarCalculationView — >630A honest fallback (spec #10, #12, #33, #
     expect(screen.getAllByText("要確認").length).toBeGreaterThan(0);
   });
 });
+
+describe("BusbarCalculationView — 断面積→電流 reverse lookup (spec follow-up: menseki→A must be a real, discoverable mode)", () => {
+  it("shows a max-current readout for a directly-entered area, independent of the top 定格電流 field", async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    await user.click(screen.getByText("switch-to-case-2"));
+    await waitFor(() =>
+      expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
+    );
+
+    await user.click(screen.getByRole("button", { name: "手動検証" }));
+
+    const areaInput = await screen.findByPlaceholderText("72");
+    await user.type(areaInput, "72");
+
+    // 72mm² is exactly the area 180A requires at 2.5 A/mm² (180 / 2.5 = 72).
+    await waitFor(() => {
+      expect(screen.getByText("180 A")).toBeInTheDocument();
+    });
+  });
+
+  it("caps at 630A for an area far beyond the simplified table's ceiling, never extrapolating", async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    await user.click(screen.getByText("switch-to-case-2"));
+    await waitFor(() =>
+      expect(screen.getByTestId("current-case").textContent).toBe("case-2"),
+    );
+
+    await user.click(screen.getByRole("button", { name: "手動検証" }));
+
+    const areaInput = await screen.findByPlaceholderText("72");
+    await user.type(areaInput, "400");
+
+    await waitFor(() => {
+      expect(screen.getByText("630+ A")).toBeInTheDocument();
+    });
+  });
+});

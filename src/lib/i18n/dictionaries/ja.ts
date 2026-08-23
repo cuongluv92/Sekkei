@@ -101,6 +101,7 @@ const ja: Dictionary = {
     button: "検索",
     resultsFor: "「{query}」の検索結果",
     resultCount: "{count} 件ヒット",
+    specOnlyToggle: "定格・仕様で検索（部品データ・部品図）",
     fromPartData: "部品データ",
     fromPartDrawing: "部品図",
     fromCatalog: "カタログ",
@@ -131,6 +132,8 @@ const ja: Dictionary = {
     searchPlaceholder: "図面番号・管理番号・工事番号・件名・盤名称で検索",
     noCases: "案件がありません",
     newCaseButton: "＋ 新規案件",
+    createElsewhereHint:
+      "新しい案件（図面番号）は設計管理からのみ作成できます。",
     newCaseModalTitle: "新規案件",
     editCaseModalTitle: "案件を編集",
     savedCasesTitle: "保存済み案件",
@@ -359,6 +362,10 @@ const ja: Dictionary = {
     arrangementLabel: "配置",
     highCurrentCandidateDisclaimer:
       "許容電流・余裕率は未検証のため表示していません。採用する場合は設計者ご自身の技術判断・原資料確認のうえで決定してください。",
+    reverseCalcTitle: "断面積 → 電流（逆算）",
+    reverseCalcHint:
+      "実際の銅帯の断面積（mm²）を直接入力すると、JIS C 8480 簡易選定表から目安上限電流を逆算します（定格電流の入力は不要です）。",
+    reverseCalcFormula: "断面積 × 電流密度 = 目安上限電流",
   },
   earthWireCalc: {
     title: "接地線計算",

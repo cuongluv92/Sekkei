@@ -53,10 +53,20 @@ describe("findEarthBarCandidates — honest fallback (spec #26, #27, #28, #37)",
     expect(result.every((c) => c.faultCurrentKA === null)).toBe(true);
   });
 
-  it("sorts ascending by total area", () => {
+  it("sorts by bar count first, then by total area ascending within the same bar count", () => {
     const result = findEarthBarCandidates(sizes, 25, 1, 2);
-    const areas = result.map((c) => c.totalAreaMm2);
-    expect(areas).toEqual([...areas].sort((a, b) => a - b));
+    const barCounts = result.map((c) => c.barsPerPhase);
+    expect(barCounts).toEqual([...barCounts].sort((a, b) => a - b));
+
+    const byBarCount = new Map<number, number[]>();
+    for (const c of result) {
+      const list = byBarCount.get(c.barsPerPhase) ?? [];
+      list.push(c.totalAreaMm2);
+      byBarCount.set(c.barsPerPhase, list);
+    }
+    for (const areas of byBarCount.values()) {
+      expect(areas).toEqual([...areas].sort((a, b) => a - b));
+    }
   });
 
   it("returns an empty list for an empty master", () => {

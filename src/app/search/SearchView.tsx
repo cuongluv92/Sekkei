@@ -37,16 +37,19 @@ export function SearchView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") ?? "";
+  const initialSpecOnly = searchParams.get("spec") === "1";
 
   const [inputValue, setInputValue] = useState(initialQuery);
   const [query, setQuery] = useState(initialQuery);
+  const [specOnly, setSpecOnly] = useState(initialSpecOnly);
   const [groups, setGroups] = useState<GroupedSearchResults>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setInputValue(initialQuery);
     setQuery(initialQuery);
-  }, [initialQuery]);
+    setSpecOnly(initialSpecOnly);
+  }, [initialQuery, initialSpecOnly]);
 
   useEffect(() => {
     if (!query) {
@@ -55,22 +58,37 @@ export function SearchView() {
     }
     let active = true;
     setLoading(true);
-    Promise.all([preloadManufacturers(), searchGlobal(query)]).then(
-      ([, res]) => {
-        if (!active) return;
-        setGroups(res);
-        setLoading(false);
-      },
-    );
+    Promise.all([
+      preloadManufacturers(),
+      searchGlobal(query, { specOnly }),
+    ]).then(([, res]) => {
+      if (!active) return;
+      setGroups(res);
+      setLoading(false);
+    });
     return () => {
       active = false;
     };
-  }, [query]);
+  }, [query, specOnly]);
+
+  function buildUrl(q: string, spec: boolean) {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (spec) params.set("spec", "1");
+    const qs = params.toString();
+    return qs ? `/search?${qs}` : "/search";
+  }
 
   function submit() {
     const q = inputValue.trim();
     setQuery(q);
-    router.replace(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
+    router.replace(buildUrl(q, specOnly));
+  }
+
+  function toggleSpecOnly() {
+    const next = !specOnly;
+    setSpecOnly(next);
+    router.replace(buildUrl(query, next));
   }
 
   const totalCount = groups.reduce((sum, g) => sum + g.hits.length, 0);
@@ -99,6 +117,16 @@ export function SearchView() {
           {t("search.button")}
         </button>
       </div>
+
+      <label className="flex w-fit items-center gap-1.5 text-[12px] text-muted">
+        <input
+          type="checkbox"
+          checked={specOnly}
+          onChange={toggleSpecOnly}
+          className="h-3.5 w-3.5 accent-accent"
+        />
+        {t("search.specOnlyToggle")}
+      </label>
 
       {query && (
         <div className="flex items-center justify-between">

@@ -19,7 +19,10 @@ function roundTo(n: number, decimals: number): number {
  * 計算式 + 計算根拠 for 接地線 — shows the actual substituted-number
  * calculation (0.052 × In) and exactly which standard/edition/clause it is
  * based on, including whether that source has actually been verified
- * against the standard's own text (spec #20, #30, #31).
+ * against the standard's own text (spec #20, #30, #31). Always rendered
+ * inside a panel already titled 計算根拠
+ * (EarthWireCalculationView's `.calc-layout-basis` block), so this
+ * component doesn't repeat that heading — only 計算式 gets its own label.
  */
 export function EarthWireBasisPanel({
   ratedCurrentA,
@@ -45,9 +48,6 @@ export function EarthWireBasisPanel({
       </div>
 
       <div className="flex flex-col gap-2">
-        <span className="field-label">
-          {t("earthWireCalc.basisSectionTitle")}
-        </span>
         <div className="rounded-lg border border-border-strong bg-surface px-3 py-2.5 text-[11.5px]">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-bold text-foreground">

@@ -102,6 +102,7 @@ export interface Dictionary {
     button: string;
     resultsFor: string;
     resultCount: string;
+    specOnlyToggle: string;
     fromPartData: string;
     fromPartDrawing: string;
     fromCatalog: string;
@@ -132,6 +133,7 @@ export interface Dictionary {
     searchPlaceholder: string;
     noCases: string;
     newCaseButton: string;
+    createElsewhereHint: string;
     newCaseModalTitle: string;
     editCaseModalTitle: string;
     savedCasesTitle: string;
@@ -325,6 +327,9 @@ export interface Dictionary {
     saved: string;
     arrangementLabel: string;
     highCurrentCandidateDisclaimer: string;
+    reverseCalcTitle: string;
+    reverseCalcHint: string;
+    reverseCalcFormula: string;
   };
   earthWireCalc: {
     title: string;

@@ -104,6 +104,7 @@ const vi: Dictionary = {
     button: "Tìm kiếm",
     resultsFor: "Kết quả tìm kiếm cho “{query}”",
     resultCount: "{count} kết quả",
+    specOnlyToggle: "定格・仕様で検索（部品データ・部品図）",
     fromPartData: "Dữ liệu linh kiện",
     fromPartDrawing: "Bản vẽ linh kiện",
     fromCatalog: "Catalog",
@@ -134,6 +135,7 @@ const vi: Dictionary = {
     searchPlaceholder: "Tìm theo 図面番号・管理番号・工事番号・件名・盤名称",
     noCases: "Chưa có 案件 nào",
     newCaseButton: "＋ 案件 mới",
+    createElsewhereHint: "案件（図面番号）mới chỉ có thể tạo từ 設計管理.",
     newCaseModalTitle: "案件 mới",
     editCaseModalTitle: "Sửa 案件",
     savedCasesTitle: "案件 đã lưu",
@@ -363,6 +365,10 @@ const vi: Dictionary = {
     arrangementLabel: "配置",
     highCurrentCandidateDisclaimer:
       "許容電流・余裕率は未検証のため表示していません。採用する場合は設計者ご自身の技術判断・原資料確認のうえで決定してください。",
+    reverseCalcTitle: "断面積 → 電流（逆算）",
+    reverseCalcHint:
+      "実際の銅帯の断面積（mm²）を直接入力すると、JIS C 8480 簡易選定表から目安上限電流を逆算します（定格電流の入力は不要です）。",
+    reverseCalcFormula: "断面積 × 電流密度 = 目安上限電流",
   },
   earthWireCalc: {
     title: "Tính dây tiếp đất (接地線)",

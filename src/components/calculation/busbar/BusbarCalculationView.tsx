@@ -27,6 +27,7 @@ import { JIS_H_3140_COPPER_SOURCE } from "@/lib/calc/busbar/material";
 import { BusbarBasisPanel } from "./BusbarBasisPanel";
 import { BusbarCandidateList } from "./BusbarCandidateList";
 import { HighCurrentBusbarCandidateList } from "./HighCurrentBusbarCandidateList";
+import { BusbarReverseCalcPanel } from "./BusbarReverseCalcPanel";
 import type { BusbarSize } from "@/lib/types";
 
 const CALCULATION_TYPE = "busbar";
@@ -211,7 +212,12 @@ export function BusbarCalculationView({
   // "requiresVerification" (see highCurrentCandidateSearch.ts); never
   // reuses the ≤630A JIS C 8480 table past its range.
   const highCurrentCandidates = useMemo(() => {
-    if (mode !== "auto" || !outOfRange || ratedCurrentA === null || !sizesLoaded)
+    if (
+      mode !== "auto" ||
+      !outOfRange ||
+      ratedCurrentA === null ||
+      !sizesLoaded
+    )
       return [];
     return findHighCurrentCandidates(sizes, ratedCurrentA);
   }, [mode, outOfRange, ratedCurrentA, sizes, sizesLoaded]);
@@ -323,8 +329,8 @@ export function BusbarCalculationView({
           </div>
         </div>
       ) : (
-        <>
-          <div className="panel">
+        <div className="calc-layout">
+          <div className="calc-layout-input panel">
             <div className="panel-header flex items-center justify-between gap-2">
               <span className="panel-title">
                 {t("busbarCalc.ratedCurrentLabel")}
@@ -386,169 +392,186 @@ export function BusbarCalculationView({
                   </p>
                 </div>
               )}
-
-              {densityResult?.inRange && (
-                <BusbarBasisPanel
-                  ratedCurrentA={densityResult.ratedCurrentA}
-                  densityAPerMm2={densityResult.densityAPerMm2}
-                  requiredAreaMm2={densityResult.requiredAreaMm2}
-                  currentDensitySource={densityResult.source}
-                  materialSource={JIS_H_3140_COPPER_SOURCE}
-                />
-              )}
-              {outOfRange && (
-                <BusbarBasisPanel highCurrentSource={JSIA_T1006_SOURCE} />
-              )}
             </div>
           </div>
 
-          <div className="-mx-1 overflow-x-auto px-1">
-            <div className="flex w-max min-w-full gap-1 border-b border-border pb-0">
-              {BUSBAR_MODES.map((key) => {
-                const isActive = key === mode;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setTab(key)}
-                    className={
-                      isActive
-                        ? "shrink-0 whitespace-nowrap border-b-2 border-accent px-3.5 py-2.5 text-[14px] font-bold text-accent"
-                        : "shrink-0 whitespace-nowrap border-b-2 border-transparent px-3.5 py-2.5 text-[14px] font-semibold text-muted hover:text-foreground"
-                    }
-                  >
-                    {t(`busbarCalc.mode${key === "auto" ? "Auto" : "Manual"}`)}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {mode === "auto" ? (
-            <div className="panel">
+          {(densityResult?.inRange || outOfRange) && (
+            <div className="calc-layout-basis panel">
               <div className="panel-header">
                 <span className="panel-title">
-                  {t("busbarCalc.candidatesTitle")}
+                  {t("busbarCalc.basisSectionTitle")}
                 </span>
               </div>
-              <div className="panel-body">
-                {!sizesLoaded ? (
-                  <p className="text-[12px] text-muted">
-                    {t("common.loading")}
-                  </p>
-                ) : sizes.length === 0 ? (
-                  <p className="text-[12px] text-warning">
-                    {t("busbarCalc.noSizesConfigured")}
-                  </p>
-                ) : ratedCurrentA === null ? (
-                  <p className="text-[12px] text-muted-2">
-                    {t("busbarCalc.enterCurrentPrompt")}
-                  </p>
-                ) : outOfRange ? (
-                  <HighCurrentBusbarCandidateList
-                    candidates={highCurrentCandidates}
-                    adopted={adoptedHighCurrent}
-                    onAdopt={handleAdoptHighCurrent}
-                    saving={saving}
+              <div className="panel-body flex flex-col gap-3">
+                {densityResult?.inRange && (
+                  <BusbarBasisPanel
+                    ratedCurrentA={densityResult.ratedCurrentA}
+                    densityAPerMm2={densityResult.densityAPerMm2}
+                    requiredAreaMm2={densityResult.requiredAreaMm2}
+                    currentDensitySource={densityResult.source}
+                    materialSource={JIS_H_3140_COPPER_SOURCE}
                   />
-                ) : requiredAreaMm2 === null ? (
-                  <p className="text-[12px] text-muted-2">
-                    {t("busbarCalc.enterCurrentPrompt")}
-                  </p>
-                ) : (
-                  <BusbarCandidateList
-                    candidates={candidates}
-                    adopted={adoptedStandard}
-                    onAdopt={handleAdoptStandard}
-                    saving={saving}
-                    ratedCurrentA={ratedCurrentA}
-                  />
+                )}
+                {outOfRange && (
+                  <BusbarBasisPanel highCurrentSource={JSIA_T1006_SOURCE} />
                 )}
               </div>
             </div>
-          ) : (
-            <div className="panel">
-              <div className="panel-header">
-                <span className="panel-title">
-                  {t("busbarCalc.modeManual")}
-                </span>
-              </div>
-              <div className="panel-body flex flex-col gap-3.5">
-                <p className="text-[12px] text-muted">
-                  {t("busbarCalc.manualHint")}
-                </p>
-                <div className="grid grid-cols-3 gap-2.5 sm:max-w-[380px]">
-                  <div>
-                    <label className="field-label">
-                      {t("busbarCalc.thicknessLabel")}
-                    </label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={thicknessRaw}
-                      onChange={(e) => {
-                        setThicknessRaw(e.target.value);
-                        markDirty();
-                      }}
-                      placeholder="6"
-                      className="field-input"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">
-                      {t("busbarCalc.widthLabel")}
-                    </label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={widthRaw}
-                      onChange={(e) => {
-                        setWidthRaw(e.target.value);
-                        markDirty();
-                      }}
-                      placeholder="50"
-                      className="field-input"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">
-                      {t("busbarCalc.barsLabel")}
-                    </label>
-                    <input
-                      type="number"
-                      step="1"
-                      min="1"
-                      value={barsRaw}
-                      onChange={(e) => {
-                        setBarsRaw(e.target.value);
-                        markDirty();
-                      }}
-                      className="field-input"
-                    />
-                  </div>
-                </div>
+          )}
 
-                {manualCandidateHighCurrent ? (
-                  <HighCurrentBusbarCandidateList
-                    candidates={[manualCandidateHighCurrent]}
-                    adopted={adoptedHighCurrent}
-                    onAdopt={handleAdoptHighCurrent}
-                    saving={saving}
-                  />
-                ) : (
-                  manualCandidateStandard && (
+          <div className="calc-layout-results flex flex-col gap-4">
+            <div className="-mx-1 overflow-x-auto px-1">
+              <div className="flex w-max min-w-full gap-1 border-b border-border pb-0">
+                {BUSBAR_MODES.map((key) => {
+                  const isActive = key === mode;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setTab(key)}
+                      className={
+                        isActive
+                          ? "shrink-0 whitespace-nowrap border-b-2 border-accent px-3.5 py-2.5 text-[14px] font-bold text-accent"
+                          : "shrink-0 whitespace-nowrap border-b-2 border-transparent px-3.5 py-2.5 text-[14px] font-semibold text-muted hover:text-foreground"
+                      }
+                    >
+                      {t(
+                        `busbarCalc.mode${key === "auto" ? "Auto" : "Manual"}`,
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {mode === "auto" ? (
+              <div className="panel">
+                <div className="panel-header">
+                  <span className="panel-title">
+                    {t("busbarCalc.candidatesTitle")}
+                  </span>
+                </div>
+                <div className="panel-body">
+                  {!sizesLoaded ? (
+                    <p className="text-[12px] text-muted">
+                      {t("common.loading")}
+                    </p>
+                  ) : sizes.length === 0 ? (
+                    <p className="text-[12px] text-warning">
+                      {t("busbarCalc.noSizesConfigured")}
+                    </p>
+                  ) : ratedCurrentA === null ? (
+                    <p className="text-[12px] text-muted-2">
+                      {t("busbarCalc.enterCurrentPrompt")}
+                    </p>
+                  ) : outOfRange ? (
+                    <HighCurrentBusbarCandidateList
+                      candidates={highCurrentCandidates}
+                      adopted={adoptedHighCurrent}
+                      onAdopt={handleAdoptHighCurrent}
+                      saving={saving}
+                    />
+                  ) : requiredAreaMm2 === null ? (
+                    <p className="text-[12px] text-muted-2">
+                      {t("busbarCalc.enterCurrentPrompt")}
+                    </p>
+                  ) : (
                     <BusbarCandidateList
-                      candidates={[manualCandidateStandard]}
+                      candidates={candidates}
                       adopted={adoptedStandard}
                       onAdopt={handleAdoptStandard}
                       saving={saving}
                       ratedCurrentA={ratedCurrentA}
                     />
-                  )
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-        </>
+            ) : (
+              <div className="panel">
+                <div className="panel-header">
+                  <span className="panel-title">
+                    {t("busbarCalc.modeManual")}
+                  </span>
+                </div>
+                <div className="panel-body flex flex-col gap-3.5">
+                  <p className="text-[12px] text-muted">
+                    {t("busbarCalc.manualHint")}
+                  </p>
+                  <div className="grid grid-cols-3 gap-2.5 sm:max-w-[380px]">
+                    <div>
+                      <label className="field-label">
+                        {t("busbarCalc.thicknessLabel")}
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={thicknessRaw}
+                        onChange={(e) => {
+                          setThicknessRaw(e.target.value);
+                          markDirty();
+                        }}
+                        placeholder="6"
+                        className="field-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="field-label">
+                        {t("busbarCalc.widthLabel")}
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={widthRaw}
+                        onChange={(e) => {
+                          setWidthRaw(e.target.value);
+                          markDirty();
+                        }}
+                        placeholder="50"
+                        className="field-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="field-label">
+                        {t("busbarCalc.barsLabel")}
+                      </label>
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        value={barsRaw}
+                        onChange={(e) => {
+                          setBarsRaw(e.target.value);
+                          markDirty();
+                        }}
+                        className="field-input"
+                      />
+                    </div>
+                  </div>
+
+                  {manualCandidateHighCurrent ? (
+                    <HighCurrentBusbarCandidateList
+                      candidates={[manualCandidateHighCurrent]}
+                      adopted={adoptedHighCurrent}
+                      onAdopt={handleAdoptHighCurrent}
+                      saving={saving}
+                    />
+                  ) : (
+                    manualCandidateStandard && (
+                      <BusbarCandidateList
+                        candidates={[manualCandidateStandard]}
+                        adopted={adoptedStandard}
+                        onAdopt={handleAdoptStandard}
+                        saving={saving}
+                        ratedCurrentA={ratedCurrentA}
+                      />
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+
+            {mode === "manual" && <BusbarReverseCalcPanel />}
+          </div>
+        </div>
       )}
     </div>
   );
