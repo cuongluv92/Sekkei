@@ -102,10 +102,33 @@ function isErrorValue(v: unknown): v is CellErrorValue {
   return typeof v === "object" && v !== null && "error" in v;
 }
 
+/**
+ * Formats a number the way Excel would display it under a given numFmt —
+ * the print view renders plain HTML text, so unlike a real .xlsx (where the
+ * numFmt is applied by Excel itself at display time) it must apply the
+ * format here or the raw float leaks through (e.g. 12.229999999999999).
+ * Only covers the numeric "#,##0.00"-style codes actually used in this
+ * codebase: decimal places = digits after ".", thousands separator = "," in
+ * the integer part. Falls back to the raw string for anything else (dates,
+ * percentages, "General", text formats).
+ */
+function formatNumberWithFmt(value: number, fmt: string | undefined): string {
+  if (!fmt || fmt === "General" || fmt.includes("%") || fmt.includes("/")) return String(value);
+  const decimalMatch = /\.(0+)/.exec(fmt);
+  const decimals = decimalMatch ? decimalMatch[1].length : 0;
+  const useGrouping = fmt.includes(",");
+  return value.toLocaleString("en-US", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+    useGrouping,
+  });
+}
+
 function cellText(cell: Cell): string {
   const v = cell.value;
   if (v == null) return "";
   if (v instanceof Date) return `${v.getFullYear()}/${v.getMonth() + 1}/${v.getDate()}`;
+  if (typeof v === "number") return formatNumberWithFmt(v, cell.numFmt);
   if (typeof v === "object") {
     if (isRichText(v)) return v.richText.map((r) => r.text ?? "").join("");
     if (isFormulaValue(v)) return v.result != null ? String(v.result) : "";

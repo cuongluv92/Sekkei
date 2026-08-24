@@ -459,12 +459,12 @@ export function WeightShapeCalcSection({
             />
             <ResultTile
               label={t("weightCalc.basic.unitWeight")}
-              value={unitWeight !== null ? `${roundTo(unitWeight, 3)}` : "—"}
+              value={unitWeight !== null ? `${roundTo(unitWeight, 2)}` : "—"}
               unit="kg"
             />
             <ResultTile
               label={t("weightCalc.basic.totalWeight")}
-              value={totalWeight !== null ? `${roundTo(totalWeight, 3)}` : "—"}
+              value={totalWeight !== null ? `${roundTo(totalWeight, 2)}` : "—"}
               unit="kg"
               emphasize
             />
@@ -492,7 +492,7 @@ export function WeightShapeCalcSection({
                 <span className="text-foreground">
                   {t("weightCalc.basic.unitWeight")} ={" "}
                   {roundTo(area as number, 2)} × {lengthState} × {densityState}{" "}
-                  × 10⁻⁶ = {roundTo(unitWeight, 3)} kg
+                  × 10⁻⁶ = {roundTo(unitWeight, 2)} kg
                 </span>
               )}
               <span className="mt-1.5">
@@ -501,8 +501,8 @@ export function WeightShapeCalcSection({
               {totalWeight !== null && (
                 <span className="text-foreground">
                   {t("weightCalc.basic.totalWeight")} ={" "}
-                  {roundTo(unitWeight as number, 3)} × {quantityState} ={" "}
-                  {roundTo(totalWeight, 3)} kg
+                  {roundTo(unitWeight as number, 2)} × {quantityState} ={" "}
+                  {roundTo(totalWeight, 2)} kg
                 </span>
               )}
             </div>
