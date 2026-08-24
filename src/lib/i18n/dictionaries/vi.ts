@@ -158,6 +158,8 @@ const vi: Dictionary = {
     switchWithoutSaving: "Đổi mà không lưu",
     saveAndSwitch: "Lưu rồi đổi",
     selectCaseFirst: "Vui lòng chọn 案件",
+    noCaseSelected: "Chưa chọn 案件",
+    selectCaseButton: "Chọn 案件",
     attachPrompt: {
       title: "Chọn 案件 để lưu",
       message: "Cần gắn 案件 để lưu. Chọn 案件 đã có hoặc tạo 案件 mới.",
@@ -359,6 +361,8 @@ const vi: Dictionary = {
           wood: "木材 (gỗ)",
           additional: "追加部材 (アングル／Cチャンネル／FB／鈑金等)",
         },
+        manualOverridePlaceholder: "tùy chọn",
+        manualOverrideTitle: "Để trống thì tự động tính. Chỉ nhập khi muốn ghi đè tay.",
         fields: {
           thickness: "板厚 t (bề dày tấm)",
           fold: "折り曲げ (gập mép, để trống nếu không gập)",

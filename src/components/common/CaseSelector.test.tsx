@@ -170,10 +170,17 @@ function Harness({
   );
 }
 
+/** CaseSelector always starts collapsed (even with no 案件 selected yet) — opens the searchable picker only on an explicit click, so every test that needs the search box clicks "案件を選ぶ" first. */
+async function openPicker(user: ReturnType<typeof userEvent.setup>) {
+  const openButton = await screen.findByRole("button", { name: /案件を選ぶ/ });
+  await user.click(openButton);
+}
+
 describe("CaseSelector — 26-0001/26-0002/26-0003 each independently findable (spec #1, #5, #18)", () => {
   it("finds, selects, and displays 26-0001 in the 〇（）／ format — distinct from 26-0002/26-0003", async () => {
     const user = userEvent.setup();
     render(<Harness />);
+    await openPicker(user);
 
     const search = await screen.findByPlaceholderText(/図面番号/);
     await user.type(search, "26-0001");
@@ -196,6 +203,7 @@ describe("CaseSelector — 26-0001/26-0002/26-0003 each independently findable (
   it("finds and selects 26-0002 with its 工事番号 shown, format has no | separator", async () => {
     const user = userEvent.setup();
     render(<Harness />);
+    await openPicker(user);
 
     const search = await screen.findByPlaceholderText(/図面番号/);
     await user.type(search, "26-0002");
@@ -216,6 +224,7 @@ describe("CaseSelector — 26-0001/26-0002/26-0003 each independently findable (
   it("finds 26-0003 by its 盤名称 (照明盤) and selects it with the full format including panel name", async () => {
     const user = userEvent.setup();
     render(<Harness />);
+    await openPicker(user);
 
     const search = await screen.findByPlaceholderText(/図面番号/);
     await user.type(search, "照明盤");
@@ -234,9 +243,10 @@ describe("CaseSelector — 26-0001/26-0002/26-0003 each independently findable (
     });
   });
 
-  it("選択解除 clears the selection and reopens the searchable picker", async () => {
+  it("選択解除 clears the selection and collapses back to the compact 案件未選択 view", async () => {
     const user = userEvent.setup();
     render(<Harness />);
+    await openPicker(user);
 
     const search = await screen.findByPlaceholderText(/図面番号/);
     await user.type(search, "26-0001");
@@ -251,12 +261,15 @@ describe("CaseSelector — 26-0001/26-0002/26-0003 each independently findable (
 
     await user.click(screen.getByRole("button", { name: /選択解除/ }));
 
-    // Back to the picking view: the search box is visible again and the
-    // "現在の案件" display (only rendered in the collapsed view) is gone.
+    // Back to the compact collapsed view (not the search picker) — shows
+    // 案件未選択 instead of the now-cleared case label.
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/図面番号/)).toBeInTheDocument();
+      expect(screen.getByText("案件未選択")).toBeInTheDocument();
     });
-    expect(screen.queryByText("現在の案件")).toBeNull();
+    expect(screen.queryByPlaceholderText(/図面番号/)).toBeNull();
+    expect(
+      screen.queryByText(labelMatcher("26-0001〇A260101　本社ビル電気設備")),
+    ).toBeNull();
   });
 });
 

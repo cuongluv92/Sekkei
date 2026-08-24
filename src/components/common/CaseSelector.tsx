@@ -62,7 +62,13 @@ export function CaseSelector({
   const caseId = useEffectiveCaseId(suppress);
   const [options, setOptions] = useState<CaseOption[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [picking, setPicking] = useState(!caseId);
+  // Always starts collapsed — even with no 案件 selected yet — so this
+  // widget stays a small corner control instead of permanently occupying
+  // the page with a full search+list. Picking only opens on an explicit
+  // click (案件を選ぶ/変更), same as switching away from an already-selected
+  // 案件; the list itself is already scrollable (max-h-64) so this also
+  // covers 100+ 案件 without ever growing the page.
+  const [picking, setPicking] = useState(false);
   const [query, setQuery] = useState("");
   const [showNewCaseModal, setShowNewCaseModal] = useState(false);
   const [showSavedCasesModal, setShowSavedCasesModal] = useState(false);
@@ -99,17 +105,13 @@ export function CaseSelector({
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node) &&
-        caseId
-      ) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setPicking(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [caseId]);
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim();
@@ -140,7 +142,7 @@ export function CaseSelector({
       setSelectedLabel(null);
       setCaseId("");
       setQuery("");
-      setPicking(true);
+      setPicking(false);
     });
   }
 
@@ -204,41 +206,56 @@ export function CaseSelector({
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-muted uppercase">
               {t("caseSelector.currentCaseLabel")}
-              {dirty ? (
-                <span className="normal-case text-warning">
-                  ● {t("caseSelector.unsavedBadge")}
-                </span>
-              ) : (
-                <span className="normal-case text-success">
-                  ✓ {t("caseSelector.savedBadge")}
-                </span>
-              )}
+              {caseId &&
+                (dirty ? (
+                  <span className="normal-case text-warning">
+                    ● {t("caseSelector.unsavedBadge")}
+                  </span>
+                ) : (
+                  <span className="normal-case text-success">
+                    ✓ {t("caseSelector.savedBadge")}
+                  </span>
+                ))}
             </div>
             <div className="truncate text-[14px] font-bold text-foreground">
-              {currentLabel}
+              {caseId ? currentLabel : t("caseSelector.noCaseSelected")}
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-            <button
-              onClick={() => guardedSwitch(() => setPicking(true))}
-              className="btn-secondary"
-            >
-              {t("caseSelector.changeCase")}
-            </button>
-            <button
-              onClick={() => setShowSavedCasesModal(true)}
-              className="btn-secondary"
-            >
-              {t("caseSelector.savedCasesButton")}
-            </button>
-            <button
-              onClick={handleDeselect}
-              className="btn-ghost"
-              title={t("caseSelector.deselectCase")}
-            >
-              <X className="h-3.5 w-3.5" />
-              {t("caseSelector.deselectCase")}
-            </button>
+            {caseId ? (
+              <>
+                <button
+                  onClick={() => guardedSwitch(() => setPicking(true))}
+                  className="btn-secondary"
+                >
+                  {t("caseSelector.changeCase")}
+                </button>
+                <button
+                  onClick={() => setShowSavedCasesModal(true)}
+                  className="btn-secondary"
+                >
+                  {t("caseSelector.savedCasesButton")}
+                </button>
+                <button
+                  onClick={handleDeselect}
+                  className="btn-ghost"
+                  title={t("caseSelector.deselectCase")}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  {t("caseSelector.deselectCase")}
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => setPicking(true)} className="btn-secondary">
+                  {t("caseSelector.selectCaseButton")}
+                </button>
+                <button onClick={() => setShowNewCaseModal(true)} className="btn-ghost">
+                  <Plus className="h-3.5 w-3.5" />
+                  {t("caseSelector.newCaseButton")}
+                </button>
+              </>
+            )}
           </div>
         </div>
       ) : (
@@ -287,11 +304,9 @@ export function CaseSelector({
               <Plus className="h-3.5 w-3.5" />
               {t("caseSelector.newCaseButton")}
             </button>
-            {caseId && (
-              <button onClick={() => setPicking(false)} className="btn-ghost">
-                {t("common.cancel")}
-              </button>
-            )}
+            <button onClick={() => setPicking(false)} className="btn-ghost">
+              {t("common.cancel")}
+            </button>
           </div>
         </div>
       )}

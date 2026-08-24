@@ -492,7 +492,8 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
   }
 
   const doorsWeight = doors.reduce((sum, i) => sum + sheetItemWeight(i), 0);
-  const subPlatesWeight = subPlates.reduce((sum, i) => sum + sheetItemWeight(i), 0);
+  // Nitto: 扉 already covers the whole box including 中板・基板 — never double-count them.
+  const subPlatesWeight = layer === "nitto" ? 0 : subPlates.reduce((sum, i) => sum + sheetItemWeight(i), 0);
   const protectionPlatesWeight = protectionPlates.reduce((sum, i) => sum + sheetItemWeight(i), 0);
   const hardwareWeight = hardware.reduce((sum, i) => sum + sheetItemWeight(i), 0);
   const busbarsWeight = busbars.reduce((sum, i) => sum + busbarItemWeight(i), 0);
@@ -740,17 +741,19 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
             defaultThickness={box.t || "2.3"}
             seed={{ W: box.W, H: box.H }}
           />
-          {/* 中板・基板 */}
-          <SheetItemGroup
-            title={t("weightCalc.panel.body.groups.subPlate")}
-            items={subPlates}
-            setItems={setSubPlates}
-            materials={materials}
-            markDirty={markDirty}
-            weightFn={sheetItemWeight}
-            t={t}
-            defaultThickness="2.3"
-          />
+          {/* 中板・基板 (Nitto は 扉 に含まれるため対象外) */}
+          {layer !== "nitto" && (
+            <SheetItemGroup
+              title={t("weightCalc.panel.body.groups.subPlate")}
+              items={subPlates}
+              setItems={setSubPlates}
+              materials={materials}
+              markDirty={markDirty}
+              weightFn={sheetItemWeight}
+              t={t}
+              defaultThickness="2.3"
+            />
+          )}
           {/* 保護板 */}
           <SheetItemGroup
             title={t("weightCalc.panel.body.groups.protectionPlate")}
@@ -1154,6 +1157,7 @@ function FaceRow({
   weight: number;
   onChange: (patch: Partial<FaceState>) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-wrap items-center gap-2.5 rounded-md border border-border bg-surface px-2.5 py-2">
       <label className="flex shrink-0 items-center gap-1.5 text-[12px] font-semibold text-foreground">
@@ -1171,11 +1175,16 @@ function FaceRow({
         <input
           type="number"
           step="0.01"
-          placeholder="kg"
+          placeholder={t("weightCalc.panel.body.manualOverridePlaceholder")}
+          title={t("weightCalc.panel.body.manualOverrideTitle")}
           value={state.manualWeight}
           onChange={(e) => onChange({ manualWeight: e.target.value })}
           disabled={!state.included}
-          className="field-input !w-24 !py-1 !text-[12px]"
+          className={
+            state.manualWeight.trim() !== "" && parseNum(state.manualWeight) === null
+              ? "field-input !w-24 !py-1 !text-[12px] !border-danger"
+              : "field-input !w-24 !py-1 !text-[12px]"
+          }
         />
         <span
           className={

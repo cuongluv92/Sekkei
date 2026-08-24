@@ -154,6 +154,8 @@ const ja: Dictionary = {
     switchWithoutSaving: "保存せず変更",
     saveAndSwitch: "保存して変更",
     selectCaseFirst: "案件を選択してください",
+    noCaseSelected: "案件未選択",
+    selectCaseButton: "案件を選ぶ",
     attachPrompt: {
       title: "保存先の案件を選択",
       message: "保存するには案件が必要です。既存の案件を選ぶか、新規案件を作成してください。",
@@ -356,6 +358,8 @@ const ja: Dictionary = {
           wood: "木材",
           additional: "追加部材（アングル／Cチャンネル／FB／鈑金等）",
         },
+        manualOverridePlaceholder: "任意",
+        manualOverrideTitle: "空欄の場合は自動計算されます。手動で上書きする場合のみ入力してください。",
         fields: {
           thickness: "板厚 t",
           fold: "折り曲げ（任意）",

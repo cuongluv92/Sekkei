@@ -151,6 +151,8 @@ export interface Dictionary {
     switchWithoutSaving: string;
     saveAndSwitch: string;
     selectCaseFirst: string;
+    noCaseSelected: string;
+    selectCaseButton: string;
     attachPrompt: {
       title: string;
       message: string;
@@ -324,6 +326,8 @@ export interface Dictionary {
           wood: string;
           additional: string;
         };
+        manualOverridePlaceholder: string;
+        manualOverrideTitle: string;
         fields: {
           thickness: string;
           fold: string;
