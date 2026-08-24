@@ -383,7 +383,7 @@ const vi: Dictionary = {
           roof: "屋根",
         },
         facesNote:
-          "Mỗi mặt có ô check để chọn có tính hay không (vì tủ thật có thể khác nhau ở mặt trên...). Bấm vào đây để soát lại từng mặt.",
+          "Mỗi mặt có ô check để chọn có tính hay không (vì tủ thật có thể khác nhau ở mặt trên...). Di chuột vào từng mặt để xem công thức/diện tích.",
         boxFaces: {
           back: "背面 (mặt sau)",
           top: "天面 (mặt trên)",

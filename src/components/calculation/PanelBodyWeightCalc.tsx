@@ -650,7 +650,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
 
                 <div className="flex flex-col gap-1.5 border-t border-border pt-2.5">
                   <span className="text-[11px] text-muted-2">{t("weightCalc.panel.body.facesNote")}</span>
-                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {BOX_FACE_KEYS.map((face) => (
                       <FaceRow
                         key={face}
@@ -706,23 +706,18 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
 
               <div className="flex flex-col gap-1.5 border-t border-border pt-2.5">
                 <span className="text-[11px] text-muted-2">{t("weightCalc.panel.body.roofBreakdownNote")}</span>
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                <div className="flex flex-wrap gap-1.5">
                   {ROOF_FACE_KEYS.map((face) => {
                     const areaMm2 = roofFaceArea(face, num(box.W), num(roof.Droof), num(box.D), num(roof.H1), num(roof.H2));
+                    const area = Number.isFinite(areaMm2) ? roundTo(areaMm2, 0) : 0;
                     return (
                       <div
                         key={face}
-                        className="flex flex-wrap items-center gap-2.5 rounded-md border border-border bg-surface px-2.5 py-2"
+                        title={`${t(`weightCalc.panel.body.roofFaceFormula.${face}`)} = ${area} mm²`}
+                        className="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[12px]"
                       >
-                        <span className="shrink-0 text-[12px] font-semibold text-foreground">
-                          {t(`weightCalc.panel.body.roofFaces.${face}`)}
-                        </span>
-                        <span className="text-[11px] text-muted-2">
-                          {t(`weightCalc.panel.body.roofFaceFormula.${face}`)} = {Number.isFinite(areaMm2) ? roundTo(areaMm2, 0) : 0} mm²
-                        </span>
-                        <span className="ml-auto text-[12.5px] font-semibold text-foreground">
-                          {roundTo(roofFaceWeight(face), 3)} kg
-                        </span>
+                        <span className="font-semibold text-foreground">{t(`weightCalc.panel.body.roofFaces.${face}`)}</span>
+                        <span className="font-semibold text-foreground">{roundTo(roofFaceWeight(face), 3)}kg</span>
                       </div>
                     );
                   })}
@@ -1145,7 +1140,7 @@ function NumField({
   );
 }
 
-/** One named 箱体 face (背面/天面/底面/左側面/右側面) — shows its own dimensions/area/weight so the total can be cross-checked face by face, with an include/exclude toggle (実物によって面の有無が違うため). Always auto-calculated — no manual override (面積×板厚×比重 で確定できるため、ムダな入力欄は置かない). */
+/** One named 箱体 face (背面/天面/底面/左側面/右側面) as a compact chip — the 5 faces sit in a single wrapping row instead of stacking, so the whole breakdown takes minimal height. Include/exclude toggle stays inline (実物によって面の有無が違うため); the formula/area (needed for audit) moves into the hover title instead of always-visible text, since that's what actually forced 2 columns before. Always auto-calculated — no manual override (面積×板厚×比重 で確定できるため、ムダな入力欄は置かない). */
 function FaceRow({
   label,
   formulaLabel,
@@ -1161,25 +1156,20 @@ function FaceRow({
   weight: number;
   onToggle: (included: boolean) => void;
 }) {
+  const area = Number.isFinite(areaMm2) ? roundTo(areaMm2, 0) : 0;
   return (
-    <div className="flex flex-wrap items-center gap-2.5 rounded-md border border-border bg-surface px-2.5 py-2">
-      <label className="flex shrink-0 items-center gap-1.5 text-[12px] font-semibold text-foreground">
-        <input type="checkbox" checked={included} onChange={(e) => onToggle(e.target.checked)} />
+    <label
+      title={`${formulaLabel} = ${area} mm²`}
+      className="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[12px]"
+    >
+      <input type="checkbox" checked={included} onChange={(e) => onToggle(e.target.checked)} />
+      <span className={included ? "font-semibold text-foreground" : "font-semibold text-muted-2 line-through"}>
         {label}
-      </label>
-      <span className="text-[11px] text-muted-2">
-        {formulaLabel} = {Number.isFinite(areaMm2) ? roundTo(areaMm2, 0) : 0} mm²
       </span>
-      <span
-        className={
-          included
-            ? "ml-auto text-[12.5px] font-semibold text-foreground"
-            : "ml-auto text-[12.5px] text-muted-2 line-through"
-        }
-      >
-        {roundTo(weight, 3)} kg
+      <span className={included ? "font-semibold text-foreground" : "text-muted-2 line-through"}>
+        {roundTo(weight, 3)}kg
       </span>
-    </div>
+    </label>
   );
 }
 
