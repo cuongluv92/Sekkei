@@ -348,6 +348,9 @@ export interface Dictionary {
           roof: string;
         };
         facesNote: string;
+        openingWPlaceholder: string;
+        openingHPlaceholder: string;
+        openingTitle: string;
         boxFaces: { back: string; top: string; bottom: string; left: string; right: string };
         boxFaceFormula: { back: string; top: string; bottom: string; left: string; right: string };
         roofFaces: {

@@ -101,6 +101,9 @@ interface AdditionalItem {
 
 interface FaceState {
   included: boolean;
+  /** 左側面/右側面のみ意味を持つ — 連結盤で隣の盤と接する面が開口 (ケーブル/母線通し) になっている場合、その開口の幅×高さを D×H から差し引く。他の面では常に空欄のまま無視される。 */
+  openingW: string;
+  openingH: string;
 }
 type BoxFaces = Record<BoxFaceKey, FaceState>;
 
@@ -206,7 +209,10 @@ function blankFrameItem(materials: WeightMaterial[]): AdditionalItem {
  */
 function blankBoxFaces(layer: PanelLayerKey): BoxFaces {
   return Object.fromEntries(
-    BOX_FACE_KEYS.map((key) => [key, { included: key === "top" ? layer !== "outdoor" : true }]),
+    BOX_FACE_KEYS.map((key) => [
+      key,
+      { included: key === "top" ? layer !== "outdoor" : true, openingW: "", openingH: "" },
+    ]),
   ) as BoxFaces;
 }
 function blankBox(materials: WeightMaterial[], layer: PanelLayerKey): BoxState {
@@ -434,10 +440,19 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
 
   // ---- Weight calculations ----
 
+  /** 左側面/右側面は開口 (連結盤で隣の盤と接する面) が入力されていればその分を差し引く。他の面は無視される (boxFaceArea 側でガード済み)。 */
+  function boxFaceAreaFor(face: BoxFaceKey): number {
+    const state = box.faces[face];
+    // Guard against records saved before openingW/openingH existed.
+    const openingW = state.openingW ?? "";
+    const openingH = state.openingH ?? "";
+    const opening =
+      openingW.trim() !== "" || openingH.trim() !== "" ? { W: num(openingW), H: num(openingH) } : undefined;
+    return boxFaceArea(face, num(box.W), num(box.H), num(box.D), opening);
+  }
   function boxFaceWeight(face: BoxFaceKey): number {
     if (!box.faces[face].included) return 0;
-    const area = boxFaceArea(face, num(box.W), num(box.H), num(box.D));
-    return sheetWeightKg(area, num(box.t), num(box.density));
+    return sheetWeightKg(boxFaceAreaFor(face), num(box.t), num(box.density));
   }
   const boxWeight =
     layer === "nitto"
@@ -520,7 +535,11 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     markDirty();
   }
   function toggleBoxFace(face: BoxFaceKey, included: boolean) {
-    setBox((prev) => ({ ...prev, faces: { ...prev.faces, [face]: { included } } }));
+    setBox((prev) => ({ ...prev, faces: { ...prev.faces, [face]: { ...prev.faces[face], included } } }));
+    markDirty();
+  }
+  function updateBoxFaceOpening(face: BoxFaceKey, patch: Partial<Pick<FaceState, "openingW" | "openingH">>) {
+    setBox((prev) => ({ ...prev, faces: { ...prev.faces, [face]: { ...prev.faces[face], ...patch } } }));
     markDirty();
   }
 
@@ -656,10 +675,20 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                         key={face}
                         label={t(`weightCalc.panel.body.boxFaces.${face}`)}
                         formulaLabel={t(`weightCalc.panel.body.boxFaceFormula.${face}`)}
-                        areaMm2={boxFaceArea(face, num(box.W), num(box.H), num(box.D))}
+                        areaMm2={boxFaceAreaFor(face)}
                         included={box.faces[face].included}
                         weight={boxFaceWeight(face)}
                         onToggle={(included) => toggleBoxFace(face, included)}
+                        opening={
+                          face === "left" || face === "right"
+                            ? {
+                                W: box.faces[face].openingW ?? "",
+                                H: box.faces[face].openingH ?? "",
+                                onChangeW: (v) => updateBoxFaceOpening(face, { openingW: v }),
+                                onChangeH: (v) => updateBoxFaceOpening(face, { openingH: v }),
+                              }
+                            : undefined
+                        }
                       />
                     ))}
                   </div>
@@ -1140,7 +1169,19 @@ function NumField({
   );
 }
 
-/** One named 箱体 face (背面/天面/底面/左側面/右側面) as a compact chip — the 5 faces sit in a single wrapping row instead of stacking, so the whole breakdown takes minimal height. Include/exclude toggle stays inline (実物によって面の有無が違うため); the formula/area (needed for audit) moves into the hover title instead of always-visible text, since that's what actually forced 2 columns before. Always auto-calculated — no manual override (面積×板厚×比重 で確定できるため、ムダな入力欄は置かない). */
+/**
+ * One named 箱体 face (背面/天面/底面/左側面/右側面) as a compact chip — the 5
+ * faces sit in a single wrapping row instead of stacking, so the whole
+ * breakdown takes minimal height. Include/exclude toggle stays inline
+ * (実物によって面の有無が違うため); the formula/area (needed for audit) moves
+ * into the hover title instead of always-visible text, since that's what
+ * actually forced 2 columns before. Always auto-calculated — no manual
+ * override (面積×板厚×比重 で確定できるため、ムダな入力欄は置かない).
+ *
+ * `opening` (left/right のみ渡される) adds 2 tiny inline inputs for 連結盤の
+ * 開口部 (隣の盤と接する面のケーブル/母線通し穴) — D×H から開口幅×開口高さを
+ * 差し引く。空欄なら通常通り D×H そのまま。
+ */
 function FaceRow({
   label,
   formulaLabel,
@@ -1148,6 +1189,7 @@ function FaceRow({
   included,
   weight,
   onToggle,
+  opening,
 }: {
   label: string;
   formulaLabel: string;
@@ -1155,21 +1197,47 @@ function FaceRow({
   included: boolean;
   weight: number;
   onToggle: (included: boolean) => void;
+  opening?: { W: string; H: string; onChangeW: (v: string) => void; onChangeH: (v: string) => void };
 }) {
+  const { t } = useTranslation();
   const area = Number.isFinite(areaMm2) ? roundTo(areaMm2, 0) : 0;
   return (
-    <label
+    <div
       title={`${formulaLabel} = ${area} mm²`}
       className="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[12px]"
     >
-      <input type="checkbox" checked={included} onChange={(e) => onToggle(e.target.checked)} />
-      <span className={included ? "font-semibold text-foreground" : "font-semibold text-muted-2 line-through"}>
-        {label}
-      </span>
+      <label className="flex items-center gap-1.5">
+        <input type="checkbox" checked={included} onChange={(e) => onToggle(e.target.checked)} />
+        <span className={included ? "font-semibold text-foreground" : "font-semibold text-muted-2 line-through"}>
+          {label}
+        </span>
+      </label>
+      {opening && included && (
+        <>
+          <input
+            type="number"
+            step="1"
+            placeholder={t("weightCalc.panel.body.openingWPlaceholder")}
+            title={t("weightCalc.panel.body.openingTitle")}
+            value={opening.W}
+            onChange={(e) => opening.onChangeW(e.target.value)}
+            className="field-input !w-12 !py-0.5 !text-[11px]"
+          />
+          <input
+            type="number"
+            step="1"
+            placeholder={t("weightCalc.panel.body.openingHPlaceholder")}
+            title={t("weightCalc.panel.body.openingTitle")}
+            value={opening.H}
+            onChange={(e) => opening.onChangeH(e.target.value)}
+            className="field-input !w-12 !py-0.5 !text-[11px]"
+          />
+        </>
+      )}
       <span className={included ? "font-semibold text-foreground" : "text-muted-2 line-through"}>
         {roundTo(weight, 3)}kg
       </span>
-    </label>
+    </div>
   );
 }
 

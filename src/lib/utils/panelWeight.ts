@@ -61,11 +61,22 @@ export function foldedPlateArea(W: number, H: number, T: number): number {
  * どの面が実在するかは実物によって違う (屋外盤は天面が屋根と重複することが多いが、
  * 両方持つ盤も、屋根のみで天面を持たない盤もある) ため、面ごとに含める/含めないを
  * 選べるようにする — ここでは固定の組み合わせを決め打ちしない。
+ *
+ * 左側面/右側面は連結盤 (複数の盤を横に並べて設置) の場合、隣の盤と接する面が
+ * ほぼ開口 (開口部) になっていることがある — ケーブル/母線を通すための開口で、
+ * 実際に鈑金が残っているのは開口の周りの縁だけ。`opening` (開口の幅×高さ) を渡すと
+ * D×H からその分を差し引く (負にはならない) — 他の面には適用しない。
  */
 export type BoxFaceKey = "back" | "top" | "bottom" | "left" | "right";
 export const BOX_FACE_KEYS: BoxFaceKey[] = ["back", "top", "bottom", "left", "right"];
 
-export function boxFaceArea(face: BoxFaceKey, W: number, H: number, D: number): number {
+export function boxFaceArea(
+  face: BoxFaceKey,
+  W: number,
+  H: number,
+  D: number,
+  opening?: { W: number; H: number },
+): number {
   switch (face) {
     case "back":
       return W * H;
@@ -73,8 +84,11 @@ export function boxFaceArea(face: BoxFaceKey, W: number, H: number, D: number): 
     case "bottom":
       return W * D;
     case "left":
-    case "right":
-      return D * H;
+    case "right": {
+      const full = D * H;
+      if (!opening) return full;
+      return Math.max(0, full - opening.W * opening.H);
+    }
   }
 }
 

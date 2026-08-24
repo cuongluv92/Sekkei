@@ -35,6 +35,17 @@ describe("panelWeight formulas", () => {
     expect(sumAllFaces - withoutTop).toBe(W * D);
   });
 
+  it("箱体: 左側面/右側面 の開口 (連結盤の隣接面) は D×H から開口幅×開口高さを差し引く", () => {
+    const W = 600, H = 1000, D = 400;
+    const opening = { W: 150, H: 300 };
+    expect(boxFaceArea("left", W, H, D, opening)).toBe(D * H - opening.W * opening.H);
+    expect(boxFaceArea("right", W, H, D, opening)).toBe(D * H - opening.W * opening.H);
+    // 開口が面より大きい場合でも負にはならない
+    expect(boxFaceArea("left", W, H, D, { W: 9999, H: 9999 })).toBe(0);
+    // 背面/天面/底面には開口の概念がない — 渡しても無視される
+    expect(boxFaceArea("back", W, H, D, opening)).toBe(W * H);
+  });
+
   it("屋根 (片流れ: 前H1低い/後H2高い): each face computed individually, summing to roofArea()", () => {
     const W = 600, Droof = 450, D = 400, H1 = 30, H2 = 70;
     expect(roofFaceArea("top", W, Droof, D, H1, H2)).toBe(W * Droof);

@@ -383,7 +383,11 @@ const vi: Dictionary = {
           roof: "屋根",
         },
         facesNote:
-          "Mỗi mặt có ô check để chọn có tính hay không (vì tủ thật có thể khác nhau ở mặt trên...). Di chuột vào từng mặt để xem công thức/diện tích.",
+          "Mỗi mặt có ô check để chọn có tính hay không (vì tủ thật có thể khác nhau ở mặt trên...). Di chuột vào từng mặt để xem công thức/diện tích. 左側面/右側面 (tủ ghép nhau) có thể nhập kích thước 開口 (lỗ mở luồn dây) để tự trừ khỏi diện tích.",
+        openingWPlaceholder: "開口W",
+        openingHPlaceholder: "開口H",
+        openingTitle:
+          "Với tủ ghép nhau, mặt giáp tủ kế bên có thể có 開口 (lỗ mở). Nhập chiều rộng/cao của 開口 để tự động trừ khỏi D×H (để trống thì tính như bình thường).",
         boxFaces: {
           back: "背面 (mặt sau)",
           top: "天面 (mặt trên)",
