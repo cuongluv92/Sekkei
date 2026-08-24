@@ -1,0 +1,1112 @@
+"use client";
+
+import { Image as ImageIcon, Loader2, Plus, Save, Trash2, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "@/lib/i18n";
+import { formatJaTime } from "@/lib/utils/dateFormat";
+import {
+  calculationRecordService,
+  panelWeightLayerImageService,
+  searchService,
+  weightMaterialService,
+} from "@/lib/services";
+import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
+import { getPublicUrl } from "@/lib/supabase/storage";
+import { getWeightShape, WEIGHT_SHAPES, type WeightDimKey, type WeightShapeKey } from "@/lib/utils/weightShapes";
+import {
+  boxBodyAreaIndoor,
+  boxBodyAreaOutdoor,
+  busbarWeightKg,
+  foldedPlateArea,
+  PANEL_IMAGE_KEYS,
+  roofArea,
+  sheetWeightKg,
+  woodWeightKg,
+  type PanelImageKey,
+  type PanelLayerKey,
+} from "@/lib/utils/panelWeight";
+import type { PanelWeightLayerImage } from "@/lib/services/panelWeightLayerImageService";
+import { InsertPartModal } from "@/components/common/InsertPartModal";
+import type { SearchResultItem, WeightMaterial } from "@/lib/types";
+
+const CALCULATION_TYPE = "weight-panel-body";
+const DIRTY_HANDLER_ID = "weight-panel-body";
+
+// ---- Row shapes (opaque JSON persisted via calculationRecordService — see WeightShapeCalcSection's identical precedent) ----
+
+interface SheetItem {
+  id: string;
+  W: string;
+  H: string;
+  /** 折り返し奥行き T (mm) — the fold's protrusion depth, distinct from 板厚 t. */
+  T: string;
+  materialId: string;
+  density: string;
+  /** 板厚 t (mm). */
+  t: string;
+  quantity: string;
+  manualWeight: string;
+}
+
+interface FlatItem {
+  id: string;
+  W: string;
+  H: string;
+  materialId: string;
+  density: string;
+  t: string;
+  quantity: string;
+  manualWeight: string;
+}
+
+interface BusbarItem {
+  id: string;
+  W: string;
+  L: string;
+  materialId: string;
+  density: string;
+  t: string;
+  quantity: string;
+  manualWeight: string;
+}
+
+interface PartItem {
+  id: string;
+  symbol: string;
+  name: string;
+  model: string;
+  /** From 部品データ.weight — "" means not registered in the master. */
+  masterWeight: string;
+  quantity: string;
+  manualWeight: string;
+  sourceRefId?: string;
+  sourceType?: "part-data" | "part-drawing" | "catalog";
+}
+
+interface AdditionalItem {
+  id: string;
+  shapeKey: WeightShapeKey;
+  dims: Partial<Record<WeightDimKey, string>>;
+  length: string;
+  materialId: string;
+  density: string;
+  quantity: string;
+  manualWeight: string;
+}
+
+interface BoxState {
+  W: string;
+  H: string;
+  D: string;
+  materialId: string;
+  density: string;
+  t: string;
+  quantity: string;
+  manualWeight: string;
+}
+
+interface RoofState {
+  Droof: string;
+  Hroof: string;
+  materialId: string;
+  density: string;
+  t: string;
+  quantity: string;
+  manualWeight: string;
+}
+
+interface PanelBodySavedInput {
+  layer: PanelLayerKey;
+  box: BoxState;
+  nittoBoxWeight: string;
+  nittoBoxQuantity: string;
+  roof: RoofState;
+  doors: SheetItem[];
+  subPlates: SheetItem[];
+  protectionPlates: SheetItem[];
+  hardware: SheetItem[];
+  busbars: BusbarItem[];
+  parts: PartItem[];
+  woods: FlatItem[];
+  additional: AdditionalItem[];
+  wiringFactor: "1" | "1.2" | "1.5";
+}
+
+let idCounter = 0;
+function nextId(): string {
+  idCounter += 1;
+  return `pw-${Date.now()}-${idCounter}`;
+}
+
+function blankSheetItem(): SheetItem {
+  return { id: nextId(), W: "", H: "", T: "", materialId: "", density: "", t: "", quantity: "1", manualWeight: "" };
+}
+function blankFlatItem(): FlatItem {
+  return { id: nextId(), W: "", H: "", materialId: "", density: "", t: "", quantity: "1", manualWeight: "" };
+}
+function blankBusbarItem(): BusbarItem {
+  return { id: nextId(), W: "", L: "", materialId: "", density: "", t: "", quantity: "1", manualWeight: "" };
+}
+function blankAdditionalItem(): AdditionalItem {
+  return {
+    id: nextId(),
+    shapeKey: "angle",
+    dims: {},
+    length: "",
+    materialId: "",
+    density: "",
+    quantity: "1",
+    manualWeight: "",
+  };
+}
+function blankBox(): BoxState {
+  return { W: "", H: "", D: "", materialId: "", density: "", t: "", quantity: "1", manualWeight: "" };
+}
+function blankRoof(): RoofState {
+  return { Droof: "", Hroof: "", materialId: "", density: "", t: "", quantity: "1", manualWeight: "" };
+}
+
+/** "" (untouched) | a positive finite number | null (typed but invalid). */
+function parseNum(raw: string): number | null | "" {
+  if (raw.trim() === "") return "";
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+function num(raw: string): number {
+  const n = parseNum(raw);
+  return typeof n === "number" ? n : 0;
+}
+function roundTo(n: number, decimals: number): number {
+  const factor = 10 ** decimals;
+  return Math.round(n * factor) / factor;
+}
+
+export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
+  const { t } = useTranslation();
+  const { registerSaveHandler } = useActiveCase();
+
+  const [materials, setMaterials] = useState<WeightMaterial[]>([]);
+  const [images, setImages] = useState<Partial<Record<PanelImageKey, PanelWeightLayerImage>>>({});
+  const [masterItems, setMasterItems] = useState<SearchResultItem[]>([]);
+  const [masterLoading, setMasterLoading] = useState(true);
+
+  const [layer, setLayer] = useState<PanelLayerKey>("indoor");
+  const [activeImageKey, setActiveImageKey] = useState<PanelImageKey>("indoor");
+  const [box, setBox] = useState<BoxState>(blankBox());
+  const [nittoBoxWeight, setNittoBoxWeight] = useState("");
+  const [nittoBoxQuantity, setNittoBoxQuantity] = useState("1");
+  const [roof, setRoof] = useState<RoofState>(blankRoof());
+  const [doors, setDoors] = useState<SheetItem[]>([]);
+  const [subPlates, setSubPlates] = useState<SheetItem[]>([]);
+  const [protectionPlates, setProtectionPlates] = useState<SheetItem[]>([]);
+  const [hardware, setHardware] = useState<SheetItem[]>([]);
+  const [busbars, setBusbars] = useState<BusbarItem[]>([]);
+  const [parts, setParts] = useState<PartItem[]>([]);
+  const [woods, setWoods] = useState<FlatItem[]>([]);
+  const [additional, setAdditional] = useState<AdditionalItem[]>([]);
+  const [wiringFactor, setWiringFactor] = useState<"1" | "1.2" | "1.5">("1");
+  const [partsModalOpen, setPartsModalOpen] = useState(false);
+
+  const [loadedRecord, setLoadedRecord] = useState<PanelBodySavedInput | null | undefined>(undefined);
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    weightMaterialService.list().then(setMaterials);
+    panelWeightLayerImageService.list().then((list) => {
+      setImages(Object.fromEntries(list.map((img) => [img.layerKey, img])));
+    });
+    searchService.listAll().then((list) => {
+      setMasterItems(list);
+      setMasterLoading(false);
+    });
+  }, []);
+
+  useEffect(() => {
+    setActiveImageKey(layer);
+  }, [layer]);
+
+  useEffect(() => {
+    initializedRef.current = false;
+    setLoadedRecord(undefined);
+    setSavedAt(null);
+    registerSaveHandler(DIRTY_HANDLER_ID, null);
+    if (!caseId) return;
+    let cancelled = false;
+    calculationRecordService.get(caseId, CALCULATION_TYPE).then((record) => {
+      if (cancelled) return;
+      setLoadedRecord(record ? (record.input as unknown as PanelBodySavedInput) : null);
+      if (record) setSavedAt(record.updatedAt);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseId]);
+
+  useEffect(() => () => registerSaveHandler(DIRTY_HANDLER_ID, null), [registerSaveHandler]);
+
+  useEffect(() => {
+    if (initializedRef.current || loadedRecord === undefined) return;
+    initializedRef.current = true;
+    if (!loadedRecord) return;
+    setLayer(loadedRecord.layer ?? "indoor");
+    setBox(loadedRecord.box ?? blankBox());
+    setNittoBoxWeight(loadedRecord.nittoBoxWeight ?? "");
+    setNittoBoxQuantity(loadedRecord.nittoBoxQuantity ?? "1");
+    setRoof(loadedRecord.roof ?? blankRoof());
+    setDoors(loadedRecord.doors ?? []);
+    setSubPlates(loadedRecord.subPlates ?? []);
+    setProtectionPlates(loadedRecord.protectionPlates ?? []);
+    setHardware(loadedRecord.hardware ?? []);
+    setBusbars(loadedRecord.busbars ?? []);
+    setParts(loadedRecord.parts ?? []);
+    setWoods(loadedRecord.woods ?? []);
+    setAdditional(loadedRecord.additional ?? []);
+    setWiringFactor(loadedRecord.wiringFactor ?? "1");
+  }, [loadedRecord]);
+
+  function markDirty() {
+    registerSaveHandler(DIRTY_HANDLER_ID, handleSave);
+  }
+
+  async function handleSave() {
+    if (!caseId || saving) return;
+    setSaving(true);
+    try {
+      const input: PanelBodySavedInput = {
+        layer,
+        box,
+        nittoBoxWeight,
+        nittoBoxQuantity,
+        roof,
+        doors,
+        subPlates,
+        protectionPlates,
+        hardware,
+        busbars,
+        parts,
+        woods,
+        additional,
+        wiringFactor,
+      };
+      const saved = await calculationRecordService.save(
+        caseId,
+        CALCULATION_TYPE,
+        input as unknown as Record<string, unknown>,
+        { totalWeight },
+      );
+      setSavedAt(saved.updatedAt);
+      registerSaveHandler(DIRTY_HANDLER_ID, null);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleImageUpload(key: PanelImageKey, file: File) {
+    const uploaded = await panelWeightLayerImageService.upload(key, file);
+    setImages((prev) => ({ ...prev, [key]: uploaded }));
+  }
+
+  // ---- Weight calculations ----
+
+  const boxArea =
+    layer === "indoor"
+      ? boxBodyAreaIndoor(num(box.W), num(box.H), num(box.D))
+      : layer === "outdoor"
+        ? boxBodyAreaOutdoor(num(box.W), num(box.H), num(box.D))
+        : 0;
+  const boxWeight =
+    layer === "nitto"
+      ? num(nittoBoxWeight) * num(nittoBoxQuantity)
+      : box.manualWeight.trim() !== ""
+        ? num(box.manualWeight) * num(box.quantity)
+        : sheetWeightKg(boxArea, num(box.t), num(box.density)) * num(box.quantity);
+
+  const roofAreaValue = layer === "outdoor" ? roofArea(num(box.W), num(roof.Droof), num(roof.Hroof)) : 0;
+  const roofWeight =
+    layer !== "outdoor"
+      ? 0
+      : roof.manualWeight.trim() !== ""
+        ? num(roof.manualWeight) * num(roof.quantity)
+        : sheetWeightKg(roofAreaValue, num(roof.t), num(roof.density)) * num(roof.quantity);
+
+  function sheetItemWeight(item: SheetItem): number {
+    if (item.manualWeight.trim() !== "") return num(item.manualWeight) * num(item.quantity);
+    const area = foldedPlateArea(num(item.W), num(item.H), num(item.T));
+    return sheetWeightKg(area, num(item.t), num(item.density)) * num(item.quantity);
+  }
+  function flatItemWeight(item: FlatItem): number {
+    if (item.manualWeight.trim() !== "") return num(item.manualWeight) * num(item.quantity);
+    return woodWeightKg(num(item.W), num(item.H), num(item.t), num(item.density)) * num(item.quantity);
+  }
+  function busbarItemWeight(item: BusbarItem): number {
+    if (item.manualWeight.trim() !== "") return num(item.manualWeight) * num(item.quantity);
+    return busbarWeightKg(num(item.W), num(item.L), num(item.t), num(item.density)) * num(item.quantity);
+  }
+  function partItemWeight(item: PartItem): number {
+    if (item.manualWeight.trim() !== "") return num(item.manualWeight) * num(item.quantity);
+    if (item.masterWeight.trim() === "") return 0;
+    return num(item.masterWeight) * num(item.quantity);
+  }
+  function additionalItemWeight(item: AdditionalItem): number {
+    if (item.manualWeight.trim() !== "") return num(item.manualWeight) * num(item.quantity);
+    const shape = getWeightShape(item.shapeKey);
+    const dims = Object.fromEntries(shape.fields.map((k) => [k, num(item.dims[k] ?? "")])) as Record<
+      WeightDimKey,
+      number
+    >;
+    if (!shape.fields.every((k) => dims[k] > 0)) return 0;
+    const area = shape.computeArea(dims);
+    return (area * num(item.length) * num(item.density) * num(item.quantity)) / 1_000_000;
+  }
+
+  const doorsWeight = doors.reduce((sum, i) => sum + sheetItemWeight(i), 0);
+  const subPlatesWeight = subPlates.reduce((sum, i) => sum + sheetItemWeight(i), 0);
+  const protectionPlatesWeight = protectionPlates.reduce((sum, i) => sum + sheetItemWeight(i), 0);
+  const hardwareWeight = hardware.reduce((sum, i) => sum + sheetItemWeight(i), 0);
+  const busbarsWeight = busbars.reduce((sum, i) => sum + busbarItemWeight(i), 0);
+  const partsWeight = parts.reduce((sum, i) => sum + partItemWeight(i), 0);
+  const woodsWeight = woods.reduce((sum, i) => sum + flatItemWeight(i), 0);
+  const additionalWeight = additional.reduce((sum, i) => sum + additionalItemWeight(i), 0);
+
+  const totalWeight =
+    boxWeight +
+    roofWeight +
+    doorsWeight +
+    subPlatesWeight +
+    protectionPlatesWeight +
+    hardwareWeight +
+    busbarsWeight +
+    partsWeight +
+    woodsWeight +
+    additionalWeight;
+
+  const factorMultiplier = wiringFactor === "1" ? 1 : wiringFactor === "1.2" ? 1.2 : 1.5;
+  const correctedWeight = totalWeight * factorMultiplier;
+
+  const activeImage = images[activeImageKey];
+
+  function updateBox(patch: Partial<BoxState>) {
+    setBox((prev) => ({ ...prev, ...patch }));
+    markDirty();
+  }
+  function updateRoof(patch: Partial<RoofState>) {
+    setRoof((prev) => ({ ...prev, ...patch }));
+    markDirty();
+  }
+
+  function pickMaterial(materialId: string): { materialId: string; density: string } {
+    const m = materials.find((mm) => mm.id === materialId);
+    return { materialId, density: m ? String(m.density) : "" };
+  }
+
+  function handlePickPart(item: SearchResultItem) {
+    setParts((prev) => [
+      ...prev,
+      {
+        id: nextId(),
+        symbol: item.symbol ?? "",
+        name: item.category,
+        model: item.model,
+        masterWeight: item.weight != null ? String(item.weight) : "",
+        quantity: "1",
+        manualWeight: "",
+        sourceRefId: item.id,
+        sourceType: item.source,
+      },
+    ]);
+    setPartsModalOpen(false);
+    markDirty();
+  }
+  function handleInsertBlankPart() {
+    setParts((prev) => [
+      ...prev,
+      { id: nextId(), symbol: "", name: "", model: "", masterWeight: "", quantity: "1", manualWeight: "" },
+    ]);
+    setPartsModalOpen(false);
+    markDirty();
+  }
+
+  return (
+    <div id="weight-panel-body" className="panel scroll-mt-4">
+      <div className="panel-header flex items-center justify-between gap-2">
+        <span className="panel-title">{t("weightCalc.panel.body.title")}</span>
+        <div className="flex items-center gap-2">
+          {savedAt && (
+            <span className="text-[11px] text-muted-2">
+              {t("weightCalc.basic.saved")} {formatJaTime(savedAt)}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!caseId || saving}
+            className="btn-secondary !py-1 !text-[12px]"
+          >
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            {t("common.save")}
+          </button>
+        </div>
+      </div>
+
+      <div className="panel-body grid grid-cols-1 gap-5 lg:grid-cols-[62%_1fr]">
+        <div className="order-2 flex flex-col gap-4 lg:order-1">
+          {/* 屋内/屋外/Nitto */}
+          <div>
+            <span className="field-label">{t("weightCalc.panel.body.layerLabel")}</span>
+            <div className="flex flex-wrap gap-1.5">
+              {(["indoor", "outdoor", "nitto"] as PanelLayerKey[]).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => {
+                    setLayer(key);
+                    markDirty();
+                  }}
+                  className={
+                    layer === key
+                      ? "rounded-md bg-accent px-3 py-1.5 text-[12.5px] font-bold text-accent-foreground"
+                      : "rounded-md border border-border-strong px-3 py-1.5 text-[12.5px] font-semibold text-muted hover:text-foreground"
+                  }
+                >
+                  {t(`weightCalc.panel.body.layer.${key}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 箱体 */}
+          <GroupCard title={t(`weightCalc.panel.body.groups.box`)} weight={boxWeight}>
+            {layer === "nitto" ? (
+              <div className="grid grid-cols-2 gap-2.5">
+                <NumField
+                  label={t("weightCalc.panel.body.fields.nittoBoxWeight")}
+                  value={nittoBoxWeight}
+                  onChange={(v) => {
+                    setNittoBoxWeight(v);
+                    markDirty();
+                  }}
+                />
+                <NumField
+                  label={t("weightCalc.basic.quantity")}
+                  value={nittoBoxQuantity}
+                  onChange={(v) => {
+                    setNittoBoxQuantity(v);
+                    markDirty();
+                  }}
+                />
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-3 gap-2.5">
+                  <NumField label="W" value={box.W} onChange={(v) => updateBox({ W: v })} />
+                  <NumField label="H" value={box.H} onChange={(v) => updateBox({ H: v })} />
+                  <NumField label="D" value={box.D} onChange={(v) => updateBox({ D: v })} />
+                </div>
+                <MaterialRow
+                  materials={materials}
+                  materialId={box.materialId}
+                  density={box.density}
+                  onChange={(patch) => updateBox(patch)}
+                />
+                <div className="grid grid-cols-3 gap-2.5">
+                  <NumField label={t("weightCalc.panel.body.fields.thickness")} value={box.t} onChange={(v) => updateBox({ t: v })} />
+                  <NumField label={t("weightCalc.basic.quantity")} value={box.quantity} onChange={(v) => updateBox({ quantity: v })} />
+                  <NumField
+                    label={t("weightCalc.panel.body.fields.manualWeight")}
+                    value={box.manualWeight}
+                    onChange={(v) => updateBox({ manualWeight: v })}
+                  />
+                </div>
+              </>
+            )}
+          </GroupCard>
+
+          {/* 屋根 (屋外のみ) */}
+          {layer === "outdoor" && (
+            <GroupCard title={t("weightCalc.panel.body.groups.roof")} weight={roofWeight}>
+              <p className="text-[11px] text-muted-2">
+                {t("weightCalc.panel.body.roofWidthNote", { W: box.W || "—" })}
+              </p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <NumField
+                  label={t("weightCalc.panel.body.fields.droof")}
+                  value={roof.Droof}
+                  onChange={(v) => updateRoof({ Droof: v })}
+                />
+                <NumField
+                  label={t("weightCalc.panel.body.fields.hroof")}
+                  value={roof.Hroof}
+                  onChange={(v) => updateRoof({ Hroof: v })}
+                />
+              </div>
+              <MaterialRow
+                materials={materials}
+                materialId={roof.materialId}
+                density={roof.density}
+                onChange={(patch) => updateRoof(patch)}
+              />
+              <div className="grid grid-cols-3 gap-2.5">
+                <NumField label={t("weightCalc.panel.body.fields.thickness")} value={roof.t} onChange={(v) => updateRoof({ t: v })} />
+                <NumField label={t("weightCalc.basic.quantity")} value={roof.quantity} onChange={(v) => updateRoof({ quantity: v })} />
+                <NumField
+                  label={t("weightCalc.panel.body.fields.manualWeight")}
+                  value={roof.manualWeight}
+                  onChange={(v) => updateRoof({ manualWeight: v })}
+                />
+              </div>
+            </GroupCard>
+          )}
+
+          {/* 扉 */}
+          <SheetItemGroup
+            title={t("weightCalc.panel.body.groups.door")}
+            items={doors}
+            setItems={setDoors}
+            materials={materials}
+            markDirty={markDirty}
+            weightFn={sheetItemWeight}
+            t={t}
+          />
+          {/* 中板・基板 */}
+          <SheetItemGroup
+            title={t("weightCalc.panel.body.groups.subPlate")}
+            items={subPlates}
+            setItems={setSubPlates}
+            materials={materials}
+            markDirty={markDirty}
+            weightFn={sheetItemWeight}
+            t={t}
+          />
+          {/* 保護板 */}
+          <SheetItemGroup
+            title={t("weightCalc.panel.body.groups.protectionPlate")}
+            items={protectionPlates}
+            setItems={setProtectionPlates}
+            materials={materials}
+            markDirty={markDirty}
+            weightFn={sheetItemWeight}
+            t={t}
+          />
+          {/* 金具・パネル等 */}
+          <SheetItemGroup
+            title={t("weightCalc.panel.body.groups.hardware")}
+            items={hardware}
+            setItems={setHardware}
+            materials={materials}
+            markDirty={markDirty}
+            weightFn={sheetItemWeight}
+            t={t}
+          />
+
+          {/* 銅帯 */}
+          <GroupCard
+            title={t("weightCalc.panel.body.groups.busbar")}
+            weight={busbarsWeight}
+            onAdd={() => {
+              setBusbars((prev) => [...prev, blankBusbarItem()]);
+              markDirty();
+            }}
+          >
+            {busbars.map((item) => (
+              <div key={item.id} className="flex flex-wrap items-end gap-2 border-t border-border pt-2.5 first:border-t-0 first:pt-0">
+                <NumField label="W" value={item.W} onChange={(v) => { setBusbars((p) => p.map((i) => (i.id === item.id ? { ...i, W: v } : i))); markDirty(); }} compact />
+                <NumField label={t("weightCalc.panel.body.fields.length")} value={item.L} onChange={(v) => { setBusbars((p) => p.map((i) => (i.id === item.id ? { ...i, L: v } : i))); markDirty(); }} compact />
+                <NumField label={t("weightCalc.panel.body.fields.thickness")} value={item.t} onChange={(v) => { setBusbars((p) => p.map((i) => (i.id === item.id ? { ...i, t: v } : i))); markDirty(); }} compact />
+                <div className="w-28">
+                  <label className="mb-1 block text-[11px] text-muted">{t("weightCalc.basic.material")}</label>
+                  <select
+                    value={item.materialId}
+                    onChange={(e) => {
+                      const picked = pickMaterial(e.target.value);
+                      setBusbars((p) => p.map((i) => (i.id === item.id ? { ...i, ...picked } : i)));
+                      markDirty();
+                    }}
+                    className="field-input"
+                  >
+                    <option value="">{t("weightCalc.basic.materialPlaceholder")}</option>
+                    {materials.map((m) => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setBusbars((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
+                <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setBusbars((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
+                <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(busbarItemWeight(item), 3)} kg</span>
+                <button type="button" onClick={() => { setBusbars((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </GroupCard>
+
+          {/* 部品 */}
+          <GroupCard
+            title={t("weightCalc.panel.body.groups.parts")}
+            weight={partsWeight}
+            onAdd={() => setPartsModalOpen(true)}
+            addLabel={t("weightCalc.panel.body.fetchFromPartAssembly")}
+          >
+            {parts.map((item) => {
+              const w = partItemWeight(item);
+              const unregistered = item.masterWeight.trim() === "" && item.manualWeight.trim() === "";
+              return (
+                <div key={item.id} className="flex flex-wrap items-end gap-2 border-t border-border pt-2.5 first:border-t-0 first:pt-0">
+                  <div className="w-32">
+                    <label className="mb-1 block text-[11px] text-muted">{t("weightCalc.panel.body.fields.model")}</label>
+                    <input value={item.model} onChange={(e) => { setParts((p) => p.map((i) => (i.id === item.id ? { ...i, model: e.target.value } : i))); markDirty(); }} className="field-input" />
+                  </div>
+                  <div className="w-32">
+                    <label className="mb-1 block text-[11px] text-muted">{t("weightCalc.panel.body.fields.name")}</label>
+                    <input value={item.name} onChange={(e) => { setParts((p) => p.map((i) => (i.id === item.id ? { ...i, name: e.target.value } : i))); markDirty(); }} className="field-input" />
+                  </div>
+                  <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setParts((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
+                  <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setParts((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
+                  {unregistered ? (
+                    <span className="mb-1 text-[11.5px] font-semibold text-warning">{t("weightCalc.panel.body.weightNotRegistered")}</span>
+                  ) : (
+                    <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(w, 3)} kg</span>
+                  )}
+                  <button type="button" onClick={() => { setParts((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </GroupCard>
+
+          {/* 木材 */}
+          <GroupCard
+            title={t("weightCalc.panel.body.groups.wood")}
+            weight={woodsWeight}
+            onAdd={() => {
+              setWoods((prev) => [...prev, blankFlatItem()]);
+              markDirty();
+            }}
+          >
+            {woods.map((item) => (
+              <div key={item.id} className="flex flex-wrap items-end gap-2 border-t border-border pt-2.5 first:border-t-0 first:pt-0">
+                <NumField label="W" value={item.W} onChange={(v) => { setWoods((p) => p.map((i) => (i.id === item.id ? { ...i, W: v } : i))); markDirty(); }} compact />
+                <NumField label="H" value={item.H} onChange={(v) => { setWoods((p) => p.map((i) => (i.id === item.id ? { ...i, H: v } : i))); markDirty(); }} compact />
+                <NumField label={t("weightCalc.panel.body.fields.thickness")} value={item.t} onChange={(v) => { setWoods((p) => p.map((i) => (i.id === item.id ? { ...i, t: v } : i))); markDirty(); }} compact />
+                <div className="w-28">
+                  <label className="mb-1 block text-[11px] text-muted">{t("weightCalc.basic.material")}</label>
+                  <select
+                    value={item.materialId}
+                    onChange={(e) => {
+                      const picked = pickMaterial(e.target.value);
+                      setWoods((p) => p.map((i) => (i.id === item.id ? { ...i, ...picked } : i)));
+                      markDirty();
+                    }}
+                    className="field-input"
+                  >
+                    <option value="">{t("weightCalc.basic.materialPlaceholder")}</option>
+                    {materials.map((m) => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setWoods((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
+                <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setWoods((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
+                <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(flatItemWeight(item), 3)} kg</span>
+                <button type="button" onClick={() => { setWoods((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </GroupCard>
+
+          {/* 追加部材 (アングル/Cチャンネル/FB/鈑金) */}
+          <GroupCard
+            title={t("weightCalc.panel.body.groups.additional")}
+            weight={additionalWeight}
+            onAdd={() => {
+              setAdditional((prev) => [...prev, blankAdditionalItem()]);
+              markDirty();
+            }}
+          >
+            {additional.map((item) => {
+              const shape = getWeightShape(item.shapeKey);
+              return (
+                <div key={item.id} className="flex flex-col gap-2 border-t border-border pt-2.5 first:border-t-0 first:pt-0">
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="w-32">
+                      <label className="mb-1 block text-[11px] text-muted">{t("weightCalc.panel.body.fields.shape")}</label>
+                      <select
+                        value={item.shapeKey}
+                        onChange={(e) => {
+                          const shapeKey = e.target.value as WeightShapeKey;
+                          setAdditional((p) => p.map((i) => (i.id === item.id ? { ...i, shapeKey, dims: {} } : i)));
+                          markDirty();
+                        }}
+                        className="field-input"
+                      >
+                        {WEIGHT_SHAPES.map((s) => (
+                          <option key={s.key} value={s.key}>{t(`weightCalc.basic.shapes.${s.key}`)}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {shape.fields.map((k) => (
+                      <NumField
+                        key={k}
+                        label={t(`weightCalc.basic.fields.${item.shapeKey}.${k}`)}
+                        value={item.dims[k] ?? ""}
+                        onChange={(v) => {
+                          setAdditional((p) => p.map((i) => (i.id === item.id ? { ...i, dims: { ...i.dims, [k]: v } } : i)));
+                          markDirty();
+                        }}
+                        compact
+                      />
+                    ))}
+                    <NumField
+                      label={t("weightCalc.basic.length")}
+                      value={item.length}
+                      onChange={(v) => { setAdditional((p) => p.map((i) => (i.id === item.id ? { ...i, length: v } : i))); markDirty(); }}
+                      compact
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="w-28">
+                      <label className="mb-1 block text-[11px] text-muted">{t("weightCalc.basic.material")}</label>
+                      <select
+                        value={item.materialId}
+                        onChange={(e) => {
+                          const picked = pickMaterial(e.target.value);
+                          setAdditional((p) => p.map((i) => (i.id === item.id ? { ...i, ...picked } : i)));
+                          markDirty();
+                        }}
+                        className="field-input"
+                      >
+                        <option value="">{t("weightCalc.basic.materialPlaceholder")}</option>
+                        {materials.map((m) => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setAdditional((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
+                    <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setAdditional((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
+                    <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(additionalItemWeight(item), 3)} kg</span>
+                    <button type="button" onClick={() => { setAdditional((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </GroupCard>
+
+          {/* 配線補正 + 合計 */}
+          <div className="flex flex-col gap-2.5 border-t border-border pt-3.5">
+            <span className="field-label">{t("weightCalc.panel.body.wiringFactor")}</span>
+            <div className="flex flex-wrap gap-1.5">
+              {(["1", "1.2", "1.5"] as const).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => {
+                    setWiringFactor(f);
+                    markDirty();
+                  }}
+                  className={
+                    wiringFactor === f
+                      ? "rounded-md bg-accent px-3 py-1.5 text-[12.5px] font-bold text-accent-foreground"
+                      : "rounded-md border border-border-strong px-3 py-1.5 text-[12.5px] font-semibold text-muted hover:text-foreground"
+                  }
+                >
+                  ×{f}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
+                <div className="text-[10.5px] tracking-wide text-muted uppercase">{t("weightCalc.panel.body.rawTotal")}</div>
+                <div className="mt-0.5 text-[15px] font-bold text-foreground">{roundTo(totalWeight, 3)} <span className="text-[11px] font-normal text-muted">kg</span></div>
+              </div>
+              <div className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
+                <div className="text-[10.5px] tracking-wide text-muted uppercase">{t("weightCalc.panel.body.correctedTotal")}</div>
+                <div className="mt-0.5 text-[17px] font-bold text-accent">{roundTo(correctedWeight, 3)} <span className="text-[11px] font-normal text-muted">kg</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 参考図: 屋内/屋外/Nitto/扉/屋根 で切替 */}
+        <div className="order-1 flex flex-col gap-1.5 lg:order-2">
+          <div className="flex flex-wrap gap-1">
+            {PANEL_IMAGE_KEYS.map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setActiveImageKey(key)}
+                className={
+                  activeImageKey === key
+                    ? "rounded px-2 py-1 text-[11px] font-bold text-accent underline"
+                    : "rounded px-2 py-1 text-[11px] text-muted hover:text-foreground"
+                }
+              >
+                {t(`weightCalc.panel.body.imageTabs.${key}`)}
+              </button>
+            ))}
+          </div>
+          <PanelImageFrame
+            image={activeImage}
+            label={t(`weightCalc.panel.body.imageTabs.${activeImageKey}`)}
+            onUpload={(file) => handleImageUpload(activeImageKey, file)}
+            placeholder={t("weightCalc.basic.imagePlaceholder")}
+            uploadLabel={t("common.upload")}
+          />
+        </div>
+      </div>
+
+      {partsModalOpen && (
+        <InsertPartModal
+          items={masterItems}
+          loading={masterLoading}
+          onClose={() => setPartsModalOpen(false)}
+          onInsertBlank={handleInsertBlankPart}
+          onPick={handlePickPart}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---- Small shared sub-components ----
+
+function NumField({
+  label,
+  value,
+  onChange,
+  compact,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  compact?: boolean;
+}) {
+  return (
+    <div className={compact ? "w-24" : undefined}>
+      <label className="mb-1 block text-[11px] text-muted">{label}</label>
+      <input
+        type="number"
+        step="0.1"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="field-input"
+      />
+    </div>
+  );
+}
+
+function MaterialRow({
+  materials,
+  materialId,
+  density,
+  onChange,
+}: {
+  materials: WeightMaterial[];
+  materialId: string;
+  density: string;
+  onChange: (patch: { materialId: string; density: string }) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="grid grid-cols-2 gap-2.5">
+      <div>
+        <label className="field-label">{t("weightCalc.basic.material")}</label>
+        <select
+          value={materialId}
+          onChange={(e) => {
+            const m = materials.find((mm) => mm.id === e.target.value);
+            onChange({ materialId: e.target.value, density: m ? String(m.density) : "" });
+          }}
+          className="field-input"
+        >
+          <option value="">{t("weightCalc.basic.materialPlaceholder")}</option>
+          {materials.map((m) => (
+            <option key={m.id} value={m.id}>{m.name}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="field-label">{t("weightCalc.basic.density")}</label>
+        <input
+          type="number"
+          step="0.01"
+          value={density}
+          onChange={(e) => onChange({ materialId, density: e.target.value })}
+          className="field-input"
+        />
+      </div>
+    </div>
+  );
+}
+
+function GroupCard({
+  title,
+  weight,
+  onAdd,
+  addLabel,
+  children,
+}: {
+  title: string;
+  weight: number;
+  onAdd?: () => void;
+  addLabel?: string;
+  children: React.ReactNode;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-lg border border-border bg-surface-2 p-3">
+      <div className="mb-2.5 flex items-center justify-between gap-2">
+        <span className="text-[13px] font-bold text-foreground">{title}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[12.5px] font-semibold text-muted">{roundTo(weight, 3)} kg</span>
+          {onAdd && (
+            <button type="button" onClick={onAdd} className="btn-ghost !py-1 !text-[12px]">
+              <Plus className="h-3.5 w-3.5" />
+              {addLabel ?? t("partAssembly.addRow")}
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col gap-2.5">{children}</div>
+    </div>
+  );
+}
+
+function SheetItemGroup({
+  title,
+  items,
+  setItems,
+  materials,
+  markDirty,
+  weightFn,
+  t,
+}: {
+  title: string;
+  items: SheetItem[];
+  setItems: React.Dispatch<React.SetStateAction<SheetItem[]>>;
+  materials: WeightMaterial[];
+  markDirty: () => void;
+  weightFn: (item: SheetItem) => number;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  const total = items.reduce((sum, i) => sum + weightFn(i), 0);
+  return (
+    <GroupCard
+      title={title}
+      weight={total}
+      onAdd={() => {
+        setItems((prev) => [...prev, blankSheetItem()]);
+        markDirty();
+      }}
+    >
+      {items.map((item) => (
+        <div key={item.id} className="flex flex-wrap items-end gap-2 border-t border-border pt-2.5 first:border-t-0 first:pt-0">
+          <NumField label="W" value={item.W} onChange={(v) => { setItems((p) => p.map((i) => (i.id === item.id ? { ...i, W: v } : i))); markDirty(); }} compact />
+          <NumField label="H" value={item.H} onChange={(v) => { setItems((p) => p.map((i) => (i.id === item.id ? { ...i, H: v } : i))); markDirty(); }} compact />
+          <NumField label="T" value={item.T} onChange={(v) => { setItems((p) => p.map((i) => (i.id === item.id ? { ...i, T: v } : i))); markDirty(); }} compact />
+          <NumField label={t("weightCalc.panel.body.fields.thickness")} value={item.t} onChange={(v) => { setItems((p) => p.map((i) => (i.id === item.id ? { ...i, t: v } : i))); markDirty(); }} compact />
+          <div className="w-28">
+            <label className="mb-1 block text-[11px] text-muted">{t("weightCalc.basic.material")}</label>
+            <select
+              value={item.materialId}
+              onChange={(e) => {
+                const m = materials.find((mm) => mm.id === e.target.value);
+                setItems((p) => p.map((i) => (i.id === item.id ? { ...i, materialId: e.target.value, density: m ? String(m.density) : "" } : i)));
+                markDirty();
+              }}
+              className="field-input"
+            >
+              <option value="">{t("weightCalc.basic.materialPlaceholder")}</option>
+              {materials.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </div>
+          <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setItems((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
+          <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setItems((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
+          <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(weightFn(item), 3)} kg</span>
+          <button type="button" onClick={() => { setItems((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ))}
+    </GroupCard>
+  );
+}
+
+function PanelImageFrame({
+  image,
+  label,
+  onUpload,
+  placeholder,
+  uploadLabel,
+}: {
+  image?: PanelWeightLayerImage;
+  label: string;
+  onUpload: (file: File) => void;
+  placeholder: string;
+  uploadLabel: string;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(file: File) {
+    setUploading(true);
+    try {
+      await onUpload(file);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="relative flex h-[240px] w-full items-center justify-center overflow-hidden rounded-lg border border-border-strong bg-surface-2 p-2 lg:h-[300px]">
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element -- real Storage URL, not a static asset next/image can optimize
+        <img src={getPublicUrl(image.storagePath)} alt={label} className="max-h-full max-w-full object-contain" />
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="flex h-full w-full flex-col items-center justify-center gap-2 border-2 border-dashed border-border-strong text-muted-2 transition-colors hover:border-accent hover:text-muted"
+        >
+          {uploading ? <Loader2 className="h-9 w-9 animate-spin" /> : <ImageIcon className="h-9 w-9" />}
+          <span className="max-w-[240px] text-center text-[12px]">{placeholder}</span>
+          <span className="flex items-center gap-1 text-[11.5px] font-semibold text-accent">
+            <Upload className="h-3 w-3" />
+            {uploadLabel}
+          </span>
+        </button>
+      )}
+      {image && (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="btn-secondary absolute top-2 right-2 !py-1 !text-[11.5px]"
+        >
+          {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+          {uploadLabel}
+        </button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".png,.jpg,.jpeg,.svg,.webp,.gif"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFile(file);
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}

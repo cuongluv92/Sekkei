@@ -296,8 +296,53 @@ export interface Dictionary {
       };
     };
     panel: {
-      title: string;
-      comingSoon: string;
+      deferredNote: string;
+      deferred: {
+        baseL: string;
+        baseC: string;
+        duct: string;
+      };
+      body: {
+        title: string;
+        layerLabel: string;
+        layer: { indoor: string; outdoor: string; nitto: string };
+        groups: {
+          box: string;
+          roof: string;
+          door: string;
+          subPlate: string;
+          protectionPlate: string;
+          hardware: string;
+          busbar: string;
+          parts: string;
+          wood: string;
+          additional: string;
+        };
+        fields: {
+          thickness: string;
+          manualWeight: string;
+          droof: string;
+          hroof: string;
+          length: string;
+          nittoBoxWeight: string;
+          model: string;
+          name: string;
+          shape: string;
+        };
+        imageTabs: {
+          indoor: string;
+          outdoor: string;
+          nitto: string;
+          door: string;
+          roof: string;
+        };
+        roofWidthNote: string;
+        fetchFromPartAssembly: string;
+        weightNotRegistered: string;
+        wiringFactor: string;
+        rawTotal: string;
+        correctedTotal: string;
+      };
     };
   };
   ventilationCalc: {
