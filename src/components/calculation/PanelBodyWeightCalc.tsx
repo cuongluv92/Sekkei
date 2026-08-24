@@ -54,7 +54,6 @@ interface SheetItem {
   /** 板厚 t (mm). */
   t: string;
   quantity: string;
-  manualWeight: string;
 }
 
 interface FlatItem {
@@ -65,7 +64,6 @@ interface FlatItem {
   density: string;
   t: string;
   quantity: string;
-  manualWeight: string;
 }
 
 interface BusbarItem {
@@ -76,7 +74,6 @@ interface BusbarItem {
   density: string;
   t: string;
   quantity: string;
-  manualWeight: string;
 }
 
 interface PartItem {
@@ -87,6 +84,7 @@ interface PartItem {
   /** From 部品データ.weight — "" means not registered in the master. */
   masterWeight: string;
   quantity: string;
+  /** 部品 only — a real part often has no formula-derivable weight (bought-in item), so this is the one group that keeps a manual kg override. Every other group is dimension-driven and always auto-calculates. */
   manualWeight: string;
   sourceRefId?: string;
   sourceType?: "part-data" | "part-drawing" | "catalog";
@@ -100,7 +98,6 @@ interface AdditionalItem {
   materialId: string;
   density: string;
   quantity: string;
-  manualWeight: string;
 }
 
 interface FaceState {
@@ -181,14 +178,13 @@ function blankSheetItem(materials: WeightMaterial[], defaultThickness: string, s
     ...defaultMaterial(materials, "鉄"),
     t: defaultThickness,
     quantity: "1",
-    manualWeight: "",
   };
 }
 function blankFlatItem(materials: WeightMaterial[], materialName: string): FlatItem {
-  return { id: nextId(), W: "", H: "", ...defaultMaterial(materials, materialName), t: "", quantity: "1", manualWeight: "" };
+  return { id: nextId(), W: "", H: "", ...defaultMaterial(materials, materialName), t: "", quantity: "1" };
 }
 function blankBusbarItem(materials: WeightMaterial[]): BusbarItem {
-  return { id: nextId(), W: "", L: "", ...defaultMaterial(materials, "銅"), t: "", quantity: "1", manualWeight: "" };
+  return { id: nextId(), W: "", L: "", ...defaultMaterial(materials, "銅"), t: "", quantity: "1" };
 }
 function blankAdditionalItem(materials: WeightMaterial[]): AdditionalItem {
   return {
@@ -198,7 +194,6 @@ function blankAdditionalItem(materials: WeightMaterial[]): AdditionalItem {
     length: "",
     ...defaultMaterial(materials, "鉄"),
     quantity: "1",
-    manualWeight: "",
   };
 }
 /** 架台 — 基本重量計算のハット形と全く同じ入力・計算式 (A = t×(W1+2×W2+2×H)) を再利用。 */
@@ -474,16 +469,13 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     layer !== "outdoor" ? 0 : ROOF_FACE_KEYS.reduce((sum, f) => sum + roofFaceWeight(f), 0);
 
   function sheetItemWeight(item: SheetItem): number {
-    if (item.manualWeight.trim() !== "") return num(item.manualWeight) * num(item.quantity);
     const area = foldedPlateArea(num(item.W), num(item.H), num(item.T));
     return sheetWeightKg(area, num(item.t), num(item.density)) * num(item.quantity);
   }
   function flatItemWeight(item: FlatItem): number {
-    if (item.manualWeight.trim() !== "") return num(item.manualWeight) * num(item.quantity);
     return woodWeightKg(num(item.W), num(item.H), num(item.t), num(item.density)) * num(item.quantity);
   }
   function busbarItemWeight(item: BusbarItem): number {
-    if (item.manualWeight.trim() !== "") return num(item.manualWeight) * num(item.quantity);
     return busbarWeightKg(num(item.W), num(item.L), num(item.t), num(item.density)) * num(item.quantity);
   }
   function partItemWeight(item: PartItem): number {
@@ -492,7 +484,6 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     return num(item.masterWeight) * num(item.quantity);
   }
   function additionalItemWeight(item: AdditionalItem): number {
-    if (item.manualWeight.trim() !== "") return num(item.manualWeight) * num(item.quantity);
     const shape = getWeightShape(item.shapeKey);
     const dims = Object.fromEntries(shape.fields.map((k) => [k, num(item.dims[k] ?? "")])) as Record<
       WeightDimKey,
@@ -1064,7 +1055,6 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                     </select>
                   </div>
                   <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setFrames((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
-                  <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setFrames((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
                   <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(additionalItemWeight(item), 2)} kg</span>
                   <button type="button" onClick={() => { setFrames((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
                     <Trash2 className="h-3.5 w-3.5" />
@@ -1106,7 +1096,6 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                   </select>
                 </div>
                 <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setBusbars((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
-                <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setBusbars((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
                 <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(busbarItemWeight(item), 2)} kg</span>
                 <button type="button" onClick={() => { setBusbars((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
                   <Trash2 className="h-3.5 w-3.5" />
@@ -1182,7 +1171,6 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                   </select>
                 </div>
                 <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setWoods((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
-                <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setWoods((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
                 <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(flatItemWeight(item), 2)} kg</span>
                 <button type="button" onClick={() => { setWoods((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
                   <Trash2 className="h-3.5 w-3.5" />
@@ -1259,7 +1247,6 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                       </select>
                     </div>
                     <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setAdditional((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
-                    <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setAdditional((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
                     <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(additionalItemWeight(item), 2)} kg</span>
                     <button type="button" onClick={() => { setAdditional((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
                       <Trash2 className="h-3.5 w-3.5" />
@@ -1585,7 +1572,6 @@ function SheetItemGroup({
             </select>
           </div>
           <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setItems((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
-          <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setItems((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
           <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(weightFn(item), 2)} kg</span>
           <button type="button" onClick={() => { setItems((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
             <Trash2 className="h-3.5 w-3.5" />
