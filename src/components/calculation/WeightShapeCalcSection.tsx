@@ -4,6 +4,7 @@ import { Image as ImageIcon, Loader2, Save, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { formatJaTime } from "@/lib/utils/dateFormat";
+import { loadFromStorage, saveToStorage } from "@/lib/utils/localStore";
 import {
   calculationRecordService,
   weightShapeImageService,
@@ -17,6 +18,7 @@ import {
   type WeightShapeImage,
   type WeightShapeKey,
 } from "@/lib/utils/weightShapes";
+import { CaseAttachPrompt } from "@/components/common/CaseAttachPrompt";
 import type { WeightMaterial } from "@/lib/types";
 
 interface WeightShapeCalcSectionProps {
@@ -68,10 +70,11 @@ export function WeightShapeCalcSection({
   caseId,
 }: WeightShapeCalcSectionProps) {
   const { t } = useTranslation();
-  const { registerSaveHandler } = useActiveCase();
+  const { registerSaveHandler, setCaseId } = useActiveCase();
   const shape = getWeightShape(shapeKey);
   const calculationType = `weight-basic-${shapeKey}`;
   const dirtyHandlerId = `weight-basic-${shapeKey}`;
+  const draftStorageKey = `sekkei.weightBasicDraft.${shapeKey}`;
 
   const [dimRaw, setDimRaw] = useState<Record<WeightDimKey, string>>({
     W: "",
@@ -96,15 +99,22 @@ export function WeightShapeCalcSection({
   >(undefined);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [caseAttachPromptOpen, setCaseAttachPromptOpen] = useState(false);
   const initializedRef = useRef(false);
 
+  // 案件 未選択のときは calculation_records ではなくローカル下書き (localStorage)
+  // から読み込む — 案件 を選ぶ/作るまでブロックしない。
   useEffect(() => {
     let cancelled = false;
     initializedRef.current = false;
     setLoadedRecord(undefined);
     setSavedAt(null);
     registerSaveHandler(dirtyHandlerId, null);
-    if (!caseId) return;
+    if (!caseId) {
+      const draft = loadFromStorage<WeightBasicSavedInput | null>(draftStorageKey, null);
+      setLoadedRecord(draft ? { input: draft, updatedAt: "" } : null);
+      return;
+    }
     calculationRecordService.get(caseId, calculationType).then((record) => {
       if (cancelled) return;
       setLoadedRecord(
@@ -146,7 +156,7 @@ export function WeightShapeCalcSection({
       if (saved.dims) setDimRaw((prev) => ({ ...prev, ...saved.dims }));
       setLengthRaw(saved.length ?? "");
       setQuantityRaw(saved.quantity ?? "1");
-      setSavedAt(loadedRecord.updatedAt);
+      if (loadedRecord.updatedAt) setSavedAt(loadedRecord.updatedAt);
     } else {
       // Brand-new calculation only: default to 鉄, with 比重 read live from
       // the weight_materials master — never a hardcoded number. If 鉄 isn't
@@ -157,7 +167,6 @@ export function WeightShapeCalcSection({
         setDensityRaw(String(iron.density));
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadedRecord, materialsLoaded, materials]);
 
   async function handleImageUpload(file: File) {
@@ -184,26 +193,45 @@ export function WeightShapeCalcSection({
     markDirty();
   }
 
-  /** Any user edit (material/density/dims/length/quantity) registers this section's save handler — which both marks the page 未保存 and gives the case-switch confirmation's "保存して変更" a real function to call for this specific shape. */
-  function markDirty() {
-    registerSaveHandler(dirtyHandlerId, handleSave);
+  function buildInput(): WeightBasicSavedInput {
+    return {
+      materialId,
+      density: densityRaw,
+      dims: dimRaw,
+      length: lengthRaw,
+      quantity: quantityRaw,
+    };
   }
 
-  async function handleSave() {
-    if (!caseId || saving) return;
+  /** Any user edit (material/density/dims/length/quantity) registers this section's save handler — which both marks the page 未保存 and gives the case-switch confirmation's "保存して変更" a real function to call for this specific shape. Only meaningful once a 案件 is attached — while unattached, edits autosave to a local draft instead (see the effect below). */
+  function markDirty() {
+    if (caseId) registerSaveHandler(dirtyHandlerId, () => handleSave());
+  }
+
+  // 案件 未選択の間は、編集のたびにローカル下書きへ即保存。
+  useEffect(() => {
+    if (caseId || !initializedRef.current) return;
+    saveToStorage(draftStorageKey, buildInput());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseId, materialId, densityRaw, dimRaw, lengthRaw, quantityRaw]);
+
+  /** 案件 が付いていればそのまま保存、なければ「既存の案件を選ぶ/新規案件を作成」を先に聞く。 */
+  function handleSaveClick() {
+    if (!caseId) {
+      setCaseAttachPromptOpen(true);
+      return;
+    }
+    handleSave();
+  }
+
+  async function handleSave(targetCaseId: string = caseId) {
+    if (!targetCaseId || saving) return;
     setSaving(true);
     try {
-      const input: WeightBasicSavedInput = {
-        materialId,
-        density: densityRaw,
-        dims: dimRaw,
-        length: lengthRaw,
-        quantity: quantityRaw,
-      };
       const saved = await calculationRecordService.save(
-        caseId,
+        targetCaseId,
         calculationType,
-        input as unknown as Record<string, unknown>,
+        buildInput() as unknown as Record<string, unknown>,
         { area, unitWeight, totalWeight },
       );
       setSavedAt(saved.updatedAt);
@@ -211,6 +239,14 @@ export function WeightShapeCalcSection({
     } finally {
       setSaving(false);
     }
+  }
+
+  /** 保存時に選んだ/作った 案件 に、今入力中の内容をそのまま紐付ける。 */
+  async function attachToCase(newCaseId: string) {
+    setCaseId(newCaseId);
+    setCaseAttachPromptOpen(false);
+    await handleSave(newCaseId);
+    saveToStorage(draftStorageKey, null);
   }
 
   const dimStates = useMemo(
@@ -282,17 +318,19 @@ export function WeightShapeCalcSection({
           {t(`weightCalc.basic.shapes.${shapeKey}`)}
         </span>
         <div className="flex items-center gap-2">
-          {savedAt && (
+          {caseId && savedAt && (
             <span className="text-[11px] text-muted-2">
               {t("weightCalc.basic.saved")}{" "}
               {formatJaTime(savedAt)}
             </span>
           )}
+          {!caseId && (
+            <span className="text-[11px] text-warning">{t("caseSelector.draftNote")}</span>
+          )}
           <button
             type="button"
-            onClick={handleSave}
-            disabled={!caseId || saving}
-            title={!caseId ? t("caseSelector.selectCaseFirst") : undefined}
+            onClick={handleSaveClick}
+            disabled={saving}
             className="btn-secondary !py-1 !text-[12px]"
           >
             {saving ? (
@@ -542,6 +580,12 @@ export function WeightShapeCalcSection({
           )}
         </div>
       </div>
+
+      <CaseAttachPrompt
+        open={caseAttachPromptOpen}
+        onClose={() => setCaseAttachPromptOpen(false)}
+        onAttach={attachToCase}
+      />
     </div>
   );
 }

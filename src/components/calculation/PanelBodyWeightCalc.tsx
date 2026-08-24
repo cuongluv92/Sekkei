@@ -14,8 +14,7 @@ import {
 import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
 import { getPublicUrl } from "@/lib/supabase/storage";
 import { getWeightShape, WEIGHT_SHAPES, type WeightDimKey, type WeightShapeKey } from "@/lib/utils/weightShapes";
-import { NewCaseModal } from "@/components/common/NewCaseModal";
-import { SavedCasesModal } from "@/components/common/SavedCasesModal";
+import { CaseAttachPrompt } from "@/components/common/CaseAttachPrompt";
 import {
   BOX_FACE_KEYS,
   boxFaceArea,
@@ -269,8 +268,6 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
   const [wiringFactor, setWiringFactor] = useState<"1" | "1.2" | "1.5">("1");
   const [partsModalOpen, setPartsModalOpen] = useState(false);
   const [caseAttachPromptOpen, setCaseAttachPromptOpen] = useState(false);
-  const [showNewCaseModal, setShowNewCaseModal] = useState(false);
-  const [showSavedCasesModal, setShowSavedCasesModal] = useState(false);
 
   const [loadedRecord, setLoadedRecord] = useState<PanelBodySavedInput | null | undefined>(undefined);
   const [saving, setSaving] = useState(false);
@@ -431,8 +428,6 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
   async function attachToCase(newCaseId: string) {
     setCaseId(newCaseId);
     setCaseAttachPromptOpen(false);
-    setShowNewCaseModal(false);
-    setShowSavedCasesModal(false);
     await handleSave(newCaseId);
     saveToStorage(DRAFT_STORAGE_KEY, null);
   }
@@ -584,7 +579,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
             </span>
           )}
           {!caseId && (
-            <span className="text-[11px] text-warning">{t("weightCalc.panel.body.draftNote")}</span>
+            <span className="text-[11px] text-warning">{t("caseSelector.draftNote")}</span>
           )}
           <button
             type="button"
@@ -667,17 +662,19 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
 
                 <div className="flex flex-col gap-1.5 border-t border-border pt-2.5">
                   <span className="text-[11px] text-muted-2">{t("weightCalc.panel.body.facesNote")}</span>
-                  {BOX_FACE_KEYS.map((face) => (
-                    <FaceRow
-                      key={face}
-                      label={t(`weightCalc.panel.body.boxFaces.${face}`)}
-                      formulaLabel={t(`weightCalc.panel.body.boxFaceFormula.${face}`)}
-                      areaMm2={boxFaceArea(face, num(box.W), num(box.H), num(box.D))}
-                      state={box.faces[face]}
-                      weight={boxFaceWeight(face)}
-                      onChange={(patch) => updateBoxFace(face, patch)}
-                    />
-                  ))}
+                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                    {BOX_FACE_KEYS.map((face) => (
+                      <FaceRow
+                        key={face}
+                        label={t(`weightCalc.panel.body.boxFaces.${face}`)}
+                        formulaLabel={t(`weightCalc.panel.body.boxFaceFormula.${face}`)}
+                        areaMm2={boxFaceArea(face, num(box.W), num(box.H), num(box.D))}
+                        state={box.faces[face]}
+                        weight={boxFaceWeight(face)}
+                        onChange={(patch) => updateBoxFace(face, patch)}
+                      />
+                    ))}
+                  </div>
                 </div>
               </>
             )}
@@ -714,17 +711,19 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
 
               <div className="flex flex-col gap-1.5 border-t border-border pt-2.5">
                 <span className="text-[11px] text-muted-2">{t("weightCalc.panel.body.facesNote")}</span>
-                {ROOF_FACE_KEYS.map((face) => (
-                  <FaceRow
-                    key={face}
-                    label={t(`weightCalc.panel.body.roofFaces.${face}`)}
-                    formulaLabel={t(`weightCalc.panel.body.roofFaceFormula.${face}`)}
-                    areaMm2={roofFaceArea(face, num(box.W), num(roof.Droof), num(roof.Hroof))}
-                    state={roof.faces[face]}
-                    weight={roofFaceWeight(face)}
-                    onChange={(patch) => updateRoofFace(face, patch)}
-                  />
-                ))}
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  {ROOF_FACE_KEYS.map((face) => (
+                    <FaceRow
+                      key={face}
+                      label={t(`weightCalc.panel.body.roofFaces.${face}`)}
+                      formulaLabel={t(`weightCalc.panel.body.roofFaceFormula.${face}`)}
+                      areaMm2={roofFaceArea(face, num(box.W), num(roof.Droof), num(roof.Hroof))}
+                      state={roof.faces[face]}
+                      weight={roofFaceWeight(face)}
+                      onChange={(patch) => updateRoofFace(face, patch)}
+                    />
+                  ))}
+                </div>
               </div>
             </GroupCard>
           )}
@@ -1103,58 +1102,11 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
         />
       )}
 
-      {caseAttachPromptOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={() => setCaseAttachPromptOpen(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-lg border border-border bg-surface p-4 shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="mb-1.5 text-[14px] font-bold text-foreground">
-              {t("weightCalc.panel.body.attachPrompt.title")}
-            </h3>
-            <p className="mb-3 text-[12.5px] text-muted">{t("weightCalc.panel.body.attachPrompt.message")}</p>
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setCaseAttachPromptOpen(false);
-                  setShowSavedCasesModal(true);
-                }}
-                className="btn-secondary w-full justify-center"
-              >
-                {t("caseSelector.savedCasesButton")}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCaseAttachPromptOpen(false);
-                  setShowNewCaseModal(true);
-                }}
-                className="btn-primary w-full justify-center"
-              >
-                {t("caseSelector.newCaseButton")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setCaseAttachPromptOpen(false)}
-                className="btn-ghost w-full justify-center"
-              >
-                {t("common.cancel")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showNewCaseModal && (
-        <NewCaseModal onClose={() => setShowNewCaseModal(false)} onCreated={(created) => attachToCase(created.id)} />
-      )}
-      {showSavedCasesModal && (
-        <SavedCasesModal onClose={() => setShowSavedCasesModal(false)} onOpen={(id) => attachToCase(id)} />
-      )}
+      <CaseAttachPrompt
+        open={caseAttachPromptOpen}
+        onClose={() => setCaseAttachPromptOpen(false)}
+        onAttach={attachToCase}
+      />
     </div>
   );
 }

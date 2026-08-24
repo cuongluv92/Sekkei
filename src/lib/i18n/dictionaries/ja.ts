@@ -154,6 +154,11 @@ const ja: Dictionary = {
     switchWithoutSaving: "保存せず変更",
     saveAndSwitch: "保存して変更",
     selectCaseFirst: "案件を選択してください",
+    attachPrompt: {
+      title: "保存先の案件を選択",
+      message: "保存するには案件が必要です。既存の案件を選ぶか、新規案件を作成してください。",
+    },
+    draftNote: "下書き（未保存・保存時に案件を選択）",
   },
   selection: {
     title: "選定",
@@ -363,12 +368,7 @@ const ja: Dictionary = {
           name: "名称",
           shape: "形状",
         },
-        draftNote: "下書き（未保存・保存時に案件を選択）",
         roofThicknessNote: "板厚は箱体の t（{t}）と同じです。",
-        attachPrompt: {
-          title: "保存先の案件を選択",
-          message: "この計算を保存するには案件が必要です。既存の案件を選ぶか、新規案件を作成してください。",
-        },
         imageTabs: {
           indoor: "屋内",
           outdoor: "屋外",

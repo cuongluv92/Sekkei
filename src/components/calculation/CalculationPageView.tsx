@@ -5,6 +5,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { formatJaTime } from "@/lib/utils/dateFormat";
+import { loadFromStorage, saveToStorage } from "@/lib/utils/localStore";
 import {
   calculationRecordService,
   calculationService,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/services";
 import { CalculationForm } from "@/components/calculation/CalculationForm";
 import { CalculationResult } from "@/components/calculation/CalculationResult";
+import { CaseAttachPrompt } from "@/components/common/CaseAttachPrompt";
 import { ExportActions } from "@/components/common/ExportActions";
 import { Modal } from "@/components/common/Modal";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -19,6 +21,11 @@ import { CaseSelector } from "@/components/common/CaseSelector";
 import { CalculationTemplateSettings } from "@/components/settings/CalculationTemplateSettings";
 import { useActiveCase, useEffectiveCaseId } from "@/lib/store/ActiveCaseProvider";
 import type { CalculationDefinition, CalculationTemplate } from "@/lib/types";
+
+interface CalculationDraft {
+  values: Record<string, string>;
+  results: Record<string, string>[];
+}
 
 interface CalculationPageViewProps {
   calculationKey: string;
@@ -49,14 +56,15 @@ function CalculationPageViewInner({
     loading: caseLoading,
     registerSaveHandler,
   } = useActiveCase();
-  // This screen must never silently show whatever 案件 was left active
-  // elsewhere — opening it always starts at 案件選択 until the user
-  // genuinely picks one here (see useEffectiveCaseId). An explicit
-  // `?case=` deep link (e.g. Global Search's 計算 result) always wins over
-  // that, exactly like DesignView.
-  const effectiveActiveCaseId = useEffectiveCaseId(true);
+  // This screen is usable the instant it opens, with no forced 案件選択
+  // first — so it does NOT suppress the already-active 案件, and stays
+  // usable even with caseId === "" (see the localStorage-draft mode below).
+  // An explicit `?case=` deep link (e.g. Global Search's 計算 result) always
+  // wins, exactly like DesignView.
+  const effectiveActiveCaseId = useEffectiveCaseId(false);
   const caseIdParam = searchParams.get("case") ?? "";
   const caseId = caseIdParam || effectiveActiveCaseId;
+  const draftStorageKey = `sekkei.calcDraft.${calculationKey}`;
 
   // Broadcast the effective 案件 (URL-provided or a genuine pick here) up
   // to the app-wide active 案件 so it's what other modules resume.
@@ -73,7 +81,9 @@ function CalculationPageViewInner({
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [caseAttachPromptOpen, setCaseAttachPromptOpen] = useState(false);
   const loadTokenRef = useRef(0);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
     setDefinition(null);
@@ -85,11 +95,20 @@ function CalculationPageViewInner({
       .then(setTemplate);
   }, [calculationKey]);
 
+  // 案件 未選択のときは calculation_records ではなくローカル下書き (localStorage)
+  // から読み込む — 案件 を選ぶ/作るまでブロックしない。
   useEffect(() => {
     const token = ++loadTokenRef.current;
     setSavedAt(null);
+    initializedRef.current = false;
     registerSaveHandler(calculationKey, null);
-    if (!caseId) return;
+    if (!caseId) {
+      const draft = loadFromStorage<CalculationDraft | null>(draftStorageKey, null);
+      setValues(draft?.values ?? {});
+      setResults(draft?.results ?? []);
+      initializedRef.current = true;
+      return;
+    }
     calculationRecordService.get(caseId, calculationKey).then((record) => {
       if (loadTokenRef.current !== token) return; // a newer (case/calculationKey) fetch already applied
       if (record) {
@@ -103,9 +122,17 @@ function CalculationPageViewInner({
         setValues({});
         setResults([]);
       }
+      initializedRef.current = true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseId, calculationKey]);
+
+  // 案件 未選択の間は、編集/計算のたびにローカル下書きへ即保存。
+  useEffect(() => {
+    if (caseId || !initializedRef.current) return;
+    saveToStorage(draftStorageKey, { values, results });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseId, values, results]);
 
   // Unregister this module's save handler on unmount so a stale handler
   // pointing at an old case's data can never be invoked by the switch
@@ -121,7 +148,7 @@ function CalculationPageViewInner({
     const rows = await calculationService.calculate(calculationKey, values);
     setResults(rows);
     setLoading(false);
-    registerSaveHandler(calculationKey, handleSave);
+    if (caseId) registerSaveHandler(calculationKey, () => handleSave());
   }
 
   function handleClear() {
@@ -129,12 +156,21 @@ function CalculationPageViewInner({
     setResults([]);
   }
 
-  async function handleSave() {
-    if (!caseId || saving) return;
+  /** 案件 が付いていればそのまま保存、なければ「既存の案件を選ぶ/新規案件を作成」を先に聞く。 */
+  function handleSaveClick() {
+    if (!caseId) {
+      setCaseAttachPromptOpen(true);
+      return;
+    }
+    handleSave();
+  }
+
+  async function handleSave(targetCaseId: string = caseId) {
+    if (!targetCaseId || saving) return;
     setSaving(true);
     try {
       const saved = await calculationRecordService.save(
-        caseId,
+        targetCaseId,
         calculationKey,
         values,
         { rows: results },
@@ -144,6 +180,14 @@ function CalculationPageViewInner({
     } finally {
       setSaving(false);
     }
+  }
+
+  /** 保存時に選んだ/作った 案件 に、今入力中の内容をそのまま紐付ける。 */
+  async function attachToCase(newCaseId: string) {
+    setActiveCaseId(newCaseId);
+    setCaseAttachPromptOpen(false);
+    await handleSave(newCaseId);
+    saveToStorage(draftStorageKey, null);
   }
 
   if (!definition) {
@@ -166,18 +210,12 @@ function CalculationPageViewInner({
         }
       />
 
-      <CaseSelector />
+      <CaseSelector suppress={false} />
 
       {caseLoading ? (
         <div className="panel">
           <div className="panel-body py-12 text-center text-[13px] text-muted-2">
             {t("common.loading")}
-          </div>
-        </div>
-      ) : !caseId ? (
-        <div className="panel">
-          <div className="panel-body py-12 text-center text-[13px] text-muted-2">
-            {t("caseSelector.selectCaseFirst")}
           </div>
         </div>
       ) : (
@@ -192,7 +230,7 @@ function CalculationPageViewInner({
                 values={values}
                 onChange={(key, value) => {
                   setValues((prev) => ({ ...prev, [key]: value }));
-                  registerSaveHandler(calculationKey, handleSave);
+                  if (caseId) registerSaveHandler(calculationKey, () => handleSave());
                 }}
               />
               <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
@@ -208,7 +246,7 @@ function CalculationPageViewInner({
                   {t("common.clear")}
                 </button>
                 <button
-                  onClick={handleSave}
+                  onClick={handleSaveClick}
                   disabled={saving}
                   className="btn-secondary"
                 >
@@ -219,11 +257,14 @@ function CalculationPageViewInner({
                   )}
                   {t("common.save")}
                 </button>
-                {savedAt && (
+                {caseId && savedAt && (
                   <span className="text-[11px] text-muted-2">
                     {t("weightCalc.basic.saved")}{" "}
                     {formatJaTime(savedAt)}
                   </span>
+                )}
+                {!caseId && (
+                  <span className="text-[11px] text-warning">{t("caseSelector.draftNote")}</span>
                 )}
               </div>
             </div>
@@ -274,6 +315,12 @@ function CalculationPageViewInner({
           <CalculationTemplateSettings keys={[calculationKey]} />
         </Modal>
       )}
+
+      <CaseAttachPrompt
+        open={caseAttachPromptOpen}
+        onClose={() => setCaseAttachPromptOpen(false)}
+        onAttach={attachToCase}
+      />
     </div>
   );
 }

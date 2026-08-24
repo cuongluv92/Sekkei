@@ -37,18 +37,12 @@ export function WeightCalculationView() {
     setCaseId: setActiveCaseId,
     loading: caseLoading,
   } = useActiveCase();
-  // This screen must never silently show whatever 案件 was left active
-  // elsewhere — opening it always starts at 案件選択 until the user
-  // genuinely picks one here (see useEffectiveCaseId). An explicit
-  // `?case=` deep link (e.g. Global Search's 計算 result) always wins over
-  // that, exactly like DesignView.
-  //
-  // 盤重量計算 (tab === "panel") is a trial exception: it must be usable the
-  // instant the page opens, with no forced 案件選択 first — so it does NOT
-  // suppress the already-active 案件 (still overridable via `?case=` or the
-  // compact CaseSelector), and stays usable even with caseId === "" (see
-  // PanelBodyWeightCalc's own localStorage-draft mode below).
-  const effectiveActiveCaseId = useEffectiveCaseId(tab !== "panel");
+  // 重量計算 (both 基本/盤) is usable the instant the page opens, with no
+  // forced 案件選択 first — so it does NOT suppress the already-active 案件
+  // (still overridable via `?case=` or the compact CaseSelector), and stays
+  // usable even with caseId === "" (each calc section keeps its own
+  // localStorage-draft mode until the user attaches/creates a 案件 to save).
+  const effectiveActiveCaseId = useEffectiveCaseId(false);
   const caseIdParam = searchParams.get("case") ?? "";
   const caseId = caseIdParam || effectiveActiveCaseId;
 
@@ -80,7 +74,7 @@ export function WeightCalculationView() {
         }
       />
 
-      <CaseSelector suppress={tab !== "panel"} />
+      <CaseSelector suppress={false} />
 
       <div className="-mx-1 overflow-x-auto px-1">
         <div className="flex w-max min-w-full gap-1 border-b border-border pb-0">
@@ -109,17 +103,11 @@ export function WeightCalculationView() {
             {t("common.loading")}
           </div>
         </div>
-      ) : tab === "basic" && !caseId ? (
-        <div className="panel">
-          <div className="panel-body py-12 text-center text-[13px] text-muted-2">
-            {t("caseSelector.selectCaseFirst")}
-          </div>
-        </div>
       ) : tab === "basic" ? (
+        // caseId === "" のときは WeightShapeCalcSection 側がローカル下書きモードで動作する。
         <BasicWeightCalc caseId={caseId} />
       ) : (
-        // 盤重量計算 は 案件 未選択でも即使える (trial) — caseId === "" のときは
-        // PanelBodyWeightCalc 側がローカル下書きモードで動作する。
+        // caseId === "" のときは PanelBodyWeightCalc 側がローカル下書きモードで動作する。
         <PanelWeightCalc caseId={caseId} />
       )}
 

@@ -12,7 +12,10 @@ import {
 } from "react";
 import { partAssemblyService } from "@/lib/services/partAssemblyService";
 import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
+import { loadFromStorage, saveToStorage } from "@/lib/utils/localStore";
 import type { PartAssemblyRow } from "@/lib/types";
+
+const DRAFT_STORAGE_KEY = "sekkei.partAssemblyDraft";
 
 interface PartAssemblyContextValue {
   caseId: string;
@@ -67,26 +70,54 @@ export function PartAssemblyProvider({ children }: { children: ReactNode }) {
   // a value only an updater assigns) here would risk persisting a stale
   // array — silently dropping the row that was just "added".
   const rowsRef = useRef<PartAssemblyRow[]>([]);
+  // Tracks whether the *previous* render had no 案件 attached — only then
+  // does a fresh caseId mean "the user just attached a 案件 to their
+  // in-progress anonymous draft", as opposed to an ordinary switch between
+  // two already-案件-scoped tables (which must always show that 案件's own
+  // saved rows, never another 案件's leftover rows).
+  const prevCaseIdRef = useRef(caseId);
 
+  // 案件 未選択のときは calculation_records と同様にローカル下書き (localStorage)
+  // から読み込む — 案件 を選ぶ/作るまでブロックしない。 案件 に紐付いた瞬間 (空の
+  // draft から real caseId へ) は、その下書きをそのまま新しい 案件 に書き込む —
+  // 案件 側の一覧が既に空でない場合だけ、その 案件 の既存データを優先する
+  // (他 案件 の内容を上書きしてしまわないよう)。
   useEffect(() => {
+    const attachingDraft = !prevCaseIdRef.current && !!caseId;
+    const draftBeforeFetch = rowsRef.current;
+    prevCaseIdRef.current = caseId;
+
     if (!caseId) {
-      rowsRef.current = [];
-      setRows([]);
+      const draft = loadFromStorage<PartAssemblyRow[]>(DRAFT_STORAGE_KEY, []);
+      rowsRef.current = draft;
+      setRows(draft);
       return;
     }
     let active = true;
     setLoading(true);
     partAssemblyService.listByCase(caseId).then((list) => {
-      if (active) {
+      if (!active) return;
+      if (attachingDraft && list.length === 0 && draftBeforeFetch.length > 0) {
+        rowsRef.current = draftBeforeFetch;
+        setRows(draftBeforeFetch);
+        partAssemblyService.saveRows(caseId, draftBeforeFetch);
+        saveToStorage(DRAFT_STORAGE_KEY, []);
+      } else {
         rowsRef.current = list;
         setRows(list);
-        setLoading(false);
       }
+      setLoading(false);
     });
     return () => {
       active = false;
     };
   }, [caseId]);
+
+  // 案件 未選択の間は、編集のたびにローカル下書きへ即保存。
+  useEffect(() => {
+    if (caseId) return;
+    saveToStorage(DRAFT_STORAGE_KEY, rows);
+  }, [caseId, rows]);
 
   const persist = useCallback(
     (next: PartAssemblyRow[]) => {

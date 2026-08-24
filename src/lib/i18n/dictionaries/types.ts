@@ -151,6 +151,11 @@ export interface Dictionary {
     switchWithoutSaving: string;
     saveAndSwitch: string;
     selectCaseFirst: string;
+    attachPrompt: {
+      title: string;
+      message: string;
+    };
+    draftNote: string;
   };
   selection: {
     title: string;
@@ -331,12 +336,7 @@ export interface Dictionary {
           name: string;
           shape: string;
         };
-        draftNote: string;
         roofThicknessNote: string;
-        attachPrompt: {
-          title: string;
-          message: string;
-        };
         imageTabs: {
           indoor: string;
           outdoor: string;

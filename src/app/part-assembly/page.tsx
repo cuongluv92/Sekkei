@@ -255,16 +255,14 @@ function PartAssemblyView() {
 
       <CaseSelector suppress={false} />
 
+      {!caseId && (
+        <p className="text-[11px] text-warning">{t("caseSelector.draftNote")}</p>
+      )}
+
       {caseLoading ? (
         <div className="panel">
           <div className="panel-body py-12 text-center text-[13px] text-muted-2">
             {t("common.loading")}
-          </div>
-        </div>
-      ) : !caseId ? (
-        <div className="panel">
-          <div className="panel-body py-12 text-center text-[13px] text-muted-2">
-            {t("caseSelector.selectCaseFirst")}
           </div>
         </div>
       ) : (

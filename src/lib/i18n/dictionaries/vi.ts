@@ -158,6 +158,11 @@ const vi: Dictionary = {
     switchWithoutSaving: "Đổi mà không lưu",
     saveAndSwitch: "Lưu rồi đổi",
     selectCaseFirst: "Vui lòng chọn 案件",
+    attachPrompt: {
+      title: "Chọn 案件 để lưu",
+      message: "Cần gắn 案件 để lưu. Chọn 案件 đã có hoặc tạo 案件 mới.",
+    },
+    draftNote: "Bản nháp (chưa lưu — chọn 案件 khi lưu)",
   },
   selection: {
     title: "Chọn thiết bị",
@@ -366,12 +371,7 @@ const vi: Dictionary = {
           name: "名称",
           shape: "Hình dạng",
         },
-        draftNote: "Bản nháp (chưa lưu — chọn 案件 khi lưu)",
         roofThicknessNote: "板厚 mái lấy theo 箱体 t ({t}).",
-        attachPrompt: {
-          title: "Chọn 案件 để lưu",
-          message: "Cần gắn 案件 để lưu phép tính này. Chọn 案件 đã có hoặc tạo 案件 mới.",
-        },
         imageTabs: {
           indoor: "屋内",
           outdoor: "屋外",
