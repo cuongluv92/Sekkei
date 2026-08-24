@@ -219,15 +219,14 @@ const vi: Dictionary = {
     insertBlankOption: "Thêm dòng trống",
     insertFromMasterOption: "Chọn từ 部品データ",
     selectPartModalTitle: "Chọn từ 部品データ",
+    dxfExport: "Xuất DXF",
     dwgTemplateMissing:
-      "Chưa có DWG/DXF テンプレート (template) — hãy tải lên ở Cài đặt > Template xuất.",
+      "Chưa có DXF テンプレート (template) — hãy tải lên ở Cài đặt > Template xuất.",
     dwgExportError: "Xuất bản vẽ thất bại",
     dwgExportedPartial:
       "Đã xuất {fileName} (đã điền {written} dòng, {skipped} dòng vượt quá số dòng của template nên chưa điền)",
-    dwgStaticTemplate:
-      "Đã xuất {fileName} (chưa có DXF template nên DWG chỉ là file gốc bạn tải lên, chưa có số liệu — hãy tải DXF template ở Cài đặt > Template xuất để số liệu 部品リスト được điền vào)",
     dwgNoPlaceholders:
-      "Không tìm thấy placeholder trong DXF template — xem hướng dẫn ở Cài đặt > Template xuất.",
+      "Không tìm thấy ô điền 部品リスト trong DXF template — kiểm tra xem có đủ dòng tiêu đề 記号/品名/メーカー/型式/定格・仕様/数量/備考 không.",
     excelExportError: "Xuất Excel thất bại",
     exportEmpty: "Danh sách 部品 đang trống — hãy thêm 部品 trước.",
   },
@@ -575,9 +574,8 @@ const vi: Dictionary = {
     partTemplateDescription:
       "Tải lên template dùng cho Xuất Excel / Xuất bản vẽ của 部品製作.",
     dxfPlaceholderHint:
-      "Trong DXF template, đặt các text placeholder theo từng dòng bảng: {symbol_1}{name_1}{manufacturer_1}{model_1}{specification_1}{quantity_1}{remarks_1}, {symbol_2}... (tối đa 30 dòng) — app sẽ điền số liệu 部品リスト thật vào đúng các placeholder này. DWG không hỗ trợ điền số liệu (định dạng nhị phân độc quyền của AutoCAD), nên khi xuất chỉ tải về đúng file bạn đã tải lên.",
+      "Nếu file DXF của bạn là khung bản vẽ thông thường có dòng tiêu đề 記号／品名／メーカー／型式／定格・仕様／数量／備考 và các ô trống (-) bên dưới, chỉ cần tải file lên là app tự động nhận diện và điền số liệu 部品リスト thật vào — không cần chuẩn bị gì thêm. Chỉ khi template của bạn dùng tiêu đề khác thì mới cần tự đặt placeholder dạng {symbol_1}{name_1}{manufacturer_1}{model_1}{specification_1}{quantity_1}{remarks_1}, {symbol_2}... (tối đa 30 dòng). DWG không hỗ trợ điền số liệu (định dạng nhị phân độc quyền của AutoCAD) nên chỉ dùng được DXF.",
     kindExcel: "Excel",
-    kindDwg: "DWG (không điền số liệu)",
     kindDxf: "DXF (điền 部品リスト)",
     templateManagement: {
       title: "Quản lý template 設計管理",

@@ -208,10 +208,10 @@ export interface Dictionary {
     insertBlankOption: string;
     insertFromMasterOption: string;
     selectPartModalTitle: string;
+    dxfExport: string;
     dwgTemplateMissing: string;
     dwgExportError: string;
     dwgExportedPartial: string;
-    dwgStaticTemplate: string;
     dwgNoPlaceholders: string;
     excelExportError: string;
     exportEmpty: string;
@@ -510,7 +510,6 @@ export interface Dictionary {
     partTemplateDescription: string;
     dxfPlaceholderHint: string;
     kindExcel: string;
-    kindDwg: string;
     kindDxf: string;
     templateManagement: {
       title: string;

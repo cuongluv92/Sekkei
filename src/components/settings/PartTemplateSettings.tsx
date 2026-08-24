@@ -11,12 +11,14 @@ import type { PartTemplate, PartTemplateKind } from "@/lib/types";
 const PART_TEMPLATE_KINDS: { kind: PartTemplateKind; accept: string }[] = [
   { kind: "excel", accept: ".xlsx,.xls" },
   { kind: "dxf", accept: ".dxf" },
-  { kind: "dwg", accept: ".dwg" },
 ];
 
 /**
- * Excel/DWG output template upload for 部品製作 — moved off the old combined
- * /settings page so it lives with the feature it actually configures.
+ * Excel/DXF output template upload for 部品製作 — moved off the old combined
+ * /settings page so it lives with the feature it actually configures. DWG
+ * isn't offered here: it's a binary format with no way to write real data
+ * into it (see partAssemblyExportService.ts), so DXF is the only 図面 export
+ * template kind.
  */
 export function PartTemplateSettings() {
   const { t } = useTranslation();
@@ -61,11 +63,7 @@ export function PartTemplateSettings() {
               return (
                 <tr key={kind}>
                   <td>
-                    {kind === "excel"
-                      ? t("settings.kindExcel")
-                      : kind === "dxf"
-                        ? t("settings.kindDxf")
-                        : t("settings.kindDwg")}
+                    {kind === "excel" ? t("settings.kindExcel") : t("settings.kindDxf")}
                   </td>
                   <td className={tpl ? "text-foreground" : "text-muted-2"}>
                     {tpl ? (

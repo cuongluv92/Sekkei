@@ -15,7 +15,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import {
-  exportPartAssemblyDwg,
+  exportPartAssemblyDxf,
   exportPartAssemblyExcel,
   searchService,
 } from "@/lib/services";
@@ -113,7 +113,7 @@ function PartAssemblyView() {
   const { toast, showToast } = useToast();
   const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [exportingDwg, setExportingDwg] = useState(false);
+  const [exportingDxf, setExportingDxf] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
 
   useEffect(() => {
@@ -129,10 +129,10 @@ function PartAssemblyView() {
     if (file) openFileAsset(file);
   }
 
-  async function handleExportDwg() {
-    setExportingDwg(true);
+  async function handleExportDxf() {
+    setExportingDxf(true);
     try {
-      const result = await exportPartAssemblyDwg(rows, locale);
+      const result = await exportPartAssemblyDxf(rows, locale);
       switch (result.status) {
         case "filled":
           showToast(
@@ -145,9 +145,6 @@ function PartAssemblyView() {
               : t("common.fileExported", { fileName: result.fileName }),
           );
           break;
-        case "staticTemplate":
-          showToast(t("partAssembly.dwgStaticTemplate", { fileName: result.fileName }));
-          break;
         case "noPlaceholders":
           showToast(t("partAssembly.dwgNoPlaceholders"), "error");
           break;
@@ -158,7 +155,7 @@ function PartAssemblyView() {
     } catch {
       showToast(t("partAssembly.dwgExportError"), "error");
     } finally {
-      setExportingDwg(false);
+      setExportingDxf(false);
     }
   }
 
@@ -492,16 +489,16 @@ function PartAssemblyView() {
               </span>
               <div className="flex flex-wrap items-center gap-2">
                 <button
-                  onClick={handleExportDwg}
-                  disabled={exportingDwg}
+                  onClick={handleExportDxf}
+                  disabled={exportingDxf}
                   className="btn-secondary"
                 >
-                  {exportingDwg ? (
+                  {exportingDxf ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <Layers className="h-3.5 w-3.5" />
                   )}
-                  {t("common.dwgExport")}
+                  {t("partAssembly.dxfExport")}
                 </button>
                 <button
                   onClick={handleExportExcel}

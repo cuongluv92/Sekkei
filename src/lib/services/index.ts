@@ -20,5 +20,5 @@ export { importService } from "./importService";
 export { exportService } from "./exportService";
 export {
   exportPartAssemblyExcel,
-  exportPartAssemblyDwg,
+  exportPartAssemblyDxf,
 } from "./partAssemblyExportService";

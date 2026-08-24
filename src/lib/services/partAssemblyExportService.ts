@@ -60,59 +60,49 @@ function downloadBlob(blob: Blob, fileName: string): void {
   URL.revokeObjectURL(url);
 }
 
-export type PartAssemblyDwgResult =
+export type PartAssemblyDxfResult =
   | { status: "filled"; fileName: string; rowsWritten: number; rowsSkipped: number }
-  | { status: "staticTemplate"; fileName: string }
   | { status: "noPlaceholders"; fileName: string }
   | { status: "noTemplate" };
 
 /**
- * 部品製作 図面出力 (DWG/DXF).
+ * 部品製作 図面出力 (DXF).
  *
  * DWG is AutoCAD's proprietary binary format — there is no open way to
  * write real 部品リスト data into a .dwg file without a commercial CAD SDK
- * (ODA/Teigha, Autodesk RealDWG...), which this app doesn't have. DXF is
- * AutoCAD's plain-text interchange format (AutoCAD's own File > Save As >
- * DXF produces an equivalent drawing any CAD tool can open) and CAN be
- * patched safely: see dxfPartListPatch.ts for the placeholder-tag scheme
- * (`{symbol_1}`, `{quantity_1}`, `{symbol_2}`... one set per pre-drawn
- * table row) used to fill in real data without touching any other entity
- * in the drawing.
+ * (ODA/Teigha, Autodesk RealDWG...), which this app doesn't have, so DWG
+ * isn't offered as an export template kind at all (see PartTemplateSettings).
+ * DXF is AutoCAD's plain-text interchange format (AutoCAD's own File > Save
+ * As > DXF produces an equivalent drawing any CAD tool can open) and CAN be
+ * patched safely — see dxfPartListPatch.ts for the detection scheme: it
+ * auto-recognizes a standard 記号/品名/メーカー/型式/定格・仕様/数量/備考
+ * header + blank-cell grid (real AutoCAD title-block templates already look
+ * like this, no template prep needed), falling back to explicit `{field_N}`
+ * placeholder tags for templates that don't use the standard header labels.
  *
- * Resolution order: a "dxf" template (real data fill) is preferred; falls
- * back to downloading the "dwg" template as-is (a static frame — no data
- * merge, since that's genuinely not possible) when only DWG is configured.
- * Never fakes success — returns { status: "noTemplate" } when neither has
- * been uploaded in 設定 > 出力テンプレート.
+ * Never fakes success — returns { status: "noTemplate" } when no DXF
+ * template has been uploaded in 設定 > 出力テンプレート.
  */
-export async function exportPartAssemblyDwg(
+export async function exportPartAssemblyDxf(
   rows: PartAssemblyRow[],
   locale: "ja" | "vi",
-): Promise<PartAssemblyDwgResult> {
+): Promise<PartAssemblyDxfResult> {
   const dxfTemplate = await partTemplateService.getByKind("dxf");
-  if (dxfTemplate) {
-    const res = await fetch(getPublicUrl(dxfTemplate.storagePath));
-    if (!res.ok) throw new Error("dxf-template-fetch-failed");
-    const dxfText = await res.text();
-    const patched = patchDxfPartList(dxfText, rows, locale);
-    if (!patched.placeholdersFound) {
-      return { status: "noPlaceholders", fileName: dxfTemplate.fileName };
-    }
-    const fileName = `部品製作図_${new Date().toISOString().slice(0, 10)}.dxf`;
-    downloadBlob(new Blob([patched.text], { type: "application/dxf" }), fileName);
-    return {
-      status: "filled",
-      fileName,
-      rowsWritten: patched.rowsWritten,
-      rowsSkipped: patched.rowsSkipped,
-    };
-  }
+  if (!dxfTemplate) return { status: "noTemplate" };
 
-  const dwgTemplate = await partTemplateService.getByKind("dwg");
-  if (dwgTemplate) {
-    window.open(getPublicUrl(dwgTemplate.storagePath), "_blank", "noopener,noreferrer");
-    return { status: "staticTemplate", fileName: dwgTemplate.fileName };
+  const res = await fetch(getPublicUrl(dxfTemplate.storagePath));
+  if (!res.ok) throw new Error("dxf-template-fetch-failed");
+  const dxfText = await res.text();
+  const patched = patchDxfPartList(dxfText, rows, locale);
+  if (!patched.placeholdersFound) {
+    return { status: "noPlaceholders", fileName: dxfTemplate.fileName };
   }
-
-  return { status: "noTemplate" };
+  const fileName = `部品製作図_${new Date().toISOString().slice(0, 10)}.dxf`;
+  downloadBlob(new Blob([patched.text], { type: "application/dxf" }), fileName);
+  return {
+    status: "filled",
+    fileName,
+    rowsWritten: patched.rowsWritten,
+    rowsSkipped: patched.rowsSkipped,
+  };
 }
