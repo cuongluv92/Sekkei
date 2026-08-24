@@ -111,7 +111,7 @@ function buildWorksheet(data: PanelWeightExportData): { workbook: ExcelJS.Workbo
         ws.mergeCells(r, 2, r, 4);
         const sub = groupRow.getCell(5);
         sub.value = subtotal.weightKg;
-        sub.numFmt = "#,##0.0";
+        sub.numFmt = "#,##0.00";
         sub.font = { bold: true };
         sub.alignment = { horizontal: "right" };
       }
@@ -128,7 +128,7 @@ function buildWorksheet(data: PanelWeightExportData): { workbook: ExcelJS.Workbo
     dataRow.getCell(4).value = row.quantity;
     dataRow.getCell(4).alignment = { horizontal: "right" };
     dataRow.getCell(5).value = row.weightKg;
-    dataRow.getCell(5).numFmt = "#,##0.0";
+    dataRow.getCell(5).numFmt = "#,##0.00";
     dataRow.getCell(5).alignment = { horizontal: "right" };
     for (let c = 1; c <= COLS; c++) {
       dataRow.getCell(c).border = BORDER;
@@ -150,7 +150,7 @@ function buildWorksheet(data: PanelWeightExportData): { workbook: ExcelJS.Workbo
   rawRow.getCell(1).font = { bold: true };
   ws.mergeCells(r, 4, r, 4);
   rawRow.getCell(5).value = data.rawTotal;
-  rawRow.getCell(5).numFmt = "#,##0.0";
+  rawRow.getCell(5).numFmt = "#,##0.00";
   rawRow.getCell(5).font = { bold: true };
   rawRow.getCell(5).alignment = { horizontal: "right" };
   for (let c = 1; c <= COLS; c++) rawRow.getCell(c).border = BORDER;
@@ -162,7 +162,7 @@ function buildWorksheet(data: PanelWeightExportData): { workbook: ExcelJS.Workbo
   totalRow.getCell(1).font = { bold: true, size: 12 };
   ws.mergeCells(r, 4, r, 4);
   totalRow.getCell(5).value = data.correctedTotal;
-  totalRow.getCell(5).numFmt = "#,##0.0";
+  totalRow.getCell(5).numFmt = "#,##0.00";
   totalRow.getCell(5).font = { bold: true, size: 12, color: { argb: "FF1D4ED8" } };
   totalRow.getCell(5).alignment = { horizontal: "right" };
   totalRow.height = 22;
