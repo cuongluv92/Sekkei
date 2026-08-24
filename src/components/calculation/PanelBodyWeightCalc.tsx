@@ -1,6 +1,6 @@
 "use client";
 
-import { FileSpreadsheet, FileText, Image as ImageIcon, Loader2, Plus, Save, Trash2, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, Image as ImageIcon, Loader2, Plus, Save, Trash2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { formatJaTime } from "@/lib/utils/dateFormat";
@@ -9,6 +9,7 @@ import {
   calculationRecordService,
   exportPanelWeightExcel,
   panelWeightLayerImageService,
+  partAssemblyService,
   printPanelWeight,
   searchService,
   weightMaterialService,
@@ -267,6 +268,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
   const [additional, setAdditional] = useState<AdditionalItem[]>([]);
   const [wiringFactor, setWiringFactor] = useState<"1" | "1.2" | "1.5">("1");
   const [partsModalOpen, setPartsModalOpen] = useState(false);
+  const [fetchingPartAssembly, setFetchingPartAssembly] = useState(false);
   const [caseAttachPromptOpen, setCaseAttachPromptOpen] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -758,6 +760,40 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     markDirty();
   }
 
+  /**
+   * 部品を1件ずつ検索して追加する代わりに、同じ案件の 部品製作 (BOM) を丸ごと
+   * 取り込む — 部品製作側で既に入力済みの数量・重量をそのまま使うので、この
+   * グループへの再入力が不要になる。件数が多い案件で特に有効。
+   */
+  async function handleFetchFromPartAssembly() {
+    if (!caseId) return;
+    if (parts.length > 0 && !window.confirm(t("weightCalc.panel.body.fetchPartAssemblyReplaceConfirm"))) return;
+    setFetchingPartAssembly(true);
+    try {
+      const rows = await partAssemblyService.listByCase(caseId);
+      if (rows.length === 0) {
+        window.alert(t("weightCalc.panel.body.fetchPartAssemblyEmpty"));
+        return;
+      }
+      setParts(
+        rows.map((r) => ({
+          id: nextId(),
+          symbol: r.symbol,
+          name: r.name,
+          model: r.model,
+          masterWeight: r.weight != null ? String(r.weight) : "",
+          quantity: String(r.quantity),
+          manualWeight: "",
+          sourceRefId: r.sourceRefId,
+          sourceType: r.sourceType,
+        })),
+      );
+      markDirty();
+    } finally {
+      setFetchingPartAssembly(false);
+    }
+  }
+
   return (
     <div id="weight-panel-body" className="panel scroll-mt-4">
       <div className="panel-header flex items-center justify-between gap-2">
@@ -1109,7 +1145,23 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
             title={t("weightCalc.panel.body.groups.parts")}
             weight={partsWeight}
             onAdd={() => setPartsModalOpen(true)}
-            addLabel={t("weightCalc.panel.body.fetchFromPartAssembly")}
+            addLabel={t("weightCalc.panel.body.addPartManually")}
+            extraActions={
+              <button
+                type="button"
+                onClick={handleFetchFromPartAssembly}
+                disabled={fetchingPartAssembly || !caseId}
+                title={!caseId ? t("caseSelector.draftNote") : t("weightCalc.panel.body.fetchFromPartAssembly")}
+                className="btn-ghost !py-1 !text-[12px]"
+              >
+                {fetchingPartAssembly ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}
+                {t("weightCalc.panel.body.fetchFromPartAssembly")}
+              </button>
+            }
           >
             {parts.map((item) => {
               const w = partItemWeight(item);
@@ -1488,12 +1540,14 @@ function GroupCard({
   weight,
   onAdd,
   addLabel,
+  extraActions,
   children,
 }: {
   title: string;
   weight: number;
   onAdd?: () => void;
   addLabel?: string;
+  extraActions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const { t } = useTranslation();
@@ -1503,6 +1557,7 @@ function GroupCard({
         <span className="text-[13px] font-bold text-foreground">{title}</span>
         <div className="flex items-center gap-2">
           <span className="text-[12.5px] font-semibold text-muted">{roundTo(weight, 2)} kg</span>
+          {extraActions}
           {onAdd && (
             <button type="button" onClick={onAdd} className="btn-ghost !py-1 !text-[12px]">
               <Plus className="h-3.5 w-3.5" />

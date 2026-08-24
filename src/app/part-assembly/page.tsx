@@ -47,13 +47,20 @@ const BLANK_ROW: Omit<PartAssemblyRow, "id"> = {
   remarks: "",
 };
 
+/** "" clears 重量 back to unset; anything else parses as a number. Returns `false` for an unparseable in-progress keystroke, so the caller can skip updating rather than corrupt the stored value. */
+function parseWeightInput(value: string): number | undefined | false {
+  if (value.trim() === "") return undefined;
+  const n = Number(value);
+  return Number.isNaN(n) ? false : n;
+}
+
 /**
  * Builds a 案件側 部品リスト row from a picked 部品データ/部品図/カタログ
  * hit. 数量・備考 are per-案件 and always start blank/1 here — 部品データ's
  * own 数量・備考 (if any) describe the master record, not this 案件, so
- * they're intentionally never copied in. 重量 isn't copied in either (not
- * used or shown here); sourceRefId keeps the link back to the master row so
- * 盤重量計算 can look weight up from there later.
+ * they're intentionally never copied in. 重量 IS copied in when the master
+ * record has one registered — saves re-typing it per 案件, and lets
+ * 盤重量計算's 部品グループ pull a ready total straight from this table.
  */
 function rowFromMasterItem(
   item: SearchResultItem,
@@ -64,6 +71,7 @@ function rowFromMasterItem(
     manufacturerId: item.manufacturerId,
     model: item.model,
     specification: item.specification,
+    weight: item.weight,
     quantity: 1,
     remarks: "",
     sourceRefId: item.id,
@@ -302,7 +310,7 @@ function PartAssemblyView() {
             </div>
 
             <div className="data-table-wrap">
-              <table className="data-table" style={{ minWidth: 1180 }}>
+              <table className="data-table" style={{ minWidth: 1260 }}>
                 <thead>
                   <tr>
                     <th style={{ width: "28px" }} />
@@ -316,6 +324,9 @@ function PartAssemblyView() {
                     <th style={{ width: "190px" }}>
                       {t("common.specification")}
                     </th>
+                    <th style={{ width: "80px" }} className="text-right">
+                      {t("common.weight")}
+                    </th>
                     <th style={{ width: "70px" }} className="text-right">
                       {t("common.quantity")}
                     </th>
@@ -326,14 +337,14 @@ function PartAssemblyView() {
                 <tbody>
                   {rowsLoading ? (
                     <tr>
-                      <td colSpan={10} className="py-8 text-center text-muted">
+                      <td colSpan={11} className="py-8 text-center text-muted">
                         {t("common.loading")}
                       </td>
                     </tr>
                   ) : rows.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={11}
                         className="py-8 text-center text-muted-2"
                       >
                         {t("partAssembly.tableEmpty")}
@@ -442,6 +453,20 @@ function PartAssemblyView() {
                               })
                             }
                             className="field-input py-1"
+                          />
+                        </td>
+                        <td className="text-right">
+                          <input
+                            type="number"
+                            min={0}
+                            step="any"
+                            value={row.weight ?? ""}
+                            onChange={(e) => {
+                              const weight = parseWeightInput(e.target.value);
+                              if (weight !== false) updateField(row.id, { weight });
+                            }}
+                            placeholder="kg"
+                            className="field-input w-[72px] py-1 text-right"
                           />
                         </td>
                         <td className="text-right">

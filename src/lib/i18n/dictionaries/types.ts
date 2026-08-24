@@ -372,6 +372,9 @@ export interface Dictionary {
         roofBreakdownNote: string;
         roofWidthNote: string;
         fetchFromPartAssembly: string;
+        addPartManually: string;
+        fetchPartAssemblyReplaceConfirm: string;
+        fetchPartAssemblyEmpty: string;
         weightNotRegistered: string;
         wiringFactor: string;
         rawTotal: string;
