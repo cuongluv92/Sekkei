@@ -1,16 +1,20 @@
 "use client";
 
-import { Image as ImageIcon, Loader2, Plus, Save, Trash2, Upload } from "lucide-react";
+import { FileSpreadsheet, FileText, Image as ImageIcon, Loader2, Plus, Save, Trash2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { formatJaTime } from "@/lib/utils/dateFormat";
 import { loadFromStorage, saveToStorage } from "@/lib/utils/localStore";
 import {
   calculationRecordService,
+  exportPanelWeightExcel,
   panelWeightLayerImageService,
+  printPanelWeight,
   searchService,
   weightMaterialService,
+  type PanelWeightExportRow,
 } from "@/lib/services";
+import { designCaseService } from "@/lib/services/design";
 import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
 import { getPublicUrl } from "@/lib/supabase/storage";
 import { getWeightShape, WEIGHT_SHAPES, type WeightDimKey, type WeightShapeKey } from "@/lib/utils/weightShapes";
@@ -20,7 +24,7 @@ import {
   boxFaceArea,
   busbarWeightKg,
   foldedPlateArea,
-  PANEL_IMAGE_KEYS,
+  PANEL_LAYER_KEYS,
   ROOF_FACE_KEYS,
   roofFaceArea,
   sheetWeightKg,
@@ -269,6 +273,8 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
   const [wiringFactor, setWiringFactor] = useState<"1" | "1.2" | "1.5">("1");
   const [partsModalOpen, setPartsModalOpen] = useState(false);
   const [caseAttachPromptOpen, setCaseAttachPromptOpen] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const [loadedRecord, setLoadedRecord] = useState<PanelBodySavedInput | null | undefined>(undefined);
   const [saving, setSaving] = useState(false);
@@ -526,6 +532,172 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
 
   const activeImage = images[activeImageKey];
 
+  /** Flattens every group into export rows (Excel/PDF) — same weight functions the screen already shows, so the export can never drift from what's on screen. */
+  function buildExportRows(): PanelWeightExportRow[] {
+    const rows: PanelWeightExportRow[] = [];
+    const g = {
+      box: t("weightCalc.panel.body.groups.box"),
+      roof: t("weightCalc.panel.body.groups.roof"),
+      door: t("weightCalc.panel.body.groups.door"),
+      subPlate: t("weightCalc.panel.body.groups.subPlate"),
+      protectionPlate: t("weightCalc.panel.body.groups.protectionPlate"),
+      hardware: t("weightCalc.panel.body.groups.hardware"),
+      frame: t("weightCalc.panel.body.groups.frame"),
+      busbar: t("weightCalc.panel.body.groups.busbar"),
+      parts: t("weightCalc.panel.body.groups.parts"),
+      wood: t("weightCalc.panel.body.groups.wood"),
+      additional: t("weightCalc.panel.body.groups.additional"),
+    };
+
+    if (layer === "nitto") {
+      rows.push({
+        group: g.box,
+        item: t("weightCalc.panel.body.fields.nittoBoxWeight"),
+        detail: `${nittoBoxWeight || "—"} kg`,
+        quantity: nittoBoxQuantity,
+        weightKg: boxWeight,
+      });
+    } else {
+      for (const face of BOX_FACE_KEYS) {
+        if (!box.faces[face].included) continue;
+        rows.push({
+          group: g.box,
+          item: t(`weightCalc.panel.body.boxFaces.${face}`),
+          detail: `${t(`weightCalc.panel.body.boxFaceFormula.${face}`)}=${roundTo(boxFaceAreaFor(face), 0)}mm²`,
+          quantity: "1",
+          weightKg: boxFaceWeight(face),
+        });
+      }
+    }
+
+    if (layer === "outdoor") {
+      for (const face of ROOF_FACE_KEYS) {
+        rows.push({
+          group: g.roof,
+          item: t(`weightCalc.panel.body.roofFaces.${face}`),
+          detail: t(`weightCalc.panel.body.roofFaceFormula.${face}`),
+          quantity: "1",
+          weightKg: roofFaceWeight(face),
+        });
+      }
+    }
+
+    function pushSheetGroup(groupLabel: string, items: SheetItem[]) {
+      items.forEach((item, i) => {
+        rows.push({
+          group: groupLabel,
+          item: `#${i + 1}`,
+          detail: `W${item.W} H${item.H} T${item.T} t${item.t}`,
+          quantity: item.quantity,
+          weightKg: sheetItemWeight(item),
+        });
+      });
+    }
+    if (layer !== "nitto") pushSheetGroup(g.door, doors);
+    if (layer !== "nitto") pushSheetGroup(g.subPlate, subPlates);
+    pushSheetGroup(g.protectionPlate, protectionPlates);
+    pushSheetGroup(g.hardware, hardware);
+
+    function pushShapeGroup(groupLabel: string, items: AdditionalItem[]) {
+      items.forEach((item, i) => {
+        const shape = getWeightShape(item.shapeKey);
+        const dims = shape.fields.map((k) => `${k}${item.dims[k] ?? ""}`).join(" ");
+        rows.push({
+          group: groupLabel,
+          item: `${t(`weightCalc.basic.shapes.${item.shapeKey}`)}#${i + 1}`,
+          detail: `${dims} L${item.length}`,
+          quantity: item.quantity,
+          weightKg: additionalItemWeight(item),
+        });
+      });
+    }
+    pushShapeGroup(g.frame, frames);
+
+    busbars.forEach((item, i) => {
+      rows.push({
+        group: g.busbar,
+        item: `#${i + 1}`,
+        detail: `W${item.W} L${item.L} t${item.t}`,
+        quantity: item.quantity,
+        weightKg: busbarItemWeight(item),
+      });
+    });
+
+    parts.forEach((item) => {
+      rows.push({
+        group: g.parts,
+        item: item.model || item.name || "-",
+        detail: item.name,
+        quantity: item.quantity,
+        weightKg: partItemWeight(item),
+      });
+    });
+
+    woods.forEach((item, i) => {
+      rows.push({
+        group: g.wood,
+        item: `#${i + 1}`,
+        detail: `W${item.W} H${item.H} t${item.t}`,
+        quantity: item.quantity,
+        weightKg: flatItemWeight(item),
+      });
+    });
+
+    pushShapeGroup(g.additional, additional);
+
+    return rows;
+  }
+
+  async function buildExportData() {
+    const rows = buildExportRows();
+    const groupSubtotals = Array.from(
+      rows.reduce((map, row) => map.set(row.group, (map.get(row.group) ?? 0) + row.weightKg), new Map<string, number>()),
+    ).map(([group, weightKg]) => ({ group, weightKg }));
+
+    let caseInfo: { drawingNumber: string; managementNumber: string; constructionNumber: string; projectName: string; panelName: string } | undefined;
+    if (caseId) {
+      const detail = await designCaseService.getDetail(caseId);
+      if (detail) {
+        caseInfo = {
+          drawingNumber: detail.case.drawingNumber,
+          managementNumber: detail.case.managementNumber,
+          constructionNumber: detail.case.constructionNumber,
+          projectName: detail.case.projectName,
+          panelName: detail.panels[0]?.panelName ?? "",
+        };
+      }
+    }
+
+    return {
+      title: t("weightCalc.panel.body.title"),
+      caseInfo,
+      layerLabel: t(`weightCalc.panel.body.layer.${layer}`),
+      rows,
+      groupSubtotals,
+      wiringFactorLabel: `×${wiringFactor}`,
+      rawTotal: totalWeight,
+      correctedTotal: correctedWeight,
+      generatedAt: new Date().toLocaleDateString("ja-JP"),
+    };
+  }
+
+  async function handleExcelExport() {
+    setExportingExcel(true);
+    try {
+      await exportPanelWeightExcel(await buildExportData());
+    } finally {
+      setExportingExcel(false);
+    }
+  }
+  async function handlePdfExport() {
+    setExportingPdf(true);
+    try {
+      printPanelWeight(await buildExportData());
+    } finally {
+      setExportingPdf(false);
+    }
+  }
+
   function updateBox(patch: Partial<BoxState>) {
     setBox((prev) => ({ ...prev, ...patch }));
     markDirty();
@@ -588,6 +760,24 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
           {!caseId && (
             <span className="text-[11px] text-warning">{t("caseSelector.draftNote")}</span>
           )}
+          <button
+            type="button"
+            onClick={handleExcelExport}
+            disabled={exportingExcel}
+            className="btn-secondary !py-1 !text-[12px]"
+          >
+            {exportingExcel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
+            {t("common.excelExport")}
+          </button>
+          <button
+            type="button"
+            onClick={handlePdfExport}
+            disabled={exportingPdf}
+            className="btn-secondary !py-1 !text-[12px]"
+          >
+            {exportingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+            {t("common.pdfExport")}
+          </button>
           <button
             type="button"
             onClick={handleSaveClick}
@@ -1095,10 +1285,10 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
           </div>
         </div>
 
-        {/* 参考図: 屋内/屋外/Nitto/扉/屋根 で切替 */}
+        {/* 参考図: 屋内/屋外/Nitto で切替 (扉/屋根は別図面がないため対象外) */}
         <div className="order-1 flex flex-col gap-1.5 lg:order-2">
           <div className="flex flex-wrap gap-1">
-            {PANEL_IMAGE_KEYS.map((key) => (
+            {PANEL_LAYER_KEYS.map((key) => (
               <button
                 key={key}
                 type="button"
