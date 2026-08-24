@@ -326,14 +326,13 @@ export interface Dictionary {
           wood: string;
           additional: string;
         };
-        manualOverridePlaceholder: string;
-        manualOverrideTitle: string;
         fields: {
           thickness: string;
           fold: string;
           manualWeight: string;
           droof: string;
-          hroof: string;
+          h1: string;
+          h2: string;
           length: string;
           nittoBoxWeight: string;
           model: string;
@@ -351,8 +350,23 @@ export interface Dictionary {
         facesNote: string;
         boxFaces: { back: string; top: string; bottom: string; left: string; right: string };
         boxFaceFormula: { back: string; top: string; bottom: string; left: string; right: string };
-        roofFaces: { top: string; frontSkirt: string; backSkirt: string; leftSkirt: string; rightSkirt: string };
-        roofFaceFormula: { top: string; frontSkirt: string; backSkirt: string; leftSkirt: string; rightSkirt: string };
+        roofFaces: {
+          top: string;
+          frontSkirt: string;
+          backSkirt: string;
+          leftSkirt: string;
+          rightSkirt: string;
+          overhang: string;
+        };
+        roofFaceFormula: {
+          top: string;
+          frontSkirt: string;
+          backSkirt: string;
+          leftSkirt: string;
+          rightSkirt: string;
+          overhang: string;
+        };
+        roofBreakdownNote: string;
         roofWidthNote: string;
         fetchFromPartAssembly: string;
         weightNotRegistered: string;

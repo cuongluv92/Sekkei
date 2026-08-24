@@ -7,6 +7,7 @@ import {
   roofArea,
   ROOF_FACE_KEYS,
   roofFaceArea,
+  roofOverhangDepth,
   sheetWeightKg,
   woodWeightKg,
 } from "./panelWeight";
@@ -34,16 +35,24 @@ describe("panelWeight formulas", () => {
     expect(sumAllFaces - withoutTop).toBe(W * D);
   });
 
-  it("屋根: each face computed individually, summing to roofArea()", () => {
-    const W = 600, Droof = 450, Hroof = 50;
-    expect(roofFaceArea("top", W, Droof, Hroof)).toBe(W * Droof);
-    expect(roofFaceArea("frontSkirt", W, Droof, Hroof)).toBe(W * Hroof);
-    expect(roofFaceArea("backSkirt", W, Droof, Hroof)).toBe(W * Hroof);
-    expect(roofFaceArea("leftSkirt", W, Droof, Hroof)).toBe(Droof * Hroof);
-    expect(roofFaceArea("rightSkirt", W, Droof, Hroof)).toBe(Droof * Hroof);
-    const sum = ROOF_FACE_KEYS.reduce((s, f) => s + roofFaceArea(f, W, Droof, Hroof), 0);
-    expect(sum).toBe(roofArea(W, Droof, Hroof));
-    expect(roofArea(W, Droof, Hroof)).toBe(W * Droof + 2 * W * Hroof + 2 * Droof * Hroof);
+  it("屋根 (片流れ: 前H1低い/後H2高い): each face computed individually, summing to roofArea()", () => {
+    const W = 600, Droof = 450, D = 400, H1 = 30, H2 = 70;
+    expect(roofFaceArea("top", W, Droof, D, H1, H2)).toBe(W * Droof);
+    expect(roofFaceArea("frontSkirt", W, Droof, D, H1, H2)).toBe(W * H1);
+    expect(roofFaceArea("backSkirt", W, Droof, D, H1, H2)).toBe(W * H2);
+    // 左右スカートは前後の高さが違う分の台形 — 平均高さ×奥行き
+    expect(roofFaceArea("leftSkirt", W, Droof, D, H1, H2)).toBe(Droof * ((H1 + H2) / 2));
+    expect(roofFaceArea("rightSkirt", W, Droof, D, H1, H2)).toBe(Droof * ((H1 + H2) / 2));
+    // 張り出し下面 = 屋根が箱体の奥行きより前に出ている分 (Droof−D) × W
+    expect(roofFaceArea("overhang", W, Droof, D, H1, H2)).toBe(W * (Droof - D));
+    const sum = ROOF_FACE_KEYS.reduce((s, f) => s + roofFaceArea(f, W, Droof, D, H1, H2), 0);
+    expect(sum).toBe(roofArea(W, Droof, D, H1, H2));
+  });
+
+  it("roofOverhangDepth: 屋根が箱体より奥行き短い/等しい場合は0 (負にならない)", () => {
+    expect(roofOverhangDepth(450, 400)).toBe(50);
+    expect(roofOverhangDepth(400, 400)).toBe(0);
+    expect(roofOverhangDepth(350, 400)).toBe(0);
   });
 
   it("扉/中板・基板/保護板/金具・パネル等: folded plate matches user's given door formula A = W×H + 2×T×H + 2×W×T", () => {

@@ -101,10 +101,8 @@ interface AdditionalItem {
 
 interface FaceState {
   included: boolean;
-  manualWeight: string;
 }
 type BoxFaces = Record<BoxFaceKey, FaceState>;
-type RoofFaces = Record<RoofFaceKey, FaceState>;
 
 interface BoxState {
   W: string;
@@ -119,12 +117,15 @@ interface BoxState {
 
 interface RoofState {
   Droof: string;
-  Hroof: string;
+  /** 前スカートの高さ (低い方)。 */
+  H1: string;
+  /** 後スカートの高さ (高い方) — 片流れ屋根のため前後で異なる。 */
+  H2: string;
   materialId: string;
   density: string;
   // 板厚は 箱体 の t をそのまま使う (別入力なし) — 屋根だけ違う板厚にする実物はまず無いため。
-  /** 5面 (天面/前後左右スカート) — 個別に表示・手動重量で上書きできる。 */
-  faces: RoofFaces;
+  // 面は常に固定 (天面/前後左右スカート/張り出し下面) — 箱体と違い実物によって
+  // 有無が変わるものではないため、個別トグルは廃止し常に自動計算する。
 }
 
 interface PanelBodySavedInput {
@@ -205,21 +206,15 @@ function blankFrameItem(materials: WeightMaterial[]): AdditionalItem {
  */
 function blankBoxFaces(layer: PanelLayerKey): BoxFaces {
   return Object.fromEntries(
-    BOX_FACE_KEYS.map((key) => [
-      key,
-      { included: key === "top" ? layer !== "outdoor" : true, manualWeight: "" },
-    ]),
+    BOX_FACE_KEYS.map((key) => [key, { included: key === "top" ? layer !== "outdoor" : true }]),
   ) as BoxFaces;
 }
 function blankBox(materials: WeightMaterial[], layer: PanelLayerKey): BoxState {
   return { W: "", H: "", D: "", ...defaultMaterial(materials, "鉄"), t: "2.3", faces: blankBoxFaces(layer) };
 }
-function blankRoofFaces(): RoofFaces {
-  return Object.fromEntries(ROOF_FACE_KEYS.map((key) => [key, { included: true, manualWeight: "" }])) as RoofFaces;
-}
 /** 屋根 has no 板厚 of its own — it always uses 箱体 の t (see roofFaceWeight). */
 function blankRoof(materials: WeightMaterial[]): RoofState {
-  return { Droof: "", Hroof: "", ...defaultMaterial(materials, "鉄"), faces: blankRoofFaces() };
+  return { Droof: "", H1: "", H2: "", ...defaultMaterial(materials, "鉄") };
 }
 
 /** "" (untouched) | a positive finite number | null (typed but invalid). */
@@ -440,9 +435,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
   // ---- Weight calculations ----
 
   function boxFaceWeight(face: BoxFaceKey): number {
-    const state = box.faces[face];
-    if (!state.included) return 0;
-    if (state.manualWeight.trim() !== "") return num(state.manualWeight);
+    if (!box.faces[face].included) return 0;
     const area = boxFaceArea(face, num(box.W), num(box.H), num(box.D));
     return sheetWeightKg(area, num(box.t), num(box.density));
   }
@@ -451,11 +444,9 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
       ? num(nittoBoxWeight) * num(nittoBoxQuantity)
       : BOX_FACE_KEYS.reduce((sum, f) => sum + boxFaceWeight(f), 0);
 
+  /** 屋根は箱体と違い実物によって面の有無が変わらないため、常に6面すべて自動計算する (トグルなし)。 */
   function roofFaceWeight(face: RoofFaceKey): number {
-    const state = roof.faces[face];
-    if (!state.included) return 0;
-    if (state.manualWeight.trim() !== "") return num(state.manualWeight);
-    const area = roofFaceArea(face, num(box.W), num(roof.Droof), num(roof.Hroof));
+    const area = roofFaceArea(face, num(box.W), num(roof.Droof), num(box.D), num(roof.H1), num(roof.H2));
     return sheetWeightKg(area, num(box.t), num(roof.density));
   }
   const roofWeight =
@@ -491,8 +482,8 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     return (area * num(item.length) * num(item.density) * num(item.quantity)) / 1_000_000;
   }
 
-  const doorsWeight = doors.reduce((sum, i) => sum + sheetItemWeight(i), 0);
-  // Nitto: 扉 already covers the whole box including 中板・基板 — never double-count them.
+  // Nitto: 箱体重量 (手入力) already covers the whole box including 扉/中板・基板 — never double-count them.
+  const doorsWeight = layer === "nitto" ? 0 : doors.reduce((sum, i) => sum + sheetItemWeight(i), 0);
   const subPlatesWeight = layer === "nitto" ? 0 : subPlates.reduce((sum, i) => sum + sheetItemWeight(i), 0);
   const protectionPlatesWeight = protectionPlates.reduce((sum, i) => sum + sheetItemWeight(i), 0);
   const hardwareWeight = hardware.reduce((sum, i) => sum + sheetItemWeight(i), 0);
@@ -528,12 +519,8 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     setRoof((prev) => ({ ...prev, ...patch }));
     markDirty();
   }
-  function updateBoxFace(face: BoxFaceKey, patch: Partial<FaceState>) {
-    setBox((prev) => ({ ...prev, faces: { ...prev.faces, [face]: { ...prev.faces[face], ...patch } } }));
-    markDirty();
-  }
-  function updateRoofFace(face: RoofFaceKey, patch: Partial<FaceState>) {
-    setRoof((prev) => ({ ...prev, faces: { ...prev.faces, [face]: { ...prev.faces[face], ...patch } } }));
+  function toggleBoxFace(face: BoxFaceKey, included: boolean) {
+    setBox((prev) => ({ ...prev, faces: { ...prev.faces, [face]: { included } } }));
     markDirty();
   }
 
@@ -670,9 +657,9 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                         label={t(`weightCalc.panel.body.boxFaces.${face}`)}
                         formulaLabel={t(`weightCalc.panel.body.boxFaceFormula.${face}`)}
                         areaMm2={boxFaceArea(face, num(box.W), num(box.H), num(box.D))}
-                        state={box.faces[face]}
+                        included={box.faces[face].included}
                         weight={boxFaceWeight(face)}
-                        onChange={(patch) => updateBoxFace(face, patch)}
+                        onToggle={(included) => toggleBoxFace(face, included)}
                       />
                     ))}
                   </div>
@@ -681,7 +668,8 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
             )}
           </GroupCard>
 
-          {/* 屋根 (屋外のみ) */}
+          {/* 屋根 (屋外のみ) — 片流れ (前H1低い/後H2高い)。実物によって面の有無が変わる箱体と違い、
+              屋根は6面すべて常に存在するため個別トグルなし・自動計算のみ。 */}
           {layer === "outdoor" && (
             <GroupCard title={t("weightCalc.panel.body.groups.roof")} weight={roofWeight}>
               <p className="text-[11px] text-muted-2">
@@ -697,9 +685,15 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                   compact
                 />
                 <NumField
-                  label={t("weightCalc.panel.body.fields.hroof")}
-                  value={roof.Hroof}
-                  onChange={(v) => updateRoof({ Hroof: v })}
+                  label={t("weightCalc.panel.body.fields.h1")}
+                  value={roof.H1}
+                  onChange={(v) => updateRoof({ H1: v })}
+                  compact
+                />
+                <NumField
+                  label={t("weightCalc.panel.body.fields.h2")}
+                  value={roof.H2}
+                  onChange={(v) => updateRoof({ H2: v })}
                   compact
                 />
                 <MaterialRow
@@ -711,36 +705,46 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
               </div>
 
               <div className="flex flex-col gap-1.5 border-t border-border pt-2.5">
-                <span className="text-[11px] text-muted-2">{t("weightCalc.panel.body.facesNote")}</span>
+                <span className="text-[11px] text-muted-2">{t("weightCalc.panel.body.roofBreakdownNote")}</span>
                 <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                  {ROOF_FACE_KEYS.map((face) => (
-                    <FaceRow
-                      key={face}
-                      label={t(`weightCalc.panel.body.roofFaces.${face}`)}
-                      formulaLabel={t(`weightCalc.panel.body.roofFaceFormula.${face}`)}
-                      areaMm2={roofFaceArea(face, num(box.W), num(roof.Droof), num(roof.Hroof))}
-                      state={roof.faces[face]}
-                      weight={roofFaceWeight(face)}
-                      onChange={(patch) => updateRoofFace(face, patch)}
-                    />
-                  ))}
+                  {ROOF_FACE_KEYS.map((face) => {
+                    const areaMm2 = roofFaceArea(face, num(box.W), num(roof.Droof), num(box.D), num(roof.H1), num(roof.H2));
+                    return (
+                      <div
+                        key={face}
+                        className="flex flex-wrap items-center gap-2.5 rounded-md border border-border bg-surface px-2.5 py-2"
+                      >
+                        <span className="shrink-0 text-[12px] font-semibold text-foreground">
+                          {t(`weightCalc.panel.body.roofFaces.${face}`)}
+                        </span>
+                        <span className="text-[11px] text-muted-2">
+                          {t(`weightCalc.panel.body.roofFaceFormula.${face}`)} = {Number.isFinite(areaMm2) ? roundTo(areaMm2, 0) : 0} mm²
+                        </span>
+                        <span className="ml-auto text-[12.5px] font-semibold text-foreground">
+                          {roundTo(roofFaceWeight(face), 3)} kg
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </GroupCard>
           )}
 
-          {/* 扉 — 新規行は箱体のW/H/tを初期値として引き継ぐ (再入力の手間を省く。後から個別に変更可) */}
-          <SheetItemGroup
-            title={t("weightCalc.panel.body.groups.door")}
-            items={doors}
-            setItems={setDoors}
-            materials={materials}
-            markDirty={markDirty}
-            weightFn={sheetItemWeight}
-            t={t}
-            defaultThickness={box.t || "2.3"}
-            seed={{ W: box.W, H: box.H }}
-          />
+          {/* 扉 — 新規行は箱体のW/H/tを初期値として引き継ぐ (再入力の手間を省く。後から個別に変更可)。Nitto は箱体重量に含まれるため対象外。 */}
+          {layer !== "nitto" && (
+            <SheetItemGroup
+              title={t("weightCalc.panel.body.groups.door")}
+              items={doors}
+              setItems={setDoors}
+              materials={materials}
+              markDirty={markDirty}
+              weightFn={sheetItemWeight}
+              t={t}
+              defaultThickness={box.t || "2.3"}
+              seed={{ W: box.W, H: box.H }}
+            />
+          )}
           {/* 中板・基板 (Nitto は 扉 に含まれるため対象外) */}
           {layer !== "nitto" && (
             <SheetItemGroup
@@ -1141,61 +1145,40 @@ function NumField({
   );
 }
 
-/** One named face (背面/天面/底面/左側面/右側面, or 屋根's 5 sub-faces) — shows its own dimensions/area/weight so the total can be cross-checked face by face, with an include/exclude toggle and a per-face manual override. */
+/** One named 箱体 face (背面/天面/底面/左側面/右側面) — shows its own dimensions/area/weight so the total can be cross-checked face by face, with an include/exclude toggle (実物によって面の有無が違うため). Always auto-calculated — no manual override (面積×板厚×比重 で確定できるため、ムダな入力欄は置かない). */
 function FaceRow({
   label,
   formulaLabel,
   areaMm2,
-  state,
+  included,
   weight,
-  onChange,
+  onToggle,
 }: {
   label: string;
   formulaLabel: string;
   areaMm2: number;
-  state: FaceState;
+  included: boolean;
   weight: number;
-  onChange: (patch: Partial<FaceState>) => void;
+  onToggle: (included: boolean) => void;
 }) {
-  const { t } = useTranslation();
   return (
     <div className="flex flex-wrap items-center gap-2.5 rounded-md border border-border bg-surface px-2.5 py-2">
       <label className="flex shrink-0 items-center gap-1.5 text-[12px] font-semibold text-foreground">
-        <input
-          type="checkbox"
-          checked={state.included}
-          onChange={(e) => onChange({ included: e.target.checked })}
-        />
+        <input type="checkbox" checked={included} onChange={(e) => onToggle(e.target.checked)} />
         {label}
       </label>
       <span className="text-[11px] text-muted-2">
         {formulaLabel} = {Number.isFinite(areaMm2) ? roundTo(areaMm2, 0) : 0} mm²
       </span>
-      <div className="ml-auto flex items-center gap-2">
-        <input
-          type="number"
-          step="0.01"
-          placeholder={t("weightCalc.panel.body.manualOverridePlaceholder")}
-          title={t("weightCalc.panel.body.manualOverrideTitle")}
-          value={state.manualWeight}
-          onChange={(e) => onChange({ manualWeight: e.target.value })}
-          disabled={!state.included}
-          className={
-            state.manualWeight.trim() !== "" && parseNum(state.manualWeight) === null
-              ? "field-input !w-24 !py-1 !text-[12px] !border-danger"
-              : "field-input !w-24 !py-1 !text-[12px]"
-          }
-        />
-        <span
-          className={
-            state.included
-              ? "w-16 text-right text-[12.5px] font-semibold text-foreground"
-              : "w-16 text-right text-[12.5px] text-muted-2 line-through"
-          }
-        >
-          {roundTo(weight, 3)} kg
-        </span>
-      </div>
+      <span
+        className={
+          included
+            ? "ml-auto text-[12.5px] font-semibold text-foreground"
+            : "ml-auto text-[12.5px] text-muted-2 line-through"
+        }
+      >
+        {roundTo(weight, 3)} kg
+      </span>
     </div>
   );
 }

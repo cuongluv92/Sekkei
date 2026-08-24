@@ -11,11 +11,17 @@ import { WEIGHT_SHAPES, type WeightDimKey, type WeightDims, type WeightShapeKey 
  *   only 屋根 with no separate box top), so this is a manual per-face choice,
  *   not a fixed rule inferred from 屋内/屋外. Showing each face's own
  *   dimensions/area/weight lets the result be cross-checked face by face.
- * - 屋根 is a 5-face, open-bottom shape: one top face (W×Droof) + 4 skirt
- *   faces (2×W×Hroof + 2×Droof×Hroof), also broken out and shown face by
- *   face. Droof/Hroof are real drawing dimensions (D1 etc.) — never
- *   hard-coded (the Excel's `=50`/`D+50` are template shortcuts, not real
- *   constants).
+ * - 屋根 (a mono-slope hood over the box, per explicit correction): a flat
+ *   top (W×Droof) + a low front skirt H1 + a high back skirt H2 (front/back
+ *   heights genuinely differ on a sloped roof, unlike the earlier shared-
+ *   Hroof version) + left/right skirts as the trapezoid between H1 and H2
+ *   running the roof's depth (Droof×(H1+H2)/2) + the overhang's underside
+ *   — the horizontal strip where the roof extends past the box's own
+ *   depth D, W×max(0,Droof−D). No longer individually toggleable (unlike
+ *   箱体) — every real 屋根 has all of these, so a per-face on/off checkbox
+ *   was needless complexity; the breakdown is still shown, just read-only.
+ *   Droof/H1/H2 are real drawing dimensions — never hard-coded (the
+ *   Excel's `=50`/`D+50` are template shortcuts, not real constants).
  * - 扉/中板・基板/保護板/金具・パネル等 share one "folded sheet" shape: a flat
  *   face (W×H) plus 4 folded edges of depth T (2×T×H + 2×W×T). The Excel's
  *   基板 formula on the 鈑金屋根無し sheet (`=(...)*$G$4*$G$4`, thickness
@@ -72,26 +78,53 @@ export function boxFaceArea(face: BoxFaceKey, W: number, H: number, D: number): 
   }
 }
 
-/** 屋根の各面 — 天面(W×Droof)・前スカート/後スカート(W×Hroof、各1)・左スカート/右スカート(Droof×Hroof、各1)。5面合計で roofArea() と一致する。 */
-export type RoofFaceKey = "top" | "frontSkirt" | "backSkirt" | "leftSkirt" | "rightSkirt";
-export const ROOF_FACE_KEYS: RoofFaceKey[] = ["top", "frontSkirt", "backSkirt", "leftSkirt", "rightSkirt"];
+/**
+ * 屋根の各面 — 天面(W×Droof)・前スカート(W×H1、低い方)・後スカート(W×H2、高い方)・
+ * 左右スカート(Droof×(H1+H2)/2、前後の高さが違う片流れ屋根の台形部分)・
+ * 張り出し下面(W×max(0,Droof−D)、屋根が箱体の奥行きより前に出ている分の下面)。
+ * 6面合計で roofArea() と一致する。
+ */
+export type RoofFaceKey = "top" | "frontSkirt" | "backSkirt" | "leftSkirt" | "rightSkirt" | "overhang";
+export const ROOF_FACE_KEYS: RoofFaceKey[] = [
+  "top",
+  "frontSkirt",
+  "backSkirt",
+  "leftSkirt",
+  "rightSkirt",
+  "overhang",
+];
 
-export function roofFaceArea(face: RoofFaceKey, W: number, Droof: number, Hroof: number): number {
+/** 屋根が箱体の奥行きより前にどれだけ出ているか (負にはならない)。 */
+export function roofOverhangDepth(Droof: number, D: number): number {
+  return Math.max(0, Droof - D);
+}
+
+export function roofFaceArea(
+  face: RoofFaceKey,
+  W: number,
+  Droof: number,
+  D: number,
+  H1: number,
+  H2: number,
+): number {
   switch (face) {
     case "top":
       return W * Droof;
     case "frontSkirt":
+      return W * H1;
     case "backSkirt":
-      return W * Hroof;
+      return W * H2;
     case "leftSkirt":
     case "rightSkirt":
-      return Droof * Hroof;
+      return Droof * ((H1 + H2) / 2);
+    case "overhang":
+      return W * roofOverhangDepth(Droof, D);
   }
 }
 
-/** 屋根 (5面, 底面なし) = 天板1 (W×Droof) + 側面4 (2×W×Hroof + 2×Droof×Hroof). roofFaceArea() の5面合計と同じ。 */
-export function roofArea(W: number, Droof: number, Hroof: number): number {
-  return ROOF_FACE_KEYS.reduce((sum, face) => sum + roofFaceArea(face, W, Droof, Hroof), 0);
+/** 屋根 (6面) = roofFaceArea() の6面合計と同じ。 */
+export function roofArea(W: number, Droof: number, D: number, H1: number, H2: number): number {
+  return ROOF_FACE_KEYS.reduce((sum, face) => sum + roofFaceArea(face, W, Droof, D, H1, H2), 0);
 }
 
 /** 銅帯 — 断面(W×t)×長さL×比重、板金と違い折り曲げなし。 */
