@@ -14,16 +14,19 @@ import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
 import { getPublicUrl } from "@/lib/supabase/storage";
 import { getWeightShape, WEIGHT_SHAPES, type WeightDimKey, type WeightShapeKey } from "@/lib/utils/weightShapes";
 import {
-  boxBodyAreaIndoor,
-  boxBodyAreaOutdoor,
+  BOX_FACE_KEYS,
+  boxFaceArea,
   busbarWeightKg,
   foldedPlateArea,
   PANEL_IMAGE_KEYS,
-  roofArea,
+  ROOF_FACE_KEYS,
+  roofFaceArea,
   sheetWeightKg,
   woodWeightKg,
+  type BoxFaceKey,
   type PanelImageKey,
   type PanelLayerKey,
+  type RoofFaceKey,
 } from "@/lib/utils/panelWeight";
 import type { PanelWeightLayerImage } from "@/lib/services/panelWeightLayerImageService";
 import { InsertPartModal } from "@/components/common/InsertPartModal";
@@ -94,6 +97,13 @@ interface AdditionalItem {
   manualWeight: string;
 }
 
+interface FaceState {
+  included: boolean;
+  manualWeight: string;
+}
+type BoxFaces = Record<BoxFaceKey, FaceState>;
+type RoofFaces = Record<RoofFaceKey, FaceState>;
+
 interface BoxState {
   W: string;
   H: string;
@@ -101,8 +111,8 @@ interface BoxState {
   materialId: string;
   density: string;
   t: string;
-  quantity: string;
-  manualWeight: string;
+  /** 5面 (背面/天面/底面/左側面/右側面, 前面は扉が別途担当) — 実物によって存在する面が違うため個別に含める/含めないを選ぶ。 */
+  faces: BoxFaces;
 }
 
 interface RoofState {
@@ -111,8 +121,8 @@ interface RoofState {
   materialId: string;
   density: string;
   t: string;
-  quantity: string;
-  manualWeight: string;
+  /** 5面 (天面/前後左右スカート) — 個別に表示・手動重量で上書きできる。 */
+  faces: RoofFaces;
 }
 
 interface PanelBodySavedInput {
@@ -159,11 +169,28 @@ function blankAdditionalItem(): AdditionalItem {
     manualWeight: "",
   };
 }
-function blankBox(): BoxState {
-  return { W: "", H: "", D: "", materialId: "", density: "", t: "", quantity: "1", manualWeight: "" };
+/**
+ * Box faces default to all-included except 天面 (top) for 屋外盤 — a typical
+ * 屋外盤 has 屋根 cover the top instead, but some real cabinets have both a
+ * box top face AND a 屋根 above it, or only 屋根 with no box top at all, so
+ * this default is just a starting point the user can flip either way.
+ */
+function blankBoxFaces(layer: PanelLayerKey): BoxFaces {
+  return Object.fromEntries(
+    BOX_FACE_KEYS.map((key) => [
+      key,
+      { included: key === "top" ? layer !== "outdoor" : true, manualWeight: "" },
+    ]),
+  ) as BoxFaces;
+}
+function blankBox(layer: PanelLayerKey): BoxState {
+  return { W: "", H: "", D: "", materialId: "", density: "", t: "", faces: blankBoxFaces(layer) };
+}
+function blankRoofFaces(): RoofFaces {
+  return Object.fromEntries(ROOF_FACE_KEYS.map((key) => [key, { included: true, manualWeight: "" }])) as RoofFaces;
 }
 function blankRoof(): RoofState {
-  return { Droof: "", Hroof: "", materialId: "", density: "", t: "", quantity: "1", manualWeight: "" };
+  return { Droof: "", Hroof: "", materialId: "", density: "", t: "", faces: blankRoofFaces() };
 }
 
 /** "" (untouched) | a positive finite number | null (typed but invalid). */
@@ -193,7 +220,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
 
   const [layer, setLayer] = useState<PanelLayerKey>("indoor");
   const [activeImageKey, setActiveImageKey] = useState<PanelImageKey>("indoor");
-  const [box, setBox] = useState<BoxState>(blankBox());
+  const [box, setBox] = useState<BoxState>(blankBox("indoor"));
   const [nittoBoxWeight, setNittoBoxWeight] = useState("");
   const [nittoBoxQuantity, setNittoBoxQuantity] = useState("1");
   const [roof, setRoof] = useState<RoofState>(blankRoof());
@@ -252,8 +279,9 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     if (initializedRef.current || loadedRecord === undefined) return;
     initializedRef.current = true;
     if (!loadedRecord) return;
-    setLayer(loadedRecord.layer ?? "indoor");
-    setBox(loadedRecord.box ?? blankBox());
+    const restoredLayer = loadedRecord.layer ?? "indoor";
+    setLayer(restoredLayer);
+    setBox(loadedRecord.box ?? blankBox(restoredLayer));
     setNittoBoxWeight(loadedRecord.nittoBoxWeight ?? "");
     setNittoBoxQuantity(loadedRecord.nittoBoxQuantity ?? "1");
     setRoof(loadedRecord.roof ?? blankRoof());
@@ -312,26 +340,27 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
 
   // ---- Weight calculations ----
 
-  const boxArea =
-    layer === "indoor"
-      ? boxBodyAreaIndoor(num(box.W), num(box.H), num(box.D))
-      : layer === "outdoor"
-        ? boxBodyAreaOutdoor(num(box.W), num(box.H), num(box.D))
-        : 0;
+  function boxFaceWeight(face: BoxFaceKey): number {
+    const state = box.faces[face];
+    if (!state.included) return 0;
+    if (state.manualWeight.trim() !== "") return num(state.manualWeight);
+    const area = boxFaceArea(face, num(box.W), num(box.H), num(box.D));
+    return sheetWeightKg(area, num(box.t), num(box.density));
+  }
   const boxWeight =
     layer === "nitto"
       ? num(nittoBoxWeight) * num(nittoBoxQuantity)
-      : box.manualWeight.trim() !== ""
-        ? num(box.manualWeight) * num(box.quantity)
-        : sheetWeightKg(boxArea, num(box.t), num(box.density)) * num(box.quantity);
+      : BOX_FACE_KEYS.reduce((sum, f) => sum + boxFaceWeight(f), 0);
 
-  const roofAreaValue = layer === "outdoor" ? roofArea(num(box.W), num(roof.Droof), num(roof.Hroof)) : 0;
+  function roofFaceWeight(face: RoofFaceKey): number {
+    const state = roof.faces[face];
+    if (!state.included) return 0;
+    if (state.manualWeight.trim() !== "") return num(state.manualWeight);
+    const area = roofFaceArea(face, num(box.W), num(roof.Droof), num(roof.Hroof));
+    return sheetWeightKg(area, num(roof.t), num(roof.density));
+  }
   const roofWeight =
-    layer !== "outdoor"
-      ? 0
-      : roof.manualWeight.trim() !== ""
-        ? num(roof.manualWeight) * num(roof.quantity)
-        : sheetWeightKg(roofAreaValue, num(roof.t), num(roof.density)) * num(roof.quantity);
+    layer !== "outdoor" ? 0 : ROOF_FACE_KEYS.reduce((sum, f) => sum + roofFaceWeight(f), 0);
 
   function sheetItemWeight(item: SheetItem): number {
     if (item.manualWeight.trim() !== "") return num(item.manualWeight) * num(item.quantity);
@@ -395,6 +424,14 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
   }
   function updateRoof(patch: Partial<RoofState>) {
     setRoof((prev) => ({ ...prev, ...patch }));
+    markDirty();
+  }
+  function updateBoxFace(face: BoxFaceKey, patch: Partial<FaceState>) {
+    setBox((prev) => ({ ...prev, faces: { ...prev.faces, [face]: { ...prev.faces[face], ...patch } } }));
+    markDirty();
+  }
+  function updateRoofFace(face: RoofFaceKey, patch: Partial<FaceState>) {
+    setRoof((prev) => ({ ...prev, faces: { ...prev.faces, [face]: { ...prev.faces[face], ...patch } } }));
     markDirty();
   }
 
@@ -512,14 +549,21 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                   density={box.density}
                   onChange={(patch) => updateBox(patch)}
                 />
-                <div className="grid grid-cols-3 gap-2.5">
-                  <NumField label={t("weightCalc.panel.body.fields.thickness")} value={box.t} onChange={(v) => updateBox({ t: v })} />
-                  <NumField label={t("weightCalc.basic.quantity")} value={box.quantity} onChange={(v) => updateBox({ quantity: v })} />
-                  <NumField
-                    label={t("weightCalc.panel.body.fields.manualWeight")}
-                    value={box.manualWeight}
-                    onChange={(v) => updateBox({ manualWeight: v })}
-                  />
+                <NumField label={t("weightCalc.panel.body.fields.thickness")} value={box.t} onChange={(v) => updateBox({ t: v })} />
+
+                <div className="flex flex-col gap-1.5 border-t border-border pt-2.5">
+                  <span className="text-[11px] text-muted-2">{t("weightCalc.panel.body.facesNote")}</span>
+                  {BOX_FACE_KEYS.map((face) => (
+                    <FaceRow
+                      key={face}
+                      label={t(`weightCalc.panel.body.boxFaces.${face}`)}
+                      formulaLabel={t(`weightCalc.panel.body.boxFaceFormula.${face}`)}
+                      areaMm2={boxFaceArea(face, num(box.W), num(box.H), num(box.D))}
+                      state={box.faces[face]}
+                      weight={boxFaceWeight(face)}
+                      onChange={(patch) => updateBoxFace(face, patch)}
+                    />
+                  ))}
                 </div>
               </>
             )}
@@ -549,14 +593,21 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                 density={roof.density}
                 onChange={(patch) => updateRoof(patch)}
               />
-              <div className="grid grid-cols-3 gap-2.5">
-                <NumField label={t("weightCalc.panel.body.fields.thickness")} value={roof.t} onChange={(v) => updateRoof({ t: v })} />
-                <NumField label={t("weightCalc.basic.quantity")} value={roof.quantity} onChange={(v) => updateRoof({ quantity: v })} />
-                <NumField
-                  label={t("weightCalc.panel.body.fields.manualWeight")}
-                  value={roof.manualWeight}
-                  onChange={(v) => updateRoof({ manualWeight: v })}
-                />
+              <NumField label={t("weightCalc.panel.body.fields.thickness")} value={roof.t} onChange={(v) => updateRoof({ t: v })} />
+
+              <div className="flex flex-col gap-1.5 border-t border-border pt-2.5">
+                <span className="text-[11px] text-muted-2">{t("weightCalc.panel.body.facesNote")}</span>
+                {ROOF_FACE_KEYS.map((face) => (
+                  <FaceRow
+                    key={face}
+                    label={t(`weightCalc.panel.body.roofFaces.${face}`)}
+                    formulaLabel={t(`weightCalc.panel.body.roofFaceFormula.${face}`)}
+                    areaMm2={roofFaceArea(face, num(box.W), num(roof.Droof), num(roof.Hroof))}
+                    state={roof.faces[face]}
+                    weight={roofFaceWeight(face)}
+                    onChange={(patch) => updateRoofFace(face, patch)}
+                  />
+                ))}
               </div>
             </GroupCard>
           )}
@@ -897,6 +948,59 @@ function NumField({
         onChange={(e) => onChange(e.target.value)}
         className="field-input"
       />
+    </div>
+  );
+}
+
+/** One named face (背面/天面/底面/左側面/右側面, or 屋根's 5 sub-faces) — shows its own dimensions/area/weight so the total can be cross-checked face by face, with an include/exclude toggle and a per-face manual override. */
+function FaceRow({
+  label,
+  formulaLabel,
+  areaMm2,
+  state,
+  weight,
+  onChange,
+}: {
+  label: string;
+  formulaLabel: string;
+  areaMm2: number;
+  state: FaceState;
+  weight: number;
+  onChange: (patch: Partial<FaceState>) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2.5 rounded-md border border-border bg-surface px-2.5 py-2">
+      <label className="flex shrink-0 items-center gap-1.5 text-[12px] font-semibold text-foreground">
+        <input
+          type="checkbox"
+          checked={state.included}
+          onChange={(e) => onChange({ included: e.target.checked })}
+        />
+        {label}
+      </label>
+      <span className="text-[11px] text-muted-2">
+        {formulaLabel} = {Number.isFinite(areaMm2) ? roundTo(areaMm2, 0) : 0} mm²
+      </span>
+      <div className="ml-auto flex items-center gap-2">
+        <input
+          type="number"
+          step="0.01"
+          placeholder="kg"
+          value={state.manualWeight}
+          onChange={(e) => onChange({ manualWeight: e.target.value })}
+          disabled={!state.included}
+          className="field-input !w-24 !py-1 !text-[12px]"
+        />
+        <span
+          className={
+            state.included
+              ? "w-16 text-right text-[12.5px] font-semibold text-foreground"
+              : "w-16 text-right text-[12.5px] text-muted-2 line-through"
+          }
+        >
+          {roundTo(weight, 3)} kg
+        </span>
+      </div>
     </div>
   );
 }

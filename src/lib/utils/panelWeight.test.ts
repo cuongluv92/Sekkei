@@ -1,30 +1,49 @@
 import { describe, expect, it } from "vitest";
 import {
-  boxBodyAreaIndoor,
-  boxBodyAreaOutdoor,
+  BOX_FACE_KEYS,
+  boxFaceArea,
   busbarWeightKg,
   foldedPlateArea,
   roofArea,
+  ROOF_FACE_KEYS,
+  roofFaceArea,
   sheetWeightKg,
   woodWeightKg,
 } from "./panelWeight";
 
 describe("panelWeight formulas", () => {
-  it("箱体屋内: back(1) + sides(2) + top&bottom(2)", () => {
-    // W=600,H=1000,D=400 -> 600*1000 + 2*400*1000 + 2*600*400
-    expect(boxBodyAreaIndoor(600, 1000, 400)).toBe(600 * 1000 + 2 * 400 * 1000 + 2 * 600 * 400);
+  it("箱体: each face computed individually (前面は扉が別途担当のため対象外)", () => {
+    const W = 600, H = 1000, D = 400;
+    expect(boxFaceArea("back", W, H, D)).toBe(W * H);
+    expect(boxFaceArea("top", W, H, D)).toBe(W * D);
+    expect(boxFaceArea("bottom", W, H, D)).toBe(W * D);
+    expect(boxFaceArea("left", W, H, D)).toBe(D * H);
+    expect(boxFaceArea("right", W, H, D)).toBe(D * H);
   });
 
-  it("箱体屋外: back(1) + sides(2) + bottom only(1)", () => {
-    expect(boxBodyAreaOutdoor(600, 1000, 400)).toBe(600 * 1000 + 2 * 400 * 1000 + 1 * 600 * 400);
-    // outdoor must be smaller than indoor by exactly one W×D face (the top the roof covers)
-    expect(boxBodyAreaIndoor(600, 1000, 400) - boxBodyAreaOutdoor(600, 1000, 400)).toBe(600 * 400);
+  it("箱体: summing all 5 faces matches the whole-box formula previously confirmed", () => {
+    const W = 600, H = 1000, D = 400;
+    const sumAllFaces = BOX_FACE_KEYS.reduce((sum, f) => sum + boxFaceArea(f, W, H, D), 0);
+    // back(1) + top&bottom(2) + sides(2) — 屋内盤 (no separate 屋根) whole-box total
+    expect(sumAllFaces).toBe(W * H + 2 * W * D + 2 * D * H);
+    // excluding "top" (typical 屋外盤 with a separate 屋根 covering the top) drops exactly one W×D face
+    const withoutTop = BOX_FACE_KEYS.filter((f) => f !== "top").reduce(
+      (sum, f) => sum + boxFaceArea(f, W, H, D),
+      0,
+    );
+    expect(sumAllFaces - withoutTop).toBe(W * D);
   });
 
-  it("屋根: 5-face open-bottom shape (top + 4 skirt faces)", () => {
-    // W=600, Droof=450, Hroof=50
-    const expected = 600 * 450 + 2 * 600 * 50 + 2 * 450 * 50;
-    expect(roofArea(600, 450, 50)).toBe(expected);
+  it("屋根: each face computed individually, summing to roofArea()", () => {
+    const W = 600, Droof = 450, Hroof = 50;
+    expect(roofFaceArea("top", W, Droof, Hroof)).toBe(W * Droof);
+    expect(roofFaceArea("frontSkirt", W, Droof, Hroof)).toBe(W * Hroof);
+    expect(roofFaceArea("backSkirt", W, Droof, Hroof)).toBe(W * Hroof);
+    expect(roofFaceArea("leftSkirt", W, Droof, Hroof)).toBe(Droof * Hroof);
+    expect(roofFaceArea("rightSkirt", W, Droof, Hroof)).toBe(Droof * Hroof);
+    const sum = ROOF_FACE_KEYS.reduce((s, f) => s + roofFaceArea(f, W, Droof, Hroof), 0);
+    expect(sum).toBe(roofArea(W, Droof, Hroof));
+    expect(roofArea(W, Droof, Hroof)).toBe(W * Droof + 2 * W * Hroof + 2 * Droof * Hroof);
   });
 
   it("扉/中板・基板/保護板/金具・パネル等: folded plate matches user's given door formula A = W×H + 2×T×H + 2×W×T", () => {

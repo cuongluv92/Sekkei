@@ -336,6 +336,11 @@ export interface Dictionary {
           door: string;
           roof: string;
         };
+        facesNote: string;
+        boxFaces: { back: string; top: string; bottom: string; left: string; right: string };
+        boxFaceFormula: { back: string; top: string; bottom: string; left: string; right: string };
+        roofFaces: { top: string; frontSkirt: string; backSkirt: string; leftSkirt: string; rightSkirt: string };
+        roofFaceFormula: { top: string; frontSkirt: string; backSkirt: string; leftSkirt: string; rightSkirt: string };
         roofWidthNote: string;
         fetchFromPartAssembly: string;
         weightNotRegistered: string;
