@@ -113,9 +113,10 @@ body {
 
   /* ---- Form controls ---- */
   .field-input {
-    @apply w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-[14px] text-foreground
-      transition-colors placeholder:text-muted-2 outline-none focus:border-accent
-      focus:ring-2 focus:ring-accent/25 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply w-full rounded-lg border border-accent/30 bg-surface px-3 py-2 text-[14px] text-foreground
+      transition-colors placeholder:text-muted-2 outline-none hover:border-accent/55 focus:border-accent
+      focus:ring-2 focus:ring-accent/25 disabled:cursor-not-allowed disabled:opacity-50
+      disabled:hover:border-accent/30;
   }
   .field-label {
     @apply mb-1.5 block text-[12.5px] font-semibold tracking-wide text-muted uppercase;
