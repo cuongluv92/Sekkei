@@ -87,14 +87,14 @@ function PartAssemblyView() {
     clear,
   } = usePartAssembly();
   const searchParams = useSearchParams();
-  // PartAssemblyProvider is mounted once above the router (so switching
-  // pages never loses the in-progress table) — it can't suppress on its
-  // own, since it doesn't remount per page visit. This screen must still
-  // never silently show whatever 案件 was left active elsewhere, so the
-  // suppression lives here instead (see useEffectiveCaseId); an explicit
-  // `?case=` deep link (e.g. Global Search's 部品製作 result) always wins
-  // over that, exactly like DesignView.
-  const effectiveActiveCaseId = useEffectiveCaseId(true);
+  // Unlike 設計管理/計算 modules, this screen does NOT suppress the already
+  // -active 案件 on mount: every mutation here writes straight through via
+  // partAssemblyService.saveRows (see PartAssemblyProvider), so there is no
+  // unsaved-edit risk in resuming it immediately — suppressing just forced
+  // an extra manual pick every time this page was opened, with the table
+  // not rendering until then. An explicit `?case=` deep link (e.g. Global
+  // Search's 部品製作 result) still wins over the active 案件.
+  const effectiveActiveCaseId = useEffectiveCaseId(false);
   const caseIdParam = searchParams.get("case") ?? "";
   const caseId = caseIdParam || effectiveActiveCaseId;
 
@@ -253,7 +253,7 @@ function PartAssemblyView() {
         }
       />
 
-      <CaseSelector />
+      <CaseSelector suppress={false} />
 
       {caseLoading ? (
         <div className="panel">

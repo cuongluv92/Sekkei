@@ -31,9 +31,11 @@ import type { DesignCase } from "@/lib/types/design";
  * Every mount starts on the picker, never silently preselected — the 案件
  * left active from browsing elsewhere only reappears once the user
  * genuinely picks one on THIS screen (see `useEffectiveCaseId`). Opening
- * any 案件-scoped screen (設計管理, 部品製作, every 計算 module) always means
- * choosing a 案件 explicitly first, never resuming whatever was last open
- * somewhere else.
+ * any 案件-scoped screen (設計管理, every 計算 module) always means choosing a
+ * 案件 explicitly first, never resuming whatever was last open somewhere
+ * else — except when the caller passes `suppress={false}` (currently only
+ * 部品製作, whose edits save immediately with no unsaved-edit risk from
+ * resuming the active 案件 without an extra pick).
  *
  * Switching away from a 案件 (変更/選択解除/開くfrom 保存済み案件) while the
  * current screen has unsaved local edits (`dirty`) prompts
@@ -49,12 +51,15 @@ import type { DesignCase } from "@/lib/types/design";
  */
 export function CaseSelector({
   autoNumberDrawingNumber = false,
+  suppress = true,
 }: {
   autoNumberDrawingNumber?: boolean;
+  /** Pass `false` to show the already-active 案件 immediately instead of forcing a fresh pick on every mount — see `useEffectiveCaseId`. Defaults to `true` (existing behavior) for every caller except 部品製作. */
+  suppress?: boolean;
 } = {}) {
   const { t } = useTranslation();
   const { setCaseId, dirty, runSaveHandler } = useActiveCase();
-  const caseId = useEffectiveCaseId(true);
+  const caseId = useEffectiveCaseId(suppress);
   const [options, setOptions] = useState<CaseOption[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [picking, setPicking] = useState(!caseId);
