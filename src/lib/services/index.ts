@@ -24,6 +24,11 @@ export {
   exportPartAssemblyDxf,
 } from "./partAssemblyExportService";
 export {
+  parsePartAssemblyImportFile,
+  type PartAssemblyImportResult,
+  type PartAssemblyImportRow,
+} from "./partAssemblyImportService";
+export {
   exportPanelWeightExcel,
   printPanelWeight,
   type PanelWeightExportData,

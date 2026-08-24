@@ -28,6 +28,8 @@ interface PartAssemblyContextValue {
   addRow: (
     row: Omit<PartAssemblyRow, "id"> & { id?: string },
   ) => Promise<string>;
+  /** Appends many rows in one persisted write (vs. N separate `addRow` calls, each a full-table save) — for bulk sources like a DXF/Excel BOM import. */
+  addRows: (rows: (Omit<PartAssemblyRow, "id"> & { id?: string })[]) => Promise<void>;
   /** Inserts at an exact position (clamped to [0, length]) instead of always appending — for 上に追加/下に追加 and "insert from master here". Same resolve/reject contract as `addRow`. */
   insertRowAt: (
     index: number,
@@ -140,6 +142,18 @@ export function PartAssemblyProvider({ children }: { children: ReactNode }) {
     [caseId],
   );
 
+  const addRows = useCallback(
+    (rowsToAdd: (Omit<PartAssemblyRow, "id"> & { id?: string })[]) => {
+      const withIds = rowsToAdd.map((row) => ({ ...row, id: row.id ?? nextId() }));
+      const next = [...rowsRef.current, ...withIds];
+      rowsRef.current = next;
+      setRows(next);
+      if (!caseId) return Promise.resolve();
+      return partAssemblyService.saveRows(caseId, next).then(() => undefined);
+    },
+    [caseId],
+  );
+
   const insertRowAt = useCallback(
     (index: number, row: Omit<PartAssemblyRow, "id"> & { id?: string }) => {
       const id = row.id ?? nextId();
@@ -208,6 +222,7 @@ export function PartAssemblyProvider({ children }: { children: ReactNode }) {
       rows,
       loading,
       addRow,
+      addRows,
       insertRowAt,
       removeRow,
       updateField,
@@ -221,6 +236,7 @@ export function PartAssemblyProvider({ children }: { children: ReactNode }) {
       rows,
       loading,
       addRow,
+      addRows,
       insertRowAt,
       removeRow,
       updateField,

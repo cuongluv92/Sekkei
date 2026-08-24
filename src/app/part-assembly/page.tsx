@@ -10,16 +10,20 @@ import {
   Plus,
   Settings,
   Trash2,
+  Upload,
 } from "lucide-react";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import {
   exportPartAssemblyDxf,
   exportPartAssemblyExcel,
+  parsePartAssemblyImportFile,
   searchService,
+  type PartAssemblyImportRow,
 } from "@/lib/services";
 import {
+  getManufacturerById,
   listManufacturers,
   preloadManufacturers,
 } from "@/lib/mock/manufacturers";
@@ -88,6 +92,7 @@ function PartAssemblyView() {
     rows,
     loading: rowsLoading,
     addRow,
+    addRows,
     insertRowAt,
     removeRow,
     updateField,
@@ -123,6 +128,10 @@ function PartAssemblyView() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportingDxf, setExportingDxf] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
+  const [importPreview, setImportPreview] = useState<{ rows: PartAssemblyImportRow[]; fileName: string } | null>(null);
+  const [importParsing, setImportParsing] = useState(false);
+  const [importCommitting, setImportCommitting] = useState(false);
+  const importFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     preloadManufacturers().then(() => forceRerender((v) => v + 1));
@@ -180,6 +189,47 @@ function PartAssemblyView() {
       showToast(t("partAssembly.excelExportError"), "error");
     } finally {
       setExportingExcel(false);
+    }
+  }
+
+  function handleImportButtonClick() {
+    importFileInputRef.current?.click();
+  }
+
+  async function handleImportFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file next time
+    if (!file) return;
+    setImportParsing(true);
+    try {
+      const { rows: parsedRows, found } = await parsePartAssemblyImportFile(file);
+      if (!found) {
+        showToast(t("partAssembly.importDxfLayoutNotFound"), "error");
+        return;
+      }
+      if (parsedRows.length === 0) {
+        showToast(t("partAssembly.importEmpty"), "error");
+        return;
+      }
+      setImportPreview({ rows: parsedRows, fileName: file.name });
+    } catch {
+      showToast(t("partAssembly.importError"), "error");
+    } finally {
+      setImportParsing(false);
+    }
+  }
+
+  async function handleImportConfirm() {
+    if (!importPreview) return;
+    setImportCommitting(true);
+    try {
+      await addRows(importPreview.rows);
+      showToast(t("partAssembly.importedCount", { count: importPreview.rows.length }));
+      setImportPreview(null);
+    } catch {
+      showToast(t("partAssembly.addError"), "error");
+    } finally {
+      setImportCommitting(false);
     }
   }
 
@@ -299,6 +349,26 @@ function PartAssemblyView() {
                   <Plus className="h-3.5 w-3.5" />
                   {t("partAssembly.addRow")}
                 </button>
+                <button
+                  onClick={handleImportButtonClick}
+                  className="btn-ghost"
+                  disabled={importParsing}
+                  title={t("partAssembly.importFileTitle")}
+                >
+                  {importParsing ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="h-3.5 w-3.5" />
+                  )}
+                  {t("partAssembly.importFile")}
+                </button>
+                <input
+                  ref={importFileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv,.dxf"
+                  className="hidden"
+                  onChange={handleImportFileSelected}
+                />
                 <button
                   onClick={clear}
                   className="btn-ghost"
@@ -561,6 +631,57 @@ function PartAssemblyView() {
           widthClassName="max-w-2xl"
         >
           <PartTemplateSettings />
+        </Modal>
+      )}
+
+      {importPreview && (
+        <Modal
+          title={t("partAssembly.importPreviewTitle", { fileName: importPreview.fileName })}
+          onClose={() => setImportPreview(null)}
+          widthClassName="max-w-3xl"
+        >
+          <div className="flex flex-col gap-3">
+            <p className="text-[12px] text-muted">
+              {t("partAssembly.importPreviewCount", { count: importPreview.rows.length })}
+            </p>
+            <div className="data-table-wrap max-h-[50vh]">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>{t("common.symbol")}</th>
+                    <th>{t("common.name")}</th>
+                    <th>{t("common.manufacturer")}</th>
+                    <th>{t("common.model")}</th>
+                    <th>{t("common.specification")}</th>
+                    <th className="text-right">{t("common.weight")}</th>
+                    <th className="text-right">{t("common.quantity")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importPreview.rows.map((row, i) => (
+                    <tr key={i}>
+                      <td>{row.symbol}</td>
+                      <td>{row.name}</td>
+                      <td>{row.manufacturerId ? getManufacturerById(row.manufacturerId)?.name ?? "" : ""}</td>
+                      <td className="font-mono text-[12px]">{row.model}</td>
+                      <td>{row.specification}</td>
+                      <td className="text-right">{row.weight ?? ""}</td>
+                      <td className="text-right">{row.quantity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-border pt-3">
+              <button className="btn-ghost" onClick={() => setImportPreview(null)} disabled={importCommitting}>
+                {t("common.cancel")}
+              </button>
+              <button className="btn-primary" onClick={handleImportConfirm} disabled={importCommitting}>
+                {importCommitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                {t("partAssembly.importConfirm")}
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

@@ -222,6 +222,15 @@ export interface Dictionary {
     dwgNoPlaceholders: string;
     excelExportError: string;
     exportEmpty: string;
+    importFile: string;
+    importFileTitle: string;
+    importDxfLayoutNotFound: string;
+    importEmpty: string;
+    importError: string;
+    importedCount: string;
+    importPreviewTitle: string;
+    importPreviewCount: string;
+    importConfirm: string;
   };
   partData: {
     title: string;
