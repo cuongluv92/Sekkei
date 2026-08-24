@@ -558,12 +558,23 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
         weightKg: boxWeight,
       });
     } else {
+      const dash = "—";
       for (const face of BOX_FACE_KEYS) {
         if (!box.faces[face].included) continue;
+        const state = box.faces[face];
+        let detail: string;
+        if (face === "back") detail = `W×H = ${box.W || dash}×${box.H || dash}`;
+        else if (face === "top" || face === "bottom") detail = `W×D = ${box.W || dash}×${box.D || dash}`;
+        else {
+          detail = `D×H = ${box.D || dash}×${box.H || dash}`;
+          if ((state.openingW ?? "").trim() || (state.openingH ?? "").trim()) {
+            detail += ` − 開口${state.openingW || dash}×${state.openingH || dash}`;
+          }
+        }
         rows.push({
           group: g.box,
           item: t(`weightCalc.panel.body.boxFaces.${face}`),
-          detail: `${t(`weightCalc.panel.body.boxFaceFormula.${face}`)}=${roundTo(boxFaceAreaFor(face), 0)}mm²`,
+          detail,
           quantity: "1",
           weightKg: boxFaceWeight(face),
         });
@@ -571,11 +582,20 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     }
 
     if (layer === "outdoor") {
+      const dash = "—";
+      const roofDetail: Record<RoofFaceKey, string> = {
+        top: `W×Droof = ${box.W || dash}×${roof.Droof || dash}`,
+        frontSkirt: `W×H1 = ${box.W || dash}×${roof.H1 || dash}`,
+        backSkirt: `W×H2 = ${box.W || dash}×${roof.H2 || dash}`,
+        leftSkirt: `Droof×(H1+H2)/2 = ${roof.Droof || dash}×(${roof.H1 || dash}+${roof.H2 || dash})/2`,
+        rightSkirt: `Droof×(H1+H2)/2 = ${roof.Droof || dash}×(${roof.H1 || dash}+${roof.H2 || dash})/2`,
+        overhang: `W×(Droof−D) = ${box.W || dash}×(${roof.Droof || dash}−${box.D || dash})`,
+      };
       for (const face of ROOF_FACE_KEYS) {
         rows.push({
           group: g.roof,
           item: t(`weightCalc.panel.body.roofFaces.${face}`),
-          detail: t(`weightCalc.panel.body.roofFaceFormula.${face}`),
+          detail: roofDetail[face],
           quantity: "1",
           weightKg: roofFaceWeight(face),
         });
@@ -587,7 +607,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
         rows.push({
           group: groupLabel,
           item: `#${i + 1}`,
-          detail: `W${item.W} H${item.H} T${item.T} t${item.t}`,
+          detail: `W×H = ${item.W}×${item.H}, T=${item.T || "0"}, t=${item.t}`,
           quantity: item.quantity,
           weightKg: sheetItemWeight(item),
         });
@@ -601,11 +621,11 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     function pushShapeGroup(groupLabel: string, items: AdditionalItem[]) {
       items.forEach((item, i) => {
         const shape = getWeightShape(item.shapeKey);
-        const dims = shape.fields.map((k) => `${k}${item.dims[k] ?? ""}`).join(" ");
+        const dims = shape.fields.map((k) => `${k}=${item.dims[k] ?? ""}`).join(", ");
         rows.push({
           group: groupLabel,
           item: `${t(`weightCalc.basic.shapes.${item.shapeKey}`)}#${i + 1}`,
-          detail: `${dims} L${item.length}`,
+          detail: `${dims}, L=${item.length}`,
           quantity: item.quantity,
           weightKg: additionalItemWeight(item),
         });
@@ -617,7 +637,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
       rows.push({
         group: g.busbar,
         item: `#${i + 1}`,
-        detail: `W${item.W} L${item.L} t${item.t}`,
+        detail: `W×L = ${item.W}×${item.L}, t=${item.t}`,
         quantity: item.quantity,
         weightKg: busbarItemWeight(item),
       });
@@ -637,7 +657,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
       rows.push({
         group: g.wood,
         item: `#${i + 1}`,
-        detail: `W${item.W} H${item.H} t${item.t}`,
+        detail: `W×H = ${item.W}×${item.H}, t=${item.t}`,
         quantity: item.quantity,
         weightKg: flatItemWeight(item),
       });
