@@ -956,7 +956,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                         className="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[12px]"
                       >
                         <span className="font-semibold text-foreground">{t(`weightCalc.panel.body.roofFaces.${face}`)}</span>
-                        <span className="font-semibold text-foreground">{roundTo(roofFaceWeight(face), 3)}kg</span>
+                        <span className="font-semibold text-foreground">{roundTo(roofFaceWeight(face), 2)}kg</span>
                       </div>
                     );
                   })}
@@ -1065,7 +1065,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                   </div>
                   <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setFrames((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
                   <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setFrames((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
-                  <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(additionalItemWeight(item), 3)} kg</span>
+                  <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(additionalItemWeight(item), 2)} kg</span>
                   <button type="button" onClick={() => { setFrames((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -1107,7 +1107,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                 </div>
                 <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setBusbars((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
                 <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setBusbars((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
-                <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(busbarItemWeight(item), 3)} kg</span>
+                <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(busbarItemWeight(item), 2)} kg</span>
                 <button type="button" onClick={() => { setBusbars((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -1140,7 +1140,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                   {unregistered ? (
                     <span className="mb-1 text-[11.5px] font-semibold text-warning">{t("weightCalc.panel.body.weightNotRegistered")}</span>
                   ) : (
-                    <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(w, 3)} kg</span>
+                    <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(w, 2)} kg</span>
                   )}
                   <button type="button" onClick={() => { setParts((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
                     <Trash2 className="h-3.5 w-3.5" />
@@ -1183,7 +1183,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                 </div>
                 <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setWoods((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
                 <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setWoods((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
-                <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(flatItemWeight(item), 3)} kg</span>
+                <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(flatItemWeight(item), 2)} kg</span>
                 <button type="button" onClick={() => { setWoods((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -1260,7 +1260,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                     </div>
                     <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setAdditional((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
                     <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setAdditional((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
-                    <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(additionalItemWeight(item), 3)} kg</span>
+                    <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(additionalItemWeight(item), 2)} kg</span>
                     <button type="button" onClick={() => { setAdditional((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -1295,11 +1295,11 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
             <div className="grid grid-cols-2 gap-2.5">
               <div className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
                 <div className="text-[10.5px] tracking-wide text-muted uppercase">{t("weightCalc.panel.body.rawTotal")}</div>
-                <div className="mt-0.5 text-[15px] font-bold text-foreground">{roundTo(totalWeight, 3)} <span className="text-[11px] font-normal text-muted">kg</span></div>
+                <div className="mt-0.5 text-[15px] font-bold text-foreground">{roundTo(totalWeight, 2)} <span className="text-[11px] font-normal text-muted">kg</span></div>
               </div>
               <div className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
                 <div className="text-[10.5px] tracking-wide text-muted uppercase">{t("weightCalc.panel.body.correctedTotal")}</div>
-                <div className="mt-0.5 text-[17px] font-bold text-accent">{roundTo(correctedWeight, 3)} <span className="text-[11px] font-normal text-muted">kg</span></div>
+                <div className="mt-0.5 text-[17px] font-bold text-accent">{roundTo(correctedWeight, 2)} <span className="text-[11px] font-normal text-muted">kg</span></div>
               </div>
             </div>
           </div>
@@ -1445,7 +1445,7 @@ function FaceRow({
         </>
       )}
       <span className={included ? "font-semibold text-foreground" : "text-muted-2 line-through"}>
-        {roundTo(weight, 3)}kg
+        {roundTo(weight, 2)}kg
       </span>
     </div>
   );
@@ -1515,7 +1515,7 @@ function GroupCard({
       <div className="mb-2.5 flex items-center justify-between gap-2">
         <span className="text-[13px] font-bold text-foreground">{title}</span>
         <div className="flex items-center gap-2">
-          <span className="text-[12.5px] font-semibold text-muted">{roundTo(weight, 3)} kg</span>
+          <span className="text-[12.5px] font-semibold text-muted">{roundTo(weight, 2)} kg</span>
           {onAdd && (
             <button type="button" onClick={onAdd} className="btn-ghost !py-1 !text-[12px]">
               <Plus className="h-3.5 w-3.5" />
@@ -1586,7 +1586,7 @@ function SheetItemGroup({
           </div>
           <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setItems((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
           <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setItems((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
-          <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(weightFn(item), 3)} kg</span>
+          <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(weightFn(item), 2)} kg</span>
           <button type="button" onClick={() => { setItems((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
             <Trash2 className="h-3.5 w-3.5" />
           </button>
