@@ -217,8 +217,14 @@ const ja: Dictionary = {
     insertFromMasterOption: "部品データから選択",
     selectPartModalTitle: "部品データから選択",
     dwgTemplateMissing:
-      "DWGテンプレートが未設定です。設定 > 出力テンプレート からアップロードしてください。",
-    dwgExportError: "DWG出力に失敗しました",
+      "DWG/DXFテンプレートが未設定です。設定 > 出力テンプレート からアップロードしてください。",
+    dwgExportError: "図面出力に失敗しました",
+    dwgExportedPartial:
+      "{fileName} を出力しました（{written}行反映、{skipped}行はテンプレートの行数を超えたため未反映）",
+    dwgStaticTemplate:
+      "{fileName} を出力しました（DXFテンプレート未設定のためDWGは元のテンプレートのまま。部品リストの数値を反映するには設定 > 出力テンプレート からDXFテンプレートをアップロードしてください）",
+    dwgNoPlaceholders:
+      "DXFテンプレートにプレースホルダーが見つかりません。設定 > 出力テンプレート の説明を確認してください。",
     excelExportError: "Excel出力に失敗しました",
     exportEmpty: "部品リストが空です。先に部品を追加してください。",
   },
@@ -564,9 +570,12 @@ const ja: Dictionary = {
     configureButton: "設定する",
     partTemplateSection: "部品テンプレート",
     partTemplateDescription:
-      "部品製作のExcel出力・DWG出力で使うテンプレートをアップロードできます（現在は未設定）。",
+      "部品製作のExcel出力・図面出力で使うテンプレートをアップロードできます。",
+    dxfPlaceholderHint:
+      "DXFテンプレートには部品リストの行数分、テキストとして {symbol_1}{name_1}{manufacturer_1}{model_1}{specification_1}{quantity_1}{remarks_1}、{symbol_2}... のようにプレースホルダーを配置してください（最大30行）。DWGはこの差し込みに対応していないため、そのままダウンロードされます。",
     kindExcel: "Excel",
-    kindDwg: "DWG",
+    kindDwg: "DWG（差込非対応）",
+    kindDxf: "DXF（部品リスト差込）",
     templateManagement: {
       title: "設計管理テンプレート管理",
       description:

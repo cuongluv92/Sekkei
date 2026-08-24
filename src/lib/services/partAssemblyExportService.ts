@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { downloadWorkbook } from "./design/excelWorkbook";
 import { partTemplateService } from "./partTemplateService";
+import { patchDxfPartList } from "./dxfPartListPatch";
 import { getPublicUrl } from "@/lib/supabase/storage";
 import { getManufacturerName } from "@/lib/mock/manufacturers";
 import type { PartAssemblyRow } from "@/lib/types";
@@ -48,16 +49,70 @@ export async function exportPartAssemblyExcel(
   return { fileName };
 }
 
+function downloadBlob(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+export type PartAssemblyDwgResult =
+  | { status: "filled"; fileName: string; rowsWritten: number; rowsSkipped: number }
+  | { status: "staticTemplate"; fileName: string }
+  | { status: "noPlaceholders"; fileName: string }
+  | { status: "noTemplate" };
+
 /**
- * 部品製作 DWG出力 — this app has no CAD engine to synthesize a real DWG
- * from a parts list, so the only honest "DWG出力" is downloading the DWG
- * output template configured in 設定 > 出力テンプレート as-is. Returns null
- * (never a fake success) when no template has been uploaded yet — the
- * caller must show that honestly rather than pretending the export worked.
+ * 部品製作 図面出力 (DWG/DXF).
+ *
+ * DWG is AutoCAD's proprietary binary format — there is no open way to
+ * write real 部品リスト data into a .dwg file without a commercial CAD SDK
+ * (ODA/Teigha, Autodesk RealDWG...), which this app doesn't have. DXF is
+ * AutoCAD's plain-text interchange format (AutoCAD's own File > Save As >
+ * DXF produces an equivalent drawing any CAD tool can open) and CAN be
+ * patched safely: see dxfPartListPatch.ts for the placeholder-tag scheme
+ * (`{symbol_1}`, `{quantity_1}`, `{symbol_2}`... one set per pre-drawn
+ * table row) used to fill in real data without touching any other entity
+ * in the drawing.
+ *
+ * Resolution order: a "dxf" template (real data fill) is preferred; falls
+ * back to downloading the "dwg" template as-is (a static frame — no data
+ * merge, since that's genuinely not possible) when only DWG is configured.
+ * Never fakes success — returns { status: "noTemplate" } when neither has
+ * been uploaded in 設定 > 出力テンプレート.
  */
-export async function exportPartAssemblyDwg(): Promise<{ fileName: string } | null> {
-  const template = await partTemplateService.getByKind("dwg");
-  if (!template) return null;
-  window.open(getPublicUrl(template.storagePath), "_blank", "noopener,noreferrer");
-  return { fileName: template.fileName };
+export async function exportPartAssemblyDwg(
+  rows: PartAssemblyRow[],
+  locale: "ja" | "vi",
+): Promise<PartAssemblyDwgResult> {
+  const dxfTemplate = await partTemplateService.getByKind("dxf");
+  if (dxfTemplate) {
+    const res = await fetch(getPublicUrl(dxfTemplate.storagePath));
+    if (!res.ok) throw new Error("dxf-template-fetch-failed");
+    const dxfText = await res.text();
+    const patched = patchDxfPartList(dxfText, rows, locale);
+    if (!patched.placeholdersFound) {
+      return { status: "noPlaceholders", fileName: dxfTemplate.fileName };
+    }
+    const fileName = `部品製作図_${new Date().toISOString().slice(0, 10)}.dxf`;
+    downloadBlob(new Blob([patched.text], { type: "application/dxf" }), fileName);
+    return {
+      status: "filled",
+      fileName,
+      rowsWritten: patched.rowsWritten,
+      rowsSkipped: patched.rowsSkipped,
+    };
+  }
+
+  const dwgTemplate = await partTemplateService.getByKind("dwg");
+  if (dwgTemplate) {
+    window.open(getPublicUrl(dwgTemplate.storagePath), "_blank", "noopener,noreferrer");
+    return { status: "staticTemplate", fileName: dwgTemplate.fileName };
+  }
+
+  return { status: "noTemplate" };
 }

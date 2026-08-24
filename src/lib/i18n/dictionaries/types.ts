@@ -210,6 +210,9 @@ export interface Dictionary {
     selectPartModalTitle: string;
     dwgTemplateMissing: string;
     dwgExportError: string;
+    dwgExportedPartial: string;
+    dwgStaticTemplate: string;
+    dwgNoPlaceholders: string;
     excelExportError: string;
     exportEmpty: string;
   };
@@ -505,8 +508,10 @@ export interface Dictionary {
     configureButton: string;
     partTemplateSection: string;
     partTemplateDescription: string;
+    dxfPlaceholderHint: string;
     kindExcel: string;
     kindDwg: string;
+    kindDxf: string;
     templateManagement: {
       title: string;
       description: string;

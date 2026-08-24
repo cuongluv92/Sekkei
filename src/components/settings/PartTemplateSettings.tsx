@@ -10,6 +10,7 @@ import type { PartTemplate, PartTemplateKind } from "@/lib/types";
 
 const PART_TEMPLATE_KINDS: { kind: PartTemplateKind; accept: string }[] = [
   { kind: "excel", accept: ".xlsx,.xls" },
+  { kind: "dxf", accept: ".dxf" },
   { kind: "dwg", accept: ".dwg" },
 ];
 
@@ -42,6 +43,9 @@ export function PartTemplateSettings() {
       <p className="text-[12px] text-muted">
         {t("settings.partTemplateDescription")}
       </p>
+      <p className="text-[11px] text-muted-2">
+        {t("settings.dxfPlaceholderHint")}
+      </p>
       <div className="data-table-wrap">
         <table className="data-table" style={{ minWidth: 480 }}>
           <thead>
@@ -59,7 +63,9 @@ export function PartTemplateSettings() {
                   <td>
                     {kind === "excel"
                       ? t("settings.kindExcel")
-                      : t("settings.kindDwg")}
+                      : kind === "dxf"
+                        ? t("settings.kindDxf")
+                        : t("settings.kindDwg")}
                   </td>
                   <td className={tpl ? "text-foreground" : "text-muted-2"}>
                     {tpl ? (

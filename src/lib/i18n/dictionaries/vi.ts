@@ -220,8 +220,14 @@ const vi: Dictionary = {
     insertFromMasterOption: "Chọn từ 部品データ",
     selectPartModalTitle: "Chọn từ 部品データ",
     dwgTemplateMissing:
-      "Chưa có DWG テンプレート (template) — hãy tải lên ở Cài đặt > Template xuất.",
-    dwgExportError: "Xuất DWG thất bại",
+      "Chưa có DWG/DXF テンプレート (template) — hãy tải lên ở Cài đặt > Template xuất.",
+    dwgExportError: "Xuất bản vẽ thất bại",
+    dwgExportedPartial:
+      "Đã xuất {fileName} (đã điền {written} dòng, {skipped} dòng vượt quá số dòng của template nên chưa điền)",
+    dwgStaticTemplate:
+      "Đã xuất {fileName} (chưa có DXF template nên DWG chỉ là file gốc bạn tải lên, chưa có số liệu — hãy tải DXF template ở Cài đặt > Template xuất để số liệu 部品リスト được điền vào)",
+    dwgNoPlaceholders:
+      "Không tìm thấy placeholder trong DXF template — xem hướng dẫn ở Cài đặt > Template xuất.",
     excelExportError: "Xuất Excel thất bại",
     exportEmpty: "Danh sách 部品 đang trống — hãy thêm 部品 trước.",
   },
@@ -567,9 +573,12 @@ const vi: Dictionary = {
     configureButton: "Cấu hình",
     partTemplateSection: "Template linh kiện",
     partTemplateDescription:
-      "Tải lên template dùng cho Xuất Excel / Xuất DWG của 部品製作 (hiện chưa có).",
+      "Tải lên template dùng cho Xuất Excel / Xuất bản vẽ của 部品製作.",
+    dxfPlaceholderHint:
+      "Trong DXF template, đặt các text placeholder theo từng dòng bảng: {symbol_1}{name_1}{manufacturer_1}{model_1}{specification_1}{quantity_1}{remarks_1}, {symbol_2}... (tối đa 30 dòng) — app sẽ điền số liệu 部品リスト thật vào đúng các placeholder này. DWG không hỗ trợ điền số liệu (định dạng nhị phân độc quyền của AutoCAD), nên khi xuất chỉ tải về đúng file bạn đã tải lên.",
     kindExcel: "Excel",
-    kindDwg: "DWG",
+    kindDwg: "DWG (không điền số liệu)",
+    kindDxf: "DXF (điền 部品リスト)",
     templateManagement: {
       title: "Quản lý template 設計管理",
       description:

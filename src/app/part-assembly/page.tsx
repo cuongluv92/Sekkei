@@ -132,11 +132,28 @@ function PartAssemblyView() {
   async function handleExportDwg() {
     setExportingDwg(true);
     try {
-      const result = await exportPartAssemblyDwg();
-      if (result) {
-        showToast(t("common.fileExported", { fileName: result.fileName }));
-      } else {
-        showToast(t("partAssembly.dwgTemplateMissing"), "error");
+      const result = await exportPartAssemblyDwg(rows, locale);
+      switch (result.status) {
+        case "filled":
+          showToast(
+            result.rowsSkipped > 0
+              ? t("partAssembly.dwgExportedPartial", {
+                  fileName: result.fileName,
+                  written: result.rowsWritten,
+                  skipped: result.rowsSkipped,
+                })
+              : t("common.fileExported", { fileName: result.fileName }),
+          );
+          break;
+        case "staticTemplate":
+          showToast(t("partAssembly.dwgStaticTemplate", { fileName: result.fileName }));
+          break;
+        case "noPlaceholders":
+          showToast(t("partAssembly.dwgNoPlaceholders"), "error");
+          break;
+        case "noTemplate":
+          showToast(t("partAssembly.dwgTemplateMissing"), "error");
+          break;
       }
     } catch {
       showToast(t("partAssembly.dwgExportError"), "error");

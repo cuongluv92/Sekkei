@@ -243,7 +243,7 @@ export interface EarthBarSize {
   order: number;
 }
 
-export type PartTemplateKind = "excel" | "dwg";
+export type PartTemplateKind = "excel" | "dwg" | "dxf";
 
 /** An uploaded export template for 部品製作 (Excel出力 / DWG出力), independent of the calculation templates above. Stored in Supabase Storage (part-templates/<kind>.<ext>), never bundled in the app. */
 export interface PartTemplate {
