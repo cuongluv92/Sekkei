@@ -313,6 +313,7 @@ export interface Dictionary {
           subPlate: string;
           protectionPlate: string;
           hardware: string;
+          frame: string;
           busbar: string;
           parts: string;
           wood: string;
@@ -320,6 +321,7 @@ export interface Dictionary {
         };
         fields: {
           thickness: string;
+          fold: string;
           manualWeight: string;
           droof: string;
           hroof: string;
@@ -328,6 +330,12 @@ export interface Dictionary {
           model: string;
           name: string;
           shape: string;
+        };
+        draftNote: string;
+        roofThicknessNote: string;
+        attachPrompt: {
+          title: string;
+          message: string;
         };
         imageTabs: {
           indoor: string;

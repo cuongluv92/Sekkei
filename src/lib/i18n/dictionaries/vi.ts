@@ -348,6 +348,7 @@ const vi: Dictionary = {
           subPlate: "中板・基板 (tấm giữa/đế)",
           protectionPlate: "保護板 (tấm bảo vệ)",
           hardware: "金具・パネル等 (phụ kiện/panel)",
+          frame: "架台 (giá đỡ/khung đế)",
           busbar: "銅帯 (thanh đồng)",
           parts: "部品 (linh kiện)",
           wood: "木材 (gỗ)",
@@ -355,6 +356,7 @@ const vi: Dictionary = {
         },
         fields: {
           thickness: "板厚 t (bề dày tấm)",
+          fold: "折り曲げ (gập mép, để trống nếu không gập)",
           manualWeight: "重量 thủ công (kg)",
           droof: "Droof (chiều sâu mái)",
           hroof: "Hroof (chiều cao gập mép mái)",
@@ -363,6 +365,12 @@ const vi: Dictionary = {
           model: "型式",
           name: "名称",
           shape: "Hình dạng",
+        },
+        draftNote: "Bản nháp (chưa lưu — chọn 案件 khi lưu)",
+        roofThicknessNote: "板厚 mái lấy theo 箱体 t ({t}).",
+        attachPrompt: {
+          title: "Chọn 案件 để lưu",
+          message: "Cần gắn 案件 để lưu phép tính này. Chọn 案件 đã có hoặc tạo 案件 mới.",
         },
         imageTabs: {
           indoor: "屋内",

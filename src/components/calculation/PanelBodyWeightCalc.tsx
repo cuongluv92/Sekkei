@@ -4,6 +4,7 @@ import { Image as ImageIcon, Loader2, Plus, Save, Trash2, Upload } from "lucide-
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { formatJaTime } from "@/lib/utils/dateFormat";
+import { loadFromStorage, saveToStorage } from "@/lib/utils/localStore";
 import {
   calculationRecordService,
   panelWeightLayerImageService,
@@ -13,6 +14,8 @@ import {
 import { useActiveCase } from "@/lib/store/ActiveCaseProvider";
 import { getPublicUrl } from "@/lib/supabase/storage";
 import { getWeightShape, WEIGHT_SHAPES, type WeightDimKey, type WeightShapeKey } from "@/lib/utils/weightShapes";
+import { NewCaseModal } from "@/components/common/NewCaseModal";
+import { SavedCasesModal } from "@/components/common/SavedCasesModal";
 import {
   BOX_FACE_KEYS,
   boxFaceArea,
@@ -120,7 +123,7 @@ interface RoofState {
   Hroof: string;
   materialId: string;
   density: string;
-  t: string;
+  // 板厚は 箱体 の t をそのまま使う (別入力なし) — 屋根だけ違う板厚にする実物はまず無いため。
   /** 5面 (天面/前後左右スカート) — 個別に表示・手動重量で上書きできる。 */
   faces: RoofFaces;
 }
@@ -135,6 +138,7 @@ interface PanelBodySavedInput {
   subPlates: SheetItem[];
   protectionPlates: SheetItem[];
   hardware: SheetItem[];
+  frames: AdditionalItem[];
   busbars: BusbarItem[];
   parts: PartItem[];
   woods: FlatItem[];
@@ -148,26 +152,51 @@ function nextId(): string {
   return `pw-${Date.now()}-${idCounter}`;
 }
 
-function blankSheetItem(): SheetItem {
-  return { id: nextId(), W: "", H: "", T: "", materialId: "", density: "", t: "", quantity: "1", manualWeight: "" };
+/**
+ * Looks up a material by name in the (already-loaded) material master and
+ * returns its id+density, or blank if not found/not loaded yet — never a
+ * guessed density. Used to default new rows to the material that's
+ * obviously always right for that group (鉄 for sheet metal, 銅 for 銅帯,
+ * 木材 for 木材), same "auto-fill but still editable" pattern
+ * WeightShapeCalcSection already uses for defaulting to 鉄.
+ */
+function defaultMaterial(materials: WeightMaterial[], name: string): { materialId: string; density: string } {
+  const m = materials.find((mm) => mm.name === name);
+  return m ? { materialId: m.id, density: String(m.density) } : { materialId: "", density: "" };
 }
-function blankFlatItem(): FlatItem {
-  return { id: nextId(), W: "", H: "", materialId: "", density: "", t: "", quantity: "1", manualWeight: "" };
+
+function blankSheetItem(materials: WeightMaterial[], defaultThickness: string, seed?: { W: string; H: string }): SheetItem {
+  return {
+    id: nextId(),
+    W: seed?.W ?? "",
+    H: seed?.H ?? "",
+    T: "",
+    ...defaultMaterial(materials, "鉄"),
+    t: defaultThickness,
+    quantity: "1",
+    manualWeight: "",
+  };
 }
-function blankBusbarItem(): BusbarItem {
-  return { id: nextId(), W: "", L: "", materialId: "", density: "", t: "", quantity: "1", manualWeight: "" };
+function blankFlatItem(materials: WeightMaterial[], materialName: string): FlatItem {
+  return { id: nextId(), W: "", H: "", ...defaultMaterial(materials, materialName), t: "", quantity: "1", manualWeight: "" };
 }
-function blankAdditionalItem(): AdditionalItem {
+function blankBusbarItem(materials: WeightMaterial[]): BusbarItem {
+  return { id: nextId(), W: "", L: "", ...defaultMaterial(materials, "銅"), t: "", quantity: "1", manualWeight: "" };
+}
+function blankAdditionalItem(materials: WeightMaterial[]): AdditionalItem {
   return {
     id: nextId(),
     shapeKey: "angle",
     dims: {},
     length: "",
-    materialId: "",
-    density: "",
+    ...defaultMaterial(materials, "鉄"),
     quantity: "1",
     manualWeight: "",
   };
+}
+/** 架台 — 基本重量計算のハット形と全く同じ入力・計算式 (A = t×(W1+2×W2+2×H)) を再利用。 */
+function blankFrameItem(materials: WeightMaterial[]): AdditionalItem {
+  return { ...blankAdditionalItem(materials), shapeKey: "hat" };
 }
 /**
  * Box faces default to all-included except 天面 (top) for 屋外盤 — a typical
@@ -183,14 +212,15 @@ function blankBoxFaces(layer: PanelLayerKey): BoxFaces {
     ]),
   ) as BoxFaces;
 }
-function blankBox(layer: PanelLayerKey): BoxState {
-  return { W: "", H: "", D: "", materialId: "", density: "", t: "", faces: blankBoxFaces(layer) };
+function blankBox(materials: WeightMaterial[], layer: PanelLayerKey): BoxState {
+  return { W: "", H: "", D: "", ...defaultMaterial(materials, "鉄"), t: "2.3", faces: blankBoxFaces(layer) };
 }
 function blankRoofFaces(): RoofFaces {
   return Object.fromEntries(ROOF_FACE_KEYS.map((key) => [key, { included: true, manualWeight: "" }])) as RoofFaces;
 }
-function blankRoof(): RoofState {
-  return { Droof: "", Hroof: "", materialId: "", density: "", t: "", faces: blankRoofFaces() };
+/** 屋根 has no 板厚 of its own — it always uses 箱体 の t (see roofFaceWeight). */
+function blankRoof(materials: WeightMaterial[]): RoofState {
+  return { Droof: "", Hroof: "", ...defaultMaterial(materials, "鉄"), faces: blankRoofFaces() };
 }
 
 /** "" (untouched) | a positive finite number | null (typed but invalid). */
@@ -209,31 +239,38 @@ function roundTo(n: number, decimals: number): number {
   return Math.round(n * factor) / factor;
 }
 
+const DRAFT_STORAGE_KEY = "sekkei.panelWeightDraft";
+
 export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
   const { t } = useTranslation();
-  const { registerSaveHandler } = useActiveCase();
+  const { registerSaveHandler, setCaseId } = useActiveCase();
 
   const [materials, setMaterials] = useState<WeightMaterial[]>([]);
+  const [materialsLoaded, setMaterialsLoaded] = useState(false);
   const [images, setImages] = useState<Partial<Record<PanelImageKey, PanelWeightLayerImage>>>({});
   const [masterItems, setMasterItems] = useState<SearchResultItem[]>([]);
   const [masterLoading, setMasterLoading] = useState(true);
 
   const [layer, setLayer] = useState<PanelLayerKey>("indoor");
   const [activeImageKey, setActiveImageKey] = useState<PanelImageKey>("indoor");
-  const [box, setBox] = useState<BoxState>(blankBox("indoor"));
+  const [box, setBox] = useState<BoxState>(blankBox([], "indoor"));
   const [nittoBoxWeight, setNittoBoxWeight] = useState("");
   const [nittoBoxQuantity, setNittoBoxQuantity] = useState("1");
-  const [roof, setRoof] = useState<RoofState>(blankRoof());
+  const [roof, setRoof] = useState<RoofState>(blankRoof([]));
   const [doors, setDoors] = useState<SheetItem[]>([]);
   const [subPlates, setSubPlates] = useState<SheetItem[]>([]);
   const [protectionPlates, setProtectionPlates] = useState<SheetItem[]>([]);
   const [hardware, setHardware] = useState<SheetItem[]>([]);
+  const [frames, setFrames] = useState<AdditionalItem[]>([]);
   const [busbars, setBusbars] = useState<BusbarItem[]>([]);
   const [parts, setParts] = useState<PartItem[]>([]);
   const [woods, setWoods] = useState<FlatItem[]>([]);
   const [additional, setAdditional] = useState<AdditionalItem[]>([]);
   const [wiringFactor, setWiringFactor] = useState<"1" | "1.2" | "1.5">("1");
   const [partsModalOpen, setPartsModalOpen] = useState(false);
+  const [caseAttachPromptOpen, setCaseAttachPromptOpen] = useState(false);
+  const [showNewCaseModal, setShowNewCaseModal] = useState(false);
+  const [showSavedCasesModal, setShowSavedCasesModal] = useState(false);
 
   const [loadedRecord, setLoadedRecord] = useState<PanelBodySavedInput | null | undefined>(undefined);
   const [saving, setSaving] = useState(false);
@@ -241,7 +278,10 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
   const initializedRef = useRef(false);
 
   useEffect(() => {
-    weightMaterialService.list().then(setMaterials);
+    weightMaterialService.list().then((list) => {
+      setMaterials(list);
+      setMaterialsLoaded(true);
+    });
     panelWeightLayerImageService.list().then((list) => {
       setImages(Object.fromEntries(list.map((img) => [img.layerKey, img])));
     });
@@ -255,12 +295,19 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     setActiveImageKey(layer);
   }, [layer]);
 
+  // 案件 未選択のときは calculation_records ではなくローカル下書き
+  // (localStorage) から読み込む — 案件 を選ぶ/作るまでブロックしない (盤重量計算
+  // だけの試験的な挙動、他の計算モジュールはまだ従来通り)。
   useEffect(() => {
     initializedRef.current = false;
     setLoadedRecord(undefined);
     setSavedAt(null);
     registerSaveHandler(DIRTY_HANDLER_ID, null);
-    if (!caseId) return;
+    if (!caseId) {
+      const draft = loadFromStorage<PanelBodySavedInput | null>(DRAFT_STORAGE_KEY, null);
+      setLoadedRecord(draft);
+      return;
+    }
     let cancelled = false;
     calculationRecordService.get(caseId, CALCULATION_TYPE).then((record) => {
       if (cancelled) return;
@@ -276,54 +323,101 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
   useEffect(() => () => registerSaveHandler(DIRTY_HANDLER_ID, null), [registerSaveHandler]);
 
   useEffect(() => {
-    if (initializedRef.current || loadedRecord === undefined) return;
+    if (initializedRef.current || loadedRecord === undefined || !materialsLoaded) return;
     initializedRef.current = true;
-    if (!loadedRecord) return;
+    if (!loadedRecord) {
+      // 新規計算のみ鉄/銅/木材をデフォルトにする — 保存済みデータは絶対に上書きしない。
+      setBox(blankBox(materials, layer));
+      setRoof(blankRoof(materials));
+      return;
+    }
     const restoredLayer = loadedRecord.layer ?? "indoor";
     setLayer(restoredLayer);
-    setBox(loadedRecord.box ?? blankBox(restoredLayer));
+    setBox(loadedRecord.box ?? blankBox(materials, restoredLayer));
     setNittoBoxWeight(loadedRecord.nittoBoxWeight ?? "");
     setNittoBoxQuantity(loadedRecord.nittoBoxQuantity ?? "1");
-    setRoof(loadedRecord.roof ?? blankRoof());
+    setRoof(loadedRecord.roof ?? blankRoof(materials));
     setDoors(loadedRecord.doors ?? []);
     setSubPlates(loadedRecord.subPlates ?? []);
     setProtectionPlates(loadedRecord.protectionPlates ?? []);
     setHardware(loadedRecord.hardware ?? []);
+    setFrames(loadedRecord.frames ?? []);
     setBusbars(loadedRecord.busbars ?? []);
     setParts(loadedRecord.parts ?? []);
     setWoods(loadedRecord.woods ?? []);
     setAdditional(loadedRecord.additional ?? []);
     setWiringFactor(loadedRecord.wiringFactor ?? "1");
-  }, [loadedRecord]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedRecord, materialsLoaded]);
 
-  function markDirty() {
-    registerSaveHandler(DIRTY_HANDLER_ID, handleSave);
+  function buildInput(): PanelBodySavedInput {
+    return {
+      layer,
+      box,
+      nittoBoxWeight,
+      nittoBoxQuantity,
+      roof,
+      doors,
+      subPlates,
+      protectionPlates,
+      hardware,
+      frames,
+      busbars,
+      parts,
+      woods,
+      additional,
+      wiringFactor,
+    };
   }
 
-  async function handleSave() {
-    if (!caseId || saving) return;
+  // 案件 未選択の間は、編集のたびにローカル下書きへ即保存 — 案件 に紐付いて
+  // いないので registerSaveHandler の「未保存」扱いは不要 (もう安全にブラウザ側へ
+  // 保持されている)。初期化が終わるまでは書き込まない (空の初期状態で
+  // 下書きを消してしまわないように)。
+  useEffect(() => {
+    if (caseId || !initializedRef.current) return;
+    saveToStorage(DRAFT_STORAGE_KEY, buildInput());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    caseId,
+    layer,
+    box,
+    nittoBoxWeight,
+    nittoBoxQuantity,
+    roof,
+    doors,
+    subPlates,
+    protectionPlates,
+    hardware,
+    frames,
+    busbars,
+    parts,
+    woods,
+    additional,
+    wiringFactor,
+  ]);
+
+  function markDirty() {
+    if (caseId) registerSaveHandler(DIRTY_HANDLER_ID, () => handleSave(caseId));
+  }
+
+  /** 案件 が付いていればそのまま保存、なければ「既存の案件を選ぶ/新規案件を作成」を先に聞く。 */
+  function handleSaveClick() {
+    if (!caseId) {
+      setCaseAttachPromptOpen(true);
+      return;
+    }
+    handleSave(caseId);
+  }
+
+  async function handleSave(targetCaseId: string) {
+    if (saving) return;
     setSaving(true);
     try {
-      const input: PanelBodySavedInput = {
-        layer,
-        box,
-        nittoBoxWeight,
-        nittoBoxQuantity,
-        roof,
-        doors,
-        subPlates,
-        protectionPlates,
-        hardware,
-        busbars,
-        parts,
-        woods,
-        additional,
-        wiringFactor,
-      };
       const saved = await calculationRecordService.save(
-        caseId,
+        targetCaseId,
         CALCULATION_TYPE,
-        input as unknown as Record<string, unknown>,
+        buildInput() as unknown as Record<string, unknown>,
         { totalWeight },
       );
       setSavedAt(saved.updatedAt);
@@ -331,6 +425,16 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  /** 保存時に選んだ/作った 案件 に、今入力中の内容をそのまま紐付ける — 案件 をアプリ全体の現在の 案件 にもする。 */
+  async function attachToCase(newCaseId: string) {
+    setCaseId(newCaseId);
+    setCaseAttachPromptOpen(false);
+    setShowNewCaseModal(false);
+    setShowSavedCasesModal(false);
+    await handleSave(newCaseId);
+    saveToStorage(DRAFT_STORAGE_KEY, null);
   }
 
   async function handleImageUpload(key: PanelImageKey, file: File) {
@@ -357,7 +461,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     if (!state.included) return 0;
     if (state.manualWeight.trim() !== "") return num(state.manualWeight);
     const area = roofFaceArea(face, num(box.W), num(roof.Droof), num(roof.Hroof));
-    return sheetWeightKg(area, num(roof.t), num(roof.density));
+    return sheetWeightKg(area, num(box.t), num(roof.density));
   }
   const roofWeight =
     layer !== "outdoor" ? 0 : ROOF_FACE_KEYS.reduce((sum, f) => sum + roofFaceWeight(f), 0);
@@ -400,6 +504,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
   const partsWeight = parts.reduce((sum, i) => sum + partItemWeight(i), 0);
   const woodsWeight = woods.reduce((sum, i) => sum + flatItemWeight(i), 0);
   const additionalWeight = additional.reduce((sum, i) => sum + additionalItemWeight(i), 0);
+  const framesWeight = frames.reduce((sum, i) => sum + additionalItemWeight(i), 0);
 
   const totalWeight =
     boxWeight +
@@ -408,6 +513,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     subPlatesWeight +
     protectionPlatesWeight +
     hardwareWeight +
+    framesWeight +
     busbarsWeight +
     partsWeight +
     woodsWeight +
@@ -472,15 +578,18 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
       <div className="panel-header flex items-center justify-between gap-2">
         <span className="panel-title">{t("weightCalc.panel.body.title")}</span>
         <div className="flex items-center gap-2">
-          {savedAt && (
+          {caseId && savedAt && (
             <span className="text-[11px] text-muted-2">
               {t("weightCalc.basic.saved")} {formatJaTime(savedAt)}
             </span>
           )}
+          {!caseId && (
+            <span className="text-[11px] text-warning">{t("weightCalc.panel.body.draftNote")}</span>
+          )}
           <button
             type="button"
-            onClick={handleSave}
-            disabled={!caseId || saving}
+            onClick={handleSaveClick}
+            disabled={saving}
             className="btn-secondary !py-1 !text-[12px]"
           >
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
@@ -538,18 +647,23 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-3 gap-2.5">
-                  <NumField label="W" value={box.W} onChange={(v) => updateBox({ W: v })} />
-                  <NumField label="H" value={box.H} onChange={(v) => updateBox({ H: v })} />
-                  <NumField label="D" value={box.D} onChange={(v) => updateBox({ D: v })} />
+                <div className="flex flex-wrap items-end gap-2">
+                  <NumField label="W" value={box.W} onChange={(v) => updateBox({ W: v })} compact />
+                  <NumField label="H" value={box.H} onChange={(v) => updateBox({ H: v })} compact />
+                  <NumField label="D" value={box.D} onChange={(v) => updateBox({ D: v })} compact />
+                  <MaterialRow
+                    materials={materials}
+                    materialId={box.materialId}
+                    density={box.density}
+                    onChange={(patch) => updateBox(patch)}
+                  />
+                  <NumField
+                    label={t("weightCalc.panel.body.fields.thickness")}
+                    value={box.t}
+                    onChange={(v) => updateBox({ t: v })}
+                    compact
+                  />
                 </div>
-                <MaterialRow
-                  materials={materials}
-                  materialId={box.materialId}
-                  density={box.density}
-                  onChange={(patch) => updateBox(patch)}
-                />
-                <NumField label={t("weightCalc.panel.body.fields.thickness")} value={box.t} onChange={(v) => updateBox({ t: v })} />
 
                 <div className="flex flex-col gap-1.5 border-t border-border pt-2.5">
                   <span className="text-[11px] text-muted-2">{t("weightCalc.panel.body.facesNote")}</span>
@@ -574,26 +688,29 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
             <GroupCard title={t("weightCalc.panel.body.groups.roof")} weight={roofWeight}>
               <p className="text-[11px] text-muted-2">
                 {t("weightCalc.panel.body.roofWidthNote", { W: box.W || "—" })}
+                {" "}
+                {t("weightCalc.panel.body.roofThicknessNote", { t: box.t || "—" })}
               </p>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="flex flex-wrap items-end gap-2">
                 <NumField
                   label={t("weightCalc.panel.body.fields.droof")}
                   value={roof.Droof}
                   onChange={(v) => updateRoof({ Droof: v })}
+                  compact
                 />
                 <NumField
                   label={t("weightCalc.panel.body.fields.hroof")}
                   value={roof.Hroof}
                   onChange={(v) => updateRoof({ Hroof: v })}
+                  compact
+                />
+                <MaterialRow
+                  materials={materials}
+                  materialId={roof.materialId}
+                  density={roof.density}
+                  onChange={(patch) => updateRoof(patch)}
                 />
               </div>
-              <MaterialRow
-                materials={materials}
-                materialId={roof.materialId}
-                density={roof.density}
-                onChange={(patch) => updateRoof(patch)}
-              />
-              <NumField label={t("weightCalc.panel.body.fields.thickness")} value={roof.t} onChange={(v) => updateRoof({ t: v })} />
 
               <div className="flex flex-col gap-1.5 border-t border-border pt-2.5">
                 <span className="text-[11px] text-muted-2">{t("weightCalc.panel.body.facesNote")}</span>
@@ -612,7 +729,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
             </GroupCard>
           )}
 
-          {/* 扉 */}
+          {/* 扉 — 新規行は箱体のW/H/tを初期値として引き継ぐ (再入力の手間を省く。後から個別に変更可) */}
           <SheetItemGroup
             title={t("weightCalc.panel.body.groups.door")}
             items={doors}
@@ -621,6 +738,8 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
             markDirty={markDirty}
             weightFn={sheetItemWeight}
             t={t}
+            defaultThickness={box.t || "2.3"}
+            seed={{ W: box.W, H: box.H }}
           />
           {/* 中板・基板 */}
           <SheetItemGroup
@@ -631,6 +750,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
             markDirty={markDirty}
             weightFn={sheetItemWeight}
             t={t}
+            defaultThickness="2.3"
           />
           {/* 保護板 */}
           <SheetItemGroup
@@ -641,6 +761,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
             markDirty={markDirty}
             weightFn={sheetItemWeight}
             t={t}
+            defaultThickness="1.6"
           />
           {/* 金具・パネル等 */}
           <SheetItemGroup
@@ -651,14 +772,74 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
             markDirty={markDirty}
             weightFn={sheetItemWeight}
             t={t}
+            defaultThickness="2.3"
           />
+
+          {/* 架台 — ハット形 (基本重量計算) と同じ入力・計算式。金具・パネル の横に配置。 */}
+          <GroupCard
+            title={t("weightCalc.panel.body.groups.frame")}
+            weight={framesWeight}
+            onAdd={() => {
+              setFrames((prev) => [...prev, blankFrameItem(materials)]);
+              markDirty();
+            }}
+          >
+            {frames.map((item) => {
+              const shape = getWeightShape("hat");
+              return (
+                <div key={item.id} className="flex flex-wrap items-end gap-2 border-t border-border pt-2.5 first:border-t-0 first:pt-0">
+                  {shape.fields.map((k) => (
+                    <NumField
+                      key={k}
+                      label={t(`weightCalc.basic.fields.hat.${k}`)}
+                      value={item.dims[k] ?? ""}
+                      onChange={(v) => {
+                        setFrames((p) => p.map((i) => (i.id === item.id ? { ...i, dims: { ...i.dims, [k]: v } } : i)));
+                        markDirty();
+                      }}
+                      compact
+                    />
+                  ))}
+                  <NumField
+                    label={t("weightCalc.basic.length")}
+                    value={item.length}
+                    onChange={(v) => { setFrames((p) => p.map((i) => (i.id === item.id ? { ...i, length: v } : i))); markDirty(); }}
+                    compact
+                  />
+                  <div className="w-28">
+                    <label className="mb-1 block text-[11px] text-muted">{t("weightCalc.basic.material")}</label>
+                    <select
+                      value={item.materialId}
+                      onChange={(e) => {
+                        const picked = pickMaterial(e.target.value);
+                        setFrames((p) => p.map((i) => (i.id === item.id ? { ...i, ...picked } : i)));
+                        markDirty();
+                      }}
+                      className="field-input"
+                    >
+                      <option value="">{t("weightCalc.basic.materialPlaceholder")}</option>
+                      {materials.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setFrames((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
+                  <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setFrames((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
+                  <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(additionalItemWeight(item), 3)} kg</span>
+                  <button type="button" onClick={() => { setFrames((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </GroupCard>
 
           {/* 銅帯 */}
           <GroupCard
             title={t("weightCalc.panel.body.groups.busbar")}
             weight={busbarsWeight}
             onAdd={() => {
-              setBusbars((prev) => [...prev, blankBusbarItem()]);
+              setBusbars((prev) => [...prev, blankBusbarItem(materials)]);
               markDirty();
             }}
           >
@@ -734,7 +915,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
             title={t("weightCalc.panel.body.groups.wood")}
             weight={woodsWeight}
             onAdd={() => {
-              setWoods((prev) => [...prev, blankFlatItem()]);
+              setWoods((prev) => [...prev, blankFlatItem(materials, "木材")]);
               markDirty();
             }}
           >
@@ -775,7 +956,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
             title={t("weightCalc.panel.body.groups.additional")}
             weight={additionalWeight}
             onAdd={() => {
-              setAdditional((prev) => [...prev, blankAdditionalItem()]);
+              setAdditional((prev) => [...prev, blankAdditionalItem(materials)]);
               markDirty();
             }}
           >
@@ -921,6 +1102,59 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
           onPick={handlePickPart}
         />
       )}
+
+      {caseAttachPromptOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setCaseAttachPromptOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-lg border border-border bg-surface p-4 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="mb-1.5 text-[14px] font-bold text-foreground">
+              {t("weightCalc.panel.body.attachPrompt.title")}
+            </h3>
+            <p className="mb-3 text-[12.5px] text-muted">{t("weightCalc.panel.body.attachPrompt.message")}</p>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCaseAttachPromptOpen(false);
+                  setShowSavedCasesModal(true);
+                }}
+                className="btn-secondary w-full justify-center"
+              >
+                {t("caseSelector.savedCasesButton")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCaseAttachPromptOpen(false);
+                  setShowNewCaseModal(true);
+                }}
+                className="btn-primary w-full justify-center"
+              >
+                {t("caseSelector.newCaseButton")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCaseAttachPromptOpen(false)}
+                className="btn-ghost w-full justify-center"
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showNewCaseModal && (
+        <NewCaseModal onClose={() => setShowNewCaseModal(false)} onCreated={(created) => attachToCase(created.id)} />
+      )}
+      {showSavedCasesModal && (
+        <SavedCasesModal onClose={() => setShowSavedCasesModal(false)} onOpen={(id) => attachToCase(id)} />
+      )}
     </div>
   );
 }
@@ -1005,6 +1239,7 @@ function FaceRow({
   );
 }
 
+/** Material select + 比重, sized to sit inline in the same compact flex-wrap row as W/H/D/t — not its own wide block. */
 function MaterialRow({
   materials,
   materialId,
@@ -1018,9 +1253,9 @@ function MaterialRow({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="grid grid-cols-2 gap-2.5">
-      <div>
-        <label className="field-label">{t("weightCalc.basic.material")}</label>
+    <>
+      <div className="w-32">
+        <label className="mb-1 block text-[11px] text-muted">{t("weightCalc.basic.material")}</label>
         <select
           value={materialId}
           onChange={(e) => {
@@ -1035,8 +1270,8 @@ function MaterialRow({
           ))}
         </select>
       </div>
-      <div>
-        <label className="field-label">{t("weightCalc.basic.density")}</label>
+      <div className="w-20">
+        <label className="mb-1 block text-[11px] text-muted">{t("weightCalc.basic.density")}</label>
         <input
           type="number"
           step="0.01"
@@ -1045,7 +1280,7 @@ function MaterialRow({
           className="field-input"
         />
       </div>
-    </div>
+    </>
   );
 }
 
@@ -1090,6 +1325,8 @@ function SheetItemGroup({
   markDirty,
   weightFn,
   t,
+  defaultThickness,
+  seed,
 }: {
   title: string;
   items: SheetItem[];
@@ -1098,6 +1335,9 @@ function SheetItemGroup({
   markDirty: () => void;
   weightFn: (item: SheetItem) => number;
   t: (key: string, vars?: Record<string, string | number>) => string;
+  defaultThickness: string;
+  /** New rows start pre-filled with these dims (扉 inherits 箱体's W/H so the common case doesn't need retyping) — still freely editable after. */
+  seed?: { W: string; H: string };
 }) {
   const total = items.reduce((sum, i) => sum + weightFn(i), 0);
   return (
@@ -1105,7 +1345,7 @@ function SheetItemGroup({
       title={title}
       weight={total}
       onAdd={() => {
-        setItems((prev) => [...prev, blankSheetItem()]);
+        setItems((prev) => [...prev, blankSheetItem(materials, defaultThickness, seed)]);
         markDirty();
       }}
     >
@@ -1113,7 +1353,7 @@ function SheetItemGroup({
         <div key={item.id} className="flex flex-wrap items-end gap-2 border-t border-border pt-2.5 first:border-t-0 first:pt-0">
           <NumField label="W" value={item.W} onChange={(v) => { setItems((p) => p.map((i) => (i.id === item.id ? { ...i, W: v } : i))); markDirty(); }} compact />
           <NumField label="H" value={item.H} onChange={(v) => { setItems((p) => p.map((i) => (i.id === item.id ? { ...i, H: v } : i))); markDirty(); }} compact />
-          <NumField label="T" value={item.T} onChange={(v) => { setItems((p) => p.map((i) => (i.id === item.id ? { ...i, T: v } : i))); markDirty(); }} compact />
+          <NumField label={t("weightCalc.panel.body.fields.fold")} value={item.T} onChange={(v) => { setItems((p) => p.map((i) => (i.id === item.id ? { ...i, T: v } : i))); markDirty(); }} compact />
           <NumField label={t("weightCalc.panel.body.fields.thickness")} value={item.t} onChange={(v) => { setItems((p) => p.map((i) => (i.id === item.id ? { ...i, t: v } : i))); markDirty(); }} compact />
           <div className="w-28">
             <label className="mb-1 block text-[11px] text-muted">{t("weightCalc.basic.material")}</label>

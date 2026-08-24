@@ -345,6 +345,7 @@ const ja: Dictionary = {
           subPlate: "中板・基板",
           protectionPlate: "保護板",
           hardware: "金具・パネル等",
+          frame: "架台",
           busbar: "銅帯",
           parts: "部品",
           wood: "木材",
@@ -352,6 +353,7 @@ const ja: Dictionary = {
         },
         fields: {
           thickness: "板厚 t",
+          fold: "折り曲げ（任意）",
           manualWeight: "手動重量 (kg)",
           droof: "Droof（屋根奥行き）",
           hroof: "Hroof（屋根立上り高さ）",
@@ -360,6 +362,12 @@ const ja: Dictionary = {
           model: "型式",
           name: "名称",
           shape: "形状",
+        },
+        draftNote: "下書き（未保存・保存時に案件を選択）",
+        roofThicknessNote: "板厚は箱体の t（{t}）と同じです。",
+        attachPrompt: {
+          title: "保存先の案件を選択",
+          message: "この計算を保存するには案件が必要です。既存の案件を選ぶか、新規案件を作成してください。",
         },
         imageTabs: {
           indoor: "屋内",

@@ -42,7 +42,13 @@ export function WeightCalculationView() {
   // genuinely picks one here (see useEffectiveCaseId). An explicit
   // `?case=` deep link (e.g. Global Search's 計算 result) always wins over
   // that, exactly like DesignView.
-  const effectiveActiveCaseId = useEffectiveCaseId(true);
+  //
+  // 盤重量計算 (tab === "panel") is a trial exception: it must be usable the
+  // instant the page opens, with no forced 案件選択 first — so it does NOT
+  // suppress the already-active 案件 (still overridable via `?case=` or the
+  // compact CaseSelector), and stays usable even with caseId === "" (see
+  // PanelBodyWeightCalc's own localStorage-draft mode below).
+  const effectiveActiveCaseId = useEffectiveCaseId(tab !== "panel");
   const caseIdParam = searchParams.get("case") ?? "";
   const caseId = caseIdParam || effectiveActiveCaseId;
 
@@ -74,7 +80,7 @@ export function WeightCalculationView() {
         }
       />
 
-      <CaseSelector />
+      <CaseSelector suppress={tab !== "panel"} />
 
       <div className="-mx-1 overflow-x-auto px-1">
         <div className="flex w-max min-w-full gap-1 border-b border-border pb-0">
@@ -103,7 +109,7 @@ export function WeightCalculationView() {
             {t("common.loading")}
           </div>
         </div>
-      ) : !caseId ? (
+      ) : tab === "basic" && !caseId ? (
         <div className="panel">
           <div className="panel-body py-12 text-center text-[13px] text-muted-2">
             {t("caseSelector.selectCaseFirst")}
@@ -112,6 +118,8 @@ export function WeightCalculationView() {
       ) : tab === "basic" ? (
         <BasicWeightCalc caseId={caseId} />
       ) : (
+        // 盤重量計算 は 案件 未選択でも即使える (trial) — caseId === "" のときは
+        // PanelBodyWeightCalc 側がローカル下書きモードで動作する。
         <PanelWeightCalc caseId={caseId} />
       )}
 
