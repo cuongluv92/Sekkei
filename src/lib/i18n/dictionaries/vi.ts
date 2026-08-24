@@ -382,12 +382,10 @@ const vi: Dictionary = {
           door: "扉",
           roof: "屋根",
         },
-        facesNote:
-          "Mỗi mặt có ô check để chọn có tính hay không (vì tủ thật có thể khác nhau ở mặt trên...). Di chuột vào từng mặt để xem công thức/diện tích. 左側面/右側面 (tủ ghép nhau) có thể nhập kích thước 開口 (lỗ mở luồn dây) để tự trừ khỏi diện tích.",
+        facesNote: "Tick chọn mặt có tính (di chuột xem công thức).",
         openingWPlaceholder: "開口W",
         openingHPlaceholder: "開口H",
-        openingTitle:
-          "Với tủ ghép nhau, mặt giáp tủ kế bên có thể có 開口 (lỗ mở). Nhập chiều rộng/cao của 開口 để tự động trừ khỏi D×H (để trống thì tính như bình thường).",
+        openingTitle: "Trừ khai khẩu (開口) khỏi D×H — để trống thì tính bình thường.",
         boxFaces: {
           back: "背面 (mặt sau)",
           top: "天面 (mặt trên)",
@@ -418,8 +416,7 @@ const vi: Dictionary = {
           rightSkirt: "Droof×(H1+H2)/2",
           overhang: "W×(Droof−D)",
         },
-        roofBreakdownNote:
-          "屋根 mái dốc 1 chiều (trước H1 thấp, sau H2 cao) — tự động tính đủ 6 mặt, không có ô check riêng như 箱体 (vì mái nào cũng có đủ các mặt này).",
+        roofBreakdownNote: "屋根 mái dốc 1 chiều — tự động tính đủ 6 mặt (không có tick riêng).",
         roofWidthNote: "屋根 W lấy theo 箱体 W ({W}).",
         fetchFromPartAssembly: "部品製作から取得",
         weightNotRegistered: "重量未登録",

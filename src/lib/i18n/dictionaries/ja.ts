@@ -379,12 +379,10 @@ const ja: Dictionary = {
           door: "扉",
           roof: "屋根",
         },
-        facesNote:
-          "面ごとにチェックで含める/含めないを選べます（実物により天面の有無などが異なるため）。各面にカーソルを合わせると計算式・面積を確認できます。左側面・右側面は連結盤の開口（ケーブル/母線通し）幅・高さを入力すると自動で差し引きます。",
+        facesNote: "面ごとに含める/含めないを選択（カーソルで計算式を確認）。",
         openingWPlaceholder: "開口W",
         openingHPlaceholder: "開口H",
-        openingTitle:
-          "連結盤の場合、隣の盤と接する面が開口になっていることがあります。開口の幅・高さを入力すると D×H から差し引いて計算します（空欄なら通常通り）。",
+        openingTitle: "連結盤の開口分をD×Hから差し引き（空欄なら通常通り）。",
         boxFaces: {
           back: "背面",
           top: "天面",
@@ -415,8 +413,7 @@ const ja: Dictionary = {
           rightSkirt: "Droof×(H1+H2)/2",
           overhang: "W×(Droof−D)",
         },
-        roofBreakdownNote:
-          "片流れ屋根（前H1・後H2）として6面すべて自動計算します（実物により有無が変わらないため、箱体と違い個別トグルはありません）。",
+        roofBreakdownNote: "片流れ屋根として6面すべて自動計算（トグルなし）。",
         roofWidthNote: "屋根の W は箱体の W（{W}）と同じです。",
         fetchFromPartAssembly: "部品製作から取得",
         weightNotRegistered: "重量未登録",
