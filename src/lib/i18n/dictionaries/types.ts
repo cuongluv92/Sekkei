@@ -231,6 +231,7 @@ export interface Dictionary {
     importPreviewTitle: string;
     importPreviewCount: string;
     importConfirm: string;
+    weightPerUnitTitle: string;
   };
   partData: {
     title: string;

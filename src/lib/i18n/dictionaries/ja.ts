@@ -242,6 +242,7 @@ const ja: Dictionary = {
     importPreviewTitle: "{fileName} の取込プレビュー",
     importPreviewCount: "{count}件見つかりました。内容を確認して取り込んでください。",
     importConfirm: "この内容で取り込む",
+    weightPerUnitTitle: "1個あたりの重量(kg)。数量分は自動で乗算されます。",
   },
   partData: {
     title: "部品データ",

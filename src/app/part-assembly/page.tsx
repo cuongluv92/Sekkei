@@ -51,6 +51,17 @@ const BLANK_ROW: Omit<PartAssemblyRow, "id"> = {
   remarks: "",
 };
 
+function roundTo(n: number, decimals: number): number {
+  const f = 10 ** decimals;
+  return Math.round(n * f) / f;
+}
+
+/** 重量 is per-unit (1個あたり) — this is the ×数量 total shown next to it, kept in sync automatically. */
+function rowWeightTotal(row: PartAssemblyRow): number | null {
+  if (row.weight == null) return null;
+  return row.weight * row.quantity;
+}
+
 /** "" clears 重量 back to unset; anything else parses as a number. Returns `false` for an unparseable in-progress keystroke, so the caller can skip updating rather than corrupt the stored value. */
 function parseWeightInput(value: string): number | undefined | false {
   if (value.trim() === "") return undefined;
@@ -341,9 +352,14 @@ function PartAssemblyView() {
 
           <div className="panel">
             <div className="panel-header">
-              <span className="panel-title">
-                {t("partAssembly.tableTitle")}
-              </span>
+              <div className="flex items-center gap-2.5">
+                <span className="panel-title">
+                  {t("partAssembly.tableTitle")}
+                </span>
+                <span className="text-[12px] font-semibold text-muted">
+                  {roundTo(rows.reduce((sum, r) => sum + (rowWeightTotal(r) ?? 0), 0), 2)} kg
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 <button onClick={addBlankRow} className="btn-ghost">
                   <Plus className="h-3.5 w-3.5" />
@@ -536,8 +552,14 @@ function PartAssemblyView() {
                               if (weight !== false) updateField(row.id, { weight });
                             }}
                             placeholder="kg"
+                            title={t("partAssembly.weightPerUnitTitle")}
                             className="field-input w-[72px] py-1 text-right"
                           />
+                          {row.weight != null && row.quantity > 1 && (
+                            <div className="mt-0.5 text-[10.5px] text-muted-2">
+                              ×{row.quantity}={roundTo(rowWeightTotal(row) ?? 0, 2)}
+                            </div>
+                          )}
                         </td>
                         <td className="text-right">
                           <input

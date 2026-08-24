@@ -245,6 +245,7 @@ const vi: Dictionary = {
     importPreviewTitle: "Xem trước dữ liệu từ {fileName}",
     importPreviewCount: "Tìm thấy {count} dòng. Kiểm tra rồi lấy vào.",
     importConfirm: "Lấy vào danh sách này",
+    weightPerUnitTitle: "重量 tính cho 1 cái. Số lượng sẽ tự động nhân lên.",
   },
   partData: {
     title: "Dữ liệu linh kiện",
