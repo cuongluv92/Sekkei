@@ -63,6 +63,7 @@ const ja: Dictionary = {
     upload: "アップロード",
     selectFile: "ファイルを選択",
     fileUploaded: "{fileName} を添付しました",
+    fileExported: "{fileName} を出力しました",
     uploadError: "アップロードに失敗しました",
     settings: "設定",
     moveToTrash: "ゴミ箱に移動",
@@ -215,6 +216,11 @@ const ja: Dictionary = {
     insertBlankOption: "空欄の行を追加",
     insertFromMasterOption: "部品データから選択",
     selectPartModalTitle: "部品データから選択",
+    dwgTemplateMissing:
+      "DWGテンプレートが未設定です。設定 > 出力テンプレート からアップロードしてください。",
+    dwgExportError: "DWG出力に失敗しました",
+    excelExportError: "Excel出力に失敗しました",
+    exportEmpty: "部品リストが空です。先に部品を追加してください。",
   },
   partData: {
     title: "部品データ",

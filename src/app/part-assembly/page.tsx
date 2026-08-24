@@ -3,7 +3,10 @@
 import {
   CornerLeftDown,
   CornerLeftUp,
+  FileSpreadsheet,
   GripVertical,
+  Layers,
+  Loader2,
   Plus,
   Settings,
   Trash2,
@@ -11,7 +14,11 @@ import {
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
-import { searchService } from "@/lib/services";
+import {
+  exportPartAssemblyDwg,
+  exportPartAssemblyExcel,
+  searchService,
+} from "@/lib/services";
 import {
   listManufacturers,
   preloadManufacturers,
@@ -106,6 +113,8 @@ function PartAssemblyView() {
   const { toast, showToast } = useToast();
   const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [exportingDwg, setExportingDwg] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   useEffect(() => {
     preloadManufacturers().then(() => forceRerender((v) => v + 1));
@@ -118,6 +127,38 @@ function PartAssemblyView() {
   function handleDownload(item: SearchResultItem, kind: "dwg" | "pdf") {
     const file = findFileByKind(item.files, kind);
     if (file) openFileAsset(file);
+  }
+
+  async function handleExportDwg() {
+    setExportingDwg(true);
+    try {
+      const result = await exportPartAssemblyDwg();
+      if (result) {
+        showToast(t("common.fileExported", { fileName: result.fileName }));
+      } else {
+        showToast(t("partAssembly.dwgTemplateMissing"), "error");
+      }
+    } catch {
+      showToast(t("partAssembly.dwgExportError"), "error");
+    } finally {
+      setExportingDwg(false);
+    }
+  }
+
+  async function handleExportExcel() {
+    if (rows.length === 0) {
+      showToast(t("partAssembly.exportEmpty"), "error");
+      return;
+    }
+    setExportingExcel(true);
+    try {
+      const { fileName } = await exportPartAssemblyExcel(rows, locale);
+      showToast(t("common.fileExported", { fileName }));
+    } catch {
+      showToast(t("partAssembly.excelExportError"), "error");
+    } finally {
+      setExportingExcel(false);
+    }
   }
 
   function flashRow(id: string) {
@@ -432,10 +473,33 @@ function PartAssemblyView() {
               <span className="text-[11px] text-muted-2">
                 {t("partAssembly.reorderHint")}
               </span>
-              <ExportActions
-                context="部品製作リスト"
-                formats={["dwg", "excel", "pdf"]}
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleExportDwg}
+                  disabled={exportingDwg}
+                  className="btn-secondary"
+                >
+                  {exportingDwg ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Layers className="h-3.5 w-3.5" />
+                  )}
+                  {t("common.dwgExport")}
+                </button>
+                <button
+                  onClick={handleExportExcel}
+                  disabled={exportingExcel}
+                  className="btn-secondary"
+                >
+                  {exportingExcel ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="h-3.5 w-3.5" />
+                  )}
+                  {t("common.excelExport")}
+                </button>
+                <ExportActions context="部品製作リスト" formats={["pdf"]} />
+              </div>
             </div>
           </div>
         </>

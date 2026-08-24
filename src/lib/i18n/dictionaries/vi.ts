@@ -64,6 +64,7 @@ const vi: Dictionary = {
     upload: "Tải lên",
     selectFile: "Chọn file",
     fileUploaded: "Đã đính kèm {fileName}",
+    fileExported: "Đã xuất {fileName}",
     uploadError: "Tải lên thất bại",
     settings: "Cài đặt",
     moveToTrash: "Chuyển vào thùng rác",
@@ -218,6 +219,11 @@ const vi: Dictionary = {
     insertBlankOption: "Thêm dòng trống",
     insertFromMasterOption: "Chọn từ 部品データ",
     selectPartModalTitle: "Chọn từ 部品データ",
+    dwgTemplateMissing:
+      "Chưa có DWG テンプレート (template) — hãy tải lên ở Cài đặt > Template xuất.",
+    dwgExportError: "Xuất DWG thất bại",
+    excelExportError: "Xuất Excel thất bại",
+    exportEmpty: "Danh sách 部品 đang trống — hãy thêm 部品 trước.",
   },
   partData: {
     title: "Dữ liệu linh kiện",

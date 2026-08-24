@@ -65,6 +65,7 @@ export interface Dictionary {
     upload: string;
     selectFile: string;
     fileUploaded: string;
+    fileExported: string;
     uploadError: string;
     settings: string;
     moveToTrash: string;
@@ -207,6 +208,10 @@ export interface Dictionary {
     insertBlankOption: string;
     insertFromMasterOption: string;
     selectPartModalTitle: string;
+    dwgTemplateMissing: string;
+    dwgExportError: string;
+    excelExportError: string;
+    exportEmpty: string;
   };
   partData: {
     title: string;
