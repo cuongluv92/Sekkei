@@ -45,7 +45,7 @@ function buildWorksheet(data: PanelWeightExportData): { workbook: ExcelJS.Workbo
       orientation: "portrait",
       fitToPage: true,
       fitToWidth: 1,
-      fitToHeight: 0,
+      fitToHeight: 1,
       margins: { top: 0.4, bottom: 0.4, left: 0.4, right: 0.4, header: 0, footer: 0 },
     },
   });
