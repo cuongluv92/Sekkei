@@ -22,7 +22,6 @@ export interface PanelWeightExportData {
     panelName: string;
   };
   layerLabel: string;
-  rows: PanelWeightExportRow[];
   groupSubtotals: { group: string; weightKg: number }[];
   wiringFactorLabel: string;
   rawTotal: number;
@@ -50,11 +49,11 @@ function buildWorksheet(data: PanelWeightExportData): { workbook: ExcelJS.Workbo
     },
   });
   ws.columns = [
-    { key: "group", width: 14 },
-    { key: "item", width: 16 },
-    { key: "detail", width: 36 },
-    { key: "quantity", width: 8 },
-    { key: "weight", width: 13 },
+    { key: "group", width: 30 },
+    { key: "spacer1", width: 12 },
+    { key: "spacer2", width: 12 },
+    { key: "spacer3", width: 12 },
+    { key: "weight", width: 16 },
   ];
 
   let r = 1;
@@ -86,53 +85,36 @@ function buildWorksheet(data: PanelWeightExportData): { workbook: ExcelJS.Workbo
   metaCell.alignment = { horizontal: "center" };
   r += 2;
 
+  // 区分ごとの小計のみを並べる — 内訳(個々の面/行)は画面側の「詳細」で
+  // 確認できるため、印刷物は要点だけ (「区分」列 + 右端「重量(kg)」列)。
   const headerRow = ws.getRow(r);
-  const headers = ["区分", "項目", "内訳", "数量", "重量(kg)"];
-  headers.forEach((h, i) => {
-    const cell = headerRow.getCell(i + 1);
-    cell.value = h;
+  ws.mergeCells(r, 2, r, 4);
+  for (let c = 1; c <= COLS; c++) {
+    const cell = headerRow.getCell(c);
     cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
     cell.fill = HEADER_FILL;
-    cell.alignment = { horizontal: i >= 3 ? "right" : "left", vertical: "middle" };
     cell.border = BORDER;
-  });
+  }
+  headerRow.getCell(1).value = "区分";
+  headerRow.getCell(1).alignment = { horizontal: "left", vertical: "middle" };
+  headerRow.getCell(5).value = "重量(kg)";
+  headerRow.getCell(5).alignment = { horizontal: "right", vertical: "middle" };
   headerRow.height = 20;
   r += 1;
 
-  let currentGroup: string | null = null;
-  for (const row of data.rows) {
-    if (row.group !== currentGroup) {
-      currentGroup = row.group;
-      const subtotal = data.groupSubtotals.find((g) => g.group === row.group);
-      const groupRow = ws.getRow(r);
-      groupRow.getCell(1).value = row.group;
-      groupRow.getCell(1).font = { bold: true };
-      if (subtotal) {
-        ws.mergeCells(r, 2, r, 4);
-        const sub = groupRow.getCell(5);
-        sub.value = subtotal.weightKg;
-        sub.numFmt = "#,##0.00";
-        sub.font = { bold: true };
-        sub.alignment = { horizontal: "right" };
-      }
-      for (let c = 1; c <= COLS; c++) {
-        groupRow.getCell(c).fill = GROUP_FILL;
-        groupRow.getCell(c).border = BORDER;
-      }
-      r += 1;
-    }
-    const dataRow = ws.getRow(r);
-    dataRow.getCell(1).value = "";
-    dataRow.getCell(2).value = row.item;
-    dataRow.getCell(3).value = row.detail;
-    dataRow.getCell(4).value = row.quantity;
-    dataRow.getCell(4).alignment = { horizontal: "right" };
-    dataRow.getCell(5).value = row.weightKg;
-    dataRow.getCell(5).numFmt = "#,##0.00";
-    dataRow.getCell(5).alignment = { horizontal: "right" };
+  for (const { group, weightKg } of data.groupSubtotals) {
+    const groupRow = ws.getRow(r);
+    groupRow.getCell(1).value = group;
+    groupRow.getCell(1).font = { bold: true };
+    ws.mergeCells(r, 2, r, 4);
+    const sub = groupRow.getCell(5);
+    sub.value = weightKg;
+    sub.numFmt = "#,##0.00";
+    sub.font = { bold: true };
+    sub.alignment = { horizontal: "right" };
     for (let c = 1; c <= COLS; c++) {
-      dataRow.getCell(c).border = BORDER;
-      dataRow.getCell(c).font = { size: 10 };
+      groupRow.getCell(c).fill = GROUP_FILL;
+      groupRow.getCell(c).border = BORDER;
     }
     r += 1;
   }

@@ -689,7 +689,6 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
       title: t("weightCalc.panel.body.title"),
       caseInfo,
       layerLabel: t(`weightCalc.panel.body.layer.${layer}`),
-      rows,
       groupSubtotals,
       wiringFactorLabel: `×${wiringFactor}`,
       rawTotal: totalWeight,
