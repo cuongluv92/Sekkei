@@ -20,21 +20,23 @@ type ScheduleDateKey =
   | "sheetMetalDeliveryDate"
   | "accessoryDeliveryDate"
   | "productionEndDate"
+  | "inspectionEndDate"
   | "shippingEndDate"
   | "deliveryDate"
   | "witnessEndDate";
 type ScheduleManufacturerKey = "boxManufacturer" | "sheetMetalManufacturer";
 
-/** ＢＯＸ/鈑金/部材/完成/出荷/納品/立会 — same case_schedules end-date fields 工程表 edits, never a separate copy (confirmed). */
+/** ＢＯＸ/鈑金/部材/完成/検査/出荷/納品/立会 — same case_schedules end-date fields 工程表 edits, never a separate copy (confirmed). */
 const SCHEDULE_DATE_FIELDS: {
   key: ScheduleDateKey;
   manufacturerKey?: ScheduleManufacturerKey;
-  labelKey: "box" | "sheetMetal" | "accessory" | "productionEnd" | "shipping" | "delivery" | "witness";
+  labelKey: "box" | "sheetMetal" | "accessory" | "productionEnd" | "inspection" | "shipping" | "delivery" | "witness";
 }[] = [
   { key: "boxDeliveryDate", manufacturerKey: "boxManufacturer", labelKey: "box" },
   { key: "sheetMetalDeliveryDate", manufacturerKey: "sheetMetalManufacturer", labelKey: "sheetMetal" },
   { key: "accessoryDeliveryDate", labelKey: "accessory" },
   { key: "productionEndDate", labelKey: "productionEnd" },
+  { key: "inspectionEndDate", labelKey: "inspection" },
   { key: "shippingEndDate", labelKey: "shipping" },
   { key: "deliveryDate", labelKey: "delivery" },
   { key: "witnessEndDate", labelKey: "witness" },
@@ -304,7 +306,7 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
         </div>
         <div className="panel-body-compact">
           <p className="mb-2.5 text-[12px] text-muted-2">{t("design.production.scheduleHint")}</p>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-7">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-8">
             {SCHEDULE_DATE_FIELDS.map((f) => (
               <div key={f.key} className="flex flex-col gap-1.5">
                 <label className="field-label">{t(`design.production.scheduleColumns.${f.labelKey}`)}</label>
@@ -320,6 +322,7 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
                   value={schedule[f.key]}
                   onChange={(v) => updateSchedule(f.key, v)}
                   className="field-input py-1.5"
+                  quickJun="end"
                 />
               </div>
             ))}

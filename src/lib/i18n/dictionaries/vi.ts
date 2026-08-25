@@ -1128,6 +1128,7 @@ const vi: Dictionary = {
         sheetMetal: "鈑金",
         accessory: "部材",
         productionEnd: "完成",
+        inspection: "検査",
         shipping: "出荷",
         delivery: "納品",
         witness: "立会",

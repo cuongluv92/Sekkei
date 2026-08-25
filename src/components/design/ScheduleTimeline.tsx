@@ -19,6 +19,7 @@ import {
   JUN_BUCKETS,
   junCellKey,
 } from "@/lib/utils/scheduleColoring";
+import { applyCascade, applyCreationDefaults } from "@/lib/utils/schedule";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type {
   CaseSchedule,
@@ -26,22 +27,26 @@ import type {
   ScheduleColorConfig,
 } from "@/lib/types/design";
 
-const MILESTONE_FIELDS: { key: keyof CaseSchedule; labelKey: string }[] = [
-  { key: "sheetMetalOrderDate", labelKey: "sheetMetalOrder" },
-  { key: "sheetMetalDeliveryDate", labelKey: "sheetMetalDelivery" },
-  { key: "boxOrderDate", labelKey: "boxOrder" },
-  { key: "boxDeliveryDate", labelKey: "boxDelivery" },
-  { key: "accessoryOrderDate", labelKey: "accessoryOrder" },
-  { key: "accessoryDeliveryDate", labelKey: "accessoryDelivery" },
-  { key: "productionStartDate", labelKey: "productionStart" },
-  { key: "productionEndDate", labelKey: "productionEnd" },
-  { key: "inspectionStartDate", labelKey: "inspectionStart" },
-  { key: "inspectionEndDate", labelKey: "inspectionEnd" },
-  { key: "witnessStartDate", labelKey: "witnessStart" },
-  { key: "witnessEndDate", labelKey: "witnessEnd" },
-  { key: "shippingStartDate", labelKey: "shippingStart" },
-  { key: "shippingEndDate", labelKey: "shippingEnd" },
-  { key: "deliveryDate", labelKey: "delivery" },
+const MILESTONE_FIELDS: {
+  key: keyof CaseSchedule;
+  labelKey: string;
+  quickJun: "start" | "end";
+}[] = [
+  { key: "sheetMetalOrderDate", labelKey: "sheetMetalOrder", quickJun: "start" },
+  { key: "sheetMetalDeliveryDate", labelKey: "sheetMetalDelivery", quickJun: "end" },
+  { key: "boxOrderDate", labelKey: "boxOrder", quickJun: "start" },
+  { key: "boxDeliveryDate", labelKey: "boxDelivery", quickJun: "end" },
+  { key: "accessoryOrderDate", labelKey: "accessoryOrder", quickJun: "start" },
+  { key: "accessoryDeliveryDate", labelKey: "accessoryDelivery", quickJun: "end" },
+  { key: "productionStartDate", labelKey: "productionStart", quickJun: "start" },
+  { key: "productionEndDate", labelKey: "productionEnd", quickJun: "end" },
+  { key: "inspectionStartDate", labelKey: "inspectionStart", quickJun: "start" },
+  { key: "inspectionEndDate", labelKey: "inspectionEnd", quickJun: "end" },
+  { key: "witnessStartDate", labelKey: "witnessStart", quickJun: "start" },
+  { key: "witnessEndDate", labelKey: "witnessEnd", quickJun: "end" },
+  { key: "shippingStartDate", labelKey: "shippingStart", quickJun: "start" },
+  { key: "shippingEndDate", labelKey: "shippingEnd", quickJun: "end" },
+  { key: "deliveryDate", labelKey: "delivery", quickJun: "end" },
 ];
 
 // "box"(BOX納入) は実テンプレートの凡例上「鈑金・BOX納入」の1色見本に含まれる
@@ -129,14 +134,15 @@ export function ScheduleTimeline() {
     setEditLoading(true);
     scheduleService.getByCase(selectedCaseId).then((s) => {
       if (active) {
-        setEditingSchedule(s);
+        const createdAt = cases.find((x) => x.case.id === selectedCaseId)?.case.createdAt;
+        setEditingSchedule(applyCreationDefaults(s, createdAt));
         setEditLoading(false);
       }
     });
     return () => {
       active = false;
     };
-  }, [selectedCaseId]);
+  }, [selectedCaseId, cases]);
 
   const months = useMemo(() => {
     const list: { year: number; month: number }[] = [];
@@ -164,9 +170,11 @@ export function ScheduleTimeline() {
   }
 
   function updateEditingField(key: keyof CaseSchedule, value: string) {
-    setEditingSchedule((prev) =>
-      prev ? { ...prev, [key]: value || null } : prev,
-    );
+    setEditingSchedule((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, [key]: value || null };
+      return value ? applyCascade(updated, key) : updated;
+    });
   }
 
   async function handleSaveSchedule() {
@@ -266,7 +274,7 @@ export function ScheduleTimeline() {
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-                  {MILESTONE_FIELDS.map(({ key, labelKey }) => (
+                  {MILESTONE_FIELDS.map(({ key, labelKey, quickJun }) => (
                     <div key={key}>
                       <label className="field-label">
                         {t(`design.schedule.milestones.${labelKey}`)}
@@ -275,6 +283,7 @@ export function ScheduleTimeline() {
                         value={editingSchedule[key] as string | null}
                         onChange={(v) => updateEditingField(key, v ?? "")}
                         className="field-input"
+                        quickJun={quickJun}
                       />
                     </div>
                   ))}

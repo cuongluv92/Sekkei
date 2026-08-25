@@ -1025,6 +1025,7 @@ export interface Dictionary {
         sheetMetal: string;
         accessory: string;
         productionEnd: string;
+        inspection: string;
         shipping: string;
         delivery: string;
         witness: string;

@@ -1,5 +1,7 @@
-import { enumerateSegmentsBetween, type MonthSegment } from "./schedule";
+import { bucketFromSegment, enumerateSegmentsBetween, JUN_BUCKETS, type JunBucket, type MonthSegment } from "./schedule";
 import type { CaseSchedule, ScheduleCategoryKey, ScheduleColorConfig } from "@/lib/types/design";
+
+export { bucketFromSegment, JUN_BUCKETS, type JunBucket };
 
 const RANGE_FIELDS: {
   category: ScheduleCategoryKey;
@@ -67,14 +69,6 @@ export function buildColorLookup(
     if (color) map.set(segmentCellKey(seg.year, seg.month, seg.segment), color);
   }
   return map;
-}
-
-export type JunBucket = "初" | "中" | "下";
-export const JUN_BUCKETS: JunBucket[] = ["初", "中", "下"];
-
-/** 初1/初2→初、中1/中2→中、下1/下2→下 — 実際の工程表テンプレート(Excel)は月ごとに初/中/下の3列しか持たないため、画面表示・Excel出力の両方でこの粒度に折りたたむ。 */
-export function bucketFromSegment(segment: MonthSegment["segment"]): JunBucket {
-  return segment.startsWith("初") ? "初" : segment.startsWith("中") ? "中" : "下";
 }
 
 export function junCellKey(year: number, month: number, bucket: JunBucket) {
