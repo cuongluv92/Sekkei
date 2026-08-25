@@ -30,6 +30,7 @@ const vi: Dictionary = {
     globalSearchPlaceholder:
       "Tìm kiếm toàn hệ thống (案件 / bộ phận / tính toán / catalog...)",
     clear: "Xóa",
+    resetFilters: "Xóa bộ lọc",
     calculate: "Tính toán",
     excelExport: "Xuất Excel",
     pdfExport: "Xuất PDF",

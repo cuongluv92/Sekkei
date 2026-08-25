@@ -31,6 +31,7 @@ export interface Dictionary {
     search: string;
     globalSearchPlaceholder: string;
     clear: string;
+    resetFilters: string;
     calculate: string;
     excelExport: string;
     pdfExport: string;

@@ -29,6 +29,7 @@ const ja: Dictionary = {
     search: "検索",
     globalSearchPlaceholder: "全体検索（案件・部品・計算・カタログなど）",
     clear: "クリア",
+    resetFilters: "絞り込みをリセット",
     calculate: "計算",
     excelExport: "Excel出力",
     pdfExport: "PDF出力",

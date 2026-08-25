@@ -342,6 +342,7 @@ function PartAssemblyView() {
             </div>
             <div className="panel-body">
               <PartMasterSearch
+                key={caseId}
                 items={masterItems}
                 loading={masterLoading}
                 onDownload={handleDownload}

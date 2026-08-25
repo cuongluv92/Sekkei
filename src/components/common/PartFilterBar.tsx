@@ -1,6 +1,6 @@
 "use client";
 
-import { Search as SearchIcon } from "lucide-react";
+import { RotateCcw, Search as SearchIcon } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { UNSET_FILTER_VALUE } from "@/lib/utils/partSearch";
 import type { Manufacturer } from "@/lib/types";
@@ -44,74 +44,86 @@ export function PartFilterBar({
   showUncategorized,
 }: PartFilterBarProps) {
   const { t } = useTranslation();
+  const hasActiveFilter = Object.values(value).some((v) => v.trim() !== "");
 
   function set(patch: Partial<PartFilterBarValue>) {
     onChange({ ...value, ...patch });
   }
+  function reset() {
+    onChange({ manufacturerId: "", category: "", keyword: "", specification: "" });
+  }
 
   return (
-    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-[minmax(160px,200px)_minmax(160px,200px)_minmax(200px,1fr)_minmax(220px,1.3fr)]">
-      <div className="min-w-0">
-        <label className="field-label">{t("common.manufacturer")}</label>
-        <select
-          value={value.manufacturerId}
-          onChange={(e) => set({ manufacturerId: e.target.value })}
-          className="field-input truncate"
-        >
-          <option value="">{t("common.allManufacturers")}</option>
-          {showUnsetManufacturer && (
-            <option value={UNSET_FILTER_VALUE}>
-              {t("common.unsetManufacturer")}
-            </option>
-          )}
-          {manufacturers.map((m) => (
-            <option key={m.id} value={m.id}>
-              {locale === "vi" && m.nameVi ? m.nameVi : m.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="min-w-0">
-        <label className="field-label">{t("common.categoryFilterLabel")}</label>
-        <select
-          value={value.category}
-          onChange={(e) => set({ category: e.target.value })}
-          className="field-input truncate"
-        >
-          <option value="">{t("common.allCategories")}</option>
-          {showUncategorized && (
-            <option value={UNSET_FILTER_VALUE}>
-              {t("common.uncategorized")}
-            </option>
-          )}
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="min-w-0">
-        <label className="field-label">{t("common.name")}</label>
-        <div className="relative">
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-2" />
+    <div className="flex flex-col gap-1.5">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-[minmax(160px,200px)_minmax(160px,200px)_minmax(200px,1fr)_minmax(220px,1.3fr)]">
+        <div className="min-w-0">
+          <label className="field-label">{t("common.manufacturer")}</label>
+          <select
+            value={value.manufacturerId}
+            onChange={(e) => set({ manufacturerId: e.target.value })}
+            className="field-input truncate"
+          >
+            <option value="">{t("common.allManufacturers")}</option>
+            {showUnsetManufacturer && (
+              <option value={UNSET_FILTER_VALUE}>
+                {t("common.unsetManufacturer")}
+              </option>
+            )}
+            {manufacturers.map((m) => (
+              <option key={m.id} value={m.id}>
+                {locale === "vi" && m.nameVi ? m.nameVi : m.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="min-w-0">
+          <label className="field-label">{t("common.categoryFilterLabel")}</label>
+          <select
+            value={value.category}
+            onChange={(e) => set({ category: e.target.value })}
+            className="field-input truncate"
+          >
+            <option value="">{t("common.allCategories")}</option>
+            {showUncategorized && (
+              <option value={UNSET_FILTER_VALUE}>
+                {t("common.uncategorized")}
+              </option>
+            )}
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="min-w-0">
+          <label className="field-label">{t("common.name")}</label>
+          <div className="relative">
+            <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-2" />
+            <input
+              value={value.keyword}
+              onChange={(e) => set({ keyword: e.target.value })}
+              placeholder={t("common.keywordFilterPlaceholder")}
+              className="field-input pl-8"
+            />
+          </div>
+        </div>
+        <div className="min-w-0">
+          <label className="field-label">{t("common.specification")}</label>
           <input
-            value={value.keyword}
-            onChange={(e) => set({ keyword: e.target.value })}
-            placeholder={t("common.keywordFilterPlaceholder")}
-            className="field-input pl-8"
+            value={value.specification}
+            onChange={(e) => set({ specification: e.target.value })}
+            placeholder={t("common.specificationFilterPlaceholder")}
+            className="field-input"
           />
         </div>
       </div>
-      <div className="min-w-0">
-        <label className="field-label">{t("common.specification")}</label>
-        <input
-          value={value.specification}
-          onChange={(e) => set({ specification: e.target.value })}
-          placeholder={t("common.specificationFilterPlaceholder")}
-          className="field-input"
-        />
-      </div>
+      {hasActiveFilter && (
+        <button type="button" onClick={reset} className="btn-ghost self-end !py-1 !text-[12px]">
+          <RotateCcw className="h-3.5 w-3.5" />
+          {t("common.resetFilters")}
+        </button>
+      )}
     </div>
   );
 }
