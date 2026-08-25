@@ -8,7 +8,7 @@ import { computeOutdoorVentilation } from "@/lib/calc/ventilation/outdoorVentila
 import { sumHeatSourcesW, type HeatSourceItem } from "@/lib/calc/ventilation/heatBalance";
 import type { VentilationClimateProfile } from "@/lib/types";
 import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calculation/OutlineDrawingUpload";
-import { FormulaBlock, SourceNote } from "@/components/calculation/FormulaBlock";
+import { FormulaBlock, SourceNote, WhyPanel } from "@/components/calculation/FormulaBlock";
 import { HeatSourceList } from "./HeatSourceList";
 
 /** 地域未選択時のデフォルト — 社内選定マスタに常に存在する基準地域。 */
@@ -471,6 +471,16 @@ export function VentilationResultPanel({
           {naturalVentilationSufficient ? t("ventilationCalc.naturalSufficient") : t("ventilationCalc.forcedRequired")}
         </span>
       </div>
+
+      <WhyPanel
+        title={t("ventilationCalc.whyTitle")}
+        items={[
+          { label: "αxAx", body: t("ventilationCalc.whyEffectiveAreaBody") },
+          { label: "QV", body: t("ventilationCalc.whyQvBody") },
+          { label: `QC vs ${heatLossLabel}+QV`, body: t("ventilationCalc.whyJudgeBody") },
+          ...(naturalVentilationSufficient ? [] : [{ label: "WK", body: t("ventilationCalc.whyWkBody") }]),
+        ]}
+      />
 
       {!naturalVentilationSufficient && (
         <div className="flex flex-col gap-3 border-t border-border pt-3">

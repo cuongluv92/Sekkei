@@ -7,7 +7,7 @@ import { calculationRecordService, seismicAnchorBoltService } from "@/lib/servic
 import { computeFloorMountAnchorForces } from "@/lib/calc/seismic/floorMountAnchor";
 import type { SeismicAnchorAllowable } from "@/lib/types";
 import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calculation/OutlineDrawingUpload";
-import { FormulaBlock, SourceNote } from "@/components/calculation/FormulaBlock";
+import { FormulaBlock, SourceNote, WhyPanel } from "@/components/calculation/FormulaBlock";
 import {
   AnchorBoltSection,
   blankAnchorBoltInputState,
@@ -203,6 +203,15 @@ export function FloorMountSeismicView({ caseId, calculationType, titleKey, descr
               ]}
             />
           )}
+
+          <WhyPanel
+            title={t("seismicCalc.whyTitle")}
+            items={[
+              { label: "Rb", body: t("seismicCalc.whyRbFloorBody") },
+              { label: "Q = FH / n", body: t("seismicCalc.whyQFloorBody") },
+              { label: "σ = Rb/A、τ = Q/A", body: t("seismicCalc.whyStressBody") },
+            ]}
+          />
         </div>
 
         {caseId && (

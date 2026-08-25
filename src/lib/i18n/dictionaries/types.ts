@@ -525,6 +525,11 @@ export interface Dictionary {
     judgementTitle: string;
     naturalSufficient: string;
     forcedRequired: string;
+    whyTitle: string;
+    whyEffectiveAreaBody: string;
+    whyQvBody: string;
+    whyJudgeBody: string;
+    whyWkBody: string;
     forcedVentilationTitle: string;
     forcedVentilationHint: string;
     fanCapacityLabel: string;
@@ -588,6 +593,12 @@ export interface Dictionary {
     weightLabel: string;
     weightPlaceholder: string;
     weightHint: string;
+    whyTitle: string;
+    whyKsBody: string;
+    whyZBody: string;
+    whyKhBody: string;
+    whyFhBody: string;
+    whyFvBody: string;
     section2TitleFloor: string;
     section2HintFloor: string;
     section2TitleWall: string;
@@ -600,6 +611,9 @@ export interface Dictionary {
     n1Hint: string;
     n2Hint: string;
     nTotalHint: string;
+    whyRbFloorBody: string;
+    whyQFloorBody: string;
+    whyStressBody: string;
     widthDirection: string;
     depthDirection: string;
     governingDirection: string;
@@ -610,6 +624,8 @@ export interface Dictionary {
     nt1Hint: string;
     nt2Hint: string;
     governingFormula: string;
+    whyRbWallBody: string;
+    whyQWallBody: string;
     section3Title: string;
     section3Hint: string;
     section3AutoHint: string;

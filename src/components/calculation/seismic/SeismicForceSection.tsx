@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslation } from "@/lib/i18n";
+import { WhyPanel } from "@/components/calculation/FormulaBlock";
 import {
   computeHorizontalForce,
   computeKh,
@@ -160,6 +161,17 @@ export function SeismicForceSection({ value, onChange }: Props) {
         <ForceStat label="FH = KH × W" value={result ? result.horizontalForceKn.toFixed(3) : "—"} unit="kN" />
         <ForceStat label="FV = FH / 2" value={result ? result.verticalForceKn.toFixed(3) : "—"} unit="kN" />
       </div>
+
+      <WhyPanel
+        title={t("seismicCalc.whyTitle")}
+        items={[
+          { label: "KS", body: t("seismicCalc.whyKsBody") },
+          { label: "Z", body: t("seismicCalc.whyZBody") },
+          { label: "KH = Z × KS", body: t("seismicCalc.whyKhBody") },
+          { label: "FH = KH × W", body: t("seismicCalc.whyFhBody") },
+          { label: "FV = FH ÷ 2", body: t("seismicCalc.whyFvBody") },
+        ]}
+      />
     </div>
   );
 }

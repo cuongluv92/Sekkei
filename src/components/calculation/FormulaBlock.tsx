@@ -32,3 +32,29 @@ export function SourceNote({ title, body }: { title: string; body: string }) {
     </div>
   );
 }
+
+export interface WhyItem {
+  label: string;
+  body: string;
+}
+
+/**
+ * 「なぜこの値になるのか」を係数・変数ごとに個別説明する専用セクション。
+ * 前提知識がない読み手でも、式の各項の意味を理解して手計算で検算できる
+ * ことを目的とする (単に出典を示すだけの SourceNote とは別に用意する)。
+ */
+export function WhyPanel({ title, items }: { title: string; items: WhyItem[] }) {
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/10 px-3 py-2.5">
+      <span className="text-[11px] font-bold text-foreground">{title}</span>
+      <dl className="flex flex-col gap-2">
+        {items.map((item, i) => (
+          <div key={i}>
+            <dt className="font-mono text-[11px] font-semibold text-foreground">{item.label}</dt>
+            <dd className="text-[11px] leading-relaxed text-muted-2">{item.body}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
