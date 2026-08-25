@@ -568,7 +568,7 @@ function PartAssemblyView() {
                             title={t("partAssembly.weightPerUnitTitle")}
                             className="field-input w-[72px] py-1 text-right"
                           />
-                          {row.weight != null && row.quantity > 1 && (
+                          {row.weight != null && (
                             <div className="mt-0.5 text-[10.5px] text-muted-2">
                               ×{row.quantity}={roundTo(rowWeightTotal(row) ?? 0, 2)}
                             </div>
@@ -640,6 +640,7 @@ function PartAssemblyView() {
         <InsertPartModal
           items={masterItems}
           loading={masterLoading}
+          currentRows={rows}
           onClose={() => setInsertAt(null)}
           onInsertBlank={handleInsertBlank}
           onPick={handleInsertPick}

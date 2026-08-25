@@ -1376,6 +1376,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
         <InsertPartModal
           items={masterItems}
           loading={masterLoading}
+          currentRows={parts}
           onClose={() => setPartsModalOpen(false)}
           onInsertBlank={handleInsertBlankPart}
           onPick={handlePickPart}
