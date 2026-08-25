@@ -1,4 +1,3 @@
-import { findManufacturerByName } from "@/lib/mock/manufacturers";
 import {
   BLANK_MARKERS,
   DXF_PART_LIST_MAX_ROWS,
@@ -16,7 +15,8 @@ import {
 export interface DxfExtractedRow {
   symbol: string;
   name: string;
-  manufacturerId: string;
+  /** Raw メーカー text as written in the DXF — not yet resolved to a manufacturerId; the caller (which is async, unlike this pure parser) resolves/auto-creates it. */
+  manufacturer: string;
   model: string;
   specification: string;
   quantity: number;
@@ -112,12 +112,11 @@ export function extractDxfPartList(dxfText: string): DxfExtractResult {
     const allBlank = sortedCells.every((c) => BLANK_MARKERS.has(c.pair.value.trim()));
     if (allBlank) break; // first unfilled template row — nothing further down was used
 
-    const manufacturerText = cellText("manufacturer", byField.get("manufacturer"));
     const quantityText = cellText("quantity", byField.get("quantity"));
     rows.push({
       symbol: cellText("symbol", byField.get("symbol")),
       name: cellText("name", byField.get("name")),
-      manufacturerId: manufacturerText ? (findManufacturerByName(manufacturerText)?.id ?? "") : "",
+      manufacturer: cellText("manufacturer", byField.get("manufacturer")),
       model: cellText("model", byField.get("model")),
       specification: cellText("specification", byField.get("specification")),
       quantity: quantityText ? Number(quantityText) || 1 : 1,

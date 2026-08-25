@@ -25,6 +25,7 @@ export {
 } from "./partAssemblyExportService";
 export {
   parsePartAssemblyImportFile,
+  registerImportedPartsInMaster,
   type PartAssemblyImportResult,
   type PartAssemblyImportRow,
 } from "./partAssemblyImportService";

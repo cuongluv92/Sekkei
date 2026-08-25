@@ -38,6 +38,7 @@ import {
 import type { PanelWeightLayerImage } from "@/lib/services/panelWeightLayerImageService";
 import { InsertPartModal } from "@/components/common/InsertPartModal";
 import { PartWeightSearchModal } from "@/components/common/PartWeightSearchModal";
+import { getFieldSuggestions, rememberFieldValue } from "@/lib/utils/fieldMemory";
 import type { SearchResultItem, WeightMaterial } from "@/lib/types";
 
 const CALCULATION_TYPE = "weight-panel-body";
@@ -137,6 +138,7 @@ interface RoofState {
 interface PanelBodySavedInput {
   layer: PanelLayerKey;
   box: BoxState;
+  nittoBoxModel: string;
   nittoBoxWeight: string;
   nittoBoxQuantity: string;
   roof: RoofState;
@@ -255,6 +257,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
   const [layer, setLayer] = useState<PanelLayerKey>("indoor");
   const [activeImageKey, setActiveImageKey] = useState<PanelImageKey>("indoor");
   const [box, setBox] = useState<BoxState>(blankBox([], "indoor"));
+  const [nittoBoxModel, setNittoBoxModel] = useState("");
   const [nittoBoxWeight, setNittoBoxWeight] = useState("");
   const [nittoBoxQuantity, setNittoBoxQuantity] = useState("1");
   const [roof, setRoof] = useState<RoofState>(blankRoof([]));
@@ -339,6 +342,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     const restoredLayer = loadedRecord.layer ?? "indoor";
     setLayer(restoredLayer);
     setBox(loadedRecord.box ?? blankBox(materials, restoredLayer));
+    setNittoBoxModel(loadedRecord.nittoBoxModel ?? "");
     setNittoBoxWeight(loadedRecord.nittoBoxWeight ?? "");
     setNittoBoxQuantity(loadedRecord.nittoBoxQuantity ?? "1");
     setRoof(loadedRecord.roof ?? blankRoof(materials));
@@ -359,6 +363,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     return {
       layer,
       box,
+      nittoBoxModel,
       nittoBoxWeight,
       nittoBoxQuantity,
       roof,
@@ -387,6 +392,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     caseId,
     layer,
     box,
+    nittoBoxModel,
     nittoBoxWeight,
     nittoBoxQuantity,
     roof,
@@ -799,11 +805,24 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
 
   /** Nitto箱体は購入品の完成品なので、部品データに登録済みなら重量をそのまま拾える — 手入力は登録がない場合のフォールバックとして残す。 */
   function handlePickNittoBoxWeight(item: SearchResultItem) {
+    setNittoBoxModel(item.model);
     if (item.weight != null) {
       setNittoBoxWeight(String(item.weight));
       markDirty();
     }
     setNittoWeightModalOpen(false);
+  }
+
+  /** 型番を手入力/確定したときに 部品データ に登録済みの完全一致があれば重量を自動で拾う — 無ければ何もしない (手入力のまま)。 */
+  function handleNittoBoxModelBlur(model: string) {
+    rememberFieldValue("partModel", model);
+    const q = model.trim().toLowerCase();
+    if (!q) return;
+    const match = masterItems.find((item) => item.source === "part-data" && item.model.trim().toLowerCase() === q);
+    if (match?.weight != null) {
+      setNittoBoxWeight(String(match.weight));
+      markDirty();
+    }
   }
 
   return (
@@ -879,6 +898,26 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
           <GroupCard title={t(`weightCalc.panel.body.groups.box`)} weight={boxWeight}>
             {layer === "nitto" ? (
               <div className="grid grid-cols-2 gap-2.5">
+                <datalist id="field-suggestions-partModel">
+                  {getFieldSuggestions("partModel").map((v) => (
+                    <option key={v} value={v} />
+                  ))}
+                </datalist>
+                <div className="col-span-2">
+                  <label className="mb-1 block text-[11px] text-muted">
+                    {t("weightCalc.panel.body.fields.nittoBoxModel")}
+                  </label>
+                  <input
+                    value={nittoBoxModel}
+                    onChange={(e) => {
+                      setNittoBoxModel(e.target.value);
+                      markDirty();
+                    }}
+                    onBlur={(e) => handleNittoBoxModelBlur(e.target.value)}
+                    list="field-suggestions-partModel"
+                    className="field-input font-mono text-[12px]"
+                  />
+                </div>
                 <div>
                   <label className="mb-1 block text-[11px] text-muted">
                     {t("weightCalc.panel.body.fields.nittoBoxWeight")}

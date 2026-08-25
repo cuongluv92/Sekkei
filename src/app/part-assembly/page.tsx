@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowDown,
   CornerLeftDown,
   CornerLeftUp,
   FileSpreadsheet,
@@ -13,13 +12,14 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Fragment, Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import {
   exportPartAssemblyDxf,
   exportPartAssemblyExcel,
   parsePartAssemblyImportFile,
+  registerImportedPartsInMaster,
   searchService,
   type PartAssemblyImportRow,
 } from "@/lib/services";
@@ -29,6 +29,7 @@ import {
   preloadManufacturers,
 } from "@/lib/mock/manufacturers";
 import { findFileByKind, openFileAsset } from "@/lib/utils/fileDownload";
+import { getFieldSuggestions, rememberFieldValue } from "@/lib/utils/fieldMemory";
 import { usePartAssembly } from "@/lib/store/PartAssemblyProvider";
 import { useEffectiveCaseId } from "@/lib/store/ActiveCaseProvider";
 import { useToast } from "@/lib/hooks/useToast";
@@ -51,6 +52,21 @@ const BLANK_ROW: Omit<PartAssemblyRow, "id"> = {
   quantity: 1,
   remarks: "",
 };
+
+/** 記号/品名/型式/仕様/備考 の autocomplete 用に、行の値を localStorage の入力履歴へ記録する。 */
+function rememberRowFields(row: {
+  symbol?: string;
+  name?: string;
+  model?: string;
+  specification?: string;
+  remarks?: string;
+}): void {
+  if (row.symbol) rememberFieldValue("partSymbol", row.symbol);
+  if (row.name) rememberFieldValue("partName", row.name);
+  if (row.model) rememberFieldValue("partModel", row.model);
+  if (row.specification) rememberFieldValue("partSpecification", row.specification);
+  if (row.remarks) rememberFieldValue("partRemarks", row.remarks);
+}
 
 function roundTo(n: number, decimals: number): number {
   const f = 10 ** decimals;
@@ -134,6 +150,7 @@ function PartAssemblyView() {
   const [masterLoading, setMasterLoading] = useState(true);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [insertAt, setInsertAt] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<"search" | "list">("search");
   const [, forceRerender] = useState(0);
   const { toast, showToast } = useToast();
   const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null);
@@ -143,6 +160,8 @@ function PartAssemblyView() {
   const [importPreview, setImportPreview] = useState<{ rows: PartAssemblyImportRow[]; fileName: string } | null>(null);
   const [importParsing, setImportParsing] = useState(false);
   const [importCommitting, setImportCommitting] = useState(false);
+  /** 仕様が既存の 部品データ (型番違い) と重複する行だけ、確認画面で「別の部品として登録する」を選んだ index を持つ。 */
+  const [registerAnywayRows, setRegisterAnywayRows] = useState<Set<number>>(new Set());
   const importFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -223,6 +242,7 @@ function PartAssemblyView() {
         showToast(t("partAssembly.importEmpty"), "error");
         return;
       }
+      setRegisterAnywayRows(new Set());
       setImportPreview({ rows: parsedRows, fileName: file.name });
     } catch {
       showToast(t("partAssembly.importError"), "error");
@@ -236,6 +256,8 @@ function PartAssemblyView() {
     setImportCommitting(true);
     try {
       await addRows(importPreview.rows);
+      importPreview.rows.forEach(rememberRowFields);
+      await registerImportedPartsInMaster(importPreview.rows, registerAnywayRows);
       showToast(t("partAssembly.importedCount", { count: importPreview.rows.length }));
       setImportPreview(null);
     } catch {
@@ -243,6 +265,15 @@ function PartAssemblyView() {
     } finally {
       setImportCommitting(false);
     }
+  }
+
+  function toggleRegisterAnyway(index: number) {
+    setRegisterAnywayRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
   }
 
   function flashRow(id: string) {
@@ -255,7 +286,9 @@ function PartAssemblyView() {
 
   async function handlePick(item: SearchResultItem) {
     try {
-      const id = await addRow(rowFromMasterItem(item));
+      const newRow = rowFromMasterItem(item);
+      const id = await addRow(newRow);
+      rememberRowFields(newRow);
       showToast(
         item.model
           ? t("partAssembly.addedToListWithModel", { model: item.model })
@@ -270,7 +303,9 @@ function PartAssemblyView() {
   async function handleInsertPick(item: SearchResultItem) {
     if (insertAt === null) return;
     try {
-      const id = await insertRowAt(insertAt, rowFromMasterItem(item));
+      const newRow = rowFromMasterItem(item);
+      const id = await insertRowAt(insertAt, newRow);
+      rememberRowFields(newRow);
       showToast(
         item.model
           ? t("partAssembly.addedToListWithModel", { model: item.model })
@@ -339,17 +374,71 @@ function PartAssemblyView() {
         <>
           <div className="panel">
             <div className="panel-header">
-              <span className="panel-title">{t("common.search")}</span>
-              <button
-                type="button"
-                onClick={() => document.getElementById("part-assembly-table")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                className="btn-ghost !py-1 !text-[12px]"
-              >
-                <ArrowDown className="h-3.5 w-3.5" />
-                {t("partAssembly.jumpToList")}
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("search")}
+                  className={
+                    activeTab === "search"
+                      ? "rounded-md bg-accent px-3 py-1.5 text-[12.5px] font-bold text-accent-foreground"
+                      : "rounded-md px-3 py-1.5 text-[12.5px] font-semibold text-muted hover:text-foreground"
+                  }
+                >
+                  {t("common.search")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("list")}
+                  className={
+                    activeTab === "list"
+                      ? "rounded-md bg-accent px-3 py-1.5 text-[12.5px] font-bold text-accent-foreground"
+                      : "rounded-md px-3 py-1.5 text-[12.5px] font-semibold text-muted hover:text-foreground"
+                  }
+                >
+                  {t("partAssembly.listTabLabel", { count: rows.length })}
+                </button>
+              </div>
+              {activeTab === "list" && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[12px] font-semibold text-muted">
+                    {roundTo(rows.reduce((sum, r) => sum + (rowWeightTotal(r) ?? 0), 0), 2)} kg
+                  </span>
+                  <button onClick={addBlankRow} className="btn-ghost">
+                    <Plus className="h-3.5 w-3.5" />
+                    {t("partAssembly.addRow")}
+                  </button>
+                  <button
+                    onClick={handleImportButtonClick}
+                    className="btn-ghost"
+                    disabled={importParsing}
+                    title={t("partAssembly.importFileTitle")}
+                  >
+                    {importParsing ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Upload className="h-3.5 w-3.5" />
+                    )}
+                    {t("partAssembly.importFile")}
+                  </button>
+                  <input
+                    ref={importFileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,.csv,.dxf"
+                    className="hidden"
+                    onChange={handleImportFileSelected}
+                  />
+                  <button
+                    onClick={clear}
+                    className="btn-ghost"
+                    disabled={rows.length === 0}
+                  >
+                    {t("common.clear")}
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="panel-body">
+
+            <div className="panel-body" style={activeTab === "search" ? undefined : { display: "none" }}>
               <PartMasterSearch
                 key={caseId}
                 items={masterItems}
@@ -358,52 +447,35 @@ function PartAssemblyView() {
                 onPick={handlePick}
               />
             </div>
-          </div>
 
-          <div id="part-assembly-table" className="panel scroll-mt-4">
-            <div className="panel-header">
-              <div className="flex items-center gap-2.5">
-                <span className="panel-title">
-                  {t("partAssembly.tableTitle")}
-                </span>
-                <span className="text-[12px] font-semibold text-muted">
-                  {roundTo(rows.reduce((sum, r) => sum + (rowWeightTotal(r) ?? 0), 0), 2)} kg
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={addBlankRow} className="btn-ghost">
-                  <Plus className="h-3.5 w-3.5" />
-                  {t("partAssembly.addRow")}
-                </button>
-                <button
-                  onClick={handleImportButtonClick}
-                  className="btn-ghost"
-                  disabled={importParsing}
-                  title={t("partAssembly.importFileTitle")}
-                >
-                  {importParsing ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Upload className="h-3.5 w-3.5" />
-                  )}
-                  {t("partAssembly.importFile")}
-                </button>
-                <input
-                  ref={importFileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls,.csv,.dxf"
-                  className="hidden"
-                  onChange={handleImportFileSelected}
-                />
-                <button
-                  onClick={clear}
-                  className="btn-ghost"
-                  disabled={rows.length === 0}
-                >
-                  {t("common.clear")}
-                </button>
-              </div>
-            </div>
+            {activeTab === "list" && (
+              <>
+                {/* 記号/品名/型式/仕様/備考 の autocomplete — 過去に入力・取込した値を localStorage から候補表示する */}
+                <datalist id="field-suggestions-partSymbol">
+                  {getFieldSuggestions("partSymbol").map((v) => (
+                    <option key={v} value={v} />
+                  ))}
+                </datalist>
+                <datalist id="field-suggestions-partName">
+                  {getFieldSuggestions("partName").map((v) => (
+                    <option key={v} value={v} />
+                  ))}
+                </datalist>
+                <datalist id="field-suggestions-partModel">
+                  {getFieldSuggestions("partModel").map((v) => (
+                    <option key={v} value={v} />
+                  ))}
+                </datalist>
+                <datalist id="field-suggestions-partSpecification">
+                  {getFieldSuggestions("partSpecification").map((v) => (
+                    <option key={v} value={v} />
+                  ))}
+                </datalist>
+                <datalist id="field-suggestions-partRemarks">
+                  {getFieldSuggestions("partRemarks").map((v) => (
+                    <option key={v} value={v} />
+                  ))}
+                </datalist>
 
             <div className="data-table-wrap">
               <table className="data-table" style={{ minWidth: 1260 }}>
@@ -497,6 +569,8 @@ function PartAssemblyView() {
                             onChange={(e) =>
                               updateField(row.id, { symbol: e.target.value })
                             }
+                            onBlur={(e) => rememberFieldValue("partSymbol", e.target.value)}
+                            list="field-suggestions-partSymbol"
                             className="field-input py-1"
                           />
                         </td>
@@ -506,6 +580,8 @@ function PartAssemblyView() {
                             onChange={(e) =>
                               updateField(row.id, { name: e.target.value })
                             }
+                            onBlur={(e) => rememberFieldValue("partName", e.target.value)}
+                            list="field-suggestions-partName"
                             className="field-input py-1"
                           />
                         </td>
@@ -537,6 +613,8 @@ function PartAssemblyView() {
                             onChange={(e) =>
                               updateField(row.id, { model: e.target.value })
                             }
+                            onBlur={(e) => rememberFieldValue("partModel", e.target.value)}
+                            list="field-suggestions-partModel"
                             className="field-input py-1 font-mono text-[12px]"
                           />
                         </td>
@@ -548,6 +626,8 @@ function PartAssemblyView() {
                                 specification: e.target.value,
                               })
                             }
+                            onBlur={(e) => rememberFieldValue("partSpecification", e.target.value)}
+                            list="field-suggestions-partSpecification"
                             className="field-input py-1"
                           />
                         </td>
@@ -590,6 +670,8 @@ function PartAssemblyView() {
                             onChange={(e) =>
                               updateField(row.id, { remarks: e.target.value })
                             }
+                            onBlur={(e) => rememberFieldValue("partRemarks", e.target.value)}
+                            list="field-suggestions-partRemarks"
                             className="field-input py-1"
                           />
                         </td>
@@ -640,6 +722,8 @@ function PartAssemblyView() {
                 <ExportActions context="部品製作リスト" formats={["pdf"]} />
               </div>
             </div>
+              </>
+            )}
           </div>
         </>
       )}
@@ -692,15 +776,31 @@ function PartAssemblyView() {
                 </thead>
                 <tbody>
                   {importPreview.rows.map((row, i) => (
-                    <tr key={i}>
-                      <td>{row.symbol}</td>
-                      <td>{row.name}</td>
-                      <td>{row.manufacturerId ? getManufacturerById(row.manufacturerId)?.name ?? "" : ""}</td>
-                      <td className="font-mono text-[12px]">{row.model}</td>
-                      <td>{row.specification}</td>
-                      <td className="text-right">{row.quantity}</td>
-                      <td className="text-right">{row.weight ?? ""}</td>
-                    </tr>
+                    <Fragment key={i}>
+                      <tr>
+                        <td>{row.symbol}</td>
+                        <td>{row.name}</td>
+                        <td>{row.manufacturerId ? getManufacturerById(row.manufacturerId)?.name ?? "" : ""}</td>
+                        <td className="font-mono text-[12px]">{row.model}</td>
+                        <td>{row.specification}</td>
+                        <td className="text-right">{row.quantity}</td>
+                        <td className="text-right">{row.weight ?? ""}</td>
+                      </tr>
+                      {row.specDuplicateModel && (
+                        <tr>
+                          <td colSpan={7} className="bg-warning/10 px-2 py-1.5">
+                            <label className="flex items-center gap-1.5 text-[11px] text-warning">
+                              <input
+                                type="checkbox"
+                                checked={registerAnywayRows.has(i)}
+                                onChange={() => toggleRegisterAnyway(i)}
+                              />
+                              {t("partAssembly.specDuplicateWarning", { model: row.specDuplicateModel })}
+                            </label>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>

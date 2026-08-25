@@ -204,7 +204,7 @@ export interface Dictionary {
     description: string;
     searchPlaceholder: string;
     tableTitle: string;
-    jumpToList: string;
+    listTabLabel: string;
     tableEmpty: string;
     addRow: string;
     reorderHint: string;
@@ -233,6 +233,7 @@ export interface Dictionary {
     importPreviewTitle: string;
     importPreviewCount: string;
     importConfirm: string;
+    specDuplicateWarning: string;
     weightPerUnitTitle: string;
     currentListLabel: string;
   };
@@ -347,6 +348,7 @@ export interface Dictionary {
           h1: string;
           h2: string;
           length: string;
+          nittoBoxModel: string;
           nittoBoxWeight: string;
           model: string;
           name: string;
