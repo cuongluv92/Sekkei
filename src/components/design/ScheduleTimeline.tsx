@@ -10,14 +10,14 @@ import {
   scheduleColorService,
   scheduleService,
 } from "@/lib/services/design";
-import { buildCaseDisplayLabel } from "@/lib/utils/designNumbering";
+import { buildCaseDisplayLabel, buildProjectPanelLabel } from "@/lib/utils/designNumbering";
 import { DateInput } from "@/components/common/DateInput";
-import { SCHEDULE_SEGMENTS } from "@/lib/utils/schedule";
 import {
   addMonths,
-  buildColorLookup,
+  buildJunColorLookup,
   computeColoredSegments,
-  segmentCellKey,
+  JUN_BUCKETS,
+  junCellKey,
 } from "@/lib/utils/scheduleColoring";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type {
@@ -44,9 +44,10 @@ const MILESTONE_FIELDS: { key: keyof CaseSchedule; labelKey: string }[] = [
   { key: "deliveryDate", labelKey: "delivery" },
 ];
 
+// "box"(BOX納入) は実テンプレートの凡例上「鈑金・BOX納入」の1色見本に含まれる
+// ため、凡例には独立した見本を出さない (色設定自体はsheetMetal/box別々のまま — 表示だけ統合)。
 const CATEGORY_KEYS: ScheduleColorConfig["category"][] = [
   "sheetMetal",
-  "box",
   "accessory",
   "production",
   "inspection",
@@ -54,10 +55,14 @@ const CATEGORY_KEYS: ScheduleColorConfig["category"][] = [
   "shipping",
 ];
 
-const MONTHS_BEFORE = 12;
-const MONTHS_AFTER = 18;
-const SEGMENT_WIDTH = 30;
-const LABEL_COL_WIDTH = 260;
+// 実テンプレート(⑤工程表 Excel)は「作成月の3ヶ月前」から始まり13ヶ月分
+// (3ヶ月前+当月+9ヶ月後) しか列を持たない — A3用紙に収まる範囲。画面表示
+// もこの範囲に合わせる (それより広い範囲を見せても実際は出力できない)。
+const MONTHS_BEFORE = 3;
+const MONTHS_AFTER = 9;
+const SEGMENT_WIDTH = 40;
+const DRAWING_COL_WIDTH = 130;
+const LABEL_COL_WIDTH = 200;
 
 /**
  * 工程表 — full system-wide timeline (not scoped to any one 案件, matching
@@ -149,7 +154,7 @@ export function ScheduleTimeline() {
     );
     if (index >= 0 && scrollContainerRef.current) {
       scrollContainerRef.current.scrollLeft =
-        index * SEGMENT_WIDTH * SCHEDULE_SEGMENTS.length;
+        index * SEGMENT_WIDTH * JUN_BUCKETS.length;
     }
   }, [focus, loading, months]);
 
@@ -399,16 +404,25 @@ export function ScheduleTimeline() {
               <thead>
                 <tr>
                   <th
-                    className="sticky left-0 z-20 border-b border-border-strong bg-surface-2 px-3 py-2 text-left"
-                    style={{
-                      width: LABEL_COL_WIDTH,
-                      minWidth: LABEL_COL_WIDTH,
-                    }}
-                  />
+                    rowSpan={2}
+                    className="sticky left-0 z-20 border-b border-border-strong bg-surface-2 px-3 py-2 text-left whitespace-pre-line"
+                    style={{ width: DRAWING_COL_WIDTH, minWidth: DRAWING_COL_WIDTH }}
+                  >
+                    {t("design.ledger.columns.drawingNumber")}
+                    {"\n"}
+                    {t("design.ledger.columns.managementNumber")}
+                  </th>
+                  <th
+                    rowSpan={2}
+                    className="sticky z-20 border-b border-border-strong bg-surface-2 px-3 py-2 text-left"
+                    style={{ left: DRAWING_COL_WIDTH, width: LABEL_COL_WIDTH, minWidth: LABEL_COL_WIDTH }}
+                  >
+                    {t("design.ledger.columns.projectName")}／{t("design.ledger.columns.panelNames")}
+                  </th>
                   {months.map((m) => (
                     <th
                       key={`y-${m.year}-${m.month}`}
-                      colSpan={SCHEDULE_SEGMENTS.length}
+                      colSpan={JUN_BUCKETS.length}
                       className="border-b border-l border-border-strong bg-surface-2 px-1 py-1 text-center text-[11px] font-semibold whitespace-nowrap text-muted"
                     >
                       {m.year}/{String(m.month).padStart(2, "0")}
@@ -416,27 +430,17 @@ export function ScheduleTimeline() {
                   ))}
                 </tr>
                 <tr>
-                  <th
-                    className="sticky left-0 z-20 border-b border-border-strong bg-surface-2 px-3 py-1.5 text-left text-[11px] text-muted"
-                    style={{
-                      width: LABEL_COL_WIDTH,
-                      minWidth: LABEL_COL_WIDTH,
-                    }}
-                  >
-                    {t("design.ledger.columns.drawingNumber")} /{" "}
-                    {t("design.ledger.columns.projectName")}
-                  </th>
                   {months.map((m) =>
-                    SCHEDULE_SEGMENTS.map((seg, i) => (
+                    JUN_BUCKETS.map((bucket, i) => (
                       <th
-                        key={`h-${m.year}-${m.month}-${seg}`}
-                        className={`border-b border-border bg-surface-2 py-1 text-center text-[9.5px] text-muted-2 ${i === 0 ? "border-l border-border-strong" : ""}`}
+                        key={`h-${m.year}-${m.month}-${bucket}`}
+                        className={`border-b border-border bg-surface-2 py-1 text-center text-[10px] text-muted-2 ${i === 0 ? "border-l border-border-strong" : ""}`}
                         style={{
                           width: SEGMENT_WIDTH,
                           minWidth: SEGMENT_WIDTH,
                         }}
                       >
-                        {seg}
+                        {bucket}
                       </th>
                     )),
                   )}
@@ -446,7 +450,7 @@ export function ScheduleTimeline() {
                 {visibleCases.map(({ case: c, panels }) => {
                   const schedule = schedules[c.id];
                   const lookup = schedule
-                    ? buildColorLookup(computeColoredSegments(schedule), colors)
+                    ? buildJunColorLookup(computeColoredSegments(schedule), colors)
                     : new Map<string, string>();
                   return (
                     <tr
@@ -454,28 +458,35 @@ export function ScheduleTimeline() {
                       className={c.id === selectedCaseId ? "bg-accent/10" : ""}
                     >
                       <td
-                        className="sticky left-0 z-10 border-b border-border bg-surface px-3 py-1.5 text-[12px]"
-                        style={{
-                          width: LABEL_COL_WIDTH,
-                          minWidth: LABEL_COL_WIDTH,
-                        }}
+                        className="sticky left-0 z-10 border-b border-border bg-surface px-3 py-1.5 text-[12px] whitespace-pre-line"
+                        style={{ width: DRAWING_COL_WIDTH, minWidth: DRAWING_COL_WIDTH }}
                       >
                         <button
                           onClick={() => setSelectedCaseId(c.id)}
-                          className="w-full truncate text-left text-foreground hover:text-accent"
+                          className="w-full text-left text-foreground hover:text-accent"
                           title={buildCaseDisplayLabel(c, panels)}
                         >
-                          {buildCaseDisplayLabel(c, panels)}
+                          {c.drawingNumber}
+                          {"\n"}
+                          {c.managementNumber}
                         </button>
                       </td>
+                      <td
+                        className="sticky z-10 border-b border-border bg-surface px-3 py-1.5 text-[12px]"
+                        style={{ left: DRAWING_COL_WIDTH, width: LABEL_COL_WIDTH, minWidth: LABEL_COL_WIDTH }}
+                      >
+                        <span className="line-clamp-2 text-foreground" title={buildProjectPanelLabel(c, panels)}>
+                          {buildProjectPanelLabel(c, panels)}
+                        </span>
+                      </td>
                       {months.map((m) =>
-                        SCHEDULE_SEGMENTS.map((seg, i) => {
+                        JUN_BUCKETS.map((bucket, i) => {
                           const color = lookup.get(
-                            segmentCellKey(m.year, m.month, seg),
+                            junCellKey(m.year, m.month, bucket),
                           );
                           return (
                             <td
-                              key={`c-${c.id}-${m.year}-${m.month}-${seg}`}
+                              key={`c-${c.id}-${m.year}-${m.month}-${bucket}`}
                               className={`border-b border-border py-1.5 ${i === 0 ? "border-l border-border-strong" : ""}`}
                               style={{
                                 width: SEGMENT_WIDTH,

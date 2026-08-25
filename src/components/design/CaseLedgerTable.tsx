@@ -249,7 +249,7 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
       ) : (
         <div className="flex items-start gap-3 overflow-x-auto pb-1">
           {yearBlocks.map(({ year, cases }) => (
-            <div key={year} className="panel shrink-0" style={{ width: 1340 }}>
+            <div key={year} className="panel shrink-0" style={{ width: 1480 }}>
               <div className="panel-header-compact">
                 <span className="panel-title">
                   {t("design.ledger.yearBlockTitle", { year })}
@@ -282,7 +282,7 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                 </div>
               </div>
               <div className="data-table-wrap">
-                <table className="data-table" style={{ minWidth: 1300 }}>
+                <table className="data-table" style={{ minWidth: 1440 }}>
                   <thead>
                     <tr>
                       <th style={{ width: "110px" }}>
@@ -298,8 +298,8 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                       <th style={{ width: "100px" }}>
                         {t("design.ledger.columns.customerContact")}
                       </th>
-                      <th>{t("design.ledger.columns.projectName")}</th>
-                      <th>{t("design.ledger.columns.panelNames")}</th>
+                      <th style={{ minWidth: "150px" }}>{t("design.ledger.columns.projectName")}</th>
+                      <th style={{ minWidth: "130px" }}>{t("design.ledger.columns.panelNames")}</th>
                       <th style={{ width: "70px" }} className="text-right">
                         {t("design.ledger.columns.faceCount")}
                       </th>
@@ -337,8 +337,8 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                         <td>{c.constructionNumber}</td>
                         <td className="truncate">{c.orderer}</td>
                         <td>{c.customerContact}</td>
-                        <td className="truncate">{c.projectName}</td>
-                        <td className="truncate text-muted">
+                        <td className="whitespace-normal break-words">{c.projectName}</td>
+                        <td className="whitespace-normal break-words text-muted">
                           {panels
                             .map((p) => p.panelName)
                             .filter(Boolean)

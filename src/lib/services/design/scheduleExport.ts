@@ -2,9 +2,9 @@ import type { Cell, Worksheet } from "exceljs";
 import { loadActiveTemplate, downloadWorkbook } from "./excelWorkbook";
 import { scheduleColorService } from "./scheduleColorService";
 import { printWorksheet } from "./excelPrintView";
-import { computeColoredSegments } from "@/lib/utils/scheduleColoring";
-import { buildCaseDisplayLabel } from "@/lib/utils/designNumbering";
-import type { CaseSchedule, DesignCaseWithPanels, ScheduleCategoryKey } from "@/lib/types/design";
+import { buildJunColorLookup, computeColoredSegments, JUN_BUCKETS, junCellKey, type JunBucket } from "@/lib/utils/scheduleColoring";
+import { buildProjectPanelLabel } from "@/lib/utils/designNumbering";
+import type { CaseSchedule, DesignCaseWithPanels } from "@/lib/types/design";
 
 /**
  * ⑤工程表 — confirmed with the user: the uploaded template's own format is
@@ -18,20 +18,17 @@ import type { CaseSchedule, DesignCaseWithPanels, ScheduleCategoryKey } from "@/
  *
  * Each month occupies 6 columns as 3 merged 初/中/下 pairs (confirmed from
  * the real file). This is coarser than the app's own 6-segment timeline
- * model (初1/初2/中1/中2/下1/下2, 5-day resolution) — computeColoredSegments()
- * is reused as-is (same source as ScheduleTimeline.tsx) and each half-
- * segment is folded onto its 旬 bucket, so the export can never show a
- * different date range than the app's own timeline.
- *
- * The real legend has one swatch "板金・BOX納入" covering both categories
- * (confirmed: 鈑金/BOX share a color by default) — both are painted using
- * the "sheetMetal" category's color for that reason.
+ * model (初1/初2/中1/中2/下1/下2, 5-day resolution) — buildJunColorLookup()
+ * (shared with ScheduleTimeline.tsx's on-screen rendering) folds each half-
+ * segment onto its 旬 bucket, so the export can never show a different
+ * date range — or a different color, since the 鈑金/BOX legend merge lives
+ * in that same shared helper — than the app's own timeline.
  */
 
 const HEADER_ROW = 4;
 const FIRST_MONTH_COL = 3; // C
 const MONTH_COL_SPAN = 6;
-const SEGMENT_COL_OFFSET: Record<"初" | "中" | "下", number> = { 初: 0, 中: 2, 下: 4 };
+const JUN_COL_OFFSET: Record<JunBucket, number> = { 初: 0, 中: 2, 下: 4 };
 const DATA_START_ROW = 6;
 
 interface MonthColumn {
@@ -52,17 +49,9 @@ function readMonthColumns(ws: { getRow(r: number): { getCell(c: number): Cell } 
   return months;
 }
 
-function bucketFromSegment(segment: string): "初" | "中" | "下" {
-  return segment.startsWith("初") ? "初" : segment.startsWith("中") ? "中" : "下";
-}
-
 function toArgb(hex: string): string {
   return `FF${hex.replace("#", "").toUpperCase()}`;
 }
-
-const EXPORT_CATEGORY_COLOR: Partial<Record<ScheduleCategoryKey, ScheduleCategoryKey>> = {
-  box: "sheetMetal", // real template's legend has one combined "板金・BOX納入" swatch
-};
 
 async function buildScheduleWorkbook(
   cases: DesignCaseWithPanels[],
@@ -73,25 +62,24 @@ async function buildScheduleWorkbook(
     scheduleColorService.list(),
   ]);
   const ws = workbook.worksheets[0];
-  const colorByCategory = new Map(colorConfigs.map((c) => [c.category, c.color]));
   const months = readMonthColumns(ws);
   if (months.length === 0) throw new Error("schedule-template-missing-month-headers");
 
   cases.forEach(({ case: c, panels }, i) => {
     const row = DATA_START_ROW + i;
     ws.getCell(`A${row}`).value = `${c.drawingNumber}\n${c.managementNumber}`;
-    ws.getCell(`B${row}`).value = buildCaseDisplayLabel(c, panels);
+    ws.getCell(`B${row}`).value = buildProjectPanelLabel(c, panels);
 
     const schedule = schedules[c.id];
     if (!schedule) return;
-    for (const seg of computeColoredSegments(schedule)) {
-      const monthEntry = months.find((m) => m.year === seg.year && m.month === seg.month);
-      if (!monthEntry) continue; // outside the template's own printed range — nothing to color
-      const colorCategory = EXPORT_CATEGORY_COLOR[seg.category] ?? seg.category;
-      const hex = colorByCategory.get(colorCategory);
-      if (!hex) continue;
-      const col = monthEntry.colStart + SEGMENT_COL_OFFSET[bucketFromSegment(seg.segment)];
-      ws.getRow(row).getCell(col).fill = { type: "pattern", pattern: "solid", fgColor: { argb: toArgb(hex) } };
+    const lookup = buildJunColorLookup(computeColoredSegments(schedule), colorConfigs);
+    for (const monthEntry of months) {
+      for (const bucket of JUN_BUCKETS) {
+        const hex = lookup.get(junCellKey(monthEntry.year, monthEntry.month, bucket));
+        if (!hex) continue;
+        const col = monthEntry.colStart + JUN_COL_OFFSET[bucket];
+        ws.getRow(row).getCell(col).fill = { type: "pattern", pattern: "solid", fgColor: { argb: toArgb(hex) } };
+      }
     }
   });
 

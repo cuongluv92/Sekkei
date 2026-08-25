@@ -69,6 +69,44 @@ export function buildColorLookup(
   return map;
 }
 
+export type JunBucket = "初" | "中" | "下";
+export const JUN_BUCKETS: JunBucket[] = ["初", "中", "下"];
+
+/** 初1/初2→初、中1/中2→中、下1/下2→下 — 実際の工程表テンプレート(Excel)は月ごとに初/中/下の3列しか持たないため、画面表示・Excel出力の両方でこの粒度に折りたたむ。 */
+export function bucketFromSegment(segment: MonthSegment["segment"]): JunBucket {
+  return segment.startsWith("初") ? "初" : segment.startsWith("中") ? "中" : "下";
+}
+
+export function junCellKey(year: number, month: number, bucket: JunBucket) {
+  return `${year}-${month}-${bucket}`;
+}
+
+/**
+ * 実テンプレートの凡例には「板金・BOX納入」という1つの色見本しかない
+ * (鈑金/BOXは日付項目としては別だが、表示色は共通)。画面・Excelどちらも
+ * この対応表を通してから色を引くことで、常に見た目が一致するようにする。
+ */
+const DISPLAY_CATEGORY_COLOR: Partial<Record<ScheduleCategoryKey, ScheduleCategoryKey>> = {
+  box: "sheetMetal",
+};
+
+/** 初/中/下 (旬) 単位に折りたたんだ色ルックアップ — 工程表の画面表示・Excel出力の唯一の実装。既に埋まっているセルは上書きしない (先勝ち)。 */
+export function buildJunColorLookup(
+  segments: ColoredSegment[],
+  colors: ScheduleColorConfig[],
+): Map<string, string> {
+  const colorByCategory = new Map(colors.map((c) => [c.category, c.color]));
+  const map = new Map<string, string>();
+  for (const seg of segments) {
+    const category = DISPLAY_CATEGORY_COLOR[seg.category] ?? seg.category;
+    const color = colorByCategory.get(category);
+    if (!color) continue;
+    const key = junCellKey(seg.year, seg.month, bucketFromSegment(seg.segment));
+    if (!map.has(key)) map.set(key, color);
+  }
+  return map;
+}
+
 /** Normalizes month arithmetic (1-12) across year boundaries in either direction. */
 export function addMonths(year: number, month: number, delta: number): { year: number; month: number } {
   const zeroBased = month - 1 + delta;

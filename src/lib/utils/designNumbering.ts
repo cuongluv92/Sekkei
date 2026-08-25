@@ -41,7 +41,8 @@ export function formatDrawingNumber(year: number, sequenceNo: number): string {
  * blank on either side — never a stray "／"). Never uses "|" or any other
  * separator. Display-only — the database keeps each 盤 as its own row.
  */
-export function buildCaseDisplayLabel(
+/** 件名／盤名称 だけの表示ラベル（図面番号・管理番号を別列で表示する場所、例: 工程表 の B列で使う）。 */
+export function buildProjectPanelLabel(
   designCase: DesignCase,
   panels: CasePanel[],
 ): string {
@@ -51,6 +52,15 @@ export function buildCaseDisplayLabel(
     .map((p) => p.panelName.trim())
     .filter(Boolean);
 
+  return [designCase.projectName.trim(), panelNames.join("・")]
+    .filter(Boolean)
+    .join("／");
+}
+
+export function buildCaseDisplayLabel(
+  designCase: DesignCase,
+  panels: CasePanel[],
+): string {
   const left = [
     designCase.drawingNumber.trim(),
     designCase.managementNumber.trim(),
@@ -61,9 +71,7 @@ export function buildCaseDisplayLabel(
     ? `（${designCase.constructionNumber.trim()}）`
     : "";
   const head = `${left}${constructionPart}`;
-  const right = [designCase.projectName.trim(), panelNames.join("・")]
-    .filter(Boolean)
-    .join("／");
+  const right = buildProjectPanelLabel(designCase, panels);
 
   if (head && right) return `${head}　${right}`;
   return head || right;
