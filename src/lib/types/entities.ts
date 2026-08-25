@@ -375,3 +375,36 @@ export interface ImportedFile {
   uploadedAt: string;
   rows: ImportRow[];
 }
+
+/**
+ * 耐震計算 (JSIA-T1018:2012「配電盤類の耐震設計マニュアル」準拠) の設置形式。
+ * 床・基礎据付け (自立形/キュービクル、5.1.1) と壁面取付け (壁掛形、5.1.2) は
+ * 転倒モーメントの計算式そのものが異なる (共通の "地震力" 計算のあとに分岐)。
+ */
+export type SeismicPanelType = "freeStanding" | "cubicle" | "wallMounted";
+
+/** JSIA-T1018 表1 (局部震度法による建築設備機器の設計用標準震度 KS) の分類軸。 */
+export type SeismicFacilityCategory = "specific" | "general"; // 特定の施設 / 一般の施設
+export type SeismicEquipmentImportance = "important" | "general"; // 重要機器 / 一般機器
+export type SeismicFloorPosition = "upper" | "middle" | "groundOrFirst"; // 上層階、屋上及び塔屋 / 中間階 / 地階及び1階
+
+/** JSIA-T1018 表2・表3 で使うボルト材質・呼び径。 */
+export type BoltMaterial = "ss400" | "stainless"; // ボルト(SS400) / ステンレスボルト(A2-50)
+export type BoltDiameter = "M8" | "M10" | "M12" | "M16" | "M20" | "M24";
+
+/**
+ * あと施工アンカーボルトの許容引抜荷重 (Ta) 社内選定マスタ。JSIA-T1018 自体
+ * も「本書では建築センター指針の値を採用する」とするだけで汎用値を持たない
+ * — コンクリート強度・施工方法・埋込み長さで変わる実在製品のカタログ値
+ * なので、busbar_sizes 等と同じ方針で空のまま始まり、設定から手入力する。
+ */
+export interface SeismicAnchorAllowable {
+  id: string;
+  manufacturerId: string;
+  method: string; // 施工方法 (例: 埋込式LA形アンカーボルト、あと施工金属拡張アンカーボルト)
+  boltDiameter: BoltDiameter;
+  concreteThicknessMm: number;
+  allowablePulloutKn: number; // Ta (kN)
+  remarks?: string;
+  order: number;
+}

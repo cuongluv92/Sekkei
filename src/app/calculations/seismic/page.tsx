@@ -1,15 +1,10 @@
-"use client";
-
-import { useTranslation } from "@/lib/i18n";
-import { CalculationPageView } from "@/components/calculation/CalculationPageView";
+import { Suspense } from "react";
+import { SeismicCalculationView } from "@/components/calculation/seismic/SeismicCalculationView";
 
 export default function SeismicCalculationPage() {
-  const { t } = useTranslation();
   return (
-    <CalculationPageView
-      calculationKey="seismic"
-      title={t("seismicCalc.title")}
-      description={t("seismicCalc.description")}
-    />
+    <Suspense fallback={null}>
+      <SeismicCalculationView />
+    </Suspense>
   );
 }

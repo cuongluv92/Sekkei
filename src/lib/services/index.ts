@@ -16,6 +16,8 @@ export { motorStarterSelectionService } from "./motorStarterSelectionService";
 export type { MotorStarterSelectionDraft } from "./motorStarterSelectionService";
 export { mainBreakerSelectionService } from "./mainBreakerSelectionService";
 export type { MainBreakerSelectionDraft } from "./mainBreakerSelectionService";
+export { seismicAnchorBoltService } from "./seismicAnchorBoltService";
+export type { SeismicAnchorAllowableDraft } from "./seismicAnchorBoltService";
 export { weightShapeImageService } from "./weightShapeImageService";
 export { panelWeightLayerImageService } from "./panelWeightLayerImageService";
 export { calculationRecordService } from "./calculationRecordService";

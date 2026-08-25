@@ -478,6 +478,93 @@ export interface Dictionary {
   seismicCalc: {
     title: string;
     description: string;
+    tabs: {
+      freeStanding: string;
+      wallMounted: string;
+      cubicle: string;
+    };
+    freeStandingTitle: string;
+    freeStandingDescription: string;
+    wallMountedTitle: string;
+    wallMountedDescription: string;
+    cubicleTitle: string;
+    cubicleDescription: string;
+    manualInputBadge: string;
+    autoCalcBadge: string;
+    section1Title: string;
+    section1Hint: string;
+    section1AutoHint: string;
+    facilityCategoryLabel: string;
+    facilityCategory: {
+      specific: string;
+      general: string;
+    };
+    facilityCategoryHint: string;
+    importanceLabel: string;
+    importance: {
+      important: string;
+      general: string;
+    };
+    importanceHint: string;
+    floorPositionLabel: string;
+    floorPosition: {
+      upper: string;
+      middle: string;
+      groundOrFirst: string;
+    };
+    regionZLabel: string;
+    regionZHint: string;
+    weightLabel: string;
+    weightPlaceholder: string;
+    weightHint: string;
+    section2TitleFloor: string;
+    section2HintFloor: string;
+    section2TitleWall: string;
+    section2HintWall: string;
+    hGHint: string;
+    widthSpanHint: string;
+    depthSpanHint: string;
+    widthCgHint: string;
+    depthCgHint: string;
+    n1Hint: string;
+    n2Hint: string;
+    nTotalHint: string;
+    widthDirection: string;
+    depthDirection: string;
+    governingDirection: string;
+    l1Hint: string;
+    l2Hint: string;
+    l2gHint: string;
+    l3gHint: string;
+    nt1Hint: string;
+    nt2Hint: string;
+    governingFormula: string;
+    section3Title: string;
+    section3Hint: string;
+    section3AutoHint: string;
+    boltMaterialLabel: string;
+    boltMaterial: {
+      ss400: string;
+      stainless: string;
+    };
+    boltDiameterLabel: string;
+    anchorManufacturerLabel: string;
+    anchorMethodLabel: string;
+    concreteThicknessLabel: string;
+    noAllowableRegistered: string;
+    judgementItem: string;
+    calculatedValue: string;
+    allowableValue: string;
+    judgementResult: string;
+    pulloutForce: string;
+    tensileStress: string;
+    shearStress: string;
+    notApplicable: string;
+    pass: string;
+    fail: string;
+    overallPass: string;
+    overallFail: string;
+    savedAt: string;
   };
   busbarCalc: {
     title: string;
@@ -1063,6 +1150,21 @@ export interface Dictionary {
       breakerModel: string;
       poles: string;
       wireSize: string;
+      remarks: string;
+    };
+  };
+  seismicAnchorBoltSettings: {
+    title: string;
+    description: string;
+    addButton: string;
+    emptyList: string;
+    methodPlaceholder: string;
+    columns: {
+      maker: string;
+      method: string;
+      diameter: string;
+      concreteThickness: string;
+      allowablePullout: string;
       remarks: string;
     };
   };
