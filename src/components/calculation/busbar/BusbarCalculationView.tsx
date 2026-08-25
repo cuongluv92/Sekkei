@@ -184,6 +184,7 @@ export function BusbarCalculationView() {
       <PageHeader
         title={t("busbarCalc.title")}
         description={t("busbarCalc.description")}
+        backHref={null}
         actions={
           <button onClick={() => setSettingsOpen(true)} className="btn-secondary">
             <Settings className="h-3.5 w-3.5" />

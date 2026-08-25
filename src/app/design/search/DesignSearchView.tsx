@@ -71,6 +71,7 @@ export function DesignSearchView() {
       <PageHeader
         title={t("design.search.title")}
         description={t("design.search.description")}
+        backHref="/design"
       />
 
       <div className="panel">

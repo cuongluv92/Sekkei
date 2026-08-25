@@ -99,6 +99,7 @@ export function EarthBarCalculationView() {
       <PageHeader
         title={t("earthBarCalc.title")}
         description={t("earthBarCalc.description")}
+        backHref={null}
         actions={
           <button onClick={() => setSettingsOpen(true)} className="btn-secondary">
             <Settings className="h-3.5 w-3.5" />

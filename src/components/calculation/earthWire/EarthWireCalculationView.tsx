@@ -97,6 +97,7 @@ export function EarthWireCalculationView() {
       <PageHeader
         title={t("earthWireCalc.title")}
         description={t("earthWireCalc.description")}
+        backHref={null}
         actions={
           <button onClick={() => setSettingsOpen(true)} className="btn-secondary">
             <Settings className="h-3.5 w-3.5" />

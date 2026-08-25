@@ -96,6 +96,7 @@ export function SearchView() {
       <PageHeader
         title={t("search.title")}
         description={t("search.description")}
+        backHref={null}
       />
 
       <div className="flex flex-wrap gap-2">
