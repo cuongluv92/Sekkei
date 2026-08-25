@@ -6,6 +6,7 @@ import { useTranslation } from "@/lib/i18n";
 import { calculationRecordService, seismicAnchorBoltService } from "@/lib/services";
 import { computeWallMountAnchorForces } from "@/lib/calc/seismic/wallMountAnchor";
 import type { SeismicAnchorAllowable } from "@/lib/types";
+import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calculation/OutlineDrawingUpload";
 import {
   AnchorBoltSection,
   blankAnchorBoltInputState,
@@ -44,6 +45,7 @@ interface SavedInput {
   force: SeismicForceInputState;
   geometry: GeometryInputState;
   bolt: AnchorBoltInputState;
+  outlineDrawing?: OutlineDrawingRef | null;
 }
 
 const CALCULATION_TYPE = "seismic-wall-mounted";
@@ -58,6 +60,7 @@ export function WallMountSeismicView({ caseId }: Props) {
   const [force, setForce] = useState<SeismicForceInputState>(blankSeismicForceInputState());
   const [geometry, setGeometry] = useState<GeometryInputState>(blankGeometry());
   const [bolt, setBolt] = useState<AnchorBoltInputState>(blankAnchorBoltInputState());
+  const [outlineDrawing, setOutlineDrawing] = useState<OutlineDrawingRef | null>(null);
   const [allowables, setAllowables] = useState<SeismicAnchorAllowable[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -73,6 +76,7 @@ export function WallMountSeismicView({ caseId }: Props) {
       setForce(blankSeismicForceInputState());
       setGeometry(blankGeometry());
       setBolt(blankAnchorBoltInputState());
+      setOutlineDrawing(null);
       setLoaded(true);
       return;
     }
@@ -83,6 +87,7 @@ export function WallMountSeismicView({ caseId }: Props) {
       setForce(saved?.force ?? blankSeismicForceInputState());
       setGeometry(saved?.geometry ?? blankGeometry());
       setBolt(saved?.bolt ?? blankAnchorBoltInputState());
+      setOutlineDrawing(saved?.outlineDrawing ?? null);
       setSavedAt(record?.updatedAt ?? null);
       setLoaded(true);
     });
@@ -123,7 +128,7 @@ export function WallMountSeismicView({ caseId }: Props) {
       const saved = await calculationRecordService.save(
         caseId,
         CALCULATION_TYPE,
-        { force, geometry, bolt } as unknown as Record<string, unknown>,
+        { force, geometry, bolt, outlineDrawing } as unknown as Record<string, unknown>,
         anchorResult ? { pulloutForceKn: anchorResult.pulloutForceKn } : {},
       );
       setSavedAt(saved.updatedAt);
@@ -183,6 +188,15 @@ export function WallMountSeismicView({ caseId }: Props) {
         pulloutForceKn={anchorResult ? anchorResult.pulloutForceKn : null}
         shearForcePerBoltKn={anchorResult ? anchorResult.shearForcePerBoltKn : null}
       />
+
+      {caseId && (
+        <OutlineDrawingUpload
+          caseId={caseId}
+          calculationType={CALCULATION_TYPE}
+          value={outlineDrawing}
+          onChange={setOutlineDrawing}
+        />
+      )}
 
       <div className="flex items-center gap-2 border-t border-border pt-3">
         <button onClick={handleSave} disabled={!caseId || saving} className="btn-primary">

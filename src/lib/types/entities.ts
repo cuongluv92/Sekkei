@@ -408,3 +408,33 @@ export interface SeismicAnchorAllowable {
   remarks?: string;
   order: number;
 }
+
+/**
+ * 換気計算 (JSIA-T1016:2019「配電盤類の換気計算」準拠) の盤形式。屋外キュービクル
+ * は方位別の日射(相当外気温度)を考慮するため、盤の熱貫流計算式そのものが
+ * 屋内キュービクル(共通条件、方位を考慮しない)と異なる。
+ */
+export type VentilationPanelType = "outdoor" | "indoor";
+
+/**
+ * 屋外キュービクルの設計用気象条件 (地域ごとの周囲温度to・上部温度tt・方位別
+ * 相当外気温度・空気物性値) 社内選定マスタ。JSIA-T1016 は「北海道から沖縄
+ * まで、設置地域別に算出できる」としているが本アプリが直接参照できたのは
+ * 換気計算書の使用例2地域 (東京・那覇) のみ — 他地域はJSIA-T1016原本または
+ * 自社基準の値を確認のうえ、設定から追加登録する。
+ */
+export interface VentilationClimateProfile {
+  id: string;
+  region: string; // 地域名 (例: 東京、那覇)
+  ambientTempC: number; // 周囲温度 to (℃)
+  topTempC: number; // 上部温度 tt (℃)
+  equivalentOutsideTempRoofC: number; // 相当外気温度 tSH — 屋根/上面 (℃)
+  equivalentOutsideTempFace1C: number; // 相当外気温度 (側面1、例: SE) (℃)
+  equivalentOutsideTempFace2C: number; // 相当外気温度 (側面2、例: WS) (℃)
+  equivalentOutsideTempFace3C: number; // 相当外気温度 (側面3、例: NW) (℃)
+  equivalentOutsideTempFace4C: number; // 相当外気温度 (側面4、例: NE) (℃)
+  airSpecificHeatKjPerKgK: number; // 空気の定圧比熱 CP (kJ/kg・K)
+  airDensityKgPerM3: number; // 空気の密度 ρE (kg/m3)
+  remarks?: string; // 出典・備考
+  order: number;
+}

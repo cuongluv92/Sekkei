@@ -1,15 +1,10 @@
-"use client";
-
-import { useTranslation } from "@/lib/i18n";
-import { CalculationPageView } from "@/components/calculation/CalculationPageView";
+import { Suspense } from "react";
+import { VentilationCalculationView } from "@/components/calculation/ventilation/VentilationCalculationView";
 
 export default function VentilationCalculationPage() {
-  const { t } = useTranslation();
   return (
-    <CalculationPageView
-      calculationKey="ventilation"
-      title={t("ventilationCalc.title")}
-      description={t("ventilationCalc.description")}
-    />
+    <Suspense fallback={null}>
+      <VentilationCalculationView />
+    </Suspense>
   );
 }

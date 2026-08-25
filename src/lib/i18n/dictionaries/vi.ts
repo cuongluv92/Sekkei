@@ -364,6 +364,12 @@ const vi: Dictionary = {
       "Công thức chưa được thiết lập. Vui lòng cấu hình trong Cài đặt > Cài đặt tính toán.",
     templateNotice:
       "File Excel xuất ra sẽ theo đúng template đã đăng ký trong Cài đặt (hiện chưa có template)",
+    outlineDrawing: {
+      title: "外形図 (bản vẽ ngoại hình)",
+      hint: "Có thể tải lên ảnh/bản vẽ ngoại hình của tủ (chỉ để lưu làm căn cứ nhập liệu, không dùng trong tính toán). Không bắt buộc.",
+      placeholder: "Tải lên 外形図",
+      uploadedAt: "Ngày tải lên: {date}",
+    },
   },
   weightCalc: {
     title: "Tính trọng lượng",
@@ -523,6 +529,73 @@ const vi: Dictionary = {
   ventilationCalc: {
     title: "Tính thông gió",
     description: "Tính lưu lượng gió cần thiết, diện tích mở...",
+    tabs: {
+      outdoor: "Cubicle ngoài trời",
+      indoor: "Cubicle trong nhà",
+    },
+    outdoorTitle: "Tính thông gió — Cubicle ngoài trời",
+    outdoorDescription:
+      "Tính thông gió tự nhiên/cưỡng bức cho cubicle ngoài trời, có xét đến nhiệt bức xạ mặt trời theo hướng (相当外気温度) (JSIA-T1016:2019).",
+    indoorTitle: "Tính thông gió — Cubicle trong nhà",
+    indoorDescription:
+      "Tính thông gió tự nhiên/cưỡng bức cho cubicle trong nhà (JSIA-T1016:2019, điều kiện chung cho mọi khu vực).",
+    manualInputBadge: "Nhập tay",
+    autoCalcBadge: "Tự động tính",
+    climateTitle: "Điều kiện khí hậu khu vực lắp đặt",
+    climateHint:
+      "Chọn khu vực lắp đặt. Nhiệt độ xung quanh・nhiệt độ đỉnh・相当外気温度 theo hướng・tính chất không khí sẽ tự động lấy từ 社内選定マスタ đã đăng ký trong Cài đặt. Khu vực chưa có thì thêm trong \"Cài đặt\".",
+    regionLabel: "Khu vực lắp đặt",
+    heatSourceTitle: "Nguồn phát nhiệt trong tủ",
+    heatSourceHint:
+      "Thêm từng thiết bị phát nhiệt trong tủ. Nhập trực tiếp giá trị phát nhiệt (W) theo catalogue thiết bị. Tổng phát nhiệt Qc được tính tự động.",
+    heatSourceColumns: {
+      name: "Tên thiết bị",
+      namePlaceholder: "Ví dụ: Máy biến áp 3 pha",
+      heatW: "Phát nhiệt (W)",
+    },
+    heatSourceEmpty: "Chưa có nguồn phát nhiệt nào",
+    heatSourceAddButton: "Thêm nguồn phát nhiệt",
+    surfaceAreaTitle: "Diện tích bề mặt tủ・hệ số truyền nhiệt",
+    surfaceAreaHintOutdoor:
+      "Tính diện tích thực của mặt trên/mái và 4 mặt bên từ bản vẽ sản phẩm rồi nhập vào (không tự suy ra vì hình dạng tủ khác nhau). URO/USO lấy giá trị chuẩn từ tài liệu làm mặc định, chỉnh lại theo vật liệu/kết cấu tủ thực tế nếu cần.",
+    surfaceAreaHintIndoor:
+      "Nhập kích thước ngoài (W・H・D) từ bản vẽ sản phẩm. Diện tích mặt trên SRi=W×D, diện tích mặt bên SSi=2(W×H)+2(D×H) được tính tự động (giả định hình hộp đơn giản). URi/USi lấy giá trị chuẩn từ tài liệu làm mặc định, chỉnh lại nếu cần.",
+    roofAreaHint: "Diện tích thực mặt trên/mái",
+    faceAreaHint: "Diện tích thực của 1 mặt bên",
+    widthHint: "Chiều rộng tủ",
+    heightHint: "Chiều cao tủ",
+    depthHint: "Chiều sâu tủ",
+    transmittanceRoofHint: "Hệ số truyền nhiệt tổng hợp mặt trên (giá trị chuẩn từ tài liệu)",
+    transmittanceSideHint: "Hệ số truyền nhiệt tổng hợp mặt bên (giá trị chuẩn từ tài liệu)",
+    ventOpeningTitle: "Cửa thông gió・thông gió tự nhiên",
+    ventOpeningHint:
+      "Tính diện tích cửa gió vào/ra hiệu dụng từ bản vẽ sản phẩm rồi nhập vào (tham khảo cách tính diện tích cửa gió hiệu dụng trong ví dụ tính toán JSIA-T1016). Nếu dùng bộ lọc (フィルタ), tích chọn và nhập hệ số trở lực bộ lọc theo catalogue.",
+    supplyAreaHint: "Diện tích cửa gió vào hiệu dụng Ai (tính từ bản vẽ sản phẩm)",
+    exhaustAreaHint: "Diện tích cửa gió ra hiệu dụng Ao (tính từ bản vẽ sản phẩm)",
+    heightDiffHint: "Chênh lệch độ cao giữa cửa gió vào và ra h",
+    hoodCoefficientHint: "Hệ số lưu lượng của chụp gió (giá trị chuẩn từ tài liệu)",
+    useFilterLabel: "Cửa gió vào/ra có dùng bộ lọc (フィルタ)",
+    ventResistanceHint: "Hệ số trở lực cửa gió (giá trị chuẩn từ tài liệu)",
+    filterResistanceHint: "Hệ số trở lực bộ lọc (nhập theo catalogue bộ lọc)",
+    noFilterDischargeHint: "Hệ số lưu lượng cửa gió vào/ra (giá trị chuẩn khi không dùng bộ lọc)",
+    judgementTitle: "Kết luận về lượng nhiệt thông gió",
+    naturalSufficient: "Thông gió tự nhiên đủ giữ nhiệt độ trong tủ ≤ 40℃",
+    forcedRequired: "Thông gió tự nhiên không đủ — cần thông gió cưỡng bức",
+    forcedVentilationTitle: "Thông gió cưỡng bức",
+    forcedVentilationHint:
+      "Nhập lưu lượng quạt thông gió sử dụng (theo catalogue). Nếu dùng bộ lọc, nhập thêm tốc độ gió chuẩn của bộ lọc (theo catalogue) để kiểm tra số lượng quạt cần theo giới hạn lưu lượng qua bộ lọc.",
+    fanCapacityLabel: "Lưu lượng 1 quạt thông gió",
+    fanCapacityHint: "Lưu lượng theo catalogue của quạt sử dụng (mỗi quạt)",
+    filterVelocityLabel: "Tốc độ gió chuẩn của bộ lọc",
+    filterVelocityHint: "Giá trị catalogue bộ lọc (điều kiện tổn thất áp suất ở tốc độ gió chuẩn)",
+    resultColumns: {
+      baseFanCount: "Số quạt cần (theo lưu lượng WK)",
+      staticPressure: "Kiểm tra áp suất tĩnh của quạt",
+      perFanAirflow: "Lưu lượng mỗi quạt",
+      filterLimitedFanCount: "Số quạt cần (theo giới hạn lưu lượng bộ lọc)",
+      finalFanCount: "Số quạt sử dụng (chọn số lớn hơn)",
+    },
+    savedAt: "Ngày lưu: {date}",
   },
   seismicCalc: {
     title: "Tính chống động đất",
@@ -1264,6 +1337,17 @@ const vi: Dictionary = {
       breakerModel: "型式 ブレーカー",
       poles: "Số cực",
       wireSize: "幹線サイズ",
+      remarks: "Ghi chú",
+    },
+  },
+  ventilationClimateSettings: {
+    title: "社内選定マスタ - Điều kiện khí hậu khu vực (tính thông gió)",
+    description:
+      "Đăng ký nhiệt độ xung quanh (to)・nhiệt độ đỉnh (tt)・相当外気温度 theo hướng (tSH/tSE/tWS/tNW/tNE)・tính chất không khí (CP/ρE) theo từng khu vực lắp đặt, dùng cho tính thông gió cubicle ngoài trời. 2 khu vực Tokyo và Naha là giá trị đã kiểm chứng, chuyển từ ví dụ tính toán trong tài liệu (JSIA-T1016:2019 準拠, đăng trên JSIA HP). Khu vực khác vui lòng xác nhận giá trị theo bản gốc JSIA-T1016 hoặc tiêu chuẩn nội bộ công ty trước khi đăng ký.",
+    addButton: "Thêm",
+    emptyList: "Chưa có khu vực nào được đăng ký",
+    columns: {
+      region: "Tên khu vực",
       remarks: "Ghi chú",
     },
   },

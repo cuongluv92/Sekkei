@@ -345,6 +345,12 @@ export interface Dictionary {
     outputTitle: string;
     formulaPending: string;
     templateNotice: string;
+    outlineDrawing: {
+      title: string;
+      hint: string;
+      placeholder: string;
+      uploadedAt: string;
+    };
   };
   weightCalc: {
     title: string;
@@ -474,6 +480,65 @@ export interface Dictionary {
   ventilationCalc: {
     title: string;
     description: string;
+    tabs: {
+      outdoor: string;
+      indoor: string;
+    };
+    outdoorTitle: string;
+    outdoorDescription: string;
+    indoorTitle: string;
+    indoorDescription: string;
+    manualInputBadge: string;
+    autoCalcBadge: string;
+    climateTitle: string;
+    climateHint: string;
+    regionLabel: string;
+    heatSourceTitle: string;
+    heatSourceHint: string;
+    heatSourceColumns: {
+      name: string;
+      namePlaceholder: string;
+      heatW: string;
+    };
+    heatSourceEmpty: string;
+    heatSourceAddButton: string;
+    surfaceAreaTitle: string;
+    surfaceAreaHintOutdoor: string;
+    surfaceAreaHintIndoor: string;
+    roofAreaHint: string;
+    faceAreaHint: string;
+    widthHint: string;
+    heightHint: string;
+    depthHint: string;
+    transmittanceRoofHint: string;
+    transmittanceSideHint: string;
+    ventOpeningTitle: string;
+    ventOpeningHint: string;
+    supplyAreaHint: string;
+    exhaustAreaHint: string;
+    heightDiffHint: string;
+    hoodCoefficientHint: string;
+    useFilterLabel: string;
+    ventResistanceHint: string;
+    filterResistanceHint: string;
+    noFilterDischargeHint: string;
+    judgementTitle: string;
+    naturalSufficient: string;
+    forcedRequired: string;
+    forcedVentilationTitle: string;
+    forcedVentilationHint: string;
+    fanCapacityLabel: string;
+    fanCapacityHint: string;
+    filterVelocityLabel: string;
+    filterVelocityHint: string;
+    resultColumns: {
+      baseFanCount: string;
+      staticPressure: string;
+      perFanAirflow: string;
+      filterLimitedFanCount: string;
+      finalFanCount: string;
+    };
+    savedAt: string;
   };
   seismicCalc: {
     title: string;
@@ -1164,6 +1229,16 @@ export interface Dictionary {
       breakerModel: string;
       poles: string;
       wireSize: string;
+      remarks: string;
+    };
+  };
+  ventilationClimateSettings: {
+    title: string;
+    description: string;
+    addButton: string;
+    emptyList: string;
+    columns: {
+      region: string;
       remarks: string;
     };
   };

@@ -18,6 +18,8 @@ export { mainBreakerSelectionService } from "./mainBreakerSelectionService";
 export type { MainBreakerSelectionDraft } from "./mainBreakerSelectionService";
 export { seismicAnchorBoltService } from "./seismicAnchorBoltService";
 export type { SeismicAnchorAllowableDraft } from "./seismicAnchorBoltService";
+export { ventilationClimateProfileService } from "./ventilationClimateProfileService";
+export type { VentilationClimateProfileDraft } from "./ventilationClimateProfileService";
 export { weightShapeImageService } from "./weightShapeImageService";
 export { panelWeightLayerImageService } from "./panelWeightLayerImageService";
 export { calculationRecordService } from "./calculationRecordService";
