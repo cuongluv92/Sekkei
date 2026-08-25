@@ -56,3 +56,34 @@ describe("computeFloorMountAnchorForces (JSIA-T1018:2012 7.1 屋外形キュー�
     expect(computeShearStress(4.18, 1.13)).toBeCloseTo(3.7, 2);
   });
 });
+
+/**
+ * 7.2 屋内薄形キュービクル (p.15) — 屋外形キュービクル(7.1)と同じ(5-1-1-1)〜
+ * (5-1-1-4)式を使っていることを、別の実例でも確認する。JSIA-T1018には
+ * キュービクル専用の別式・別係数表は存在せず、自立形と全く同じ計算体系
+ * であることがこの2つの公式例からも裏付けられる。
+ */
+describe("computeFloorMountAnchorForces (JSIA-T1018:2012 7.2 屋内薄形キュービクル 例)", () => {
+  it("mass=1650kg, hG=85cm, ℓ1=230cm(ℓG1=95), ℓ2=79cm(ℓG2=37), n1=2,n2=3,n=6", () => {
+    const result = computeFloorMountAnchorForces(24.3, 12.2, 16.2, {
+      centerOfGravityHeightMm: 85,
+      widthSpanMm: 230,
+      depthSpanMm: 79,
+      widthCenterToGravityMm: 95,
+      depthCenterToGravityMm: 37,
+      widthSideBoltCount: 2,
+      depthSideBoltCount: 3,
+      totalBoltCount: 6,
+    });
+    expect(result.pulloutWidthDirectionKn).toBeCloseTo(3.66, 2);
+    expect(result.pulloutDepthDirectionKn).toBeCloseTo(8.1, 1);
+    expect(result.pulloutForceKn).toBeCloseTo(8.1, 1);
+    expect(result.governingDirection).toBe("depth");
+    expect(result.shearForcePerBoltKn).toBeCloseTo(4.05, 2);
+  });
+
+  it("σ and τ match the worked example (A=1.13cm2)", () => {
+    expect(computeTensileStress(8.10, 1.13)).toBeCloseTo(7.17, 2);
+    expect(computeShearStress(4.05, 1.13)).toBeCloseTo(3.58, 2);
+  });
+});

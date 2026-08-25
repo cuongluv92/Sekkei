@@ -8,7 +8,6 @@ import { CaseSelector } from "@/components/common/CaseSelector";
 import { Modal } from "@/components/common/Modal";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SeismicAnchorBoltSettings } from "@/components/settings/SeismicAnchorBoltSettings";
-import { CubicleSeismicView } from "./CubicleSeismicView";
 import { FloorMountSeismicView } from "./FloorMountSeismicView";
 import { WallMountSeismicView } from "./WallMountSeismicView";
 
@@ -18,8 +17,12 @@ const TABS: SeismicTab[] = ["freeStanding", "wallMounted", "cubicle"];
 /**
  * JSIA-T1018:2012「配電盤類の耐震設計マニュアル」準拠の耐震計算。案件ごとに
  * 保存する (他の 計算 モジュールと同じ — 案件を選ぶ/作るまでは保存できない
- * ことを明示する)。盤形式 (自立形/壁掛形/キュービクル) はタブで分ける —
- * 転倒モーメントの計算式そのものが異なるため。
+ * ことを明示する)。盤形式は3タブに分けるが、計算式は2種類しかない:
+ * 自立形・キュービクルはどちらも§5.1.1「床、基礎据付けの場合」— 標準の
+ * 7.1屋外形キュービクル・7.2屋内薄形キュービクル・7.3自立形盤類の3例が
+ * すべて同じ(5-1-1-1)〜(5-1-1-4)式を使っていることを実際の標準本文で
+ * 確認済み (キュービクル専用の別係数表は標準には存在しない)。壁掛形のみ
+ * §5.1.2の別式。
  */
 export function SeismicCalculationView() {
   const { t } = useTranslation();
@@ -73,7 +76,14 @@ export function SeismicCalculationView() {
             />
           )}
           {activeTab === "wallMounted" && <WallMountSeismicView caseId={caseId} />}
-          {activeTab === "cubicle" && <CubicleSeismicView caseId={caseId} />}
+          {activeTab === "cubicle" && (
+            <FloorMountSeismicView
+              caseId={caseId}
+              calculationType="seismic-cubicle"
+              titleKey="seismicCalc.cubicleTitle"
+              descriptionKey="seismicCalc.cubicleDescription"
+            />
+          )}
         </div>
       </div>
 
