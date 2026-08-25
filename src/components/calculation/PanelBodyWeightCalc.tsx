@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, FileSpreadsheet, FileText, Image as ImageIcon, Loader2, Plus, Save, Trash2, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, FileSpreadsheet, FileText, Image as ImageIcon, Loader2, Plus, Save, Trash2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { formatJaTime } from "@/lib/utils/dateFormat";
@@ -269,6 +269,8 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
   const [wiringFactor, setWiringFactor] = useState<"1" | "1.2" | "1.5">("1");
   const [partsModalOpen, setPartsModalOpen] = useState(false);
   const [fetchingPartAssembly, setFetchingPartAssembly] = useState(false);
+  /** 部品製作から一括取得すると件数が多くなりがちなので、既定は畳んでおき合計だけ見せる — 詳細ボタンで必要な時だけ展開。 */
+  const [partsExpanded, setPartsExpanded] = useState(false);
   const [caseAttachPromptOpen, setCaseAttachPromptOpen] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -1173,32 +1175,46 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
               </button>
             }
           >
-            {parts.map((item) => {
-              const w = partItemWeight(item);
-              const unregistered = item.masterWeight.trim() === "" && item.manualWeight.trim() === "";
-              return (
-                <div key={item.id} className="flex flex-wrap items-end gap-2 border-t border-border pt-2.5 first:border-t-0 first:pt-0">
-                  <div className="w-32">
-                    <label className="mb-1 block text-[11px] text-muted">{t("weightCalc.panel.body.fields.model")}</label>
-                    <input value={item.model} onChange={(e) => { setParts((p) => p.map((i) => (i.id === item.id ? { ...i, model: e.target.value } : i))); markDirty(); }} className="field-input" />
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11.5px] text-muted-2">
+                {t("weightCalc.panel.body.partsSummary", { count: parts.length })}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPartsExpanded((v) => !v)}
+                className="btn-ghost !py-1 !text-[11.5px]"
+              >
+                {partsExpanded ? t("weightCalc.panel.body.hideDetails") : t("weightCalc.panel.body.showDetails")}
+                {partsExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+            {partsExpanded &&
+              parts.map((item) => {
+                const w = partItemWeight(item);
+                const unregistered = item.masterWeight.trim() === "" && item.manualWeight.trim() === "";
+                return (
+                  <div key={item.id} className="flex flex-wrap items-end gap-2 border-t border-border pt-2.5">
+                    <div className="w-32">
+                      <label className="mb-1 block text-[11px] text-muted">{t("weightCalc.panel.body.fields.model")}</label>
+                      <input value={item.model} onChange={(e) => { setParts((p) => p.map((i) => (i.id === item.id ? { ...i, model: e.target.value } : i))); markDirty(); }} className="field-input" />
+                    </div>
+                    <div className="w-32">
+                      <label className="mb-1 block text-[11px] text-muted">{t("weightCalc.panel.body.fields.name")}</label>
+                      <input value={item.name} onChange={(e) => { setParts((p) => p.map((i) => (i.id === item.id ? { ...i, name: e.target.value } : i))); markDirty(); }} className="field-input" />
+                    </div>
+                    <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setParts((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
+                    <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setParts((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
+                    {unregistered ? (
+                      <span className="mb-1 text-[11.5px] font-semibold text-warning">{t("weightCalc.panel.body.weightNotRegistered")}</span>
+                    ) : (
+                      <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(w, 2)} kg</span>
+                    )}
+                    <button type="button" onClick={() => { setParts((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                  <div className="w-32">
-                    <label className="mb-1 block text-[11px] text-muted">{t("weightCalc.panel.body.fields.name")}</label>
-                    <input value={item.name} onChange={(e) => { setParts((p) => p.map((i) => (i.id === item.id ? { ...i, name: e.target.value } : i))); markDirty(); }} className="field-input" />
-                  </div>
-                  <NumField label={t("weightCalc.basic.quantity")} value={item.quantity} onChange={(v) => { setParts((p) => p.map((i) => (i.id === item.id ? { ...i, quantity: v } : i))); markDirty(); }} compact />
-                  <NumField label={t("weightCalc.panel.body.fields.manualWeight")} value={item.manualWeight} onChange={(v) => { setParts((p) => p.map((i) => (i.id === item.id ? { ...i, manualWeight: v } : i))); markDirty(); }} compact />
-                  {unregistered ? (
-                    <span className="mb-1 text-[11.5px] font-semibold text-warning">{t("weightCalc.panel.body.weightNotRegistered")}</span>
-                  ) : (
-                    <span className="mb-1 text-[12px] font-semibold text-foreground">{roundTo(w, 2)} kg</span>
-                  )}
-                  <button type="button" onClick={() => { setParts((p) => p.filter((i) => i.id !== item.id)); markDirty(); }} className="btn-ghost btn-icon text-danger hover:bg-danger/10 mb-1">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              );
-            })}
+                );
+              })}
           </GroupCard>
 
           {/* 木材 */}

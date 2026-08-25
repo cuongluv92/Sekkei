@@ -386,6 +386,9 @@ export interface Dictionary {
         addPartManually: string;
         fetchPartAssemblyReplaceConfirm: string;
         fetchPartAssemblyEmpty: string;
+        partsSummary: string;
+        showDetails: string;
+        hideDetails: string;
         weightNotRegistered: string;
         wiringFactor: string;
         rawTotal: string;
