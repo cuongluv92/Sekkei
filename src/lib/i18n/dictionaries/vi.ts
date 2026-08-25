@@ -436,6 +436,7 @@ const vi: Dictionary = {
         partsSummary: "{count} mục",
         showDetails: "詳細",
         hideDetails: "Đóng 詳細",
+        fetchNittoWeightTitle: "Lấy 重量 từ 部品データ",
         weightNotRegistered: "重量未登録",
         wiringFactor: "配線補正",
         rawTotal: "盤本体重量 (trước hệ số)",

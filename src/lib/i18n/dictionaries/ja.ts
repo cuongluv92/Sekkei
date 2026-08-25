@@ -433,6 +433,7 @@ const ja: Dictionary = {
         partsSummary: "{count}件",
         showDetails: "詳細",
         hideDetails: "詳細を閉じる",
+        fetchNittoWeightTitle: "部品データから重量を取得",
         weightNotRegistered: "重量未登録",
         wiringFactor: "配線補正",
         rawTotal: "盤本体重量（補正前）",

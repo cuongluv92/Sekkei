@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronUp, Download, FileSpreadsheet, FileText, Image as ImageIcon, Loader2, Plus, Save, Trash2, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, FileSpreadsheet, FileText, Image as ImageIcon, Loader2, Plus, Save, Search, Trash2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { formatJaTime } from "@/lib/utils/dateFormat";
@@ -37,6 +37,7 @@ import {
 } from "@/lib/utils/panelWeight";
 import type { PanelWeightLayerImage } from "@/lib/services/panelWeightLayerImageService";
 import { InsertPartModal } from "@/components/common/InsertPartModal";
+import { PartWeightSearchModal } from "@/components/common/PartWeightSearchModal";
 import type { SearchResultItem, WeightMaterial } from "@/lib/types";
 
 const CALCULATION_TYPE = "weight-panel-body";
@@ -271,6 +272,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
   const [fetchingPartAssembly, setFetchingPartAssembly] = useState(false);
   /** 部品製作から一括取得すると件数が多くなりがちなので、既定は畳んでおき合計だけ見せる — 詳細ボタンで必要な時だけ展開。 */
   const [partsExpanded, setPartsExpanded] = useState(false);
+  const [nittoWeightModalOpen, setNittoWeightModalOpen] = useState(false);
   const [caseAttachPromptOpen, setCaseAttachPromptOpen] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -796,6 +798,15 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
     }
   }
 
+  /** Nitto箱体は購入品の完成品なので、部品データに登録済みなら重量をそのまま拾える — 手入力は登録がない場合のフォールバックとして残す。 */
+  function handlePickNittoBoxWeight(item: SearchResultItem) {
+    if (item.weight != null) {
+      setNittoBoxWeight(String(item.weight));
+      markDirty();
+    }
+    setNittoWeightModalOpen(false);
+  }
+
   return (
     <div id="weight-panel-body" className="panel scroll-mt-4">
       <div className="panel-header flex items-center justify-between gap-2">
@@ -869,14 +880,31 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
           <GroupCard title={t(`weightCalc.panel.body.groups.box`)} weight={boxWeight}>
             {layer === "nitto" ? (
               <div className="grid grid-cols-2 gap-2.5">
-                <NumField
-                  label={t("weightCalc.panel.body.fields.nittoBoxWeight")}
-                  value={nittoBoxWeight}
-                  onChange={(v) => {
-                    setNittoBoxWeight(v);
-                    markDirty();
-                  }}
-                />
+                <div>
+                  <label className="mb-1 block text-[11px] text-muted">
+                    {t("weightCalc.panel.body.fields.nittoBoxWeight")}
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={nittoBoxWeight}
+                      onChange={(e) => {
+                        setNittoBoxWeight(e.target.value);
+                        markDirty();
+                      }}
+                      className="field-input"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setNittoWeightModalOpen(true)}
+                      title={t("weightCalc.panel.body.fetchNittoWeightTitle")}
+                      className="btn-ghost btn-icon shrink-0"
+                    >
+                      <Search className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
                 <NumField
                   label={t("weightCalc.basic.quantity")}
                   value={nittoBoxQuantity}
@@ -1406,6 +1434,15 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
           onClose={() => setPartsModalOpen(false)}
           onInsertBlank={handleInsertBlankPart}
           onPick={handlePickPart}
+        />
+      )}
+
+      {nittoWeightModalOpen && (
+        <PartWeightSearchModal
+          items={masterItems}
+          loading={masterLoading}
+          onClose={() => setNittoWeightModalOpen(false)}
+          onPick={handlePickNittoBoxWeight}
         />
       )}
 

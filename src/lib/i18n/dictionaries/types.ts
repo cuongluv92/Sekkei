@@ -389,6 +389,7 @@ export interface Dictionary {
         partsSummary: string;
         showDetails: string;
         hideDetails: string;
+        fetchNittoWeightTitle: string;
         weightNotRegistered: string;
         wiringFactor: string;
         rawTotal: string;
