@@ -63,6 +63,23 @@ export function extractDxfPartList(dxfText: string): DxfExtractResult {
   const orderedFields = sortedHeader.map((h) => h.field);
   const avgHeaderY = header.reduce((sum, h) => sum + h.y, 0) / header.length;
 
+  // A real title block often has a row-number column (連番) just outside the
+  // 7-field grid — that column isn't one of DXF_PART_LIST_FIELDS, so nothing
+  // catches it, and left uncaught it silently adds an 8th cell to a row's
+  // cluster, breaking the "one cell per column" cardinality check below on
+  // literally every row. Bound the accepted x-range to the table's own span,
+  // with margin derived from its narrowest adjacent column gap — a fixed
+  // margin would either miss real cells or admit stray ones, since real
+  // cell text can sit well off its own header label's x (a wide 定格・仕様
+  // column's data is often left-aligned far from its centered label; see
+  // `patchViaGrid`'s comment) but a genuinely foreign column (row numbers)
+  // sits further outside the table than any real column ever drifts.
+  const headerXs = sortedHeader.map((h) => h.x);
+  const minGap = Math.min(...headerXs.slice(1).map((x, i) => x - headerXs[i]));
+  const margin = minGap / 2;
+  const minX = headerXs[0] - margin;
+  const maxX = headerXs[headerXs.length - 1] + margin;
+
   const bodyCells: GridCell[] = [];
   for (const rec of textRecords) {
     const textPair = getPair(rec, 1);
@@ -73,6 +90,7 @@ export function extractDxfPartList(dxfText: string): DxfExtractResult {
     const y = parseFloat(yPair.value);
     if (Number.isNaN(x) || Number.isNaN(y)) continue;
     if (y >= avgHeaderY - Y_CLUSTER_TOLERANCE) continue; // header row itself, or anything at/above it
+    if (x < minX || x > maxX) continue; // outside the table's own column span — a foreign column, not this grid
     bodyCells.push({ pair: textPair, x, y });
   }
 

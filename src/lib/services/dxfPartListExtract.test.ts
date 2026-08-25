@@ -90,4 +90,23 @@ describe("extractDxfPartList", () => {
     expect(extracted.found).toBe(false);
     expect(extracted.rows).toEqual([]);
   });
+
+  it("ignores a row-number (連番) column outside the 7-field grid — real BricsCAD/AutoCAD title blocks often draw one just left of 記号", () => {
+    // Reproduces a real bug found against an actual customer DXF: an 8th
+    // TEXT cell (a row-number label like "1") sits well left of the 記号
+    // column on some rows, which used to break the "exactly one cell per
+    // column" cardinality check on literally every row, so nothing was ever
+    // extracted (rows: 0) even though the file had real data.
+    const template = buildGridFixtureDxf(2);
+    const lines = template.trimEnd().split("\n");
+    const endsecIdx = lines.lastIndexOf("ENDSEC");
+    const rowNumberLines = ["0", "TEXT", "8", "0", "10", "6.5", "20", "259.78", "1", "1"];
+    lines.splice(endsecIdx - 1, 0, ...rowNumberLines);
+    const dxf = lines.join("\n") + "\n";
+
+    const filled = patchDxfPartList(dxf, [row({ symbol: "MCCB1" })], "ja");
+    const extracted = extractDxfPartList(filled.text);
+    expect(extracted.rows).toHaveLength(1);
+    expect(extracted.rows[0].symbol).toBe("MCCB1");
+  });
 });
