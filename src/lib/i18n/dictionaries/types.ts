@@ -630,6 +630,37 @@ export interface Dictionary {
     overallPass: string;
     overallFail: string;
     savedAt: string;
+    section1TitleCubicle: string;
+    section1HintCubicle: string;
+    prefectureLabel: string;
+    cubicleFloor: {
+      upper: string;
+      middle: string;
+      ground: string;
+    };
+    weightLabelKgf: string;
+    section2TitleCubicle: string;
+    section2HintCubicle: string;
+    cubicleHHint: string;
+    cubicleLHint: string;
+    cubicleSmallLHint: string;
+    cubicleNHint: string;
+    cubicleNtHint: string;
+    cubicleSmallNtHint: string;
+    cubicleHorizontalDirection: string;
+    cubicleDepthDirection: string;
+    cubicleOutlineDrawingHint: string;
+    section3TitleCubicle: string;
+    section3HintCubicle: string;
+    section3AutoHintCubicle: string;
+    cubicleTensionBolt: string;
+    cubicleShearBolt: string;
+    cubiclePulloutBolt: string;
+    cubicleSelectedBolt: string;
+    cubicleNoBoltFits: string;
+    cubicleRecommendNote: string;
+    cubicleSourceTitle: string;
+    cubicleSourceBody: string;
   };
   busbarCalc: {
     title: string;

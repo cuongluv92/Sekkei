@@ -8,6 +8,7 @@ import { CaseSelector } from "@/components/common/CaseSelector";
 import { Modal } from "@/components/common/Modal";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SeismicAnchorBoltSettings } from "@/components/settings/SeismicAnchorBoltSettings";
+import { CubicleSeismicView } from "./CubicleSeismicView";
 import { FloorMountSeismicView } from "./FloorMountSeismicView";
 import { WallMountSeismicView } from "./WallMountSeismicView";
 
@@ -72,14 +73,7 @@ export function SeismicCalculationView() {
             />
           )}
           {activeTab === "wallMounted" && <WallMountSeismicView caseId={caseId} />}
-          {activeTab === "cubicle" && (
-            <FloorMountSeismicView
-              caseId={caseId}
-              calculationType="seismic-cubicle"
-              titleKey="seismicCalc.cubicleTitle"
-              descriptionKey="seismicCalc.cubicleDescription"
-            />
-          )}
+          {activeTab === "cubicle" && <CubicleSeismicView caseId={caseId} />}
         </div>
       </div>
 
