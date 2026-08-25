@@ -70,8 +70,6 @@ export function computeIndoorVentilation(input: IndoorVentilationInput): IndoorV
     dischargeCoefficient,
     input.effectiveSupplyAreaM2,
     input.effectiveExhaustAreaM2,
-    INDOOR_AIR_CONDITION.topTempC,
-    INDOOR_AIR_CONDITION.ambientTempC,
   );
   const naturalVentilationHeatRemovalW = computeNaturalVentilationHeatRemovalW(
     INDOOR_AIR_CONDITION,

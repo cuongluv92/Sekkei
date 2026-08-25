@@ -24,7 +24,7 @@ describe("computeIndoorVentilation — フィルタ無し (natural ventilation i
     expect(result.roofAreaM2).toBeCloseTo(6.6, 6);
     expect(result.sideAreaM2).toBeCloseTo(24.44, 6);
     expect(result.naturalHeatLossW).toBeCloseTo(1609.2400000000002, 2);
-    expect(result.naturalVentilationHeatRemovalW).toBeCloseTo(8737.148873185093, 2);
+    expect(result.naturalVentilationHeatRemovalW).toBeCloseTo(8751.554734366313, 2);
     expect(result.naturalVentilationSufficient).toBe(true);
     expect(result.requiredForcedAirflowM3PerH).toBeNull();
     expect(result.finalFanCount).toBeNull();
@@ -49,9 +49,9 @@ describe("computeIndoorVentilation — フィルタ有り (forced ventilation re
     });
 
     expect(result.naturalHeatLossW).toBeCloseTo(1609.2400000000002, 2);
-    expect(result.naturalVentilationHeatRemovalW).toBeCloseTo(2357.8419954173414, 2);
+    expect(result.naturalVentilationHeatRemovalW).toBeCloseTo(2361.72961882473, 2);
     expect(result.naturalVentilationSufficient).toBe(false);
-    expect(result.requiredForcedAirflowM3PerH).toBeCloseTo(2230.869566232594, 2);
+    expect(result.requiredForcedAirflowM3PerH).toBeCloseTo(2229.3804002213806, 2);
     expect(result.fanCount).toBe(2);
     expect(result.staticPressurePa).toBeCloseTo(2.9603784388725236, 2);
     expect(result.filterLimitedFanCount).toBe(1);

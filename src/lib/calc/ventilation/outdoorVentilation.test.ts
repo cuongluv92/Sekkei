@@ -93,8 +93,8 @@ describe("computeOutdoorVentilation — 那覇・フィルタ有り", () => {
     });
 
     expect(result.naturalHeatLossW).toBeCloseTo(677.3157, 3);
-    expect(result.naturalVentilationHeatRemovalW).toBeCloseTo(317.673220719584, 3);
-    expect(result.requiredForcedAirflowM3PerH).toBeCloseTo(4230.569019127624, 2);
+    expect(result.naturalVentilationHeatRemovalW).toBeCloseTo(316.9780092945867, 3);
+    expect(result.requiredForcedAirflowM3PerH).toBeCloseTo(4230.903391138962, 2);
     expect(result.fanCount).toBe(4);
   });
 });

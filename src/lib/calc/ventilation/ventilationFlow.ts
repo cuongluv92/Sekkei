@@ -35,26 +35,24 @@ export function computeDischargeCoefficient(
 
 /**
  * 実効換気口面積 αxAx (m2) — 給気口・排気口を直列とみなした合成有効面積。
- * JSIA-T1016換気計算書の式そのまま:
- * αxAx = 1 / √( (1/(α・Ai))² + (1/(α・Ao))²・(273+tt)/(273+to) )
- *
- * (273+tt)/(273+to) は固定定数ではなく、地域・盤形式ごとの tt・to から
- * 都度計算する値 ── 以前は東京の使用例 (tt=49, to=31 → 322/304) の数値を
- * そのまま固定定数として実装していたが、別の実在計算書 (動力制御盤・計装盤
- * 用キュービクル, tt=50, to=29.9) で式が「(273+tt)/(273+to)」という一般形で
- * 明記されているのを確認し、地域ごとに正しく計算し直すよう修正した。
+ * JSIA-T1016換気計算書の式そのまま (322/304 はJSIA公式Excel全5シート
+ * (屋外東京/那覇・屋内フィルタ有無) 共通で埋め込まれている固定定数 —
+ * 各シートのtt・toが49/31, 48/32, 50/30とそれぞれ異なるにもかかわらず
+ * どのシートも同じ322/304を使っているため、地域ごとに再計算する値では
+ * なく、JSIAが定める設計基準値として固定されていると判断できる。
+ * 一時、別の実在計算書 (JSIA公式ではない出典) の記載に基づき地域ごとの
+ * (273+tt)/(273+to) に変更したが、JSIA公式Excelの5シート全ての実際の
+ * セル数式を確認した結果、そちらが誤りだったため元の固定定数に戻した):
+ * αxAx = 1 / √( (1/(α・Ai))² + (1/(α・Ao))²・(322/304) )
  */
 export function computeEffectiveVentAreaM2(
   dischargeCoefficient: number,
   effectiveSupplyAreaM2: number,
   effectiveExhaustAreaM2: number,
-  topTempC: number,
-  ambientTempC: number,
 ): number {
   const supplyTerm = 1 / (dischargeCoefficient * effectiveSupplyAreaM2);
   const exhaustTerm = 1 / (dischargeCoefficient * effectiveExhaustAreaM2);
-  const tempRatio = (273 + topTempC) / (273 + ambientTempC);
-  return 1 / Math.sqrt(supplyTerm ** 2 + exhaustTerm ** 2 * tempRatio);
+  return 1 / Math.sqrt(supplyTerm ** 2 + exhaustTerm ** 2 * (322 / 304));
 }
 
 /**
