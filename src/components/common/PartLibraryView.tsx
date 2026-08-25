@@ -96,6 +96,7 @@ export function PartLibraryView<T extends LibraryItem>({
       specification: searchParams.get("spec") ?? "",
     };
   });
+  const [sourceFilter, setSourceFilter] = useState("");
   const [selected, setSelected] = useState<T | null>(null);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -148,9 +149,19 @@ export function PartLibraryView<T extends LibraryItem>({
     [categoryScopeItems],
   );
 
+  // 部品製作 の取込から自動登録された部品 (自作/手配品) は、インポート画面や
+  // カタログ由来の部品と source が違う — メーカーの正式カタログ品と混ざって
+  // 見えないよう、この一覧だけで絞り込めるようにする (spec: 部品6要望)。
+  const sources = useMemo(
+    () => Array.from(new Set(items.map((i) => i.source).filter(Boolean))),
+    [items],
+  );
   const filtered = useMemo(
-    () => items.filter((i) => matchesPartFilters(i, filters)),
-    [items, filters],
+    () =>
+      items.filter(
+        (i) => matchesPartFilters(i, filters) && (!sourceFilter || i.source === sourceFilter),
+      ),
+    [items, filters, sourceFilter],
   );
 
   function handleDownload(item: T, kind: FileAsset["kind"]) {
@@ -345,6 +356,36 @@ export function PartLibraryView<T extends LibraryItem>({
           </button>
         }
       />
+
+      {sources.length > 1 && (
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setSourceFilter("")}
+            className={
+              sourceFilter === ""
+                ? "rounded-md bg-accent px-3 py-1.5 text-[12px] font-bold text-accent-foreground"
+                : "rounded-md border border-border-strong px-3 py-1.5 text-[12px] font-semibold text-muted hover:text-foreground"
+            }
+          >
+            {t("common.all")}
+          </button>
+          {sources.map((source) => (
+            <button
+              key={source}
+              type="button"
+              onClick={() => setSourceFilter(source)}
+              className={
+                sourceFilter === source
+                  ? "rounded-md bg-accent px-3 py-1.5 text-[12px] font-bold text-accent-foreground"
+                  : "rounded-md border border-border-strong px-3 py-1.5 text-[12px] font-semibold text-muted hover:text-foreground"
+              }
+            >
+              {source}
+            </button>
+          ))}
+        </div>
+      )}
 
       <PartFilterBar
         value={filters}

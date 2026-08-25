@@ -24,6 +24,7 @@ export {
   exportPartAssemblyDxf,
 } from "./partAssemblyExportService";
 export {
+  AUTO_REGISTERED_SOURCE_LABEL,
   parsePartAssemblyImportFile,
   registerImportedPartsInMaster,
   type PartAssemblyImportResult,

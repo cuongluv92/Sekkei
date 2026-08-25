@@ -29,7 +29,6 @@ import {
   preloadManufacturers,
 } from "@/lib/mock/manufacturers";
 import { findFileByKind, openFileAsset } from "@/lib/utils/fileDownload";
-import { getFieldSuggestions, rememberFieldValue } from "@/lib/utils/fieldMemory";
 import { usePartAssembly } from "@/lib/store/PartAssemblyProvider";
 import { useEffectiveCaseId } from "@/lib/store/ActiveCaseProvider";
 import { useToast } from "@/lib/hooks/useToast";
@@ -52,21 +51,6 @@ const BLANK_ROW: Omit<PartAssemblyRow, "id"> = {
   quantity: 1,
   remarks: "",
 };
-
-/** 記号/品名/型式/仕様/備考 の autocomplete 用に、行の値を localStorage の入力履歴へ記録する。 */
-function rememberRowFields(row: {
-  symbol?: string;
-  name?: string;
-  model?: string;
-  specification?: string;
-  remarks?: string;
-}): void {
-  if (row.symbol) rememberFieldValue("partSymbol", row.symbol);
-  if (row.name) rememberFieldValue("partName", row.name);
-  if (row.model) rememberFieldValue("partModel", row.model);
-  if (row.specification) rememberFieldValue("partSpecification", row.specification);
-  if (row.remarks) rememberFieldValue("partRemarks", row.remarks);
-}
 
 function roundTo(n: number, decimals: number): number {
   const f = 10 ** decimals;
@@ -256,7 +240,6 @@ function PartAssemblyView() {
     setImportCommitting(true);
     try {
       await addRows(importPreview.rows);
-      importPreview.rows.forEach(rememberRowFields);
       await registerImportedPartsInMaster(importPreview.rows, registerAnywayRows);
       showToast(t("partAssembly.importedCount", { count: importPreview.rows.length }));
       setImportPreview(null);
@@ -288,7 +271,6 @@ function PartAssemblyView() {
     try {
       const newRow = rowFromMasterItem(item);
       const id = await addRow(newRow);
-      rememberRowFields(newRow);
       showToast(
         item.model
           ? t("partAssembly.addedToListWithModel", { model: item.model })
@@ -305,7 +287,6 @@ function PartAssemblyView() {
     try {
       const newRow = rowFromMasterItem(item);
       const id = await insertRowAt(insertAt, newRow);
-      rememberRowFields(newRow);
       showToast(
         item.model
           ? t("partAssembly.addedToListWithModel", { model: item.model })
@@ -450,33 +431,6 @@ function PartAssemblyView() {
 
             {activeTab === "list" && (
               <>
-                {/* 記号/品名/型式/仕様/備考 の autocomplete — 過去に入力・取込した値を localStorage から候補表示する */}
-                <datalist id="field-suggestions-partSymbol">
-                  {getFieldSuggestions("partSymbol").map((v) => (
-                    <option key={v} value={v} />
-                  ))}
-                </datalist>
-                <datalist id="field-suggestions-partName">
-                  {getFieldSuggestions("partName").map((v) => (
-                    <option key={v} value={v} />
-                  ))}
-                </datalist>
-                <datalist id="field-suggestions-partModel">
-                  {getFieldSuggestions("partModel").map((v) => (
-                    <option key={v} value={v} />
-                  ))}
-                </datalist>
-                <datalist id="field-suggestions-partSpecification">
-                  {getFieldSuggestions("partSpecification").map((v) => (
-                    <option key={v} value={v} />
-                  ))}
-                </datalist>
-                <datalist id="field-suggestions-partRemarks">
-                  {getFieldSuggestions("partRemarks").map((v) => (
-                    <option key={v} value={v} />
-                  ))}
-                </datalist>
-
             <div className="data-table-wrap">
               <table className="data-table" style={{ minWidth: 1260 }}>
                 <thead>
@@ -569,8 +523,6 @@ function PartAssemblyView() {
                             onChange={(e) =>
                               updateField(row.id, { symbol: e.target.value })
                             }
-                            onBlur={(e) => rememberFieldValue("partSymbol", e.target.value)}
-                            list="field-suggestions-partSymbol"
                             className="field-input py-1"
                           />
                         </td>
@@ -580,8 +532,6 @@ function PartAssemblyView() {
                             onChange={(e) =>
                               updateField(row.id, { name: e.target.value })
                             }
-                            onBlur={(e) => rememberFieldValue("partName", e.target.value)}
-                            list="field-suggestions-partName"
                             className="field-input py-1"
                           />
                         </td>
@@ -613,8 +563,6 @@ function PartAssemblyView() {
                             onChange={(e) =>
                               updateField(row.id, { model: e.target.value })
                             }
-                            onBlur={(e) => rememberFieldValue("partModel", e.target.value)}
-                            list="field-suggestions-partModel"
                             className="field-input py-1 font-mono text-[12px]"
                           />
                         </td>
@@ -626,8 +574,6 @@ function PartAssemblyView() {
                                 specification: e.target.value,
                               })
                             }
-                            onBlur={(e) => rememberFieldValue("partSpecification", e.target.value)}
-                            list="field-suggestions-partSpecification"
                             className="field-input py-1"
                           />
                         </td>
@@ -670,8 +616,6 @@ function PartAssemblyView() {
                             onChange={(e) =>
                               updateField(row.id, { remarks: e.target.value })
                             }
-                            onBlur={(e) => rememberFieldValue("partRemarks", e.target.value)}
-                            list="field-suggestions-partRemarks"
                             className="field-input py-1"
                           />
                         </td>

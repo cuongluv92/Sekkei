@@ -19,6 +19,14 @@ function normalize(s: string | undefined): string {
 }
 
 /**
+ * 部品製作 に取り込んだ図面/Excel から自動登録された 部品データ は、メーカー
+ * カタログや インポート 画面から登録した部品と混ざらないよう、別の source
+ * ラベルを付ける — 自社の盤図に載っている自作/手配部品であって、メーカーの
+ * 正式なカタログ品ではない場合があるため、区別できることが重要。
+ */
+export const AUTO_REGISTERED_SOURCE_LABEL = "部品製作から自動登録";
+
+/**
  * 部品データ (メーカー master) doesn't require registering a manufacturer up
  * front in 設定 before it can be recognized — an imported DXF/Excel's メーカー
  * text is matched case-insensitively against existing manufacturers and, if
@@ -115,7 +123,7 @@ async function registerInMasterIfMissing(row: {
     model: row.model,
     specification: row.specification,
     weight: row.weight,
-    source: "インポート",
+    source: AUTO_REGISTERED_SOURCE_LABEL,
     files: [],
   });
 }

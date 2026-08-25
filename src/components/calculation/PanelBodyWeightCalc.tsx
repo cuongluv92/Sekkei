@@ -38,7 +38,6 @@ import {
 import type { PanelWeightLayerImage } from "@/lib/services/panelWeightLayerImageService";
 import { InsertPartModal } from "@/components/common/InsertPartModal";
 import { PartWeightSearchModal } from "@/components/common/PartWeightSearchModal";
-import { getFieldSuggestions, rememberFieldValue } from "@/lib/utils/fieldMemory";
 import type { SearchResultItem, WeightMaterial } from "@/lib/types";
 
 const CALCULATION_TYPE = "weight-panel-body";
@@ -815,7 +814,6 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
 
   /** 型番を手入力/確定したときに 部品データ に登録済みの完全一致があれば重量を自動で拾う — 無ければ何もしない (手入力のまま)。 */
   function handleNittoBoxModelBlur(model: string) {
-    rememberFieldValue("partModel", model);
     const q = model.trim().toLowerCase();
     if (!q) return;
     const match = masterItems.find((item) => item.source === "part-data" && item.model.trim().toLowerCase() === q);
@@ -898,11 +896,6 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
           <GroupCard title={t(`weightCalc.panel.body.groups.box`)} weight={boxWeight}>
             {layer === "nitto" ? (
               <div className="grid grid-cols-2 gap-2.5">
-                <datalist id="field-suggestions-partModel">
-                  {getFieldSuggestions("partModel").map((v) => (
-                    <option key={v} value={v} />
-                  ))}
-                </datalist>
                 <div className="col-span-2">
                   <label className="mb-1 block text-[11px] text-muted">
                     {t("weightCalc.panel.body.fields.nittoBoxModel")}
@@ -914,7 +907,6 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                       markDirty();
                     }}
                     onBlur={(e) => handleNittoBoxModelBlur(e.target.value)}
-                    list="field-suggestions-partModel"
                     className="field-input font-mono text-[12px]"
                   />
                 </div>
