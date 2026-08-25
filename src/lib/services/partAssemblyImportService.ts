@@ -47,31 +47,26 @@ async function resolveManufacturerId(name: string): Promise<string> {
   return created.id;
 }
 
-/** A rating token like "3p"/"2p" (極数), "50af"/"af" (フレーム電流), "30at"/"at" (トリップ電流). */
-const RATING_TOKEN_RE = /^(\d+p|\d*af|\d*at)$/;
+/** 仕様の先頭からこの件数のトークンが一致していれば同じ定格とみなす。 */
+const SPEC_PREFIX_TOKEN_COUNT = 3;
 
 /**
- * DXF の 仕様 欄には AF・AT・極数以外の自由記述の注記が混ざることが多く
- * (実物は「3P 50AF 30AT 盤内専用」のように書かれる) — 部品データ 側のきれいな
- * 仕様文字列とは完全一致しない。AF(フレーム電流)・AT(トリップ電流)・
- * 極数(3P/2P等) という代表的な定格トークンだけを取り出して比較することで、
- * 他の自由記述の違いを無視しつつ、定格が実際に一致する部品だけを拾う。
+ * DXF の 仕様 欄には末尾に自由記述の注記が混ざることが多く (実物は
+ * 「3P 50AF 30AT 盤内専用品」のように書かれる) — これは遮断器に限らず
+ * 端子台・ブザーなど他の部品でも同じで、部品データ 側のきれいな仕様文字列
+ * とは完全一致しない。仕様の先頭2〜3トークンさえ一致していれば同じ定格の
+ * 部品とみなす — 末尾に付く自由記述の違いは無視してよい、という現場判断。
+ * 仕様が空欄の行は対象外 (あてずっぽうで重量を借りない)。
  */
-function ratingTokens(specification: string): string[] {
-  return tokenizeSpecification(specification).filter((t) => RATING_TOKEN_RE.test(t));
-}
-
-/** 数字を伴わない裸の単位トークン ("af"/"at") — どの電流値でも良いという意味なので、候補側は末尾一致で十分。 */
-const BARE_UNIT_TOKEN_RE = /^(af|at)$/;
-
-/** 行の仕様から拾える定格トークンが、候補の仕様にすべて含まれているか。定格トークンを1つも拾えない行は対象外 (あてずっぽうで重量を借りない)。 */
 export function specificationLooselyMatches(rowSpecification: string, candidateSpecification: string): boolean {
-  const rowTokens = ratingTokens(rowSpecification);
+  const rowTokens = tokenizeSpecification(rowSpecification);
   if (rowTokens.length === 0) return false;
-  const candidateTokens = ratingTokens(candidateSpecification);
-  return rowTokens.every((t) =>
-    BARE_UNIT_TOKEN_RE.test(t) ? candidateTokens.some((c) => c.endsWith(t)) : candidateTokens.includes(t),
-  );
+  const candidateTokens = tokenizeSpecification(candidateSpecification);
+  const prefixLength = Math.min(SPEC_PREFIX_TOKEN_COUNT, rowTokens.length);
+  for (let i = 0; i < prefixLength; i++) {
+    if (rowTokens[i] !== candidateTokens[i]) return false;
+  }
+  return true;
 }
 
 /**

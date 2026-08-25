@@ -141,22 +141,26 @@ describe("stripSymbolInstanceNumber", () => {
 });
 
 describe("specificationLooselyMatches", () => {
-  it("matches when the row's AF/AT/pole tokens are all present, ignoring extra free-text notes", () => {
+  it("matches when the leading 2-3 tokens agree, ignoring a trailing free-text note on either side", () => {
     expect(specificationLooselyMatches("3P 50AF 30AT 盤内専用品", "3P 50AF/30AT")).toBe(true);
     expect(specificationLooselyMatches("3P 50AF 30AT", "3P 50AF/30AT 屋外仕様 IP65")).toBe(true);
   });
 
-  it("does not match when a rating token differs", () => {
+  it("applies to non-breaker parts too, not just AF/AT/pole ratings", () => {
+    expect(specificationLooselyMatches("8P 95A", "8P 95A")).toBe(true);
+    expect(specificationLooselyMatches("φ30 AC200V 電子音 90dB", "φ30 AC200V 電子音 85dB")).toBe(true);
+  });
+
+  it("does not match when a leading token differs", () => {
     expect(specificationLooselyMatches("3P 50AF 30AT", "3P 50AF/40AT")).toBe(false);
     expect(specificationLooselyMatches("3P 50AF 30AT", "2P 50AF/30AT")).toBe(false);
   });
 
-  it("matches a bare unit token (af/at) against any numbered instance of it", () => {
-    expect(specificationLooselyMatches("AF AT", "3P 50AF/30AT")).toBe(true);
+  it("does not match when the candidate has fewer leading tokens than the row needs", () => {
+    expect(specificationLooselyMatches("3P 50AF 30AT", "3P")).toBe(false);
   });
 
-  it("never matches when the row has no recognizable rating tokens at all", () => {
-    expect(specificationLooselyMatches("屋外仕様 特注品", "3P 50AF/30AT")).toBe(false);
+  it("never matches when the row's specification is blank", () => {
     expect(specificationLooselyMatches("", "3P 50AF/30AT")).toBe(false);
   });
 });
