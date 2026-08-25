@@ -996,6 +996,22 @@ const ja: Dictionary = {
         manufacturingComplete: "製造完了",
         updatedAt: "更新日",
       },
+      importButton: "ファイル取込",
+      importModalTitle: "図面管理台帳 取込プレビュー",
+      importModalDescription:
+        "以前使用していたExcelファイル（本アプリの図面管理台帳と同じ列構成：A=年、B=連番、C=管理番号、D=工事番号、E=客先名、F=客先担当、G=件名、H=盤名称、I=面数、J=製造完了、K=出荷日）を読み込みました。取り込む行にチェックを入れて「取り込む」を押してください。案件として新規登録され、既存データは一切変更されません。",
+      importColumns: {
+        faceCount: "面数",
+        deliveryDate: "出荷日",
+      },
+      importDuplicateBadge: "既存の図面番号と一致",
+      importDuplicateHint:
+        "{count}件は既存の案件と図面番号が一致しています。二重登録を避けるため初期状態ではチェックを外しています（必要な場合はチェックを入れれば取り込めます）。",
+      importSelectedCount: "{count} / {total}件を選択中",
+      importConfirmButton: "選択した行を取り込む",
+      importNoRows: "取り込めるデータが見つかりませんでした。図面管理台帳と同じ列構成のファイルを選択してください。",
+      importParseError: "ファイルの読み込みに失敗しました。ファイル形式をご確認ください。",
+      importedMessage: "{count}件の案件を取り込みました",
     },
     index: {
       empty: "データがありません",

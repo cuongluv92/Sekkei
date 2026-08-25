@@ -917,6 +917,20 @@ export interface Dictionary {
         manufacturingComplete: string;
         updatedAt: string;
       };
+      importButton: string;
+      importModalTitle: string;
+      importModalDescription: string;
+      importColumns: {
+        faceCount: string;
+        deliveryDate: string;
+      };
+      importDuplicateBadge: string;
+      importDuplicateHint: string;
+      importSelectedCount: string;
+      importConfirmButton: string;
+      importNoRows: string;
+      importParseError: string;
+      importedMessage: string;
     };
     index: {
       empty: string;

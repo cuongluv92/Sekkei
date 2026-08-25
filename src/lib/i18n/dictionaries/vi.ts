@@ -1008,6 +1008,22 @@ const vi: Dictionary = {
         manufacturingComplete: "製造完了",
         updatedAt: "Cập nhật",
       },
+      importButton: "ファイル取込 (Nhập file)",
+      importModalTitle: "Xem trước dữ liệu nhập — 図面管理台帳",
+      importModalDescription:
+        "Đã đọc file Excel cũ (cùng cấu trúc cột với 図面管理台帳 của ứng dụng: A=năm, B=連番, C=管理番号, D=工事番号, E=客先名, F=客先担当, G=件名, H=盤名称, I=面数, J=製造完了, K=出荷日). Tích chọn các dòng muốn nhập rồi bấm \"Nhập\". Dữ liệu sẽ được tạo thành 案件 mới, không ảnh hưởng đến dữ liệu hiện có.",
+      importColumns: {
+        faceCount: "面数",
+        deliveryDate: "出荷日",
+      },
+      importDuplicateBadge: "Trùng 図面番号 đã có",
+      importDuplicateHint:
+        "{count} dòng có 図面番号 trùng với 案件 đã có. Mặc định các dòng này KHÔNG được chọn để tránh nhập trùng (có thể tự tích chọn nếu muốn nhập).",
+      importSelectedCount: "Đã chọn {count} / {total} dòng",
+      importConfirmButton: "Nhập các dòng đã chọn",
+      importNoRows: "Không tìm thấy dữ liệu có thể nhập. Vui lòng chọn file có cùng cấu trúc cột với 図面管理台帳.",
+      importParseError: "Đọc file thất bại. Vui lòng kiểm tra lại định dạng file.",
+      importedMessage: "Đã nhập {count} 案件",
     },
     index: {
       empty: "Không có dữ liệu",

@@ -2,18 +2,22 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileSpreadsheet, Loader2, Pencil, Printer, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { FileSpreadsheet, Loader2, Pencil, Printer, Trash2, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import {
+  annotateDuplicateRows,
   designCaseService,
   exportDrawingLedgerExcel,
+  parseDrawingLedgerFile,
   printDrawingLedger,
+  type LedgerImportRow,
 } from "@/lib/services/design";
 import { calculationRecordService, partAssemblyService } from "@/lib/services";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { EditCaseModal } from "@/components/common/EditCaseModal";
 import { Modal } from "@/components/common/Modal";
+import { LedgerImportModal } from "@/components/design/LedgerImportModal";
 import type { CaseStatus, DesignCase, DesignCaseWithPanels } from "@/lib/types/design";
 
 /** Row background per ②図面管理台帳 H1 legend — real colors from the template, not invented. */
@@ -53,6 +57,9 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
   } | null>(null);
   const [checkingImpact, setCheckingImpact] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [importRows, setImportRows] = useState<LedgerImportRow[] | null>(null);
+  const [parsingImport, setParsingImport] = useState(false);
+  const importFileInputRef = useRef<HTMLInputElement>(null);
 
   function reload() {
     designCaseService.listAll().then((list) => setItems(list));
@@ -169,17 +176,61 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
     }
   }
 
+  function handleImportButtonClick() {
+    importFileInputRef.current?.click();
+  }
+
+  async function handleImportFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setParsingImport(true);
+    try {
+      const parsed = await parseDrawingLedgerFile(file);
+      if (parsed.length === 0) {
+        show(t("design.ledger.importNoRows"));
+        return;
+      }
+      setImportRows(annotateDuplicateRows(parsed, items ?? []));
+    } catch {
+      show(t("design.ledger.importParseError"));
+    } finally {
+      setParsingImport(false);
+    }
+  }
+
+  function handleImported(count: number) {
+    setImportRows(null);
+    reload();
+    show(t("design.ledger.importedMessage", { count }));
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <div className="panel">
-        <div className="panel-body-compact">
-          <label className="field-label">{t("common.search")}</label>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("design.ledger.searchPlaceholder")}
-            className="field-input max-w-md"
-          />
+        <div className="panel-body-compact flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <label className="field-label">{t("common.search")}</label>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("design.ledger.searchPlaceholder")}
+              className="field-input max-w-md"
+            />
+          </div>
+          <div>
+            <button onClick={handleImportButtonClick} disabled={parsingImport} className="btn-secondary">
+              {parsingImport ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              {t("design.ledger.importButton")}
+            </button>
+            <input
+              ref={importFileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={handleImportFileSelected}
+            />
+          </div>
         </div>
       </div>
 
@@ -324,6 +375,10 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
         </div>
       )}
       {message && <div className="text-[12px] text-success">{message}</div>}
+
+      {importRows && (
+        <LedgerImportModal rows={importRows} onClose={() => setImportRows(null)} onImported={handleImported} />
+      )}
 
       {editing && (
         <EditCaseModal
