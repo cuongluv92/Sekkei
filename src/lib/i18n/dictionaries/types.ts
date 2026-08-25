@@ -232,6 +232,8 @@ export interface Dictionary {
     importEmpty: string;
     importError: string;
     importedCount: string;
+    importedCountWithMaster: string;
+    importedCountNoneRegistered: string;
     importPreviewTitle: string;
     importPreviewCount: string;
     importConfirm: string;

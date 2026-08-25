@@ -210,8 +210,8 @@ async function createMasterRecord(row: {
   model: string;
   specification: string;
   weight?: number;
-}): Promise<void> {
-  if ((!row.model.trim() && !row.symbol.trim()) || !isSupabaseConfigured()) return;
+}): Promise<boolean> {
+  if ((!row.model.trim() && !row.symbol.trim()) || !isSupabaseConfigured()) return false;
   await partDataService.create({
     symbol: stripSymbolInstanceNumber(row.symbol) || undefined,
     category: row.name,
@@ -222,6 +222,7 @@ async function createMasterRecord(row: {
     source: AUTO_REGISTERED_SOURCE_LABEL,
     files: [],
   });
+  return true;
 }
 
 export interface PartAssemblyImportResult {
@@ -230,25 +231,43 @@ export interface PartAssemblyImportResult {
   found: boolean;
 }
 
+export interface RegisterImportedPartsResult {
+  /** 部品データ に実際に新規登録された件数。 */
+  created: number;
+  /** 型番・記号がどちらも空で登録しようがなかった、またはユーザーが重複チェックを外した件数。 */
+  skipped: number;
+}
+
 /**
  * 取り込み確認 (プレビュー) で「はい」が押された後にだけ呼ぶ — 部品データ への
  * 書き込みはここでのみ発生する。重複の可能性がある行 (`masterDuplicate` 付き)
  * は、`registerDuplicatesAnyway` にその行の index が入っている場合だけ登録
  * する — ユーザーが確認画面で「別の部品として登録する」を選んだ行。逆に
  * `masterDuplicate` の無い行は毎回必ず登録する (自動でのスキップ判断はしない)。
+ * 呼び出し側が「部品リストへの取込」と「部品データへの新規登録」を別々の
+ * 結果として案内できるよう、実際に登録できた件数を返す (部品製作 の
+ * 取込トーストが「n件取り込みました」だけだと、部品データ 側が実際には
+ * 0件だったケースがあっても同じ成功表示になってしまい紛らわしいため)。
  */
 export async function registerImportedPartsInMaster(
   rows: PartAssemblyImportRow[],
   registerDuplicatesAnyway: Set<number>,
-): Promise<void> {
+): Promise<RegisterImportedPartsResult> {
+  let created = 0;
+  let skipped = 0;
   // Sequential, not Promise.all — see `annotateMasterDuplicates`'s comment:
   // duplicate detection already accounts for earlier rows in this same
   // batch, but only holds if rows are actually created one at a time in
   // that same order (concurrent creates could otherwise still race).
   for (const [i, row] of rows.entries()) {
-    if (row.masterDuplicate && !registerDuplicatesAnyway.has(i)) continue;
-    await createMasterRecord(row);
+    if (row.masterDuplicate && !registerDuplicatesAnyway.has(i)) {
+      skipped++;
+      continue;
+    }
+    if (await createMasterRecord(row)) created++;
+    else skipped++;
   }
+  return { created, skipped };
 }
 
 /**

@@ -246,8 +246,14 @@ function PartAssemblyView() {
     setImportCommitting(true);
     try {
       await addRows(importPreview.rows);
-      await registerImportedPartsInMaster(importPreview.rows, registerAnywayRows);
-      showToast(t("partAssembly.importedCount", { count: importPreview.rows.length }));
+      const { created, skipped } = await registerImportedPartsInMaster(importPreview.rows, registerAnywayRows);
+      if (created > 0) {
+        showToast(t("partAssembly.importedCountWithMaster", { count: importPreview.rows.length, created }));
+      } else if (skipped > 0) {
+        showToast(t("partAssembly.importedCountNoneRegistered", { count: importPreview.rows.length }));
+      } else {
+        showToast(t("partAssembly.importedCount", { count: importPreview.rows.length }));
+      }
       setImportPreview(null);
     } catch {
       showToast(t("partAssembly.addError"), "error");

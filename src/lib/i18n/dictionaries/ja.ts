@@ -244,6 +244,8 @@ const ja: Dictionary = {
     importEmpty: "取り込める行が見つかりませんでした",
     importError: "ファイルの読み込みに失敗しました",
     importedCount: "{count}件取り込みました",
+    importedCountWithMaster: "{count}件取り込みました（部品データに{created}件新規登録）",
+    importedCountNoneRegistered: "{count}件取り込みました（部品データへの新規登録は0件 — 重複と判定されたか、型番・記号が無い行のみでした）",
     importPreviewTitle: "{fileName} の取込プレビュー",
     importPreviewCount: "{count}件見つかりました。内容を確認して取り込んでください。",
     importConfirm: "この内容で取り込む",

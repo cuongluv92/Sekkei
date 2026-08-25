@@ -247,6 +247,8 @@ const vi: Dictionary = {
     importEmpty: "Không tìm thấy dòng nào để lấy vào",
     importError: "Đọc file thất bại",
     importedCount: "Đã lấy vào {count} dòng",
+    importedCountWithMaster: "Đã lấy vào {count} dòng (đăng ký mới {created} vào 部品データ)",
+    importedCountNoneRegistered: "Đã lấy vào {count} dòng (không có dòng nào đăng ký mới vào 部品データ — do bị coi là trùng, hoặc không có 型番/記号)",
     importPreviewTitle: "Xem trước dữ liệu từ {fileName}",
     importPreviewCount: "Tìm thấy {count} dòng. Kiểm tra rồi lấy vào.",
     importConfirm: "Lấy vào danh sách này",
