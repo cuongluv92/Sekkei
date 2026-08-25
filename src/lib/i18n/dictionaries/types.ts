@@ -234,11 +234,13 @@ export interface Dictionary {
     importedCount: string;
     importedCountWithMaster: string;
     importedCountNoneRegistered: string;
+    importedCountRegisterFailed: string;
     importPreviewTitle: string;
     importPreviewCount: string;
     importConfirm: string;
     masterDuplicateSpecWarning: string;
     masterDuplicateExactWarning: string;
+    masterModelExistsInfo: string;
     weightPerUnitTitle: string;
     currentListLabel: string;
   };

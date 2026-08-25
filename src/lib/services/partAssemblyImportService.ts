@@ -15,7 +15,7 @@ export interface PartAssemblyImportRow extends Omit<PartAssemblyRow, "id"> {
    * `exact: true` はメーカー・品名・型番・仕様・記号(個体番号を除く)が
    * すべて一致する場合、`exact: false` は仕様だけが一致する場合。
    */
-  masterDuplicate?: { model: string; exact: boolean };
+  masterDuplicate?: { model: string; exact: boolean; blocked?: boolean };
 }
 
 function normalize(s: string | undefined): string {
@@ -165,13 +165,26 @@ function findMasterDuplicate(
  * 部品データ の既存データに加えて「この取込内で先に処理した行」も
  * 重複判定の対象に加えていく。最初に出てきた行は重複なし (これが登録される
  * 側)、2件目以降が「重複かもしれません」の対象になる。
+ *
+ * 型番の一致だけは別枠 (`blocked: true`) で扱う — `part_data.model` は
+ * source を問わずテーブル全体で unique 制約が付いているため、同じ型番を
+ * 持つ行を2件目以降そのまま登録しようとすると必ず DB エラーになる。これは
+ * ユーザーが「別の部品として登録する」を選んでも回避できない (回避を選んでも
+ * 同じ unique 違反が起きるだけ) ので、チェックボックスでの確認対象にはせず、
+ * 常に登録をスキップする (部品リストへの取込自体は普通に行われる)。クリア
+ * してから同じファイルを再取込したときに毎回エラーになっていた件はこれが原因。
  */
 function annotateMasterDuplicates(
   rows: PartAssemblyImportRow[],
   master: PartData[],
 ): PartAssemblyImportRow[] {
   const autoRegisteredMaster = [...master.filter((p) => p.source === AUTO_REGISTERED_SOURCE_LABEL)];
+  const existingModels = new Set(master.map((p) => normalize(p.model)).filter(Boolean));
   return rows.map((row) => {
+    const model = normalize(row.model);
+    if (model && existingModels.has(model)) {
+      return { ...row, masterDuplicate: { model: row.model, exact: true, blocked: true } };
+    }
     const masterDuplicate = findMasterDuplicate(
       { symbol: row.symbol, manufacturerId: row.manufacturerId, category: row.name, model: row.model, specification: row.specification },
       autoRegisteredMaster,
@@ -192,6 +205,7 @@ function annotateMasterDuplicates(
         updatedAt: "",
       });
     }
+    if (model) existingModels.add(model);
     return { ...row, masterDuplicate };
   });
 }
@@ -202,6 +216,17 @@ function annotateMasterDuplicates(
  * 済んでいるので、ここでは常に作成する (自動で「既にある」と判断して
  * 黙ってスキップすることはしない — 型番・仕様が空欄同士というだけで
  * 無関係の部品を同一視してしまう事故を避けるため)。
+ *
+ * 型番が空の行は登録しない — `part_data.model` は not null かつ
+ * source を問わずテーブル全体で unique 制約が付いており、空文字列
+ * ("") 同士も「同じ値」として扱われるため、型番の無い行を複数登録
+ * しようとすると2件目以降が必ず unique 違反になる。記号だけで登録する
+ * 手段が無い以上、型番が空の行は静かにスキップするしかない。
+ *
+ * `partDataService.create` の失敗は呼び出し元 (`registerImportedPartsInMaster`)
+ * 全体を巻き込んで例外を投げさせない — プレビュー作成時点では存在しなかった
+ * 型番が、確認〜実行の間に他の経路で登録されるような稀なケースでも、
+ * この行だけ静かにスキップして残りの行の登録は続行する。
  */
 async function createMasterRecord(row: {
   symbol: string;
@@ -211,18 +236,22 @@ async function createMasterRecord(row: {
   specification: string;
   weight?: number;
 }): Promise<boolean> {
-  if ((!row.model.trim() && !row.symbol.trim()) || !isSupabaseConfigured()) return false;
-  await partDataService.create({
-    symbol: stripSymbolInstanceNumber(row.symbol) || undefined,
-    category: row.name,
-    manufacturerId: row.manufacturerId,
-    model: row.model,
-    specification: row.specification,
-    weight: row.weight,
-    source: AUTO_REGISTERED_SOURCE_LABEL,
-    files: [],
-  });
-  return true;
+  if (!row.model.trim() || !isSupabaseConfigured()) return false;
+  try {
+    await partDataService.create({
+      symbol: stripSymbolInstanceNumber(row.symbol) || undefined,
+      category: row.name,
+      manufacturerId: row.manufacturerId,
+      model: row.model,
+      specification: row.specification,
+      weight: row.weight,
+      source: AUTO_REGISTERED_SOURCE_LABEL,
+      files: [],
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export interface PartAssemblyImportResult {
@@ -260,6 +289,12 @@ export async function registerImportedPartsInMaster(
   // batch, but only holds if rows are actually created one at a time in
   // that same order (concurrent creates could otherwise still race).
   for (const [i, row] of rows.entries()) {
+    // 型番がテーブル全体で既に使われている行は unique 制約に必ず引っかかる
+    // ので、ユーザーが「別の部品として登録する」を選んでいても無条件でスキップ。
+    if (row.masterDuplicate?.blocked) {
+      skipped++;
+      continue;
+    }
     if (row.masterDuplicate && !registerDuplicatesAnyway.has(i)) {
       skipped++;
       continue;

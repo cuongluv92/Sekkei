@@ -231,7 +231,7 @@ function PartAssemblyView() {
       // 部品が大量に部品データに反映されない事態になる (共通の定格・仕様の
       // 文字列を使う部品は現場では珍しくない)。チェックを外せば個別に除外できる。
       setRegisterAnywayRows(
-        new Set(parsedRows.flatMap((r, i) => (r.masterDuplicate ? [i] : []))),
+        new Set(parsedRows.flatMap((r, i) => (r.masterDuplicate && !r.masterDuplicate.blocked ? [i] : []))),
       );
       setImportPreview({ rows: parsedRows, fileName: file.name });
     } catch {
@@ -243,20 +243,34 @@ function PartAssemblyView() {
 
   async function handleImportConfirm() {
     if (!importPreview) return;
+    const { rows: previewRows } = importPreview;
     setImportCommitting(true);
+    // 部品リストへの取込 (addRows) と 部品データへの新規登録
+    // (registerImportedPartsInMaster) は別々の失敗になりうるので、
+    // 別々の try/catch で扱う — 前者が成功しているのに後者だけ失敗した
+    // ときに「部品の追加に失敗しました」という誤った全滅トーストを
+    // 出さないようにするため。
     try {
-      await addRows(importPreview.rows);
-      const { created, skipped } = await registerImportedPartsInMaster(importPreview.rows, registerAnywayRows);
-      if (created > 0) {
-        showToast(t("partAssembly.importedCountWithMaster", { count: importPreview.rows.length, created }));
-      } else if (skipped > 0) {
-        showToast(t("partAssembly.importedCountNoneRegistered", { count: importPreview.rows.length }));
-      } else {
-        showToast(t("partAssembly.importedCount", { count: importPreview.rows.length }));
-      }
-      setImportPreview(null);
+      await addRows(previewRows);
     } catch {
       showToast(t("partAssembly.addError"), "error");
+      setImportCommitting(false);
+      return;
+    }
+    // 部品リストへの取込は既に成功しているので、ここでプレビューを閉じる
+    // (開いたままにすると「取込」を再度押されて同じ行が二重に追加されてしまう)。
+    setImportPreview(null);
+    try {
+      const { created, skipped } = await registerImportedPartsInMaster(previewRows, registerAnywayRows);
+      if (created > 0) {
+        showToast(t("partAssembly.importedCountWithMaster", { count: previewRows.length, created }));
+      } else if (skipped > 0) {
+        showToast(t("partAssembly.importedCountNoneRegistered", { count: previewRows.length }));
+      } else {
+        showToast(t("partAssembly.importedCount", { count: previewRows.length }));
+      }
+    } catch {
+      showToast(t("partAssembly.importedCountRegisterFailed", { count: previewRows.length }), "error");
     } finally {
       setImportCommitting(false);
     }
@@ -742,7 +756,14 @@ function PartAssemblyView() {
                         <td className="text-right">{row.quantity}</td>
                         <td className="text-right">{row.weight ?? ""}</td>
                       </tr>
-                      {row.masterDuplicate && (
+                      {row.masterDuplicate && row.masterDuplicate.blocked && (
+                        <tr>
+                          <td colSpan={7} className="bg-muted/10 px-2 py-1.5 text-[11px] text-muted-2">
+                            {t("partAssembly.masterModelExistsInfo", { model: row.masterDuplicate.model })}
+                          </td>
+                        </tr>
+                      )}
+                      {row.masterDuplicate && !row.masterDuplicate.blocked && (
                         <tr>
                           <td colSpan={7} className="bg-warning/10 px-2 py-1.5">
                             <label className="flex items-center gap-1.5 text-[11px] text-warning">

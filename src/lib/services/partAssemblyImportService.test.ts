@@ -187,4 +187,19 @@ describe("parsePartAssemblyImportFile (in-batch duplicate detection)", () => {
     expect(result.rows[0].masterDuplicate).toBeUndefined();
     expect(result.rows[1].masterDuplicate).toBeUndefined();
   });
+
+  it("blocks a second row sharing the same 型番 as an earlier row in the batch, even when 記号・仕様・メーカー all differ", async () => {
+    // part_data.model has a table-wide unique constraint regardless of any
+    // other field, so two rows resolving to the same 型番 can never both be
+    // registered — this must be caught unconditionally, not only when the
+    // rest of the row also matches (that's the separate, softer "exact"
+    // semantic-duplicate check above).
+    const csv = ["記号,品名,メーカー,型式,仕様", "T1,端子台,BBW,NF32,AC100V", "MC1,電磁接触器,DBK,NF32,DC24V"].join("\n");
+    const file = new File([csv], "list.csv", { type: "text/csv" });
+    const result = await parsePartAssemblyImportFile(file);
+
+    expect(result.rows).toHaveLength(2);
+    expect(result.rows[0].masterDuplicate).toBeUndefined();
+    expect(result.rows[1].masterDuplicate).toMatchObject({ model: "NF32", exact: true, blocked: true });
+  });
 });
