@@ -907,7 +907,7 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                 <div className="flex flex-col gap-1.5 border-t border-border pt-2.5">
                   <span className="text-[11px] text-muted-2">{t("weightCalc.panel.body.facesNote")}</span>
                   <div className="flex flex-wrap gap-1.5">
-                    {BOX_FACE_KEYS.map((face) => (
+                    {BOX_FACE_KEYS.filter((face) => face !== "left" && face !== "right").map((face) => (
                       <FaceRow
                         key={face}
                         label={t(`weightCalc.panel.body.boxFaces.${face}`)}
@@ -916,16 +916,26 @@ export function PanelBodyWeightCalc({ caseId }: { caseId: string }) {
                         included={box.faces[face].included}
                         weight={boxFaceWeight(face)}
                         onToggle={(included) => toggleBoxFace(face, included)}
-                        opening={
-                          face === "left" || face === "right"
-                            ? {
-                                W: box.faces[face].openingW ?? "",
-                                H: box.faces[face].openingH ?? "",
-                                onChangeW: (v) => updateBoxFaceOpening(face, { openingW: v }),
-                                onChangeH: (v) => updateBoxFaceOpening(face, { openingH: v }),
-                              }
-                            : undefined
-                        }
+                      />
+                    ))}
+                  </div>
+                  {/* 左側面/右側面は 開口 入力欄で幅を取るため別行 — 3面の行と詰めると狭すぎる。 */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {(["left", "right"] as const).map((face) => (
+                      <FaceRow
+                        key={face}
+                        label={t(`weightCalc.panel.body.boxFaces.${face}`)}
+                        formulaLabel={t(`weightCalc.panel.body.boxFaceFormula.${face}`)}
+                        areaMm2={boxFaceAreaFor(face)}
+                        included={box.faces[face].included}
+                        weight={boxFaceWeight(face)}
+                        onToggle={(included) => toggleBoxFace(face, included)}
+                        opening={{
+                          W: box.faces[face].openingW ?? "",
+                          H: box.faces[face].openingH ?? "",
+                          onChangeW: (v) => updateBoxFaceOpening(face, { openingW: v }),
+                          onChangeH: (v) => updateBoxFaceOpening(face, { openingH: v }),
+                        }}
                       />
                     ))}
                   </div>
