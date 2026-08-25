@@ -255,7 +255,7 @@ const vi: Dictionary = {
     importConfirm: "Lấy vào danh sách này",
     masterDuplicateSpecWarning: "Đã có bộ phận tự đăng ký cùng 仕様 (型番: {model}). Đăng ký là một 部品データ mới riêng biệt",
     masterDuplicateExactWarning: "Đã có bộ phận giống hệt (型番: {model}) trong lần tải này hoặc trong bộ phận tự đăng ký. Đăng ký là một 部品データ mới riêng biệt",
-    masterModelExistsInfo: "型番 ({model}) này đã có sẵn trong 部品データ rồi. Sẽ bỏ qua việc đăng ký mới vào 部品データ (vẫn lấy vào 部品リスト bình thường)",
+    masterModelExistsInfo: "Đã có linh kiện trùng hoàn toàn メーカー・品名・型番・仕様 (型番: {model}) ở phía tự đăng ký trong 部品データ. Sẽ bỏ qua việc đăng ký mới (vẫn lấy vào 部品リスト bình thường)",
     weightPerUnitTitle: "重量 tính cho 1 cái. Số lượng sẽ tự động nhân lên.",
     currentListLabel: "部品リスト hiện tại ({count})",
   },

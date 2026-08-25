@@ -22,6 +22,7 @@ vi.mock("./partDataService", () => ({
 import { partDataService } from "./partDataService";
 import {
   AUTO_REGISTERED_SOURCE_LABEL,
+  parsePartAssemblyImportFile,
   registerImportedPartsInMaster,
   type PartAssemblyImportRow,
 } from "./partAssemblyImportService";
@@ -90,5 +91,34 @@ describe("registerImportedPartsInMaster", () => {
 
     expect(result).toEqual({ created: 0, skipped: 1 });
     expect(partDataService.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("parsePartAssemblyImportFile (自動登録 vs インポート separation)", () => {
+  beforeEach(() => {
+    vi.mocked(partDataService.list).mockReset();
+  });
+
+  it("does not treat an identical part already registered under インポート as a duplicate — 自動登録 and インポート must stay fully separate", async () => {
+    vi.mocked(partDataService.list).mockResolvedValueOnce([
+      {
+        id: "existing-1",
+        category: "配線用遮断器",
+        manufacturerId: "",
+        model: "NF32",
+        specification: "AC200V 5A",
+        symbol: "T1",
+        source: "インポート",
+        files: [],
+        updatedAt: "",
+      },
+    ]);
+    const csv = ["記号,品名,メーカー,型式,仕様", "MCCB1,配線用遮断器,,NF32,AC200V 5A"].join("\n");
+    const file = new File([csv], "list.csv", { type: "text/csv" });
+
+    const result = await parsePartAssemblyImportFile(file);
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0].masterDuplicate).toBeUndefined();
   });
 });

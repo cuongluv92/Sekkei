@@ -252,7 +252,7 @@ const ja: Dictionary = {
     importConfirm: "この内容で取り込む",
     masterDuplicateSpecWarning: "仕様が同じ自動登録品（型番: {model}）が既にあります。別の部品として部品データに新規登録する",
     masterDuplicateExactWarning: "同じ部品（型番: {model}）がこの取込内、または自動登録品として既にあります。別の部品として部品データに新規登録する",
-    masterModelExistsInfo: "この型番（{model}）は部品データに既に登録済みです。部品データへの新規登録はスキップされます（部品リストへの取込は行われます）",
+    masterModelExistsInfo: "メーカー・品名・型番・仕様が全て一致する部品（型番: {model}）が、部品データの自動登録側に既にあります。部品データへの新規登録はスキップされます（部品リストへの取込は行われます）",
     weightPerUnitTitle: "1個あたりの重量(kg)。数量分は自動で乗算されます。",
     currentListLabel: "現在の部品リスト ({count}件)",
   },

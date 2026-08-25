@@ -188,18 +188,29 @@ describe("parsePartAssemblyImportFile (in-batch duplicate detection)", () => {
     expect(result.rows[1].masterDuplicate).toBeUndefined();
   });
 
-  it("blocks a second row sharing the same 型番 as an earlier row in the batch, even when 記号・仕様・メーカー all differ", async () => {
-    // part_data.model has a table-wide unique constraint regardless of any
-    // other field, so two rows resolving to the same 型番 can never both be
-    // registered — this must be caught unconditionally, not only when the
-    // rest of the row also matches (that's the separate, softer "exact"
-    // semantic-duplicate check above).
-    const csv = ["記号,品名,メーカー,型式,仕様", "T1,端子台,BBW,NF32,AC100V", "MC1,電磁接触器,DBK,NF32,DC24V"].join("\n");
+  it("blocks a second row sharing the same メーカー・品名・型番・仕様 as an earlier row in the batch, even when 記号 differs", async () => {
+    // part_data_identity_idx (migrations/0025) is a unique index on
+    // (manufacturer_id, category, model, specification, source), so two
+    // rows resolving to the same combination (regardless of 記号, which
+    // isn't part of the index) can never both be registered under the same
+    // source — this must be caught unconditionally, not only when 記号 also
+    // matches (that's a separate, narrower notion than what the DB enforces).
+    const csv = ["記号,品名,メーカー,型式,仕様", "T1,配線用遮断器,,NF32,AC200V 5A", "MC1,配線用遮断器,,NF32,AC200V 5A"].join("\n");
     const file = new File([csv], "list.csv", { type: "text/csv" });
     const result = await parsePartAssemblyImportFile(file);
 
     expect(result.rows).toHaveLength(2);
     expect(result.rows[0].masterDuplicate).toBeUndefined();
     expect(result.rows[1].masterDuplicate).toMatchObject({ model: "NF32", exact: true, blocked: true });
+  });
+
+  it("does not block two rows sharing only 型番 when 品名 or 仕様 differ (the DB identity is メーカー・品名・型番・仕様, not 型番 alone)", async () => {
+    const csv = ["記号,品名,メーカー,型式,仕様", "T1,端子台,,NF32,AC100V", "MC1,電磁接触器,,NF32,DC24V"].join("\n");
+    const file = new File([csv], "list.csv", { type: "text/csv" });
+    const result = await parsePartAssemblyImportFile(file);
+
+    expect(result.rows).toHaveLength(2);
+    expect(result.rows[0].masterDuplicate).toBeUndefined();
+    expect(result.rows[1].masterDuplicate).toBeUndefined();
   });
 });
