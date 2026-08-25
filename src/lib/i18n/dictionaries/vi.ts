@@ -76,6 +76,9 @@ const vi: Dictionary = {
     bulkDeleteCategory: 'Xóa cả nhóm "{category}" ({count} mục)',
     bulkDeleteCategoryConfirm:
       'Chuyển toàn bộ {count} mục thuộc "{category}" vào thùng rác? (Có thể khôi phục lại từ thùng rác)',
+    bulkDeleteFiltered: 'Xóa cả nhóm "{summary}" ({count} mục)',
+    bulkDeleteFilteredConfirm:
+      'Chuyển toàn bộ {count} mục thuộc "{summary}" vào thùng rác? (Có thể khôi phục lại từ thùng rác)',
     bulkDeletedToTrash: "Đã chuyển {count} mục vào thùng rác",
     bulkDeleteError: "Xóa hàng loạt thất bại",
     analyze: "Phân tích",

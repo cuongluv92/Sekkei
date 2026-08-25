@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePartAssemblyImportFile } from "./partAssemblyImportService";
+import { parsePartAssemblyImportFile, stripSymbolInstanceNumber } from "./partAssemblyImportService";
 
 /**
  * Real-world DXF files exported by Japanese-locale AutoCAD (and a lot of
@@ -102,5 +102,40 @@ describe("parsePartAssemblyImportFile (DXF, Shift_JIS encoded)", () => {
       quantity: 1,
       remarks: "予備",
     });
+  });
+});
+
+describe("stripSymbolInstanceNumber", () => {
+  it("strips a single trailing instance number", () => {
+    expect(stripSymbolInstanceNumber("MCCB1")).toBe("MCCB");
+    expect(stripSymbolInstanceNumber("MCCB12")).toBe("MCCB");
+  });
+
+  it("strips a comma-separated instance list", () => {
+    expect(stripSymbolInstanceNumber("MCCB1,2")).toBe("MCCB");
+    expect(stripSymbolInstanceNumber("MCCB1,2,3")).toBe("MCCB");
+  });
+
+  it("strips a tilde/dash range", () => {
+    expect(stripSymbolInstanceNumber("MCCB1～3")).toBe("MCCB");
+    expect(stripSymbolInstanceNumber("MCCB1~3")).toBe("MCCB");
+    expect(stripSymbolInstanceNumber("MCCB1-3")).toBe("MCCB");
+  });
+
+  it("strips a spaced/full-width-comma list", () => {
+    expect(stripSymbolInstanceNumber("MCCB 1、2、3")).toBe("MCCB");
+  });
+
+  it("leaves a symbol with no trailing digits unchanged", () => {
+    expect(stripSymbolInstanceNumber("NF32-CVF")).toBe("NF32-CVF");
+    expect(stripSymbolInstanceNumber("MC")).toBe("MC");
+  });
+
+  it("keeps the original when stripping would leave nothing", () => {
+    expect(stripSymbolInstanceNumber("123")).toBe("123");
+  });
+
+  it("trims surrounding whitespace", () => {
+    expect(stripSymbolInstanceNumber("  MCCB1  ")).toBe("MCCB");
   });
 });

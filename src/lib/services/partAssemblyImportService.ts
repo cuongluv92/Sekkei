@@ -83,14 +83,19 @@ function findSpecDuplicateModel(
 }
 
 /**
- * 記号は盤内の個体番号込みで書かれることが多い (同じ MCCB を3回使うなら
- * MCCB1/MCCB2/MCCB3) — 部品データ に型番として登録するときは個体番号を落とし、
- * 部品の種類そのものを表す記号 (MCCB) だけを残す。全体が数字だけの記号
- * (捨てると空になる場合) はそのまま残す。
+ * 記号は盤内の個体番号込みで書かれることが多い — 単発 (MCCB1)、連番の
+ * 範囲 (MCCB1～3, MCCB1-3)、カンマ列挙 (MCCB1,2,3) のどれも実物の図面で
+ * 見かける。部品データ に型番として登録するときはこの個体番号部分を落とし、
+ * 部品の種類そのものを表す記号 (MCCB) だけを残す。末尾が数字・区切り文字
+ * だけで構成される部分をまとめて切り落とす (単純な「末尾の数字だけ」を
+ * 切る実装だと、区切り文字を挟む範囲/列挙表記が切り残ってしまうため)。
+ * 全体が数字だけの記号 (捨てると空になる場合) はそのまま残す。
  */
-function stripSymbolInstanceNumber(symbol: string): string {
+const SYMBOL_INSTANCE_SUFFIX = /[\s,、.\-‐－―~～_\d]*\d[\s,、.\-‐－―~～_\d]*$/;
+
+export function stripSymbolInstanceNumber(symbol: string): string {
   const trimmed = symbol.trim();
-  const stripped = trimmed.replace(/[\s\-_.]*\d+$/, "").trim();
+  const stripped = trimmed.replace(SYMBOL_INSTANCE_SUFFIX, "").trim();
   return stripped || trimmed;
 }
 

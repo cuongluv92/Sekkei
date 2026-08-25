@@ -75,6 +75,9 @@ const ja: Dictionary = {
     bulkDeleteCategory: "「{category}」を一括削除（{count}件）",
     bulkDeleteCategoryConfirm:
       "「{category}」に該当する{count}件をすべてゴミ箱に移動しますか？（ゴミ箱から復元できます）",
+    bulkDeleteFiltered: "「{summary}」を一括削除（{count}件）",
+    bulkDeleteFilteredConfirm:
+      "「{summary}」に該当する{count}件をすべてゴミ箱に移動しますか？（ゴミ箱から復元できます）",
     bulkDeletedToTrash: "{count}件をゴミ箱に移動しました",
     bulkDeleteError: "一括削除に失敗しました",
     analyze: "解析",

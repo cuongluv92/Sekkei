@@ -75,6 +75,8 @@ export interface Dictionary {
     deleteError: string;
     bulkDeleteCategory: string;
     bulkDeleteCategoryConfirm: string;
+    bulkDeleteFiltered: string;
+    bulkDeleteFilteredConfirm: string;
     bulkDeletedToTrash: string;
     bulkDeleteError: string;
     analyze: string;

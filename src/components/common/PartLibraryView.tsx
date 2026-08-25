@@ -208,24 +208,38 @@ export function PartLibraryView<T extends LibraryItem>({
     }
   }
 
-  // "分類を一括削除": deletes every row currently shown by the table (i.e.
-  // matching all active filters, not just 分類), so the button only appears
-  // once a specific 分類 is chosen — that turns the visible table into
-  // exactly "this whole 分類 group" (e.g. 漏電遮断機), which is what the
-  // button deletes. Sequential awaits (not Promise.all) so a mid-batch
-  // failure leaves `items`/`deletingId`-free rows in a known, inspectable
-  // state rather than a partial concurrent mess.
-  async function handleBulkDeleteCategory() {
-    const categoryLabel =
-      filters.category === UNSET_FILTER_VALUE
-        ? t("common.uncategorized")
-        : filters.category;
+  // メーカー・分類 (種類・品名)・source のどれか1つでも絞り込まれていれば
+  // 「このグループをまとめて削除」を出す — 分類だけに限定すると、メーカー
+  // 単位や自動登録品(source)単位でまとめて消したいときに使えなかったため。
+  // キーワード検索だけでは出さない(誤字で意図せず広い範囲を消しかねない)。
+  const hasGroupFilter = Boolean(filters.manufacturerId || filters.category || sourceFilter);
+  function activeFilterSummary(): string {
+    const parts: string[] = [];
+    if (filters.manufacturerId) {
+      parts.push(
+        filters.manufacturerId === UNSET_FILTER_VALUE
+          ? t("common.unsetManufacturer")
+          : getManufacturerName(filters.manufacturerId, locale),
+      );
+    }
+    if (filters.category) {
+      parts.push(filters.category === UNSET_FILTER_VALUE ? t("common.uncategorized") : filters.category);
+    }
+    if (sourceFilter) parts.push(sourceFilter);
+    return parts.join(" / ");
+  }
+
+  // 表示中の一覧 (filtered = 全アクティブフィルタを反映済み) をまとめてゴミ箱へ
+  // 移動する。Sequential awaits (not Promise.all) so a mid-batch failure
+  // leaves `items`/`deletingId`-free rows in a known, inspectable state
+  // rather than a partial concurrent mess.
+  async function handleBulkDeleteFiltered() {
     const targets = filtered;
     if (targets.length === 0) return;
     if (
       !window.confirm(
-        t("common.bulkDeleteCategoryConfirm", {
-          category: categoryLabel,
+        t("common.bulkDeleteFilteredConfirm", {
+          summary: activeFilterSummary(),
           count: targets.length,
         }),
       )
@@ -397,10 +411,10 @@ export function PartLibraryView<T extends LibraryItem>({
         showUncategorized={hasUncategorizedItem(items)}
       />
 
-      {filters.category && (
+      {hasGroupFilter && (
         <div className="flex justify-end">
           <button
-            onClick={handleBulkDeleteCategory}
+            onClick={handleBulkDeleteFiltered}
             disabled={bulkDeleting || filtered.length === 0}
             className="btn-ghost text-danger hover:bg-danger/10"
           >
@@ -409,11 +423,8 @@ export function PartLibraryView<T extends LibraryItem>({
             ) : (
               <Trash2 className="h-3.5 w-3.5" />
             )}
-            {t("common.bulkDeleteCategory", {
-              category:
-                filters.category === UNSET_FILTER_VALUE
-                  ? t("common.uncategorized")
-                  : filters.category,
+            {t("common.bulkDeleteFiltered", {
+              summary: activeFilterSummary(),
               count: filtered.length,
             })}
           </button>
