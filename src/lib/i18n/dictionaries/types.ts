@@ -235,7 +235,8 @@ export interface Dictionary {
     importPreviewTitle: string;
     importPreviewCount: string;
     importConfirm: string;
-    specDuplicateWarning: string;
+    masterDuplicateSpecWarning: string;
+    masterDuplicateExactWarning: string;
     weightPerUnitTitle: string;
     currentListLabel: string;
   };
@@ -264,8 +265,11 @@ export interface Dictionary {
     restore: string;
     purge: string;
     purgeConfirm: string;
+    purgeAll: string;
+    purgeAllConfirm: string;
     restored: string;
     purged: string;
+    purgedAll: string;
     restoreError: string;
     purgeError: string;
     tableEmpty: string;

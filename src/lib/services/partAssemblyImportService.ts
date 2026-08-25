@@ -7,11 +7,14 @@ import type { PartAssemblyRow, PartData } from "@/lib/types";
 
 export interface PartAssemblyImportRow extends Omit<PartAssemblyRow, "id"> {
   /**
-   * 仕様が既存の 部品データ と一致するが型番が異なる場合の、その既存レコードの
-   * 型番 — 確認用の警告表示にだけ使う (このフィールドがあるからといって
-   * 自動的に何もしない。登録するかはユーザーが確認画面で選ぶ)。
+   * 部品データ に登録済み、または今回の取り込み内の別の行と重複している
+   * 可能性がある場合の情報 — 確認用の警告表示にだけ使う。このフィールドが
+   * あるからといって自動的に何もしない: 登録する/しないはユーザーが確認画面
+   * のチェックボックスで選ぶ (`registerImportedPartsInMaster` 参照)。
+   * `exact: true` はメーカー・品名・型番・仕様・記号(個体番号を除く)が
+   * すべて一致する場合、`exact: false` は仕様だけが一致する場合。
    */
-  specDuplicateModel?: string;
+  masterDuplicate?: { model: string; exact: boolean };
 }
 
 function normalize(s: string | undefined): string {
@@ -68,21 +71,6 @@ function findWeightMatch(
 }
 
 /**
- * 型番は違うが仕様が同じ既存の 部品データ がある場合、その型番を返す —
- * 同じ仕様の部品が別の型番でもう登録されている (別メーカー品や型番違いの
- * 互換品など) 可能性があるという警告のためだけで、自動では何もしない。
- */
-function findSpecDuplicateModel(
-  row: { model: string; specification: string },
-  master: PartData[],
-): string | undefined {
-  const specification = normalize(row.specification);
-  if (!specification) return undefined;
-  const model = normalize(row.model);
-  return master.find((p) => normalize(p.specification) === specification && normalize(p.model) !== model)?.model;
-}
-
-/**
  * 記号は盤内の個体番号込みで書かれることが多い — 単発 (MCCB1)、連番の
  * 範囲 (MCCB1～3, MCCB1-3)、カンマ列挙 (MCCB1,2,3) のどれも実物の図面で
  * 見かける。部品データ に型番として登録するときはこの個体番号部分を落とし、
@@ -100,12 +88,97 @@ export function stripSymbolInstanceNumber(symbol: string): string {
 }
 
 /**
- * 取り込んだ行と同じ (メーカー・品名・型番・仕様) の 部品データ が無ければ、
- * 新規レコードとして自動登録する — 一度取り込んだ部品は次回から
- * 部品データ に「型番のある部品」として残るので、以降の取り込みは
- * 記号や仕様の完全一致だけで重量まで自動的に拾えるようになる。
+ * 部品製作 の取込から自動登録される 部品データ の重複可能性を検出する —
+ * どちらの判定も、既存の 部品データ のうち自動登録 (AUTO_REGISTERED_SOURCE_LABEL)
+ * のものだけを対象にする。インポート画面/カタログ由来のデータは別世界
+ * (メーカー正式カタログ品と自作/手配品を混同すると、重複でないものを
+ * 勝手にまとめてしまいかねない) なので比較対象に含めない。
+ *
+ * exact: メーカー・品名・型番・仕様、かつ記号 (個体番号を除いた型) まで
+ * すべて一致 — 同じ物理部品を指している可能性が高い。型番・仕様が空欄の
+ * 行同士というだけで無関係の部品を同一視しないよう、記号が空の行は対象外。
+ * spec: 型番は違うが仕様だけが一致 — 型番違いの互換品や別メーカー品の
+ * 可能性がある、という参考情報。
+ *
+ * どちらも「検出」するだけで、実際に登録するかしないかは
+ * `registerImportedPartsInMaster` がユーザーの確認 (チェックボックス) を
+ * 経てから判断する — ここでは絶対に自動で何も書き込まない。
  */
-async function registerInMasterIfMissing(row: {
+function findMasterDuplicate(
+  row: { symbol: string; manufacturerId: string; category: string; model: string; specification: string },
+  autoRegisteredMaster: PartData[],
+): { model: string; exact: boolean } | undefined {
+  const model = normalize(row.model);
+  const specification = normalize(row.specification);
+  const category = normalize(row.category);
+  const strippedSymbol = normalize(stripSymbolInstanceNumber(row.symbol));
+
+  if (strippedSymbol) {
+    const exact = autoRegisteredMaster.find(
+      (p) =>
+        p.manufacturerId === row.manufacturerId &&
+        normalize(p.category) === category &&
+        normalize(p.model) === model &&
+        normalize(p.specification) === specification &&
+        normalize(stripSymbolInstanceNumber(p.symbol ?? "")) === strippedSymbol,
+    );
+    if (exact) return { model: exact.model, exact: true };
+  }
+
+  if (specification) {
+    const sameSpec = autoRegisteredMaster.find(
+      (p) => normalize(p.specification) === specification && normalize(p.model) !== model,
+    );
+    if (sameSpec) return { model: sameSpec.model, exact: false };
+  }
+  return undefined;
+}
+
+/**
+ * 同じ取込内の複数行が同じ部品を指している場合 (例: MCCB1/MCCB2 が同じ
+ * 記号「MCCB」に丸められ、型番・仕様・メーカーも同じ) も検出できるよう、
+ * 部品データ の既存データに加えて「この取込内で先に処理した行」も
+ * 重複判定の対象に加えていく。最初に出てきた行は重複なし (これが登録される
+ * 側)、2件目以降が「重複かもしれません」の対象になる。
+ */
+function annotateMasterDuplicates(
+  rows: PartAssemblyImportRow[],
+  master: PartData[],
+): PartAssemblyImportRow[] {
+  const autoRegisteredMaster = [...master.filter((p) => p.source === AUTO_REGISTERED_SOURCE_LABEL)];
+  return rows.map((row) => {
+    const masterDuplicate = findMasterDuplicate(
+      { symbol: row.symbol, manufacturerId: row.manufacturerId, category: row.name, model: row.model, specification: row.specification },
+      autoRegisteredMaster,
+    );
+    if (!masterDuplicate) {
+      // 今回の行がこのキーの「最初の1件」として扱われるよう、以降の行の
+      // 重複判定対象に加えておく (DB へはまだ何も書いていない、あくまで
+      // このプレビュー内の判定用の一時データ)。
+      autoRegisteredMaster.push({
+        id: "",
+        category: row.name,
+        manufacturerId: row.manufacturerId,
+        model: row.model,
+        specification: row.specification,
+        symbol: row.symbol,
+        source: AUTO_REGISTERED_SOURCE_LABEL,
+        files: [],
+        updatedAt: "",
+      });
+    }
+    return { ...row, masterDuplicate };
+  });
+}
+
+/**
+ * 部品データ に新規レコードとして登録する — 重複判定はすでに
+ * `annotateMasterDuplicates`/`registerImportedPartsInMaster` の側で
+ * 済んでいるので、ここでは常に作成する (自動で「既にある」と判断して
+ * 黙ってスキップすることはしない — 型番・仕様が空欄同士というだけで
+ * 無関係の部品を同一視してしまう事故を避けるため)。
+ */
+async function createMasterRecord(row: {
   symbol: string;
   name: string;
   manufacturerId: string;
@@ -113,14 +186,7 @@ async function registerInMasterIfMissing(row: {
   specification: string;
   weight?: number;
 }): Promise<void> {
-  if (!row.model.trim() || !isSupabaseConfigured()) return;
-  const existing = await partDataService.findExisting({
-    manufacturerId: row.manufacturerId,
-    category: row.name,
-    model: row.model,
-    specification: row.specification,
-  });
-  if (existing) return;
+  if ((!row.model.trim() && !row.symbol.trim()) || !isSupabaseConfigured()) return;
   await partDataService.create({
     symbol: stripSymbolInstanceNumber(row.symbol) || undefined,
     category: row.name,
@@ -141,22 +207,22 @@ export interface PartAssemblyImportResult {
 
 /**
  * 取り込み確認 (プレビュー) で「はい」が押された後にだけ呼ぶ — 部品データ への
- * 書き込みはここでのみ発生する。仕様が重複している行 (`specDuplicateModel`
- * 付き) は、`registerDuplicatesAnyway` にその行の index が入っている場合
- * だけ登録する — ユーザーが確認画面で「別の部品として登録する」を選んだ行。
+ * 書き込みはここでのみ発生する。重複の可能性がある行 (`masterDuplicate` 付き)
+ * は、`registerDuplicatesAnyway` にその行の index が入っている場合だけ登録
+ * する — ユーザーが確認画面で「別の部品として登録する」を選んだ行。逆に
+ * `masterDuplicate` の無い行は毎回必ず登録する (自動でのスキップ判断はしない)。
  */
 export async function registerImportedPartsInMaster(
   rows: PartAssemblyImportRow[],
   registerDuplicatesAnyway: Set<number>,
 ): Promise<void> {
-  // Sequential, not Promise.all — two rows in the same file that resolve to
-  // the identical (manufacturerId, category, model, specification) key (e.g.
-  // "MCCB1"/"MCCB2" both stripping to the same 記号/型番) would otherwise
-  // both see `findExisting` return nothing at the same time and both create
-  // a row, leaving two duplicate 部品データ records for what should be one.
+  // Sequential, not Promise.all — see `annotateMasterDuplicates`'s comment:
+  // duplicate detection already accounts for earlier rows in this same
+  // batch, but only holds if rows are actually created one at a time in
+  // that same order (concurrent creates could otherwise still race).
   for (const [i, row] of rows.entries()) {
-    if (row.specDuplicateModel && !registerDuplicatesAnyway.has(i)) continue;
-    await registerInMasterIfMissing(row);
+    if (row.masterDuplicate && !registerDuplicatesAnyway.has(i)) continue;
+    await createMasterRecord(row);
   }
 }
 
@@ -214,11 +280,10 @@ export async function parsePartAssemblyImportFile(file: File): Promise<PartAssem
           weight: findWeightMatch({ model: r.model, specification: r.specification, manufacturerId }, master),
           quantity: r.quantity,
           remarks: r.remarks,
-          specDuplicateModel: findSpecDuplicateModel({ model: r.model, specification: r.specification }, master),
         };
       }),
     );
-    return { found, rows: resolvedRows };
+    return { found, rows: annotateMasterDuplicates(resolvedRows, master) };
   }
 
   const parsed = await parseTabularFile(file);
@@ -239,9 +304,8 @@ export async function parsePartAssemblyImportFile(file: File): Promise<PartAssem
         weight: r.weight ?? findWeightMatch({ model, specification, manufacturerId }, master),
         quantity: r.quantity ?? 1,
         remarks: r.remarks ?? "",
-        specDuplicateModel: findSpecDuplicateModel({ model, specification }, master),
       };
     }),
   );
-  return { found: true, rows };
+  return { found: true, rows: annotateMasterDuplicates(rows, master) };
 }

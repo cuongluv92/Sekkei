@@ -226,12 +226,12 @@ function PartAssemblyView() {
         showToast(t("partAssembly.importEmpty"), "error");
         return;
       }
-      // 仕様重複の警告が出た行も、既定では「別の部品として登録する」— 黙って
+      // 重複の可能性がある行も、既定では「別の部品として登録する」— 黙って
       // 部品データ への登録をスキップすると (旧デフォルト) 実物には存在する
       // 部品が大量に部品データに反映されない事態になる (共通の定格・仕様の
       // 文字列を使う部品は現場では珍しくない)。チェックを外せば個別に除外できる。
       setRegisterAnywayRows(
-        new Set(parsedRows.flatMap((r, i) => (r.specDuplicateModel ? [i] : []))),
+        new Set(parsedRows.flatMap((r, i) => (r.masterDuplicate ? [i] : []))),
       );
       setImportPreview({ rows: parsedRows, fileName: file.name });
     } catch {
@@ -736,7 +736,7 @@ function PartAssemblyView() {
                         <td className="text-right">{row.quantity}</td>
                         <td className="text-right">{row.weight ?? ""}</td>
                       </tr>
-                      {row.specDuplicateModel && (
+                      {row.masterDuplicate && (
                         <tr>
                           <td colSpan={7} className="bg-warning/10 px-2 py-1.5">
                             <label className="flex items-center gap-1.5 text-[11px] text-warning">
@@ -745,7 +745,12 @@ function PartAssemblyView() {
                                 checked={registerAnywayRows.has(i)}
                                 onChange={() => toggleRegisterAnyway(i)}
                               />
-                              {t("partAssembly.specDuplicateWarning", { model: row.specDuplicateModel })}
+                              {t(
+                                row.masterDuplicate.exact
+                                  ? "partAssembly.masterDuplicateExactWarning"
+                                  : "partAssembly.masterDuplicateSpecWarning",
+                                { model: row.masterDuplicate.model },
+                              )}
                             </label>
                           </td>
                         </tr>

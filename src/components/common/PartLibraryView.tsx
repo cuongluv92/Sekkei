@@ -208,6 +208,25 @@ export function PartLibraryView<T extends LibraryItem>({
     }
   }
 
+  // 詳細パネルで選択中の部品がある間は Delete/Backspace キーでも削除できる —
+  // 一覧の管理・削除を毎回ボタンまでクリックせずに済ませたいという要望。
+  // テキスト入力にフォーカスがある間は無効 (通常の文字削除を邪魔しない)。
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Delete" && e.key !== "Backspace") return;
+      if (!selected || deletingId) return;
+      const target = e.target;
+      if (target instanceof HTMLElement && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+        return;
+      }
+      e.preventDefault();
+      handleDelete(selected);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, deletingId]);
+
   // メーカー・分類 (種類・品名)・source のどれか1つでも絞り込まれていれば
   // 「このグループをまとめて削除」を出す — 分類だけに限定すると、メーカー
   // 単位や自動登録品(source)単位でまとめて消したいときに使えなかったため。

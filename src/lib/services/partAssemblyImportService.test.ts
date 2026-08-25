@@ -139,3 +139,27 @@ describe("stripSymbolInstanceNumber", () => {
     expect(stripSymbolInstanceNumber("  MCCB1  ")).toBe("MCCB");
   });
 });
+
+describe("parsePartAssemblyImportFile (in-batch duplicate detection)", () => {
+  it("flags the second of two rows resolving to the same 記号・型式・仕様・メーカー as an exact duplicate, leaving the first unflagged", async () => {
+    const csv = ["記号,品名,メーカー,型式,仕様", "MCCB1,配線用遮断器,BBW,NF32,AC200V 5A", "MCCB2,配線用遮断器,BBW,NF32,AC200V 5A"].join(
+      "\n",
+    );
+    const file = new File([csv], "list.csv", { type: "text/csv" });
+    const result = await parsePartAssemblyImportFile(file);
+
+    expect(result.rows).toHaveLength(2);
+    expect(result.rows[0].masterDuplicate).toBeUndefined();
+    expect(result.rows[1].masterDuplicate).toMatchObject({ model: "NF32", exact: true });
+  });
+
+  it("does not flag two rows with different 記号 that both happen to have blank 型式・仕様", async () => {
+    const csv = ["記号,品名,メーカー,型式,仕様", "T1,端子台,,,", "MC1,電磁接触器,,,"].join("\n");
+    const file = new File([csv], "list.csv", { type: "text/csv" });
+    const result = await parsePartAssemblyImportFile(file);
+
+    expect(result.rows).toHaveLength(2);
+    expect(result.rows[0].masterDuplicate).toBeUndefined();
+    expect(result.rows[1].masterDuplicate).toBeUndefined();
+  });
+});

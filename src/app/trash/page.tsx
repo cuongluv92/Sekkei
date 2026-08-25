@@ -99,6 +99,39 @@ export default function TrashPage() {
     }
   }
 
+  function itemsFor(section: TrashSection): TrashedItem[] {
+    if (section === "partData") return partDataTrash;
+    if (section === "partDrawing") return partDrawingTrash;
+    return catalogTrash;
+  }
+
+  // ゴミ箱を1件ずつ「完全に削除」するのは件数が多いと大変なので、区分ごと
+  // まとめて完全削除できるようにした。元に戻せない操作なので必ず確認する。
+  // Sequential awaits so a mid-batch failure leaves a known, inspectable
+  // state rather than a partial concurrent mess.
+  async function handlePurgeAll(section: TrashSection) {
+    const targets = itemsFor(section);
+    if (targets.length === 0) return;
+    if (!window.confirm(t("trash.purgeAllConfirm", { count: targets.length }))) return;
+    setBusyId("all");
+    try {
+      for (const item of targets) {
+        if (section === "partData") await partDataService.purge(item.id);
+        else if (section === "partDrawing") await partDrawingService.purge(item.id);
+        else await catalogService.purge(item.id);
+      }
+      const purgedIds = new Set(targets.map((i) => i.id));
+      if (section === "partData") setPartDataTrash((prev) => prev.filter((i) => !purgedIds.has(i.id)));
+      else if (section === "partDrawing") setPartDrawingTrash((prev) => prev.filter((i) => !purgedIds.has(i.id)));
+      else setCatalogTrash((prev) => prev.filter((i) => !purgedIds.has(i.id)));
+      show(t("trash.purgedAll", { count: targets.length }));
+    } catch {
+      show(t("trash.purgeError"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   function columnsFor(section: TrashSection): DataTableColumn<TrashedItem>[] {
     return [
       { key: "category", header: t("common.kind"), width: "140px" },
@@ -126,7 +159,7 @@ export default function TrashPage() {
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => handleRestore(section, r)}
-              disabled={busyId === r.id}
+              disabled={busyId !== null}
               className="btn-secondary"
             >
               {busyId === r.id ? (
@@ -138,7 +171,7 @@ export default function TrashPage() {
             </button>
             <button
               onClick={() => handlePurge(section, r)}
-              disabled={busyId === r.id}
+              disabled={busyId !== null}
               className="btn-ghost text-danger hover:bg-danger/10"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -157,6 +190,16 @@ export default function TrashPage() {
       <div className="panel overflow-hidden">
         <div className="panel-header">
           <span className="panel-title">{t("trash.partDataSection")}</span>
+          {partDataTrash.length > 0 && (
+            <button
+              onClick={() => handlePurgeAll("partData")}
+              disabled={busyId !== null}
+              className="btn-ghost text-danger hover:bg-danger/10"
+            >
+              {busyId === "all" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              {t("trash.purgeAll", { count: partDataTrash.length })}
+            </button>
+          )}
         </div>
         <DataTable
           columns={columnsFor("partData")}
@@ -170,6 +213,16 @@ export default function TrashPage() {
       <div className="panel overflow-hidden">
         <div className="panel-header">
           <span className="panel-title">{t("trash.partDrawingSection")}</span>
+          {partDrawingTrash.length > 0 && (
+            <button
+              onClick={() => handlePurgeAll("partDrawing")}
+              disabled={busyId !== null}
+              className="btn-ghost text-danger hover:bg-danger/10"
+            >
+              {busyId === "all" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              {t("trash.purgeAll", { count: partDrawingTrash.length })}
+            </button>
+          )}
         </div>
         <DataTable
           columns={columnsFor("partDrawing")}
@@ -183,6 +236,16 @@ export default function TrashPage() {
       <div className="panel overflow-hidden">
         <div className="panel-header">
           <span className="panel-title">{t("trash.catalogSection")}</span>
+          {catalogTrash.length > 0 && (
+            <button
+              onClick={() => handlePurgeAll("catalog")}
+              disabled={busyId !== null}
+              className="btn-ghost text-danger hover:bg-danger/10"
+            >
+              {busyId === "all" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              {t("trash.purgeAll", { count: catalogTrash.length })}
+            </button>
+          )}
         </div>
         <DataTable
           columns={columnsFor("catalog")}
