@@ -84,7 +84,7 @@ const DISPLAY_CATEGORY_COLOR: Partial<Record<ScheduleCategoryKey, ScheduleCatego
   box: "sheetMetal",
 };
 
-/** 初/中/下 (旬) 単位に折りたたんだ色ルックアップ — 工程表の画面表示・Excel出力の唯一の実装。既に埋まっているセルは上書きしない (先勝ち)。 */
+/** 初/中/下 (旬) 単位に折りたたんだ色ルックアップ — 既に埋まっているセルは上書きしない (先勝ち)。 */
 export function buildJunColorLookup(
   segments: ColoredSegment[],
   colors: ScheduleColorConfig[],
@@ -96,6 +96,51 @@ export function buildJunColorLookup(
     const color = colorByCategory.get(category);
     if (!color) continue;
     const key = junCellKey(seg.year, seg.month, bucketFromSegment(seg.segment));
+    if (!map.has(key)) map.set(key, color);
+  }
+  return map;
+}
+
+/**
+ * 実テンプレートの1案件ブロックは4行 (罫線で確認済み: 1ブロック=4行、行間に
+ * 太罫線なし) — 板金・BOX・部材が製作の"前工程"として同時期に走ることが多く、
+ * 1行しかないと後勝ちで色が消えてしまう問題を、工程の流れ(板金・BOX・部材→
+ * 製作→検査→立会・出荷)に沿って4行に分けることで解消する。画面表示・Excel
+ * 出力どちらもこの行グループ分けを共通で使う。
+ */
+export const PROCESS_ROWS: ScheduleCategoryKey[][] = [
+  ["sheetMetal", "box", "accessory"],
+  ["production"],
+  ["inspection"],
+  ["witness", "shipping"],
+];
+
+function rowIndexForCategory(category: ScheduleCategoryKey): number {
+  return PROCESS_ROWS.findIndex((categories) => categories.includes(category));
+}
+
+export function junCellKeyRow(year: number, month: number, bucket: JunBucket, rowIndex: number) {
+  return `${year}-${month}-${bucket}-${rowIndex}`;
+}
+
+/**
+ * PROCESS_ROWS の行ごとに折りたたんだ色ルックアップ — 工程表の画面表示・
+ * Excel出力の唯一の実装。同じ行内で既に埋まっているセルは上書きしない
+ * (先勝ち)。
+ */
+export function buildJunColorLookupByRow(
+  segments: ColoredSegment[],
+  colors: ScheduleColorConfig[],
+): Map<string, string> {
+  const colorByCategory = new Map(colors.map((c) => [c.category, c.color]));
+  const map = new Map<string, string>();
+  for (const seg of segments) {
+    const rowIndex = rowIndexForCategory(seg.category);
+    if (rowIndex < 0) continue;
+    const displayCategory = DISPLAY_CATEGORY_COLOR[seg.category] ?? seg.category;
+    const color = colorByCategory.get(displayCategory);
+    if (!color) continue;
+    const key = junCellKeyRow(seg.year, seg.month, bucketFromSegment(seg.segment), rowIndex);
     if (!map.has(key)) map.set(key, color);
   }
   return map;

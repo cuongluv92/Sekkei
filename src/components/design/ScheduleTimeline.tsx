@@ -10,14 +10,15 @@ import {
   scheduleColorService,
   scheduleService,
 } from "@/lib/services/design";
-import { buildCaseDisplayLabel, buildProjectPanelLabel } from "@/lib/utils/designNumbering";
+import { buildCaseDisplayLabel, buildProjectPanelLines } from "@/lib/utils/designNumbering";
 import { DateInput } from "@/components/common/DateInput";
 import {
   addMonths,
-  buildJunColorLookup,
+  buildJunColorLookupByRow,
   computeColoredSegments,
   JUN_BUCKETS,
-  junCellKey,
+  junCellKeyRow,
+  PROCESS_ROWS,
 } from "@/lib/utils/scheduleColoring";
 import { applyCascade, applyCreationDefaults } from "@/lib/utils/schedule";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
@@ -459,44 +460,58 @@ export function ScheduleTimeline() {
                 {visibleCases.map(({ case: c, panels }) => {
                   const schedule = schedules[c.id];
                   const lookup = schedule
-                    ? buildJunColorLookup(computeColoredSegments(schedule), colors)
+                    ? buildJunColorLookupByRow(computeColoredSegments(schedule), colors)
                     : new Map<string, string>();
-                  return (
+                  const { projectName, panelNames } = buildProjectPanelLines(c, panels);
+                  const faceCount = panels[0]?.faceCount;
+                  return PROCESS_ROWS.map((_, rowIndex) => (
                     <tr
-                      key={c.id}
+                      key={`${c.id}-${rowIndex}`}
                       className={c.id === selectedCaseId ? "bg-accent/10" : ""}
                     >
-                      <td
-                        className="sticky left-0 z-10 border-b border-border bg-surface px-3 py-1.5 text-[12px] whitespace-pre-line"
-                        style={{ width: DRAWING_COL_WIDTH, minWidth: DRAWING_COL_WIDTH }}
-                      >
-                        <button
-                          onClick={() => setSelectedCaseId(c.id)}
-                          className="w-full text-left text-foreground hover:text-accent"
-                          title={buildCaseDisplayLabel(c, panels)}
-                        >
-                          {c.drawingNumber}
-                          {"\n"}
-                          {c.managementNumber}
-                        </button>
-                      </td>
-                      <td
-                        className="sticky z-10 border-b border-border bg-surface px-3 py-1.5 text-[12px]"
-                        style={{ left: DRAWING_COL_WIDTH, width: LABEL_COL_WIDTH, minWidth: LABEL_COL_WIDTH }}
-                      >
-                        <span className="line-clamp-2 text-foreground" title={buildProjectPanelLabel(c, panels)}>
-                          {buildProjectPanelLabel(c, panels)}
-                        </span>
-                      </td>
+                      {rowIndex === 0 && (
+                        <>
+                          <td
+                            rowSpan={PROCESS_ROWS.length}
+                            className="sticky left-0 z-10 border-b border-border bg-surface px-3 py-1.5 text-[12px] whitespace-pre-line align-top"
+                            style={{ width: DRAWING_COL_WIDTH, minWidth: DRAWING_COL_WIDTH }}
+                          >
+                            <button
+                              onClick={() => setSelectedCaseId(c.id)}
+                              className="w-full text-left text-foreground hover:text-accent"
+                              title={buildCaseDisplayLabel(c, panels)}
+                            >
+                              {c.drawingNumber}
+                              {"\n"}
+                              {c.managementNumber}
+                              {"\n\n"}
+                              {c.constructionNumber}
+                            </button>
+                          </td>
+                          <td
+                            rowSpan={PROCESS_ROWS.length}
+                            className="sticky z-10 border-b border-border bg-surface px-3 py-1.5 text-[12px] whitespace-pre-line align-top"
+                            style={{ left: DRAWING_COL_WIDTH, width: LABEL_COL_WIDTH, minWidth: LABEL_COL_WIDTH }}
+                          >
+                            <span className="text-foreground" title={buildCaseDisplayLabel(c, panels)}>
+                              {projectName}
+                              {"\n"}
+                              {panelNames}
+                              {"\n\n"}
+                              {faceCount != null ? `${faceCount}面` : ""}
+                            </span>
+                          </td>
+                        </>
+                      )}
                       {months.map((m) =>
                         JUN_BUCKETS.map((bucket, i) => {
                           const color = lookup.get(
-                            junCellKey(m.year, m.month, bucket),
+                            junCellKeyRow(m.year, m.month, bucket, rowIndex),
                           );
                           return (
                             <td
-                              key={`c-${c.id}-${m.year}-${m.month}-${bucket}`}
-                              className={`border-b border-border py-1.5 ${i === 0 ? "border-l border-border-strong" : ""}`}
+                              key={`c-${c.id}-${rowIndex}-${m.year}-${m.month}-${bucket}`}
+                              className={`border-b border-border py-1 ${i === 0 ? "border-l border-border-strong" : ""} ${rowIndex === PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
                               style={{
                                 width: SEGMENT_WIDTH,
                                 minWidth: SEGMENT_WIDTH,
@@ -507,7 +522,7 @@ export function ScheduleTimeline() {
                         }),
                       )}
                     </tr>
-                  );
+                  ));
                 })}
               </tbody>
             </table>

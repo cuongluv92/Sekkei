@@ -41,20 +41,28 @@ export function formatDrawingNumber(year: number, sequenceNo: number): string {
  * blank on either side — never a stray "／"). Never uses "|" or any other
  * separator. Display-only — the database keeps each 盤 as its own row.
  */
+/** 件名・盤名称を別々の文字列として返す（工程表の実テンプレートのように、1案件を複数行に分けて表示する場所で使う）。 */
+export function buildProjectPanelLines(
+  designCase: DesignCase,
+  panels: CasePanel[],
+): { projectName: string; panelNames: string } {
+  const panelNames = panels
+    .slice()
+    .sort((a, b) => a.panelNo - b.panelNo)
+    .map((p) => p.panelName.trim())
+    .filter(Boolean)
+    .join("・");
+
+  return { projectName: designCase.projectName.trim(), panelNames };
+}
+
 /** 件名／盤名称 だけの表示ラベル（図面番号・管理番号を別列で表示する場所、例: 工程表 の B列で使う）。 */
 export function buildProjectPanelLabel(
   designCase: DesignCase,
   panels: CasePanel[],
 ): string {
-  const panelNames = panels
-    .slice()
-    .sort((a, b) => a.panelNo - b.panelNo)
-    .map((p) => p.panelName.trim())
-    .filter(Boolean);
-
-  return [designCase.projectName.trim(), panelNames.join("・")]
-    .filter(Boolean)
-    .join("／");
+  const { projectName, panelNames } = buildProjectPanelLines(designCase, panels);
+  return [projectName, panelNames].filter(Boolean).join("／");
 }
 
 export function buildCaseDisplayLabel(
