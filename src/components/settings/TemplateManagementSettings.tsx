@@ -17,6 +17,10 @@ const KIND_ACCEPT: Record<DesignTemplateKind, string> = {
   scheduleSheet: ".xlsx",
   costLaborSheet: ".xlsx",
   dwgTemplate: ".dwg",
+  seismicFreeStanding: ".xlsx",
+  seismicWallMounted: ".xlsx",
+  ventilationOutdoor: ".xlsx",
+  ventilationIndoor: ".xlsx",
 };
 
 /**

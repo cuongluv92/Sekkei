@@ -1,11 +1,16 @@
 "use client";
 
-import { Loader2, Save } from "lucide-react";
+import { FileSpreadsheet, Loader2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { calculationRecordService, seismicAnchorBoltService } from "@/lib/services";
+import { designCaseService } from "@/lib/services/design";
 import { computeWallMountAnchorForces } from "@/lib/calc/seismic/wallMountAnchor";
+import { findAllowablePulloutKn } from "@/lib/calc/seismic/anchorAllowableLookup";
+import { BOLT_SHANK_AREA_MM2 } from "@/lib/calc/seismic/boltStress";
+import { exportSeismicWallMountedExcel } from "@/lib/services/seismicExcelExport";
 import type { SeismicAnchorAllowable } from "@/lib/types";
+import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calculation/OutlineDrawingUpload";
 import { FormulaBlock, SourceNote, WhyPanel } from "@/components/calculation/FormulaBlock";
 import {
@@ -58,6 +63,7 @@ interface Props {
 /** JSIA-T1018:2012 5.1.2「壁面取付けの場合」— 壁掛形盤類。 */
 export function WallMountSeismicView({ caseId }: Props) {
   const { t } = useTranslation();
+  const { message: exportMessage, show: showExportMessage } = useMockFeedback();
   const [force, setForce] = useState<SeismicForceInputState>(blankSeismicForceInputState());
   const [geometry, setGeometry] = useState<GeometryInputState>(blankGeometry());
   const [bolt, setBolt] = useState<AnchorBoltInputState>(blankAnchorBoltInputState());
@@ -66,6 +72,8 @@ export function WallMountSeismicView({ caseId }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     seismicAnchorBoltService.list().then(setAllowables);
@@ -135,6 +143,57 @@ export function WallMountSeismicView({ caseId }: Props) {
       setSavedAt(saved.updatedAt);
     } finally {
       setSaving(false);
+    }
+  }
+
+  const concreteThicknessMm = Number(bolt.concreteThicknessMmRaw);
+  const allowableTaKn =
+    bolt.manufacturerId && bolt.method && Number.isFinite(concreteThicknessMm) && concreteThicknessMm > 0
+      ? findAllowablePulloutKn(allowables, {
+          manufacturerId: bolt.manufacturerId,
+          method: bolt.method,
+          boltDiameter: bolt.diameter,
+          concreteThicknessMm,
+        })
+      : null;
+
+  async function handleExcelExport() {
+    if (!forceResult || !geometryComplete) return;
+    setExportError(null);
+    setExportingExcel(true);
+    try {
+      const caseInfo = caseId ? await designCaseService.getDetail(caseId) : null;
+      const { fileName } = await exportSeismicWallMountedExcel({
+        caseInfo: caseInfo
+          ? {
+              projectName: caseInfo.case.projectName,
+              panelName: caseInfo.panels[0]?.panelName ?? "",
+              constructionNumber: caseInfo.case.constructionNumber,
+              drawingNumber: caseInfo.case.drawingNumber,
+            }
+          : undefined,
+        force: { regionZ: force.regionZ, ks: forceResult.ks, weightKg: Number(force.weightKgRaw) },
+        geometry: {
+          horizontalSpanMm: horizontalSpan,
+          verticalSpanMm: verticalSpan,
+          verticalCenterToGravityMm: verticalCg,
+          wallToGravityMm: wallCg,
+          totalBoltCount: n,
+          horizontalFaceBoltCount: nt1,
+          verticalFaceBoltCount: nt2,
+        },
+        bolt: {
+          material: bolt.material,
+          diameter: bolt.diameter,
+          areaMm2: BOLT_SHANK_AREA_MM2[bolt.diameter],
+          allowableTaKn,
+        },
+      });
+      showExportMessage(t("seismicCalc.exportedMessage", { fileName }));
+    } catch {
+      setExportError(t("seismicCalc.exportError"));
+    } finally {
+      setExportingExcel(false);
     }
   }
 
@@ -227,12 +286,23 @@ export function WallMountSeismicView({ caseId }: Props) {
 
       <SourceNote title={t("seismicCalc.wallSourceTitle")} body={t("seismicCalc.wallSourceBody")} />
 
-      <div className="flex items-center gap-2 border-t border-border pt-3">
+      <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
         <button onClick={handleSave} disabled={!caseId || saving} className="btn-primary">
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           {t("common.save")}
         </button>
+        <button
+          type="button"
+          onClick={handleExcelExport}
+          disabled={exportingExcel || !forceResult || !geometryComplete}
+          className="btn-secondary !py-1 !text-[12px]"
+        >
+          {exportingExcel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
+          {t("common.excelExport")}
+        </button>
         {savedAt && <span className="text-[11px] text-muted-2">{t("seismicCalc.savedAt", { date: savedAt.slice(0, 10) })}</span>}
+        {exportMessage && <span className="text-[11px] text-success">{exportMessage}</span>}
+        {exportError && <span className="text-[11px] text-danger">{exportError}</span>}
       </div>
     </div>
   );

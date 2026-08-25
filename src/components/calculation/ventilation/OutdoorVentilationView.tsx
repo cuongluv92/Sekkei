@@ -1,12 +1,15 @@
 "use client";
 
-import { Loader2, Save } from "lucide-react";
+import { FileSpreadsheet, Loader2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { calculationRecordService, ventilationClimateProfileService } from "@/lib/services";
+import { designCaseService } from "@/lib/services/design";
 import { computeOutdoorVentilation } from "@/lib/calc/ventilation/outdoorVentilation";
 import { sumHeatSourcesW, type HeatSourceItem } from "@/lib/calc/ventilation/heatBalance";
+import { exportOutdoorVentilationExcel } from "@/lib/services/ventilationExcelExport";
 import type { VentilationClimateProfile } from "@/lib/types";
+import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calculation/OutlineDrawingUpload";
 import { FormulaBlock, SourceNote, WhyPanel } from "@/components/calculation/FormulaBlock";
 import { HeatSourceList } from "./HeatSourceList";
@@ -86,6 +89,7 @@ interface Props {
  */
 export function OutdoorVentilationView({ caseId }: Props) {
   const { t } = useTranslation();
+  const { message: exportMessage, show: showExportMessage } = useMockFeedback();
   const [climateProfiles, setClimateProfiles] = useState<VentilationClimateProfile[]>([]);
   const [climateProfileId, setClimateProfileId] = useState("");
   const [heatSources, setHeatSources] = useState<HeatSourceItem[]>([]);
@@ -95,6 +99,8 @@ export function OutdoorVentilationView({ caseId }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     ventilationClimateProfileService.list().then(setClimateProfiles);
@@ -214,6 +220,50 @@ export function OutdoorVentilationView({ caseId }: Props) {
     }
   }
 
+  async function handleExcelExport() {
+    if (!climate || !surfaceAreasComplete || !ventOpeningComplete || totalHeatGainW <= 0) return;
+    setExportError(null);
+    setExportingExcel(true);
+    try {
+      const detail = caseId ? await designCaseService.getDetail(caseId) : null;
+      const { fileName } = await exportOutdoorVentilationExcel({
+        caseInfo: detail
+          ? {
+              projectName: detail.case.projectName,
+              panelName: detail.panels[0]?.panelName ?? "",
+              managementNumber: detail.case.managementNumber,
+            }
+          : undefined,
+        climate: { ambientTempC: climate.ambientTempC, topTempC: climate.topTempC },
+        heatSources,
+        surfaceAreas: { roofM2, face1M2, face2M2, face3M2, face4M2 },
+        transmittance: { roofWPerM2K: roofTransmittance, sideWPerM2K: sideTransmittance },
+        equivalentOutsideTemp: {
+          roofC: climate.equivalentOutsideTempRoofC,
+          face1C: climate.equivalentOutsideTempFace1C,
+          face2C: climate.equivalentOutsideTempFace2C,
+          face3C: climate.equivalentOutsideTempFace3C,
+          face4C: climate.equivalentOutsideTempFace4C,
+        },
+        supplyAreaM2,
+        exhaustAreaM2,
+        useFilter: ventOpening.useFilter,
+        noFilterDischargeCoefficient,
+        ventResistanceCoefficient,
+        filterResistanceCoefficient,
+        heightDiffM,
+        hoodFlowCoefficientX,
+        fanCapacityM3PerHPerUnit,
+        filterRatedVelocityMPerS,
+      });
+      showExportMessage(t("ventilationCalc.exportedMessage", { fileName }));
+    } catch {
+      setExportError(t("ventilationCalc.exportError"));
+    } finally {
+      setExportingExcel(false);
+    }
+  }
+
   if (!loaded) {
     return <div className="py-8 text-center text-[13px] text-muted">{t("common.loading")}</div>;
   }
@@ -330,12 +380,23 @@ export function OutdoorVentilationView({ caseId }: Props) {
 
       <SourceNote title={t("ventilationCalc.outdoorSourceTitle")} body={t("ventilationCalc.outdoorSourceBody")} />
 
-      <div className="flex items-center gap-2 border-t border-border pt-3">
+      <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
         <button onClick={handleSave} disabled={!caseId || saving} className="btn-primary">
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           {t("common.save")}
         </button>
+        <button
+          type="button"
+          onClick={handleExcelExport}
+          disabled={exportingExcel || !result}
+          className="btn-secondary !py-1 !text-[12px]"
+        >
+          {exportingExcel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
+          {t("common.excelExport")}
+        </button>
         {savedAt && <span className="text-[11px] text-muted-2">{t("ventilationCalc.savedAt", { date: savedAt.slice(0, 10) })}</span>}
+        {exportMessage && <span className="text-[11px] text-success">{exportMessage}</span>}
+        {exportError && <span className="text-[11px] text-danger">{exportError}</span>}
       </div>
     </div>
   );

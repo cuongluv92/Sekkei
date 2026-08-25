@@ -1,11 +1,14 @@
 "use client";
 
-import { Loader2, Save } from "lucide-react";
+import { FileSpreadsheet, Loader2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { calculationRecordService } from "@/lib/services";
+import { designCaseService } from "@/lib/services/design";
 import { computeIndoorVentilation } from "@/lib/calc/ventilation/indoorVentilation";
 import { sumHeatSourcesW, type HeatSourceItem } from "@/lib/calc/ventilation/heatBalance";
+import { exportIndoorVentilationExcel } from "@/lib/services/ventilationExcelExport";
+import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calculation/OutlineDrawingUpload";
 import { FormulaBlock, SourceNote } from "@/components/calculation/FormulaBlock";
 import { HeatSourceList } from "./HeatSourceList";
@@ -72,6 +75,7 @@ interface Props {
  */
 export function IndoorVentilationView({ caseId }: Props) {
   const { t } = useTranslation();
+  const { message: exportMessage, show: showExportMessage } = useMockFeedback();
   const [heatSources, setHeatSources] = useState<HeatSourceItem[]>([]);
   const [dimensions, setDimensions] = useState<DimensionState>(blankDimensions());
   const [ventOpening, setVentOpening] = useState<VentOpeningState>(blankVentOpening());
@@ -79,6 +83,8 @@ export function IndoorVentilationView({ caseId }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoaded(false);
@@ -167,6 +173,42 @@ export function IndoorVentilationView({ caseId }: Props) {
     }
   }
 
+  async function handleExcelExport() {
+    if (!dimensionsComplete || !ventOpeningComplete || totalHeatGainW <= 0) return;
+    setExportError(null);
+    setExportingExcel(true);
+    try {
+      const detail = caseId ? await designCaseService.getDetail(caseId) : null;
+      const { fileName } = await exportIndoorVentilationExcel({
+        caseInfo: detail
+          ? {
+              projectName: detail.case.projectName,
+              panelName: detail.panels[0]?.panelName ?? "",
+              managementNumber: detail.case.managementNumber,
+            }
+          : undefined,
+        dimensions: { widthM, heightM, depthM },
+        heatSources,
+        transmittance: { roofWPerM2K: roofTransmittance, sideWPerM2K: sideTransmittance },
+        supplyAreaM2,
+        exhaustAreaM2,
+        useFilter: ventOpening.useFilter,
+        noFilterDischargeCoefficient,
+        ventResistanceCoefficient,
+        filterResistanceCoefficient,
+        heightDiffM,
+        hoodFlowCoefficientX,
+        fanCapacityM3PerHPerUnit,
+        filterRatedVelocityMPerS,
+      });
+      showExportMessage(t("ventilationCalc.exportedMessage", { fileName }));
+    } catch {
+      setExportError(t("ventilationCalc.exportError"));
+    } finally {
+      setExportingExcel(false);
+    }
+  }
+
   if (!loaded) {
     return <div className="py-8 text-center text-[13px] text-muted">{t("common.loading")}</div>;
   }
@@ -247,12 +289,23 @@ export function IndoorVentilationView({ caseId }: Props) {
 
       <SourceNote title={t("ventilationCalc.indoorSourceTitle")} body={t("ventilationCalc.indoorSourceBody")} />
 
-      <div className="flex items-center gap-2 border-t border-border pt-3">
+      <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
         <button onClick={handleSave} disabled={!caseId || saving} className="btn-primary">
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           {t("common.save")}
         </button>
+        <button
+          type="button"
+          onClick={handleExcelExport}
+          disabled={exportingExcel || !result}
+          className="btn-secondary !py-1 !text-[12px]"
+        >
+          {exportingExcel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
+          {t("common.excelExport")}
+        </button>
         {savedAt && <span className="text-[11px] text-muted-2">{t("ventilationCalc.savedAt", { date: savedAt.slice(0, 10) })}</span>}
+        {exportMessage && <span className="text-[11px] text-success">{exportMessage}</span>}
+        {exportError && <span className="text-[11px] text-danger">{exportError}</span>}
       </div>
     </div>
   );

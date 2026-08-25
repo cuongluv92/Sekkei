@@ -544,6 +544,8 @@ export interface Dictionary {
       finalFanCount: string;
     };
     savedAt: string;
+    exportedMessage: string;
+    exportError: string;
     outlineDrawingHintOutdoor: string;
     outlineDrawingHintIndoor: string;
     outdoorSourceTitle: string;
@@ -652,6 +654,8 @@ export interface Dictionary {
     overallPass: string;
     overallFail: string;
     savedAt: string;
+    exportedMessage: string;
+    exportError: string;
     outlineDrawingHintFloor: string;
     outlineDrawingHintWall: string;
     floorSourceTitle: string;
@@ -884,6 +888,10 @@ export interface Dictionary {
         scheduleSheet: string;
         costLaborSheet: string;
         dwgTemplate: string;
+        seismicFreeStanding: string;
+        seismicWallMounted: string;
+        ventilationOutdoor: string;
+        ventilationIndoor: string;
       };
     };
   };

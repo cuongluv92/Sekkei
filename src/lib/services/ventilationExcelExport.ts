@@ -1,0 +1,219 @@
+import { downloadWorkbook, keepOnlyWorksheet, loadActiveTemplateSheet } from "./design/excelWorkbook";
+
+/**
+ * Fills the real vendor 換気計算書 templates (JSIA-T1016:2019準拠, JSIA HP
+ * 掲載の使用例ファイル、ユーザー提供のものと同一) instead of building a
+ * generic sheet from scratch. As with seismicExcelExport.ts, every
+ * downstream cell (QBO/QBi, αxAx, QV, 判定, WK, 静圧, 台数決定) is a LIVE
+ * EXCEL FORMULA already confirmed cell-by-cell against ventilationFlow.ts/
+ * outdoorVentilation.ts/indoorVentilation.ts's golden tests — this module
+ * only writes the raw INPUT cells and lets Excel recompute the rest.
+ *
+ * JSIAの元ファイルは屋外・屋内それぞれフィルタ有り／無しで別シート(行数が
+ * 異なるレイアウト)になっているが、フィルタ有りシートは共通項目について
+ * フィルタ無しシートと全く同じ行・列位置を使う上位互換のレイアウトで、
+ * 差分はフィルタ関連の3行のみ (ζC/ζF入力・フィルタ通過風速による必要
+ * 換気扇台数の確認)。そのため2枚目のほぼ同一シートを別テンプレート種別
+ * として二重管理せず、フィルタ有りシート1枚を両方のケースで使い、
+ * フィルタ無しの場合はフィルタ専用セルを空欄にする方式を採用している。
+ */
+
+export interface VentilationCaseInfoExportData {
+  projectName: string;
+  panelName: string;
+  managementNumber: string;
+}
+
+export interface VentilationHeatSourceExportItem {
+  name: string;
+  heatW: number;
+}
+
+export interface OutdoorVentilationExportData {
+  caseInfo?: VentilationCaseInfoExportData;
+  climate: { ambientTempC: number; topTempC: number };
+  heatSources: VentilationHeatSourceExportItem[];
+  surfaceAreas: { roofM2: number; face1M2: number; face2M2: number; face3M2: number; face4M2: number };
+  transmittance: { roofWPerM2K: number; sideWPerM2K: number };
+  equivalentOutsideTemp: { roofC: number; face1C: number; face2C: number; face3C: number; face4C: number };
+  supplyAreaM2: number;
+  exhaustAreaM2: number;
+  useFilter: boolean;
+  noFilterDischargeCoefficient: number;
+  ventResistanceCoefficient: number;
+  filterResistanceCoefficient: number | null;
+  heightDiffM: number;
+  hoodFlowCoefficientX: number;
+  fanCapacityM3PerHPerUnit: number | null;
+  filterRatedVelocityMPerS: number | null;
+}
+
+export interface IndoorVentilationExportData {
+  caseInfo?: VentilationCaseInfoExportData;
+  dimensions: { widthM: number; heightM: number; depthM: number };
+  heatSources: VentilationHeatSourceExportItem[];
+  transmittance: { roofWPerM2K: number; sideWPerM2K: number };
+  supplyAreaM2: number;
+  exhaustAreaM2: number;
+  useFilter: boolean;
+  noFilterDischargeCoefficient: number;
+  ventResistanceCoefficient: number;
+  filterResistanceCoefficient: number | null;
+  heightDiffM: number;
+  hoodFlowCoefficientX: number;
+  fanCapacityM3PerHPerUnit: number | null;
+  filterRatedVelocityMPerS: number | null;
+}
+
+const HEAT_SOURCE_ROWS = [13, 14, 15, 16, 17, 18, 19];
+
+/**
+ * B(機器名称)・J(発熱W)のみ埋める — アプリの発熱源入力(HeatSourceList)は
+ * 機器名と発熱量(カタログ損失値)のみを持ち、F(容量)/H(負荷率%)の内訳は
+ * 保持していない(テンプレート例のような容量×負荷率からの逆算はしない
+ * 方式のため)。この2列は空欄のまま(捏造しない)。
+ *
+ * テンプレートの発熱源欄は7行(B13:J19)しかない — 8件目以降がある場合は
+ * 合計発熱量J20(=SUM(J13:J19))がアプリの合計と食い違ってしまうため、
+ * 最終行にあふれた分をまとめて計上する(件数を勝手に切り捨てない)。
+ */
+function writeHeatSources(ws: import("exceljs").Worksheet, heatSources: VentilationHeatSourceExportItem[]) {
+  const overflow = heatSources.length > HEAT_SOURCE_ROWS.length;
+  const visibleCount = overflow ? HEAT_SOURCE_ROWS.length - 1 : heatSources.length;
+  HEAT_SOURCE_ROWS.forEach((row, i) => {
+    if (i < visibleCount) {
+      ws.getCell(`B${row}`).value = heatSources[i].name;
+      ws.getCell(`J${row}`).value = heatSources[i].heatW;
+    } else if (overflow && i === HEAT_SOURCE_ROWS.length - 1) {
+      const rest = heatSources.slice(visibleCount);
+      ws.getCell(`B${row}`).value = `他${rest.length}件`;
+      ws.getCell(`J${row}`).value = rest.reduce((sum, s) => sum + s.heatW, 0);
+    } else {
+      ws.getCell(`B${row}`).value = "";
+      ws.getCell(`J${row}`).value = "";
+    }
+  });
+}
+
+function clearFilterOnlyCells(ws: import("exceljs").Worksheet, cells: string[]) {
+  for (const addr of cells) ws.getCell(addr).value = null;
+}
+
+export async function exportOutdoorVentilationExcel(data: OutdoorVentilationExportData): Promise<{ fileName: string }> {
+  const { workbook, ws } = await loadActiveTemplateSheet("ventilationOutdoor", [
+    "屋外フィルタ有り　東京",
+    "屋外フィルタ有り　那覇",
+    "屋外フィルタ無し　東京",
+  ]);
+  keepOnlyWorksheet(workbook, ws);
+
+  if (data.caseInfo) {
+    ws.getCell("C3").value = data.caseInfo.projectName;
+    ws.getCell("C4").value = data.caseInfo.panelName;
+    ws.getCell("O4").value = data.caseInfo.managementNumber;
+  }
+
+  // a) 盤周囲温度及び盤内部温度 — ti(平均)はJSIA-T1016使用例どおり40℃固定
+  // (アプリのAVERAGE_INTERNAL_TEMP_C定数と同じ — 換気計算.md参照の golden
+  // テストで確認済み)。
+  ws.getCell("F10").value = data.climate.ambientTempC; // to
+  ws.getCell("H10").value = data.climate.topTempC; // tt
+  ws.getCell("J10").value = 40; // ti
+
+  // b) 盤内部発熱源
+  writeHeatSources(ws, data.heatSources);
+
+  // c) 盤表面面積 — テンプレートはW/H/H1/D/D1の外形寸法から面積を計算する式
+  // だが、アプリは面積そのものを保持している(寸法の内訳を持たない)ため、
+  // 面積セル(F25/H25/J25/L25/N25/P25)を直接上書きする。外形寸法欄(F23等)
+  // は空欄のまま(誤った寸法を捏造しないため)。
+  const { roofM2, face1M2, face2M2, face3M2, face4M2 } = data.surfaceAreas;
+  ws.getCell("F25").value = roofM2; // SRO
+  ws.getCell("J25").value = face1M2; // SSE
+  ws.getCell("L25").value = face2M2; // SWS
+  ws.getCell("N25").value = face3M2; // SNW
+  ws.getCell("P25").value = face4M2; // SNE
+  ws.getCell("H25").value = face1M2 + face2M2 + face3M2 + face4M2; // SSO(4面合計)
+
+  ws.getCell("F29").value = data.transmittance.roofWPerM2K; // URO
+  ws.getCell("H29").value = data.transmittance.sideWPerM2K; // USO
+  ws.getCell("N29").value = data.equivalentOutsideTemp.roofC; // tSH
+  ws.getCell("P29").value = data.equivalentOutsideTemp.face1C; // tSE
+  ws.getCell("R29").value = data.equivalentOutsideTemp.face2C; // tWS
+  ws.getCell("T29").value = data.equivalentOutsideTemp.face3C; // tNW
+  ws.getCell("V29").value = data.equivalentOutsideTemp.face4C; // tNE
+
+  ws.getCell("H43").value = data.supplyAreaM2; // Ai
+  ws.getCell("H44").value = data.exhaustAreaM2; // Ao
+  ws.getCell("S48").value = data.heightDiffM; // h
+  ws.getCell("S53").value = data.hoodFlowCoefficientX; // X
+  if (data.fanCapacityM3PerHPerUnit != null) ws.getCell("S54").value = data.fanCapacityM3PerHPerUnit; // F
+
+  if (data.useFilter) {
+    ws.getCell("V43").value = data.ventResistanceCoefficient; // ζC
+    ws.getCell("V44").value = data.filterResistanceCoefficient ?? 0; // ζF
+    if (data.filterRatedVelocityMPerS != null) ws.getCell("O58").value = data.filterRatedVelocityMPerS;
+    ws.getCell("Q60").value = { formula: "MAX(H53,T59)" };
+  } else {
+    ws.getCell("N43").value = data.noFilterDischargeCoefficient; // α (置換 — フィルタ無し時は固定値)
+    ws.getCell("S55").value = data.ventResistanceCoefficient; // ζ (置換 — ζC単独)
+    clearFilterOnlyCells(ws, ["R43", "V43", "R44", "V44", "H58", "O58", "M59", "T59"]);
+    ws.getCell("J60").value = null;
+    ws.getCell("Q60").value = { formula: "H53" };
+  }
+
+  const fileName = `換気計算書_屋外_${data.caseInfo?.managementNumber || new Date().toLocaleDateString("ja-JP").replace(/\//g, "")}.xlsx`;
+  await downloadWorkbook(workbook, fileName);
+  return { fileName };
+}
+
+export async function exportIndoorVentilationExcel(data: IndoorVentilationExportData): Promise<{ fileName: string }> {
+  const { workbook, ws } = await loadActiveTemplateSheet("ventilationIndoor", ["屋内フィルタ有り", "屋内フィルタ無し"]);
+  keepOnlyWorksheet(workbook, ws);
+
+  // 提供テンプレートの見出し文言(A6)は屋内シートでも「屋外キュービクルの
+  // 換気計算」のままになっている(元ファイル自体の記載漏れ) — 誤った表記を
+  // そのまま出力しないよう、屋内用に訂正して書き込む。
+  ws.getCell("A6").value = "屋内キュービクルの換気計算　回路電圧 3φ3w 6 600 V　50 Hz";
+
+  if (data.caseInfo) {
+    ws.getCell("C3").value = data.caseInfo.projectName;
+    ws.getCell("C4").value = data.caseInfo.panelName;
+    ws.getCell("O4").value = data.caseInfo.managementNumber;
+  }
+
+  ws.getCell("F10").value = 30; // to — JSIA-T1016屋内使用例の固定値(全地域共通条件)
+  ws.getCell("H10").value = 50; // tt — 同上
+  ws.getCell("J10").value = 40; // ti
+
+  writeHeatSources(ws, data.heatSources);
+
+  ws.getCell("F23").value = data.dimensions.widthM; // W
+  ws.getCell("H23").value = data.dimensions.heightM; // H
+  ws.getCell("J23").value = data.dimensions.depthM; // D
+  ws.getCell("F29").value = data.transmittance.roofWPerM2K; // URi
+  ws.getCell("H29").value = data.transmittance.sideWPerM2K; // USi
+
+  ws.getCell("H31").value = data.supplyAreaM2; // Ai
+  ws.getCell("H32").value = data.exhaustAreaM2; // Ao
+  ws.getCell("S36").value = data.heightDiffM; // h
+  ws.getCell("S41").value = data.hoodFlowCoefficientX; // X
+  if (data.fanCapacityM3PerHPerUnit != null) ws.getCell("S42").value = data.fanCapacityM3PerHPerUnit; // F
+
+  if (data.useFilter) {
+    ws.getCell("V31").value = data.ventResistanceCoefficient; // ζC
+    ws.getCell("V32").value = data.filterResistanceCoefficient ?? 0; // ζF
+    if (data.filterRatedVelocityMPerS != null) ws.getCell("O46").value = data.filterRatedVelocityMPerS;
+    ws.getCell("Q48").value = { formula: "MAX(H41,T47)" };
+  } else {
+    ws.getCell("N31").value = data.noFilterDischargeCoefficient; // α (置換)
+    ws.getCell("S43").value = data.ventResistanceCoefficient; // ζ (置換)
+    clearFilterOnlyCells(ws, ["R31", "V31", "R32", "V32", "H46", "O46", "M47", "T47"]);
+    ws.getCell("J48").value = null;
+    ws.getCell("Q48").value = { formula: "H41" };
+  }
+
+  const fileName = `換気計算書_屋内_${data.caseInfo?.managementNumber || new Date().toLocaleDateString("ja-JP").replace(/\//g, "")}.xlsx`;
+  await downloadWorkbook(workbook, fileName);
+  return { fileName };
+}

@@ -253,7 +253,28 @@ export interface DesignCaseWithPanels {
   panels: CasePanel[];
 }
 
-/** ②～⑧ Excel templates. Phase 5 — schema only (settings UI/versioning not built yet). */
+/**
+ * ②～⑧ Excel templates, plus 耐震計算/換気計算 report templates. Phase 5 —
+ * schema only (settings UI/versioning not built yet).
+ *
+ * The 耐震計算/換気計算 kinds below reuse this same Storage-backed template
+ * system (design_templates table, oku-pro-files bucket) even though they are
+ * not part of 設計管理 — the underlying service/table/storage are already
+ * generic (kind is a free-text column), and duplicating that machinery for a
+ * second "calc template" system would add nothing. Each kind's uploaded file
+ * is expected to be — or contain, as one named sheet in a multi-sheet
+ * workbook — the real JSIA-T1018/JSIA-T1016 vendor Excel format:
+ *   - seismicFreeStanding: 自立形 sheet (also used for キュービクル — see
+ *     seismicExcelExport.ts for why they share one sheet/formula set)
+ *   - seismicWallMounted: 壁掛形 sheet
+ *   - ventilationOutdoor: 屋外フィルタ有り◯◯ sheet (the フィルタ有り layout
+ *     is a strict superset of フィルタ無し — same row/column positions for
+ *     every shared field, with 3 extra filter-only rows — so a フィルタ無し
+ *     case is exported into this same sheet with the filter-only cells
+ *     blanked out, rather than maintaining a second near-duplicate kind;
+ *     see ventilationExcelExport.ts)
+ *   - ventilationIndoor: 屋内フィルタ有り sheet, same reasoning
+ */
 export type DesignTemplateKind =
   | "drawingLedger" // ② 図面管理台帳 (one workbook, one sheet per year)
   | "designRequestIndexKeio" // ③ 設計依頼書目次・京王 (one workbook)
@@ -262,7 +283,11 @@ export type DesignTemplateKind =
   | "costLaborSheet" // ⑥ 仕入原価／工数一覧表 (one workbook)
   | "designRequestForm" // ⑦ 設計依頼書 (one file per year)
   | "productionRequestForm" // ⑧ 製作依頼書 (one file per year)
-  | "dwgTemplate"; // generic DWG starter template
+  | "dwgTemplate" // generic DWG starter template
+  | "seismicFreeStanding" // 耐震計算書（自立形／キュービクル）
+  | "seismicWallMounted" // 耐震計算書（壁掛形）
+  | "ventilationOutdoor" // 換気計算書（屋外）
+  | "ventilationIndoor"; // 換気計算書（屋内）
 
 export const DESIGN_TEMPLATE_KINDS: DesignTemplateKind[] = [
   "designRequestForm",
@@ -273,6 +298,10 @@ export const DESIGN_TEMPLATE_KINDS: DesignTemplateKind[] = [
   "scheduleSheet",
   "costLaborSheet",
   "dwgTemplate",
+  "seismicFreeStanding",
+  "seismicWallMounted",
+  "ventilationOutdoor",
+  "ventilationIndoor",
 ];
 
 /** Stored in Supabase Storage (templates/<kind>/...), never bundled in the app — see designTemplateService. */
