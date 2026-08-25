@@ -1,0 +1,106 @@
+import { describe, expect, it } from "vitest";
+import { parsePartAssemblyImportFile } from "./partAssemblyImportService";
+
+/**
+ * Real-world DXF files exported by Japanese-locale AutoCAD (and a lot of
+ * JW-CAD-family tooling) write ASCII group-code text as Shift_JIS (CP932),
+ * not UTF-8 — decoding with a fixed UTF-8 assumption turns every Japanese
+ * label into mojibake and `findHeaderFields` silently matches nothing. This
+ * builds a minimal grid-mode DXF with the header labels and one row's text
+ * encoded as raw Shift_JIS bytes (precomputed via Python's `str.encode`),
+ * everything else plain ASCII, to prove `parsePartAssemblyImportFile` still
+ * recovers the real values instead of just failing to find the grid.
+ */
+const SJIS = {
+  "記　号": [139, 76, 129, 64, 141, 134],
+  "品　名": [149, 105, 129, 64, 150, 188],
+  "メーカー": [131, 129, 129, 91, 131, 74, 129, 91],
+  "型　式": [140, 94, 129, 64, 142, 174],
+  "定　格　・　仕　様": [146, 232, 129, 64, 138, 105, 129, 64, 129, 69, 129, 64, 142, 100, 129, 64, 151, 108],
+  "数　量": [144, 148, 129, 64, 151, 202],
+  "備　考": [148, 245, 129, 64, 141, 108],
+  配線用遮断器: [148, 122, 144, 252, 151, 112, 142, 213, 146, 102, 138, 237],
+  予備: [151, 92, 148, 245],
+} as const;
+
+function sjisBytes(text: string): number[] {
+  const known = SJIS[text as keyof typeof SJIS];
+  if (known) return [...known];
+  // ASCII-only fragments (symbol/model/spec/quantity/"-") round-trip identically in UTF-8 and Shift_JIS.
+  return [...text].map((c) => c.charCodeAt(0));
+}
+
+function ascii(text: string): number[] {
+  return [...text].map((c) => c.charCodeAt(0));
+}
+
+function buildShiftJisGridDxf(): Uint8Array<ArrayBuffer> {
+  const header: [string, number, number][] = [
+    ["記　号", 22.0, 270.838],
+    ["品　名", 59.5, 270.734],
+    ["メーカー", 94.3, 270.752],
+    ["型　式", 142.0, 270.688],
+    ["定　格　・　仕　様", 243.5, 270.73],
+    ["数　量", 357.0, 270.748],
+    ["備　考", 382.0, 270.724],
+  ];
+  const rowXs = [28.668, 66.168, 103.668, 148.668, 182.0, 363.668, 388.668];
+
+  const bytes: number[] = [];
+  const push = (...parts: number[][]) => parts.forEach((p) => bytes.push(...p));
+  const line = (text: string) => push(ascii(text), [0x0a]);
+
+  line("0");
+  line("SECTION");
+  line("2");
+  line("ENTITIES");
+  for (const [text, x, y] of header) {
+    line("0");
+    line("TEXT");
+    line("8");
+    line("0");
+    line("10");
+    line(String(x));
+    line("20");
+    line(String(y));
+    line("1");
+    push(sjisBytes(text), [0x0a]);
+  }
+  // one filled row: 記号/品名/メーカー/数量/備考 real values, 型式/仕様 left as "-" (unfilled cell)
+  const rowVals = ["MCCB1", "配線用遮断器", "BBW", "-", "-", "1", "予備"];
+  for (let i = 0; i < rowXs.length; i++) {
+    line("0");
+    line("TEXT");
+    line("8");
+    line("0");
+    line("10");
+    line(String(rowXs[i]));
+    line("20");
+    line("259.75");
+    line("1");
+    push(sjisBytes(rowVals[i]), [0x0a]);
+  }
+  line("0");
+  line("ENDSEC");
+  line("0");
+  line("EOF");
+  return new Uint8Array(new ArrayBuffer(bytes.length)).map((_, i) => bytes[i]);
+}
+
+describe("parsePartAssemblyImportFile (DXF, Shift_JIS encoded)", () => {
+  it("recovers real values from a DXF whose Japanese text is Shift_JIS, not UTF-8", async () => {
+    const file = new File([buildShiftJisGridDxf()], "見積.dxf", { type: "application/dxf" });
+    const result = await parsePartAssemblyImportFile(file);
+
+    expect(result.found).toBe(true);
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]).toMatchObject({
+      symbol: "MCCB1",
+      name: "配線用遮断器",
+      model: "",
+      specification: "",
+      quantity: 1,
+      remarks: "予備",
+    });
+  });
+});
