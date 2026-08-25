@@ -249,7 +249,7 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
       ) : (
         <div className="flex items-start gap-3 overflow-x-auto pb-1">
           {yearBlocks.map(({ year, cases }) => (
-            <div key={year} className="panel shrink-0" style={{ width: 1120 }}>
+            <div key={year} className="panel shrink-0" style={{ width: 1340 }}>
               <div className="panel-header-compact">
                 <span className="panel-title">
                   {t("design.ledger.yearBlockTitle", { year })}
@@ -282,7 +282,7 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                 </div>
               </div>
               <div className="data-table-wrap">
-                <table className="data-table" style={{ minWidth: 1080 }}>
+                <table className="data-table" style={{ minWidth: 1300 }}>
                   <thead>
                     <tr>
                       <th style={{ width: "110px" }}>
@@ -300,6 +300,12 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                       </th>
                       <th>{t("design.ledger.columns.projectName")}</th>
                       <th>{t("design.ledger.columns.panelNames")}</th>
+                      <th style={{ width: "70px" }} className="text-right">
+                        {t("design.ledger.columns.faceCount")}
+                      </th>
+                      <th style={{ width: "160px" }}>
+                        {t("design.ledger.columns.remarks")}
+                      </th>
                       <th style={{ width: "80px" }} className="text-center">
                         {t("design.ledger.columns.manufacturingComplete")}
                       </th>
@@ -338,6 +344,10 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                             .filter(Boolean)
                             .join("・")}
                         </td>
+                        <td className="text-right font-mono">
+                          {panels[0]?.faceCount != null ? `${panels[0].faceCount}面` : ""}
+                        </td>
+                        <td className="truncate text-muted">{c.designRemarks}</td>
                         <td className="text-center">
                           {c.manufacturingComplete ? "完" : ""}
                         </td>

@@ -185,10 +185,28 @@ export function ScheduleTimeline() {
     [colors],
   );
 
+  // 工程表は「製作依頼済み」の案件のみを対象とする（設計依頼段階のものは
+  // まだ工程が確定していない）。製造完了になった案件は工程管理の対象外に
+  // なるため自動的に一覧から外れる。表示順は出荷（納品）日の早い順 — 未入力
+  // (null) は常に最後に回す。
+  const visibleCases = useMemo(() => {
+    return cases
+      .filter(({ case: c }) => c.caseStatus === "production_requested" && !c.manufacturingComplete)
+      .slice()
+      .sort((a, b) => {
+        const da = schedules[a.case.id]?.deliveryDate;
+        const db = schedules[b.case.id]?.deliveryDate;
+        if (!da && !db) return 0;
+        if (!da) return 1;
+        if (!db) return -1;
+        return da.localeCompare(db);
+      });
+  }, [cases, schedules]);
+
   async function handleExportExcel() {
     setExportingExcel(true);
     try {
-      const { fileName } = await exportScheduleExcel(cases, schedules);
+      const { fileName } = await exportScheduleExcel(visibleCases, schedules);
       show(t("design.exportedMessage", { fileName }));
     } catch {
       show(t("design.exportError"));
@@ -200,7 +218,7 @@ export function ScheduleTimeline() {
   async function handlePrint() {
     setPrinting(true);
     try {
-      await printSchedule(cases, schedules);
+      await printSchedule(visibleCases, schedules);
     } catch {
       show(t("design.exportError"));
     } finally {
@@ -229,7 +247,7 @@ export function ScheduleTimeline() {
               <option value="">
                 {t("design.workspaceBar.casePlaceholder")}
               </option>
-              {cases.map(({ case: c, panels }) => (
+              {visibleCases.map(({ case: c, panels }) => (
                 <option key={c.id} value={c.id}>
                   {buildCaseDisplayLabel(c, panels)}
                 </option>
@@ -368,7 +386,7 @@ export function ScheduleTimeline() {
           <p className="p-6 text-center text-[13px] text-muted">
             {t("common.loading")}
           </p>
-        ) : cases.length === 0 ? (
+        ) : visibleCases.length === 0 ? (
           <p className="p-8 text-center text-[13px] text-muted-2">
             {t("design.ledger.empty")}
           </p>
@@ -425,7 +443,7 @@ export function ScheduleTimeline() {
                 </tr>
               </thead>
               <tbody>
-                {cases.map(({ case: c, panels }) => {
+                {visibleCases.map(({ case: c, panels }) => {
                   const schedule = schedules[c.id];
                   const lookup = schedule
                     ? buildColorLookup(computeColoredSegments(schedule), colors)

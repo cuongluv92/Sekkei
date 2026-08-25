@@ -979,6 +979,8 @@ export interface Dictionary {
         customerContact: string;
         projectName: string;
         panelNames: string;
+        faceCount: string;
+        remarks: string;
         manufacturingComplete: string;
         updatedAt: string;
       };

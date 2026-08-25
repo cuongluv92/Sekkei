@@ -1078,6 +1078,8 @@ const vi: Dictionary = {
         customerContact: "客先担当",
         projectName: "件名",
         panelNames: "盤名称",
+        faceCount: "面数",
+        remarks: "Ghi chú",
         manufacturingComplete: "製造完了",
         updatedAt: "Cập nhật",
       },

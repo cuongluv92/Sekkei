@@ -26,7 +26,11 @@ async function buildLedgerWorkbook(year: number, cases: DesignCaseWithPanels[]):
   const ws = workbook.worksheets[0];
   ws.getCell("A1").value = `${year}年`;
 
-  const sorted = cases.slice().sort((a, b) => a.case.sequenceNo - b.case.sequenceNo);
+  // 図面番号 (drawingNumber) で並べる — sequenceNo ではない。設計依頼以外の
+  // 経路で作成された案件は図面番号を手入力するため、内部の連番(sequenceNo)
+  // と表示上の図面番号が一致しない場合がある (画面側の CaseLedgerTable と
+  // 同じ並び順にするため揃える)。
+  const sorted = cases.slice().sort((a, b) => a.case.drawingNumber.localeCompare(b.case.drawingNumber, "ja"));
   sorted.forEach(({ case: c, panels }, i) => {
     const row = 3 + i;
     ws.getCell(`A${row}`).value = c.year % 100;
