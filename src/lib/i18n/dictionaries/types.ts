@@ -181,6 +181,66 @@ export interface Dictionary {
     resultEmpty: string;
     ruleNotice: string;
   };
+  motorSelection: {
+    tabs: {
+      branch: string;
+      main: string;
+      highVoltage: string;
+      legacy: string;
+    };
+    highVoltagePlaceholder: string;
+    circuitTypes: {
+      direct: string;
+      starDelta: string;
+      inverter: string;
+    };
+    manufacturerLabel: string;
+    voltageClassLabel: string;
+    circuitTypeLabel: string;
+    branch: {
+      title: string;
+      description: string;
+      labelLabel: string;
+      labelPlaceholder: string;
+      inputLabel: string;
+      inputPlaceholder: string;
+      inputUnitKw: string;
+      inputUnitA: string;
+      addButton: string;
+      resultTitle: string;
+      resultEmpty: string;
+      notMatched: string;
+      columns: {
+        label: string;
+        maker: string;
+        voltage: string;
+        circuit: string;
+        input: string;
+        breaker: string;
+        ct: string;
+        am: string;
+        contactor: string;
+        wireSize: string;
+      };
+      totalCurrentLabel: string;
+    };
+    main: {
+      title: string;
+      description: string;
+      autoSumLabel: string;
+      autoSumHint: string;
+      useAutoSumButton: string;
+      totalCurrentLabel: string;
+      totalCurrentPlaceholder: string;
+      calculateButton: string;
+      resultTitle: string;
+      resultEmpty: string;
+      notMatched: string;
+      resultBreaker: string;
+      resultPoles: string;
+      resultWireSize: string;
+    };
+  };
   electricalTools: {
     title: string;
     description: string;
@@ -968,6 +1028,42 @@ export interface Dictionary {
     columns: {
       thickness: string;
       width: string;
+    };
+  };
+  motorStarterSelectionSettings: {
+    title: string;
+    description: string;
+    addButton: string;
+    emptyList: string;
+    columns: {
+      maker: string;
+      voltage: string;
+      circuit: string;
+      motorKw: string;
+      ratedCurrent: string;
+      breakerModel: string;
+      ctModel: string;
+      ctRatio: string;
+      amRange: string;
+      contactorModel: string;
+      inverterModel: string;
+      wireSize: string;
+      remarks: string;
+    };
+  };
+  mainBreakerSelectionSettings: {
+    title: string;
+    description: string;
+    addButton: string;
+    emptyList: string;
+    columns: {
+      maker: string;
+      voltage: string;
+      ratedCurrent: string;
+      breakerModel: string;
+      poles: string;
+      wireSize: string;
+      remarks: string;
     };
   };
   backupSettings: {

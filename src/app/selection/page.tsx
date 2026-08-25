@@ -1,65 +1,34 @@
 "use client";
 
-import { Loader2, Settings } from "lucide-react";
-import { useState } from "react";
+import { Settings } from "lucide-react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
-import { selectionService } from "@/lib/services";
-import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
-import { ExportActions } from "@/components/common/ExportActions";
+import { useEffectiveCaseId } from "@/lib/store/ActiveCaseProvider";
+import { CaseSelector } from "@/components/common/CaseSelector";
 import { Modal } from "@/components/common/Modal";
 import { PageHeader } from "@/components/common/PageHeader";
-import { SelectionRuleSettings } from "@/components/settings/SelectionRuleSettings";
-import type { SelectionOutputKey, SelectionResultRow } from "@/lib/types";
+import { LegacySelectionView } from "@/components/selection/LegacySelectionView";
+import { MainBreakerSelectionView } from "@/components/selection/MainBreakerSelectionView";
+import { MotorBranchSelectionView } from "@/components/selection/MotorBranchSelectionView";
+import { MainBreakerSelectionSettings } from "@/components/settings/MainBreakerSelectionSettings";
+import { MotorStarterSelectionSettings } from "@/components/settings/MotorStarterSelectionSettings";
 
-const OUTPUT_KEYS: SelectionOutputKey[] = [
-  "breaker",
-  "am",
-  "magneticContactor",
-  "wireSize",
-  "terminalBlock",
-  "other",
-];
+type SelectionTab = "branch" | "main" | "highVoltage" | "legacy";
+const TABS: SelectionTab[] = ["branch", "main", "highVoltage", "legacy"];
 
-export default function SelectionPage() {
+function SelectionPageView() {
   const { t } = useTranslation();
-  const [rawValue, setRawValue] = useState("");
-  const [outputs, setOutputs] = useState<Set<SelectionOutputKey>>(
-    new Set(["breaker", "wireSize"]),
-  );
-  const [results, setResults] = useState<SelectionResultRow[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+  // 部品製作 と同じパターン: ?case= の明示的なディープリンクがアプリ全体の
+  // アクティブ案件より優先される。
+  const effectiveActiveCaseId = useEffectiveCaseId(false);
+  const caseIdParam = searchParams.get("case") ?? "";
+  const caseId = caseIdParam || effectiveActiveCaseId;
+  const [activeTab, setActiveTab] = useState<SelectionTab>("branch");
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  function toggleOutput(key: SelectionOutputKey) {
-    setOutputs((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }
-
-  async function handleCalculate() {
-    setLoading(true);
-    const rows = await selectionService.evaluate({
-      rawValue,
-      outputs: Array.from(outputs),
-    });
-    setResults(rows);
-    setLoading(false);
-  }
-
-  function handleClear() {
-    setRawValue("");
-    setOutputs(new Set());
-    setResults(null);
-  }
-
-  const columns: DataTableColumn<SelectionResultRow>[] = [
-    { key: "label", header: t("selection.outputLabel"), width: "180px" },
-    { key: "value", header: t("common.result"), width: "160px" },
-    { key: "remarks", header: t("common.remarks") },
-  ];
+  const needsCase = activeTab === "branch" || activeTab === "main";
 
   return (
     <div className="flex flex-col gap-4">
@@ -67,10 +36,7 @@ export default function SelectionPage() {
         title={t("selection.title")}
         description={t("selection.description")}
         actions={
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="btn-secondary"
-          >
+          <button onClick={() => setSettingsOpen(true)} className="btn-secondary">
             <Settings className="h-3.5 w-3.5" />
             {t("common.settings")}
           </button>
@@ -79,83 +45,63 @@ export default function SelectionPage() {
 
       <div className="panel">
         <div className="panel-header">
-          <span className="panel-title">{t("selection.inputLabel")}</span>
+          <div className="flex items-center gap-1">
+            {TABS.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={
+                  activeTab === tab
+                    ? "rounded-md bg-accent px-3 py-1.5 text-[12.5px] font-bold text-accent-foreground"
+                    : "rounded-md px-3 py-1.5 text-[12.5px] font-semibold text-muted hover:text-foreground"
+                }
+              >
+                {t(`motorSelection.tabs.${tab}`)}
+              </button>
+            ))}
+          </div>
         </div>
+
         <div className="panel-body flex flex-col gap-4">
-          <div className="max-w-xs">
-            <label className="field-label">{t("selection.inputLabel")}</label>
-            <input
-              value={rawValue}
-              onChange={(e) => setRawValue(e.target.value)}
-              placeholder={t("selection.inputPlaceholder")}
-              className="field-input"
-            />
-            <p className="mt-1 text-[11px] text-muted-2">{t("selection.inputHint")}</p>
-          </div>
+          {needsCase && (
+            <>
+              <CaseSelector suppress={false} />
+              {!caseId && <p className="text-[11px] text-warning">{t("caseSelector.draftNote")}</p>}
+            </>
+          )}
 
-          <div>
-            <label className="field-label">{t("selection.outputLabel")}</label>
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              {OUTPUT_KEYS.map((key) => (
-                <label key={key} className="checkbox-row cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={outputs.has(key)}
-                    onChange={() => toggleOutput(key)}
-                    className="h-3.5 w-3.5 accent-[var(--accent)]"
-                  />
-                  {t(`selection.outputs.${key}`)}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-            <button
-              onClick={handleCalculate}
-              disabled={loading || !rawValue || outputs.size === 0}
-              className="btn-primary"
-            >
-              {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              {t("common.calculate")}
-            </button>
-            <button onClick={handleClear} className="btn-secondary">
-              {t("common.clear")}
-            </button>
-            <div className="ml-auto">
-              <ExportActions context="選定結果" />
-            </div>
-          </div>
+          {activeTab === "branch" && <MotorBranchSelectionView caseId={caseId} />}
+          {activeTab === "main" && <MainBreakerSelectionView caseId={caseId} />}
+          {activeTab === "highVoltage" && (
+            <div className="py-12 text-center text-[13px] text-muted-2">{t("motorSelection.highVoltagePlaceholder")}</div>
+          )}
+          {activeTab === "legacy" && <LegacySelectionView />}
         </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header">
-          <span className="panel-title">{t("selection.resultTitle")}</span>
-        </div>
-        {results && results.length > 0 && (
-          <p className="border-b border-border px-4 py-2 text-[11px] text-warning">
-            {t("selection.ruleNotice")}
-          </p>
-        )}
-        <DataTable
-          columns={columns}
-          rows={results ?? []}
-          rowKey={(r) => r.id}
-          loading={loading}
-          emptyMessage={t("selection.resultEmpty")}
-        />
       </div>
 
       {settingsOpen && (
-        <Modal
-          title={t("common.settings")}
-          onClose={() => setSettingsOpen(false)}
-          widthClassName="max-w-2xl"
-        >
-          <SelectionRuleSettings />
+        <Modal title={t("common.settings")} onClose={() => setSettingsOpen(false)} widthClassName="max-w-5xl">
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <span className="panel-title">{t("motorStarterSelectionSettings.title")}</span>
+              <MotorStarterSelectionSettings />
+            </div>
+            <div className="flex flex-col gap-2 border-t border-border pt-6">
+              <span className="panel-title">{t("mainBreakerSelectionSettings.title")}</span>
+              <MainBreakerSelectionSettings />
+            </div>
+          </div>
         </Modal>
       )}
     </div>
+  );
+}
+
+export default function SelectionPage() {
+  return (
+    <Suspense fallback={null}>
+      <SelectionPageView />
+    </Suspense>
   );
 }

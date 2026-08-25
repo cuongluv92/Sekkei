@@ -1,0 +1,127 @@
+"use client";
+
+import { Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "@/lib/i18n";
+import { selectionService } from "@/lib/services";
+import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
+import type { SelectionOutputKey, SelectionResultRow } from "@/lib/types";
+
+const OUTPUT_KEYS: SelectionOutputKey[] = [
+  "breaker",
+  "am",
+  "magneticContactor",
+  "wireSize",
+  "terminalBlock",
+  "other",
+];
+
+/**
+ * 選定 > 簡易選定 — 分岐(電動機回路)タブに置き換わる前の、単一の入力範囲→
+ * 出力値ルール (selectionRuleService) による汎用選定ツール。電動機回路以外の
+ * 単純な選定にはまだ使えるので残してある。
+ */
+export function LegacySelectionView() {
+  const { t } = useTranslation();
+  const [rawValue, setRawValue] = useState("");
+  const [outputs, setOutputs] = useState<Set<SelectionOutputKey>>(
+    new Set(["breaker", "wireSize"]),
+  );
+  const [results, setResults] = useState<SelectionResultRow[] | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  function toggleOutput(key: SelectionOutputKey) {
+    setOutputs((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  async function handleCalculate() {
+    setLoading(true);
+    const rows = await selectionService.evaluate({
+      rawValue,
+      outputs: Array.from(outputs),
+    });
+    setResults(rows);
+    setLoading(false);
+  }
+
+  function handleClear() {
+    setRawValue("");
+    setOutputs(new Set());
+    setResults(null);
+  }
+
+  const columns: DataTableColumn<SelectionResultRow>[] = [
+    { key: "label", header: t("selection.outputLabel"), width: "180px" },
+    { key: "value", header: t("common.result"), width: "160px" },
+    { key: "remarks", header: t("common.remarks") },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
+        <div className="max-w-xs">
+          <label className="field-label">{t("selection.inputLabel")}</label>
+          <input
+            value={rawValue}
+            onChange={(e) => setRawValue(e.target.value)}
+            placeholder={t("selection.inputPlaceholder")}
+            className="field-input"
+          />
+          <p className="mt-1 text-[11px] text-muted-2">{t("selection.inputHint")}</p>
+        </div>
+
+        <div>
+          <label className="field-label">{t("selection.outputLabel")}</label>
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            {OUTPUT_KEYS.map((key) => (
+              <label key={key} className="checkbox-row cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={outputs.has(key)}
+                  onChange={() => toggleOutput(key)}
+                  className="h-3.5 w-3.5 accent-[var(--accent)]"
+                />
+                {t(`selection.outputs.${key}`)}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
+          <button
+            onClick={handleCalculate}
+            disabled={loading || !rawValue || outputs.size === 0}
+            className="btn-primary"
+          >
+            {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {t("common.calculate")}
+          </button>
+          <button onClick={handleClear} className="btn-secondary">
+            {t("common.clear")}
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <span className="panel-title">{t("selection.resultTitle")}</span>
+        {results && results.length > 0 && (
+          <p className="border-b border-border px-1 py-2 text-[11px] text-warning">
+            {t("selection.ruleNotice")}
+          </p>
+        )}
+        <DataTable
+          columns={columns}
+          rows={results ?? []}
+          rowKey={(r) => r.id}
+          loading={loading}
+          emptyMessage={t("selection.resultEmpty")}
+        />
+      </div>
+    </div>
+  );
+}

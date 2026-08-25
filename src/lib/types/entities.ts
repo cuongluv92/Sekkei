@@ -136,6 +136,74 @@ export interface SelectionResultRow {
   remarks?: string;
 }
 
+/** 選定 (低圧電動機回路) の電圧クラス・回路方式。 */
+export type SelectionVoltageClass = "100V" | "200V" | "400V";
+export type SelectionCircuitType = "direct" | "starDelta" | "inverter";
+
+/**
+ * 電動機回路選定マスタ (motor_starter_selections) — メーカー・電圧クラス・
+ * 回路方式ごとに、ある出力(kW)/定格電流(A)の電動機に対して実際に採用する
+ * ブレーカー→CT→AM→電磁開閉器・電磁接触器(またはインバーター)→電線サイズの
+ * 組み合わせを1行にまとめたもの。社内選定マスタ (busbar_sizes/
+ * earth_wire_sizes と同じ位置づけ) — 会社が実際に使う機器だけを 設定 から
+ * 手入力する。メーカーカタログを丸ごと取り込むことはしない(使わない型式が
+ * 大量に混ざって手間が増えるだけ、という現場判断)。空のまま始まる。
+ */
+export interface MotorStarterSelection {
+  id: string;
+  manufacturerId: string;
+  voltageClass: SelectionVoltageClass;
+  circuitType: SelectionCircuitType;
+  motorKw: number;
+  ratedCurrent: number; // 電動機定格電流 (A)
+  breakerModel?: string;
+  breakerRatedCurrent?: number;
+  ctModel?: string;
+  ctRatio?: string;
+  amRange?: string;
+  contactorModel?: string; // 電磁開閉器・電磁接触器
+  inverterModel?: string; // インバーター (circuitType: "inverter" のみ)
+  wireSize?: string;
+  remarks?: string;
+  order: number;
+}
+
+/**
+ * 主幹(一次側)選定マスタ (main_breaker_selections) — 幹線の総電流(A)から
+ * 主開閉器を選ぶための表。motor_starter_selections とは別の独立したマスタ
+ * (電動機1台ごとの表ではないため)。
+ */
+export interface MainBreakerSelection {
+  id: string;
+  manufacturerId: string;
+  voltageClass: SelectionVoltageClass;
+  ratedCurrent: number; // この値以上の最小行を採用
+  breakerModel: string;
+  poles?: string;
+  wireSize?: string;
+  remarks?: string;
+  order: number;
+}
+
+/**
+ * 選定 > 分岐(電動機回路) タブで、案件ごとに保存する1回路分の入力+結果。
+ * calculationRecordService 経由で 案件 に紐づけて保存する (専用テーブルは
+ * 持たない — 部品製作の行のような独立管理が要らないシンプルなリストなので、
+ * 他の計算モジュールと同じ jsonb 保存の方が適している)。`matched` が
+ * false のときは対応するマスタ行が無かったことを示す — 値を捏造しない。
+ */
+export interface MotorSelectionBranchItem {
+  id: string;
+  label: string; // 用途・回路名 (自由記述、例: "コンプレッサー1")
+  manufacturerId: string;
+  voltageClass: SelectionVoltageClass;
+  circuitType: SelectionCircuitType;
+  inputUnit: "kW" | "A";
+  inputValue: number;
+  matched: boolean;
+  matchedRow?: MotorStarterSelection;
+}
+
 /**
  * One row of the real 選定 rule table (SelectionEngine → RuleRepository).
  * `minValue`/`maxValue` are the input range (inclusive) this rule covers for
