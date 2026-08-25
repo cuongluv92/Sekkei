@@ -214,6 +214,7 @@ const vi: Dictionary = {
       "Tìm kiếm 部品データ và double click để thêm vào danh sách bên dưới. Sau khi thêm bạn có thể chỉnh sửa riêng cho 案件 này (không ảnh hưởng 部品データ gốc).",
     searchPlaceholder: "Tìm theo model hoặc tên linh kiện",
     tableTitle: "Danh sách linh kiện",
+    jumpToList: "Đến 部品リスト",
     tableEmpty:
       "Chưa có linh kiện nào. Hãy double click vào kết quả tìm kiếm ở trên.",
     addRow: "Thêm dòng",

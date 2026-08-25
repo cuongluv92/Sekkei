@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowDown,
   CornerLeftDown,
   CornerLeftUp,
   FileSpreadsheet,
@@ -339,6 +340,14 @@ function PartAssemblyView() {
           <div className="panel">
             <div className="panel-header">
               <span className="panel-title">{t("common.search")}</span>
+              <button
+                type="button"
+                onClick={() => document.getElementById("part-assembly-table")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                className="btn-ghost !py-1 !text-[12px]"
+              >
+                <ArrowDown className="h-3.5 w-3.5" />
+                {t("partAssembly.jumpToList")}
+              </button>
             </div>
             <div className="panel-body">
               <PartMasterSearch
@@ -351,7 +360,7 @@ function PartAssemblyView() {
             </div>
           </div>
 
-          <div className="panel">
+          <div id="part-assembly-table" className="panel scroll-mt-4">
             <div className="panel-header">
               <div className="flex items-center gap-2.5">
                 <span className="panel-title">

@@ -204,6 +204,7 @@ export interface Dictionary {
     description: string;
     searchPlaceholder: string;
     tableTitle: string;
+    jumpToList: string;
     tableEmpty: string;
     addRow: string;
     reorderHint: string;
