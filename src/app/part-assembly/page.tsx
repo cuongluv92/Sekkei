@@ -410,11 +410,11 @@ function PartAssemblyView() {
                     <th style={{ width: "190px" }}>
                       {t("common.specification")}
                     </th>
-                    <th style={{ width: "80px" }} className="text-right">
-                      {t("common.weight")}
-                    </th>
                     <th style={{ width: "70px" }} className="text-right">
                       {t("common.quantity")}
+                    </th>
+                    <th style={{ width: "80px" }} className="text-right">
+                      {t("common.weight")}
                     </th>
                     <th style={{ width: "150px" }}>{t("common.remarks")}</th>
                     <th style={{ width: "40px" }} />
@@ -545,6 +545,19 @@ function PartAssemblyView() {
                           <input
                             type="number"
                             min={0}
+                            value={row.quantity}
+                            onChange={(e) =>
+                              updateField(row.id, {
+                                quantity: Number(e.target.value),
+                              })
+                            }
+                            className="field-input w-16 py-1 text-right"
+                          />
+                        </td>
+                        <td className="text-right">
+                          <input
+                            type="number"
+                            min={0}
                             step="any"
                             value={row.weight ?? ""}
                             onChange={(e) => {
@@ -560,19 +573,6 @@ function PartAssemblyView() {
                               ×{row.quantity}={roundTo(rowWeightTotal(row) ?? 0, 2)}
                             </div>
                           )}
-                        </td>
-                        <td className="text-right">
-                          <input
-                            type="number"
-                            min={0}
-                            value={row.quantity}
-                            onChange={(e) =>
-                              updateField(row.id, {
-                                quantity: Number(e.target.value),
-                              })
-                            }
-                            className="field-input w-16 py-1 text-right"
-                          />
                         </td>
                         <td>
                           <input
@@ -675,8 +675,8 @@ function PartAssemblyView() {
                     <th>{t("common.manufacturer")}</th>
                     <th>{t("common.model")}</th>
                     <th>{t("common.specification")}</th>
-                    <th className="text-right">{t("common.weight")}</th>
                     <th className="text-right">{t("common.quantity")}</th>
+                    <th className="text-right">{t("common.weight")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -687,8 +687,8 @@ function PartAssemblyView() {
                       <td>{row.manufacturerId ? getManufacturerById(row.manufacturerId)?.name ?? "" : ""}</td>
                       <td className="font-mono text-[12px]">{row.model}</td>
                       <td>{row.specification}</td>
-                      <td className="text-right">{row.weight ?? ""}</td>
                       <td className="text-right">{row.quantity}</td>
+                      <td className="text-right">{row.weight ?? ""}</td>
                     </tr>
                   ))}
                 </tbody>
