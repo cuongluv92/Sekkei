@@ -1533,7 +1533,7 @@ function FaceRow({
             title={t("weightCalc.panel.body.openingTitle")}
             value={opening.W}
             onChange={(e) => opening.onChangeW(e.target.value)}
-            className="field-input !w-12 !py-0.5 !text-[11px]"
+            className="field-input !w-[4.5rem] !py-0.5 !text-[12px]"
           />
           <input
             type="number"
@@ -1542,7 +1542,7 @@ function FaceRow({
             title={t("weightCalc.panel.body.openingTitle")}
             value={opening.H}
             onChange={(e) => opening.onChangeH(e.target.value)}
-            className="field-input !w-12 !py-0.5 !text-[11px]"
+            className="field-input !w-[4.5rem] !py-0.5 !text-[12px]"
           />
         </>
       )}
