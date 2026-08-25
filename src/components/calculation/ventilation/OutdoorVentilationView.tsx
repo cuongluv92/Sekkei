@@ -11,6 +11,9 @@ import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calcu
 import { FormulaBlock, SourceNote } from "@/components/calculation/FormulaBlock";
 import { HeatSourceList } from "./HeatSourceList";
 
+/** 地域未選択時のデフォルト — 社内選定マスタに常に存在する基準地域。 */
+const DEFAULT_REGION = "東京";
+
 interface SurfaceAreaState {
   roofM2Raw: string;
   face1M2Raw: string;
@@ -124,6 +127,14 @@ export function OutdoorVentilationView({ caseId }: Props) {
       cancelled = true;
     };
   }, [caseId]);
+
+  // 保存済みの地域選択が無い場合は東京をデフォルトにする(未選択のまま「—」を
+  // 表示し続けない — 社内選定マスタに登録済みの地域のうち東京を基準値とする)。
+  useEffect(() => {
+    if (!loaded || climateProfileId) return;
+    const tokyo = climateProfiles.find((c) => c.region === DEFAULT_REGION);
+    if (tokyo) setClimateProfileId(tokyo.id);
+  }, [loaded, climateProfileId, climateProfiles]);
 
   const climate = climateProfiles.find((c) => c.id === climateProfileId) ?? null;
   const totalHeatGainW = sumHeatSourcesW(heatSources);
