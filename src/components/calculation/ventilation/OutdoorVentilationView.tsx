@@ -8,6 +8,7 @@ import { computeOutdoorVentilation } from "@/lib/calc/ventilation/outdoorVentila
 import { sumHeatSourcesW, type HeatSourceItem } from "@/lib/calc/ventilation/heatBalance";
 import type { VentilationClimateProfile } from "@/lib/types";
 import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calculation/OutlineDrawingUpload";
+import { FormulaBlock, SourceNote } from "@/components/calculation/FormulaBlock";
 import { HeatSourceList } from "./HeatSourceList";
 
 interface SurfaceAreaState {
@@ -249,29 +250,46 @@ export function OutdoorVentilationView({ caseId }: Props) {
 
       <HeatSourceList value={heatSources} onChange={setHeatSources} />
 
-      <div className="flex flex-col gap-3 border-t border-border pt-4">
-        <div className="flex items-center gap-2">
-          <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
-            {t("ventilationCalc.manualInputBadge")}
-          </span>
-          <span className="panel-title">{t("ventilationCalc.surfaceAreaTitle")}</span>
-        </div>
-        <p className="text-[12px] text-muted">{t("ventilationCalc.surfaceAreaHintOutdoor")}</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <NumField label="SRO (屋根/上面)" hintKey="ventilationCalc.roofAreaHint" value={surfaceAreas.roofM2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, roofM2Raw: v })} unit="m²" />
-          <NumField label="面1 (SSE)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face1M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face1M2Raw: v })} unit="m²" />
-          <NumField label="面2 (SWS)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face2M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face2M2Raw: v })} unit="m²" />
-          <NumField label="面3 (SNW)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face3M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face3M2Raw: v })} unit="m²" />
-          <NumField label="面4 (SNE)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face4M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face4M2Raw: v })} unit="m²" />
-          <NumField label="URO" hintKey="ventilationCalc.transmittanceRoofHint" value={surfaceAreas.roofTransmittanceRaw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, roofTransmittanceRaw: v })} unit="W/m²K" />
-          <NumField label="USO" hintKey="ventilationCalc.transmittanceSideHint" value={surfaceAreas.sideTransmittanceRaw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, sideTransmittanceRaw: v })} unit="W/m²K" />
-        </div>
-        {result && (
-          <div className="flex items-center gap-2 pt-1">
-            <span className="rounded border border-border px-1.5 py-0.5 text-[10px] font-semibold text-muted-2">
-              {t("ventilationCalc.autoCalcBadge")}
+      <div className="grid grid-cols-1 gap-4 border-t border-border pt-4 lg:grid-cols-[1fr_320px]">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
+              {t("ventilationCalc.manualInputBadge")}
             </span>
-            <span className="font-mono text-[12px] text-muted">QBO = {result.naturalHeatLossW.toFixed(1)} W</span>
+            <span className="panel-title">{t("ventilationCalc.surfaceAreaTitle")}</span>
+          </div>
+          <p className="text-[12px] text-muted">{t("ventilationCalc.surfaceAreaHintOutdoor")}</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <NumField label="SRO (屋根/上面)" hintKey="ventilationCalc.roofAreaHint" value={surfaceAreas.roofM2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, roofM2Raw: v })} unit="m²" />
+            <NumField label="面1 (SSE)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face1M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face1M2Raw: v })} unit="m²" />
+            <NumField label="面2 (SWS)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face2M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face2M2Raw: v })} unit="m²" />
+            <NumField label="面3 (SNW)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face3M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face3M2Raw: v })} unit="m²" />
+            <NumField label="面4 (SNE)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face4M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face4M2Raw: v })} unit="m²" />
+            <NumField label="URO" hintKey="ventilationCalc.transmittanceRoofHint" value={surfaceAreas.roofTransmittanceRaw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, roofTransmittanceRaw: v })} unit="W/m²K" />
+            <NumField label="USO" hintKey="ventilationCalc.transmittanceSideHint" value={surfaceAreas.sideTransmittanceRaw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, sideTransmittanceRaw: v })} unit="W/m²K" />
+          </div>
+          {result && (
+            <FormulaBlock
+              badge={t("ventilationCalc.autoCalcBadge")}
+              lines={[
+                {
+                  formula: "QBO = URO(tt−to)SRO + USO(ti−to)ΣS − URO・tSH・SRO − USO・Σ(t面・S面)",
+                  result: `${result.naturalHeatLossW.toFixed(1)} W`,
+                },
+              ]}
+            />
+          )}
+        </div>
+
+        {caseId && (
+          <div className="lg:pt-8">
+            <OutlineDrawingUpload
+              caseId={caseId}
+              calculationType={CALCULATION_TYPE}
+              value={outlineDrawing}
+              onChange={setOutlineDrawing}
+            />
+            <p className="mt-1.5 text-[10.5px] text-muted-2">{t("ventilationCalc.outlineDrawingHintOutdoor")}</p>
           </div>
         )}
       </div>
@@ -299,14 +317,7 @@ export function OutdoorVentilationView({ caseId }: Props) {
         />
       )}
 
-      {caseId && (
-        <OutlineDrawingUpload
-          caseId={caseId}
-          calculationType={CALCULATION_TYPE}
-          value={outlineDrawing}
-          onChange={setOutlineDrawing}
-        />
-      )}
+      <SourceNote title={t("ventilationCalc.outdoorSourceTitle")} body={t("ventilationCalc.outdoorSourceBody")} />
 
       <div className="flex items-center gap-2 border-t border-border pt-3">
         <button onClick={handleSave} disabled={!caseId || saving} className="btn-primary">
@@ -398,6 +409,7 @@ export function VentilationResultPanel({
   onFanCapacityChange,
   filterRatedVelocityMPerSRaw,
   onFilterRatedVelocityChange,
+  heatLossLabel = "QBO",
 }: {
   totalHeatGainW: number;
   naturalHeatLossW: number;
@@ -415,6 +427,8 @@ export function VentilationResultPanel({
   onFanCapacityChange: (v: string) => void;
   filterRatedVelocityMPerSRaw: string;
   onFilterRatedVelocityChange: (v: string) => void;
+  /** 自然放熱の記号 — 屋外はQBO、屋内はQBi (呼び方が違うだけで判定式は同じ)。 */
+  heatLossLabel?: string;
 }) {
   const { t } = useTranslation();
   const naturalRemoval = naturalHeatLossW + naturalVentilationHeatRemovalW;
@@ -427,10 +441,20 @@ export function VentilationResultPanel({
         </span>
         <span className="panel-title">{t("ventilationCalc.judgementTitle")}</span>
       </div>
-      <p className="font-mono text-[12px] text-muted">
-        αxAx = {effectiveVentAreaM2.toFixed(5)} m² ・ QV = {naturalVentilationHeatRemovalW.toFixed(1)} W ・ Qc(
-        {totalHeatGainW.toFixed(1)}W) {naturalVentilationSufficient ? "≦" : ">"} 自然換気({naturalRemoval.toFixed(1)}W)
-      </p>
+      <FormulaBlock
+        badge={t("ventilationCalc.autoCalcBadge")}
+        lines={[
+          { formula: "αxAx = 1/√((1/(α・Ai))² + (1/(α・Ao))²・(322/304))", result: `${effectiveVentAreaM2.toFixed(5)} m²` },
+          {
+            formula: "QV = Cp・ρE・αxAx・√(2g・h・(ti−to)/(273+ti))・(tt−to)・1000",
+            result: `${naturalVentilationHeatRemovalW.toFixed(1)} W`,
+          },
+          {
+            formula: `Qc(${totalHeatGainW.toFixed(1)}W) ${naturalVentilationSufficient ? "≦" : ">"} ${heatLossLabel}+QV(${naturalRemoval.toFixed(1)}W)`,
+            result: naturalVentilationSufficient ? t("ventilationCalc.naturalSufficient") : t("ventilationCalc.forcedRequired"),
+          },
+        ]}
+      />
       <div className={naturalVentilationSufficient ? "rounded-md border border-success/40 bg-success/10 px-3 py-2" : "rounded-md border border-warning/40 bg-warning/10 px-3 py-2"}>
         <span className={naturalVentilationSufficient ? "badge-success" : "badge-danger"}>
           {naturalVentilationSufficient ? t("ventilationCalc.naturalSufficient") : t("ventilationCalc.forcedRequired")}
@@ -445,9 +469,11 @@ export function VentilationResultPanel({
             </span>
             <span className="panel-title">{t("ventilationCalc.forcedVentilationTitle")}</span>
           </div>
-          <p className="text-[12px] text-muted">
-            WK = {requiredForcedAirflowM3PerH?.toFixed(1)} m³/h — {t("ventilationCalc.forcedVentilationHint")}
-          </p>
+          <FormulaBlock
+            badge={t("ventilationCalc.autoCalcBadge")}
+            lines={[{ formula: "WK = 3.6・(QC−QBO−QV)/(Cp・ρE・(ti−to)・X)", result: `${requiredForcedAirflowM3PerH?.toFixed(1) ?? "—"} m³/h` }]}
+          />
+          <p className="text-[12px] text-muted">{t("ventilationCalc.forcedVentilationHint")}</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <NumField
               label={t("ventilationCalc.fanCapacityLabel")}

@@ -7,6 +7,7 @@ import { calculationRecordService } from "@/lib/services";
 import { computeIndoorVentilation } from "@/lib/calc/ventilation/indoorVentilation";
 import { sumHeatSourcesW, type HeatSourceItem } from "@/lib/calc/ventilation/heatBalance";
 import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calculation/OutlineDrawingUpload";
+import { FormulaBlock, SourceNote } from "@/components/calculation/FormulaBlock";
 import { HeatSourceList } from "./HeatSourceList";
 import { NumField, VentilationResultPanel, VentOpeningFields } from "./OutdoorVentilationView";
 
@@ -179,30 +180,43 @@ export function IndoorVentilationView({ caseId }: Props) {
 
       <HeatSourceList value={heatSources} onChange={setHeatSources} />
 
-      <div className="flex flex-col gap-3 border-t border-border pt-4">
-        <div className="flex items-center gap-2">
-          <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
-            {t("ventilationCalc.manualInputBadge")}
-          </span>
-          <span className="panel-title">{t("ventilationCalc.surfaceAreaTitle")}</span>
-        </div>
-        <p className="text-[12px] text-muted">{t("ventilationCalc.surfaceAreaHintIndoor")}</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <NumField label="W (横幅)" hintKey="ventilationCalc.widthHint" value={dimensions.widthMRaw} onChange={(v) => setDimensions({ ...dimensions, widthMRaw: v })} unit="m" />
-          <NumField label="H (高さ)" hintKey="ventilationCalc.heightHint" value={dimensions.heightMRaw} onChange={(v) => setDimensions({ ...dimensions, heightMRaw: v })} unit="m" />
-          <NumField label="D (奥行)" hintKey="ventilationCalc.depthHint" value={dimensions.depthMRaw} onChange={(v) => setDimensions({ ...dimensions, depthMRaw: v })} unit="m" />
-          <NumField label="URi" hintKey="ventilationCalc.transmittanceRoofHint" value={dimensions.roofTransmittanceRaw} onChange={(v) => setDimensions({ ...dimensions, roofTransmittanceRaw: v })} unit="W/m²K" />
-          <NumField label="USi" hintKey="ventilationCalc.transmittanceSideHint" value={dimensions.sideTransmittanceRaw} onChange={(v) => setDimensions({ ...dimensions, sideTransmittanceRaw: v })} unit="W/m²K" />
-        </div>
-        {result && (
-          <div className="flex items-center gap-2 pt-1">
-            <span className="rounded border border-border px-1.5 py-0.5 text-[10px] font-semibold text-muted-2">
-              {t("ventilationCalc.autoCalcBadge")}
+      <div className="grid grid-cols-1 gap-4 border-t border-border pt-4 lg:grid-cols-[1fr_320px]">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
+              {t("ventilationCalc.manualInputBadge")}
             </span>
-            <span className="font-mono text-[12px] text-muted">
-              SRi = {result.roofAreaM2.toFixed(2)} m² ・ SSi = {result.sideAreaM2.toFixed(2)} m² ・ QBi ={" "}
-              {result.naturalHeatLossW.toFixed(1)} W
-            </span>
+            <span className="panel-title">{t("ventilationCalc.surfaceAreaTitle")}</span>
+          </div>
+          <p className="text-[12px] text-muted">{t("ventilationCalc.surfaceAreaHintIndoor")}</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <NumField label="W (横幅)" hintKey="ventilationCalc.widthHint" value={dimensions.widthMRaw} onChange={(v) => setDimensions({ ...dimensions, widthMRaw: v })} unit="m" />
+            <NumField label="H (高さ)" hintKey="ventilationCalc.heightHint" value={dimensions.heightMRaw} onChange={(v) => setDimensions({ ...dimensions, heightMRaw: v })} unit="m" />
+            <NumField label="D (奥行)" hintKey="ventilationCalc.depthHint" value={dimensions.depthMRaw} onChange={(v) => setDimensions({ ...dimensions, depthMRaw: v })} unit="m" />
+            <NumField label="URi" hintKey="ventilationCalc.transmittanceRoofHint" value={dimensions.roofTransmittanceRaw} onChange={(v) => setDimensions({ ...dimensions, roofTransmittanceRaw: v })} unit="W/m²K" />
+            <NumField label="USi" hintKey="ventilationCalc.transmittanceSideHint" value={dimensions.sideTransmittanceRaw} onChange={(v) => setDimensions({ ...dimensions, sideTransmittanceRaw: v })} unit="W/m²K" />
+          </div>
+          {result && (
+            <FormulaBlock
+              badge={t("ventilationCalc.autoCalcBadge")}
+              lines={[
+                { formula: "SRi = W × D", result: `${result.roofAreaM2.toFixed(2)} m²` },
+                { formula: "SSi = 2(W×H) + 2(D×H)", result: `${result.sideAreaM2.toFixed(2)} m²` },
+                { formula: "QBi = URi(tt−to)SRi + USi(ti−to)SSi", result: `${result.naturalHeatLossW.toFixed(1)} W` },
+              ]}
+            />
+          )}
+        </div>
+
+        {caseId && (
+          <div className="lg:pt-8">
+            <OutlineDrawingUpload
+              caseId={caseId}
+              calculationType={CALCULATION_TYPE}
+              value={outlineDrawing}
+              onChange={setOutlineDrawing}
+            />
+            <p className="mt-1.5 text-[10.5px] text-muted-2">{t("ventilationCalc.outlineDrawingHintIndoor")}</p>
           </div>
         )}
       </div>
@@ -227,17 +241,11 @@ export function IndoorVentilationView({ caseId }: Props) {
           onFanCapacityChange={(v) => setVentOpening({ ...ventOpening, fanCapacityM3PerHPerUnitRaw: v })}
           filterRatedVelocityMPerSRaw={ventOpening.filterRatedVelocityMPerSRaw}
           onFilterRatedVelocityChange={(v) => setVentOpening({ ...ventOpening, filterRatedVelocityMPerSRaw: v })}
+          heatLossLabel="QBi"
         />
       )}
 
-      {caseId && (
-        <OutlineDrawingUpload
-          caseId={caseId}
-          calculationType={CALCULATION_TYPE}
-          value={outlineDrawing}
-          onChange={setOutlineDrawing}
-        />
-      )}
+      <SourceNote title={t("ventilationCalc.indoorSourceTitle")} body={t("ventilationCalc.indoorSourceBody")} />
 
       <div className="flex items-center gap-2 border-t border-border pt-3">
         <button onClick={handleSave} disabled={!caseId || saving} className="btn-primary">

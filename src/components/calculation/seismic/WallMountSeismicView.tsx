@@ -7,6 +7,7 @@ import { calculationRecordService, seismicAnchorBoltService } from "@/lib/servic
 import { computeWallMountAnchorForces } from "@/lib/calc/seismic/wallMountAnchor";
 import type { SeismicAnchorAllowable } from "@/lib/types";
 import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calculation/OutlineDrawingUpload";
+import { FormulaBlock, SourceNote } from "@/components/calculation/FormulaBlock";
 import {
   AnchorBoltSection,
   blankAnchorBoltInputState,
@@ -150,33 +151,59 @@ export function WallMountSeismicView({ caseId }: Props) {
 
       <SeismicForceSection value={force} onChange={setForce} />
 
-      <div className="flex flex-col gap-3 border-t border-border pt-4">
-        <div className="flex items-center gap-2">
-          <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
-            {t("seismicCalc.manualInputBadge")}
-          </span>
-          <span className="panel-title">{t("seismicCalc.section2TitleWall")}</span>
-        </div>
-        <p className="text-[12px] text-muted">{t("seismicCalc.section2HintWall")}</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <GeoField label="ℓ1 (水平方向)" hintKey="seismicCalc.l1Hint" value={geometry.horizontalSpanMmRaw} onChange={(v) => setGeometry({ ...geometry, horizontalSpanMmRaw: v })} />
-          <GeoField label="ℓ2 (鉛直方向)" hintKey="seismicCalc.l2Hint" value={geometry.verticalSpanMmRaw} onChange={(v) => setGeometry({ ...geometry, verticalSpanMmRaw: v })} />
-          <GeoField label="ℓ2G" hintKey="seismicCalc.l2gHint" value={geometry.verticalCenterToGravityMmRaw} onChange={(v) => setGeometry({ ...geometry, verticalCenterToGravityMmRaw: v })} />
-          <GeoField label="ℓ3G" hintKey="seismicCalc.l3gHint" value={geometry.wallToGravityMmRaw} onChange={(v) => setGeometry({ ...geometry, wallToGravityMmRaw: v })} />
-          <GeoField label="nt1 (上下面片側)" hintKey="seismicCalc.nt1Hint" value={geometry.horizontalFaceBoltCountRaw} onChange={(v) => setGeometry({ ...geometry, horizontalFaceBoltCountRaw: v })} />
-          <GeoField label="nt2 (側面片側)" hintKey="seismicCalc.nt2Hint" value={geometry.verticalFaceBoltCountRaw} onChange={(v) => setGeometry({ ...geometry, verticalFaceBoltCountRaw: v })} />
-          <GeoField label="n (総本数)" hintKey="seismicCalc.nTotalHint" value={geometry.totalBoltCountRaw} onChange={(v) => setGeometry({ ...geometry, totalBoltCountRaw: v })} />
+      <div className="grid grid-cols-1 gap-4 border-t border-border pt-4 lg:grid-cols-[1fr_320px]">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
+              {t("seismicCalc.manualInputBadge")}
+            </span>
+            <span className="panel-title">{t("seismicCalc.section2TitleWall")}</span>
+          </div>
+          <p className="text-[12px] text-muted">{t("seismicCalc.section2HintWall")}</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <GeoField label="ℓ1 (水平方向)" hintKey="seismicCalc.l1Hint" value={geometry.horizontalSpanMmRaw} onChange={(v) => setGeometry({ ...geometry, horizontalSpanMmRaw: v })} />
+            <GeoField label="ℓ2 (鉛直方向)" hintKey="seismicCalc.l2Hint" value={geometry.verticalSpanMmRaw} onChange={(v) => setGeometry({ ...geometry, verticalSpanMmRaw: v })} />
+            <GeoField label="ℓ2G" hintKey="seismicCalc.l2gHint" value={geometry.verticalCenterToGravityMmRaw} onChange={(v) => setGeometry({ ...geometry, verticalCenterToGravityMmRaw: v })} />
+            <GeoField label="ℓ3G" hintKey="seismicCalc.l3gHint" value={geometry.wallToGravityMmRaw} onChange={(v) => setGeometry({ ...geometry, wallToGravityMmRaw: v })} />
+            <GeoField label="nt1 (上下面片側)" hintKey="seismicCalc.nt1Hint" value={geometry.horizontalFaceBoltCountRaw} onChange={(v) => setGeometry({ ...geometry, horizontalFaceBoltCountRaw: v })} />
+            <GeoField label="nt2 (側面片側)" hintKey="seismicCalc.nt2Hint" value={geometry.verticalFaceBoltCountRaw} onChange={(v) => setGeometry({ ...geometry, verticalFaceBoltCountRaw: v })} />
+            <GeoField label="n (総本数)" hintKey="seismicCalc.nTotalHint" value={geometry.totalBoltCountRaw} onChange={(v) => setGeometry({ ...geometry, totalBoltCountRaw: v })} />
+          </div>
+
+          {anchorResult && (
+            <FormulaBlock
+              badge={t("seismicCalc.autoCalcBadge")}
+              lines={[
+                {
+                  formula: "Rb(①式) = FH×ℓ3G/(ℓ1×nt2) + (W+FV)×ℓ3G/(ℓ2×nt1)",
+                  result: `${anchorResult.pulloutFormula1Kn.toFixed(3)} kN/本`,
+                },
+                {
+                  formula: "Rb(②式) = FH×(ℓ2−ℓ2G)/(ℓ2×nt1) + (W+FV)×ℓ3G/(ℓ2×nt1)",
+                  result: `${anchorResult.pulloutFormula2Kn.toFixed(3)} kN/本`,
+                },
+                {
+                  formula: `${t("seismicCalc.governingFormula")}: ${anchorResult.governingFormula}`,
+                  result: `Rb = ${anchorResult.pulloutForceKn.toFixed(3)} kN/本`,
+                },
+                {
+                  formula: "Q = √(FH² + (W+FV)²) / n",
+                  result: `${anchorResult.shearForcePerBoltKn.toFixed(3)} kN/本`,
+                },
+              ]}
+            />
+          )}
         </div>
 
-        {anchorResult && (
-          <div className="flex items-center gap-2 pt-1">
-            <span className="rounded border border-border px-1.5 py-0.5 text-[10px] font-semibold text-muted-2">
-              {t("seismicCalc.autoCalcBadge")}
-            </span>
-            <span className="font-mono text-[12px] text-muted">
-              Rb(①式)={anchorResult.pulloutFormula1Kn.toFixed(3)}kN ・ Rb(②式)={anchorResult.pulloutFormula2Kn.toFixed(3)}kN ・{" "}
-              {t("seismicCalc.governingFormula")}: {anchorResult.governingFormula}
-            </span>
+        {caseId && (
+          <div className="lg:pt-8">
+            <OutlineDrawingUpload
+              caseId={caseId}
+              calculationType={CALCULATION_TYPE}
+              value={outlineDrawing}
+              onChange={setOutlineDrawing}
+            />
+            <p className="mt-1.5 text-[10.5px] text-muted-2">{t("seismicCalc.outlineDrawingHintWall")}</p>
           </div>
         )}
       </div>
@@ -189,14 +216,7 @@ export function WallMountSeismicView({ caseId }: Props) {
         shearForcePerBoltKn={anchorResult ? anchorResult.shearForcePerBoltKn : null}
       />
 
-      {caseId && (
-        <OutlineDrawingUpload
-          caseId={caseId}
-          calculationType={CALCULATION_TYPE}
-          value={outlineDrawing}
-          onChange={setOutlineDrawing}
-        />
-      )}
+      <SourceNote title={t("seismicCalc.wallSourceTitle")} body={t("seismicCalc.wallSourceBody")} />
 
       <div className="flex items-center gap-2 border-t border-border pt-3">
         <button onClick={handleSave} disabled={!caseId || saving} className="btn-primary">

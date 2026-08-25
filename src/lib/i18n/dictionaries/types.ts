@@ -539,6 +539,12 @@ export interface Dictionary {
       finalFanCount: string;
     };
     savedAt: string;
+    outlineDrawingHintOutdoor: string;
+    outlineDrawingHintIndoor: string;
+    outdoorSourceTitle: string;
+    outdoorSourceBody: string;
+    indoorSourceTitle: string;
+    indoorSourceBody: string;
   };
   seismicCalc: {
     title: string;
@@ -661,6 +667,12 @@ export interface Dictionary {
     cubicleRecommendNote: string;
     cubicleSourceTitle: string;
     cubicleSourceBody: string;
+    outlineDrawingHintFloor: string;
+    outlineDrawingHintWall: string;
+    floorSourceTitle: string;
+    floorSourceBody: string;
+    wallSourceTitle: string;
+    wallSourceBody: string;
   };
   busbarCalc: {
     title: string;
