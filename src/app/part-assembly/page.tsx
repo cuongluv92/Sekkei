@@ -226,7 +226,13 @@ function PartAssemblyView() {
         showToast(t("partAssembly.importEmpty"), "error");
         return;
       }
-      setRegisterAnywayRows(new Set());
+      // 仕様重複の警告が出た行も、既定では「別の部品として登録する」— 黙って
+      // 部品データ への登録をスキップすると (旧デフォルト) 実物には存在する
+      // 部品が大量に部品データに反映されない事態になる (共通の定格・仕様の
+      // 文字列を使う部品は現場では珍しくない)。チェックを外せば個別に除外できる。
+      setRegisterAnywayRows(
+        new Set(parsedRows.flatMap((r, i) => (r.specDuplicateModel ? [i] : []))),
+      );
       setImportPreview({ rows: parsedRows, fileName: file.name });
     } catch {
       showToast(t("partAssembly.importError"), "error");

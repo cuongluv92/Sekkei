@@ -149,12 +149,15 @@ export async function registerImportedPartsInMaster(
   rows: PartAssemblyImportRow[],
   registerDuplicatesAnyway: Set<number>,
 ): Promise<void> {
-  await Promise.all(
-    rows.map((row, i) => {
-      if (row.specDuplicateModel && !registerDuplicatesAnyway.has(i)) return undefined;
-      return registerInMasterIfMissing(row);
-    }),
-  );
+  // Sequential, not Promise.all — two rows in the same file that resolve to
+  // the identical (manufacturerId, category, model, specification) key (e.g.
+  // "MCCB1"/"MCCB2" both stripping to the same 記号/型番) would otherwise
+  // both see `findExisting` return nothing at the same time and both create
+  // a row, leaving two duplicate 部品データ records for what should be one.
+  for (const [i, row] of rows.entries()) {
+    if (row.specDuplicateModel && !registerDuplicatesAnyway.has(i)) continue;
+    await registerInMasterIfMissing(row);
+  }
 }
 
 /**
