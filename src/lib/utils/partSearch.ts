@@ -39,7 +39,7 @@ export function matchesAllTokens(
 }
 
 /** Splits a normalized specification string into technical tokens on `/` and whitespace — e.g. "3p 250af/125at 25ka" → ["3p","250af","125at","25ka"]. */
-function tokenizeSpecification(raw: string): string[] {
+export function tokenizeSpecification(raw: string): string[] {
   return normalizeSearchText(raw)
     .split(/[\s/]+/)
     .filter(Boolean);

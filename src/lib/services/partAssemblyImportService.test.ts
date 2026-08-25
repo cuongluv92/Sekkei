@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePartAssemblyImportFile, stripSymbolInstanceNumber } from "./partAssemblyImportService";
+import { parsePartAssemblyImportFile, specificationLooselyMatches, stripSymbolInstanceNumber } from "./partAssemblyImportService";
 
 /**
  * Real-world DXF files exported by Japanese-locale AutoCAD (and a lot of
@@ -137,6 +137,27 @@ describe("stripSymbolInstanceNumber", () => {
 
   it("trims surrounding whitespace", () => {
     expect(stripSymbolInstanceNumber("  MCCB1  ")).toBe("MCCB");
+  });
+});
+
+describe("specificationLooselyMatches", () => {
+  it("matches when the row's AF/AT/pole tokens are all present, ignoring extra free-text notes", () => {
+    expect(specificationLooselyMatches("3P 50AF 30AT 盤内専用品", "3P 50AF/30AT")).toBe(true);
+    expect(specificationLooselyMatches("3P 50AF 30AT", "3P 50AF/30AT 屋外仕様 IP65")).toBe(true);
+  });
+
+  it("does not match when a rating token differs", () => {
+    expect(specificationLooselyMatches("3P 50AF 30AT", "3P 50AF/40AT")).toBe(false);
+    expect(specificationLooselyMatches("3P 50AF 30AT", "2P 50AF/30AT")).toBe(false);
+  });
+
+  it("matches a bare unit token (af/at) against any numbered instance of it", () => {
+    expect(specificationLooselyMatches("AF AT", "3P 50AF/30AT")).toBe(true);
+  });
+
+  it("never matches when the row has no recognizable rating tokens at all", () => {
+    expect(specificationLooselyMatches("屋外仕様 特注品", "3P 50AF/30AT")).toBe(false);
+    expect(specificationLooselyMatches("", "3P 50AF/30AT")).toBe(false);
   });
 });
 

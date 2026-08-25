@@ -1,6 +1,7 @@
 import { addManufacturer, findManufacturerByName } from "@/lib/mock/manufacturers";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { mapRowToRecord, parseTabularFile } from "@/lib/utils/importParsing";
+import { tokenizeSpecification } from "@/lib/utils/partSearch";
 import { extractDxfPartList } from "./dxfPartListExtract";
 import { partDataService } from "./partDataService";
 import type { PartAssemblyRow, PartData } from "@/lib/types";
@@ -46,10 +47,39 @@ async function resolveManufacturerId(name: string): Promise<string> {
   return created.id;
 }
 
+/** A rating token like "3p"/"2p" (極数), "50af"/"af" (フレーム電流), "30at"/"at" (トリップ電流). */
+const RATING_TOKEN_RE = /^(\d+p|\d*af|\d*at)$/;
+
+/**
+ * DXF の 仕様 欄には AF・AT・極数以外の自由記述の注記が混ざることが多く
+ * (実物は「3P 50AF 30AT 盤内専用」のように書かれる) — 部品データ 側のきれいな
+ * 仕様文字列とは完全一致しない。AF(フレーム電流)・AT(トリップ電流)・
+ * 極数(3P/2P等) という代表的な定格トークンだけを取り出して比較することで、
+ * 他の自由記述の違いを無視しつつ、定格が実際に一致する部品だけを拾う。
+ */
+function ratingTokens(specification: string): string[] {
+  return tokenizeSpecification(specification).filter((t) => RATING_TOKEN_RE.test(t));
+}
+
+/** 数字を伴わない裸の単位トークン ("af"/"at") — どの電流値でも良いという意味なので、候補側は末尾一致で十分。 */
+const BARE_UNIT_TOKEN_RE = /^(af|at)$/;
+
+/** 行の仕様から拾える定格トークンが、候補の仕様にすべて含まれているか。定格トークンを1つも拾えない行は対象外 (あてずっぽうで重量を借りない)。 */
+export function specificationLooselyMatches(rowSpecification: string, candidateSpecification: string): boolean {
+  const rowTokens = ratingTokens(rowSpecification);
+  if (rowTokens.length === 0) return false;
+  const candidateTokens = ratingTokens(candidateSpecification);
+  return rowTokens.every((t) =>
+    BARE_UNIT_TOKEN_RE.test(t) ? candidateTokens.some((c) => c.endsWith(t)) : candidateTokens.includes(t),
+  );
+}
+
 /**
  * 型番(model)・仕様・メーカー・品名 から 部品データ に登録済みの一致する部品を
  * 探し、その重量を借りてくる — DXF の部品リストグリッドや大半の Excel BOM に
  * 重量列は無いので、取り込んだだけでは重量が空のままになってしまうため。
+ * インポート/カタログ由来のデータも対象に含める (重量だけは 自動登録 と
+ * インポート のデータをまたいで借りてよい、という現場判断)。
  * 型番が一致しない部品は対象外 (誤った重量を拾うほうが実害が大きい)。
  */
 function findWeightMatch(
@@ -65,7 +95,7 @@ function findWeightMatch(
     : candidates;
   const pool = byMaker.length > 0 ? byMaker : candidates;
   const bySpec = row.specification
-    ? pool.filter((p) => normalize(p.specification) === normalize(row.specification))
+    ? pool.filter((p) => specificationLooselyMatches(row.specification, p.specification))
     : pool;
   return (bySpec.length > 0 ? bySpec : pool)[0]?.weight;
 }

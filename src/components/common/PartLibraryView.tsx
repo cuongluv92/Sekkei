@@ -390,33 +390,41 @@ export function PartLibraryView<T extends LibraryItem>({
         }
       />
 
+      {/* source (データ元) タブ — 部品製作から自動登録された部品 (自作/手配品) を、
+          インポート画面/カタログ由来の部品と完全に別の区画として切り替えられる
+          ようにする。フィルターバーの一部ではなく、独立したタブとして
+          ページ上部に大きく置く (メーカー/分類などの絞り込みとは別物、という
+          見た目上の区別を明確にするため — 見た目もインポート由来のデータとは
+          関わりが無いことがひと目でわかるように)。 */}
       {sources.length > 1 && (
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={() => setSourceFilter("")}
-            className={
-              sourceFilter === ""
-                ? "rounded-md bg-accent px-3 py-1.5 text-[12px] font-bold text-accent-foreground"
-                : "rounded-md border border-border-strong px-3 py-1.5 text-[12px] font-semibold text-muted hover:text-foreground"
-            }
-          >
-            {t("common.all")}
-          </button>
-          {sources.map((source) => (
+        <div className="-mx-1 overflow-x-auto px-1">
+          <div className="flex w-max min-w-full gap-1 border-b border-border pb-0">
             <button
-              key={source}
               type="button"
-              onClick={() => setSourceFilter(source)}
+              onClick={() => setSourceFilter("")}
               className={
-                sourceFilter === source
-                  ? "rounded-md bg-accent px-3 py-1.5 text-[12px] font-bold text-accent-foreground"
-                  : "rounded-md border border-border-strong px-3 py-1.5 text-[12px] font-semibold text-muted hover:text-foreground"
+                sourceFilter === ""
+                  ? "shrink-0 whitespace-nowrap border-b-2 border-accent px-3.5 py-2.5 text-[14px] font-bold text-accent"
+                  : "shrink-0 whitespace-nowrap border-b-2 border-transparent px-3.5 py-2.5 text-[14px] font-semibold text-muted hover:text-foreground"
               }
             >
-              {source}
+              {t("common.all")}
             </button>
-          ))}
+            {sources.map((source) => (
+              <button
+                key={source}
+                type="button"
+                onClick={() => setSourceFilter(source)}
+                className={
+                  sourceFilter === source
+                    ? "shrink-0 whitespace-nowrap border-b-2 border-accent px-3.5 py-2.5 text-[14px] font-bold text-accent"
+                    : "shrink-0 whitespace-nowrap border-b-2 border-transparent px-3.5 py-2.5 text-[14px] font-semibold text-muted hover:text-foreground"
+                }
+              >
+                {source}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
