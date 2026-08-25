@@ -40,6 +40,14 @@ describe("computeOutdoorNaturalHeatLossW", () => {
     const s = { roofM2: 7.5, face1M2: 5.39, face2M2: 7.35, face3M2: 5.39, face4M2: 7.05 };
     expect(computeOutdoorNaturalHeatLossW(air, solar, u, s)).toBeCloseTo(677.3157, 3);
   });
+
+  it("独立した別業者の換気計算書 (動力制御盤・計装盤用キュービクル, 非対称な外形寸法H1/H2) でも QBO ≈ 1006.2W と一致する", () => {
+    const air = { ambientTempC: 29.9, topTempC: 50, airSpecificHeatKjPerKgK: 1.018, airDensityKgPerM3: 1.154 };
+    const solar = { roofC: 12.0, face1C: 0.9, face2C: 8.9, face3C: 7.1, face4C: 0.9 };
+    const u = { roofWPerM2K: 6.6, sideWPerM2K: 6.1 };
+    const s = { roofM2: 5.712, face1M2: 4.7, face2M2: 5.64, face3M2: 4.7, face4M2: 5.52 };
+    expect(computeOutdoorNaturalHeatLossW(air, solar, u, s)).toBeCloseTo(1006.2, 1);
+  });
 });
 
 describe("computeIndoorSurfaceAreasM2 + computeIndoorNaturalHeatLossW", () => {

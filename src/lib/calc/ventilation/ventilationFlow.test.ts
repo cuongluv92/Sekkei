@@ -24,7 +24,10 @@ describe("屋外・東京・フィルタ無し (natural ventilation is sufficien
 
   it("effective vent area ≈ 0.0612 m2 (Ai=0.168, Ao=0.117)", () => {
     const alpha = computeDischargeCoefficient(0.65, 2.5, null);
-    expect(computeEffectiveVentAreaM2(alpha, 0.168, 0.117)).toBeCloseTo(0.061198978118764145, 9);
+    expect(computeEffectiveVentAreaM2(alpha, 0.168, 0.117, air.topTempC, air.ambientTempC)).toBeCloseTo(
+      0.061198978118764145,
+      9,
+    );
   });
 
   it("natural ventilation heat removal QV ≈ 1406.3325W (h=2.1)", () => {
@@ -61,7 +64,10 @@ describe("屋外・東京・フィルタ有り", () => {
 
   it("effective vent area ≈ 0.0165 m2", () => {
     const alpha = computeDischargeCoefficient(0.65, 2.5, 30);
-    expect(computeEffectiveVentAreaM2(alpha, 0.168, 0.117)).toBeCloseTo(0.016515401394602308, 9);
+    expect(computeEffectiveVentAreaM2(alpha, 0.168, 0.117, air.topTempC, air.ambientTempC)).toBeCloseTo(
+      0.016515401394602308,
+      9,
+    );
   });
 
   it("QV ≈ 379.5185W", () => {
@@ -87,16 +93,22 @@ describe("屋外・東京・フィルタ有り", () => {
 describe("屋内・フィルタ有り (final fan count takes the max of the WK-based and filter-limited counts)", () => {
   const indoorAir = { ambientTempC: 30, topTempC: 50, airSpecificHeatKjPerKgK: 1.018, airDensityKgPerM3: 1.154 };
 
-  it("QV ≈ 2361.7296W, WK ≈ 2229.3804 m3/h, base fan count = 2, filter-limited fan count = 1 → final = max(2,1) = 2", () => {
+  it("QV ≈ 2357.8420W, WK ≈ 2230.8696 m3/h, base fan count = 2, filter-limited fan count = 1 → final = max(2,1) = 2", () => {
     const alpha = computeDischargeCoefficient(0.65, 2.5, 30);
-    const effectiveVentAreaM2 = computeEffectiveVentAreaM2(alpha, 0.797, 0.797);
-    expect(effectiveVentAreaM2).toBeCloseTo(0.09742406940577984, 9);
+    const effectiveVentAreaM2 = computeEffectiveVentAreaM2(
+      alpha,
+      0.797,
+      0.797,
+      indoorAir.topTempC,
+      indoorAir.ambientTempC,
+    );
+    expect(effectiveVentAreaM2).toBeCloseTo(0.09726370045852777, 9);
 
     const qv = computeNaturalVentilationHeatRemovalW(indoorAir, effectiveVentAreaM2, 1.7);
-    expect(qv).toBeCloseTo(2361.72961882473, 3);
+    expect(qv).toBeCloseTo(2357.8419954173414, 3);
 
     const wk = computeRequiredForcedAirflowM3PerH(indoorAir, 9791, 1609.2400000000002, qv, 0.8);
-    expect(wk).toBeCloseTo(2229.3804002213806, 3);
+    expect(wk).toBeCloseTo(2230.869566232594, 3);
 
     const baseFanCount = computeFanCount(wk, 1140);
     expect(baseFanCount).toBe(2);

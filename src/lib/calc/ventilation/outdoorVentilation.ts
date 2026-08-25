@@ -57,6 +57,8 @@ export function computeOutdoorVentilation(input: OutdoorVentilationInput): Outdo
     dischargeCoefficient,
     input.effectiveSupplyAreaM2,
     input.effectiveExhaustAreaM2,
+    input.climate.topTempC,
+    input.climate.ambientTempC,
   );
   const naturalVentilationHeatRemovalW = computeNaturalVentilationHeatRemovalW(
     input.climate,

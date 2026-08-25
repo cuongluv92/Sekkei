@@ -35,18 +35,26 @@ export function computeDischargeCoefficient(
 
 /**
  * 実効換気口面積 αxAx (m2) — 給気口・排気口を直列とみなした合成有効面積。
- * JSIA-T1016換気計算書の式そのまま (322/304 は同書内の定数、給気側と排気側の
- * 基準条件の違いに由来する係数):
- * αxAx = 1 / √( (1/(α・Ai))² + (1/(α・Ao))²・(322/304) )
+ * JSIA-T1016換気計算書の式そのまま:
+ * αxAx = 1 / √( (1/(α・Ai))² + (1/(α・Ao))²・(273+tt)/(273+to) )
+ *
+ * (273+tt)/(273+to) は固定定数ではなく、地域・盤形式ごとの tt・to から
+ * 都度計算する値 ── 以前は東京の使用例 (tt=49, to=31 → 322/304) の数値を
+ * そのまま固定定数として実装していたが、別の実在計算書 (動力制御盤・計装盤
+ * 用キュービクル, tt=50, to=29.9) で式が「(273+tt)/(273+to)」という一般形で
+ * 明記されているのを確認し、地域ごとに正しく計算し直すよう修正した。
  */
 export function computeEffectiveVentAreaM2(
   dischargeCoefficient: number,
   effectiveSupplyAreaM2: number,
   effectiveExhaustAreaM2: number,
+  topTempC: number,
+  ambientTempC: number,
 ): number {
   const supplyTerm = 1 / (dischargeCoefficient * effectiveSupplyAreaM2);
   const exhaustTerm = 1 / (dischargeCoefficient * effectiveExhaustAreaM2);
-  return 1 / Math.sqrt(supplyTerm ** 2 + exhaustTerm ** 2 * (322 / 304));
+  const tempRatio = (273 + topTempC) / (273 + ambientTempC);
+  return 1 / Math.sqrt(supplyTerm ** 2 + exhaustTerm ** 2 * tempRatio);
 }
 
 /**
