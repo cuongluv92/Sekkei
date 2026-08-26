@@ -91,6 +91,7 @@ const HEADER_ALIASES: Record<string, string[]> = {
   specification: ["定格・仕様", "仕様", "走り・仕様", "specification", "spec"],
   weight: ["重量", "weight"],
   quantity: ["数量", "quantity"],
+  heatW: ["発熱量", "発熱量(W)", "発熱量w", "heat", "heatw", "heat generation"],
   remarks: ["備考", "remarks", "note"],
   fileName: ["ファイル名", "filename", "file"],
 };
@@ -114,6 +115,7 @@ export interface MappedImportRecord {
   specification?: string;
   weight?: number;
   quantity?: number;
+  heatW?: number;
   remarks?: string;
   fileName?: string;
 }
@@ -134,10 +136,24 @@ function parseWeightKg(raw: string): number | undefined {
   return match[2]?.toLowerCase() === "g" ? value / 1000 : value;
 }
 
+/**
+ * 発熱量(W)セルをパースする — カタログ値は素の数値のことが多いが、
+ * 「150W」「1,200W」のように単位・桁区切りカンマ付きで書かれるケースも
+ * 許容する。負荷率などからの逆算はしない(捏造しない — 換気計算の
+ * HeatSourceItem.heatWと同じ方針で常に直値)。
+ */
+function parseHeatW(raw: string): number | undefined {
+  const match = /^([\d,.]+)\s*w?$/i.exec(raw.trim());
+  if (!match) return undefined;
+  const value = Number(match[1].replace(/,/g, ""));
+  return Number.isFinite(value) ? value : undefined;
+}
+
 /** Maps one parsed spreadsheet row to normalized fields for the given target category, based only on recognized header text. */
 export function mapRowToRecord(record: ParsedRow, target: ImportTargetCategory): MappedImportRecord {
   const weightRaw = findField(record, "weight");
   const quantityRaw = findField(record, "quantity");
+  const heatWRaw = findField(record, "heatW");
   return {
     symbol: findField(record, "symbol"),
     category: findField(record, "category"),
@@ -146,6 +162,7 @@ export function mapRowToRecord(record: ParsedRow, target: ImportTargetCategory):
     specification: findField(record, "specification"),
     weight: weightRaw ? parseWeightKg(weightRaw) : undefined,
     quantity: quantityRaw ? Number(quantityRaw) : undefined,
+    heatW: heatWRaw ? parseHeatW(heatWRaw) : undefined,
     remarks: findField(record, "remarks"),
     fileName: target === "catalog" ? findField(record, "fileName") : undefined,
   };

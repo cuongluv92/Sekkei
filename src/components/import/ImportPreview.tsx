@@ -88,6 +88,16 @@ export function ImportPreview({ rows, onRowsChange, onConfirm, confirming }: Imp
       },
     },
     {
+      key: "heatW",
+      header: t("common.heatGeneration"),
+      width: "80px",
+      align: "right",
+      render: (r) => {
+        const h = field(r, "heatW");
+        return h ? `${h} W` : "—";
+      },
+    },
+    {
       key: "status",
       header: t("common.status"),
       width: "110px",

@@ -42,6 +42,7 @@ export interface PartData {
   specification: string; // 定格・仕様
   weight?: number; // 重量 (kg)
   quantity?: number; // 数量
+  heatW?: number; // 発熱量 (W)
   remarks?: string; // 備考
   source: string; // データ source (社内DB, メーカーカタログ, etc.)
   files: FileAsset[];

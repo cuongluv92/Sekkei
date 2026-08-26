@@ -45,6 +45,7 @@ const vi: Dictionary = {
     quantity: "Số lượng",
     remarks: "Ghi chú",
     weight: "Trọng lượng",
+    heatGeneration: "Phát nhiệt",
     source: "Nguồn dữ liệu",
     kind: "Loại",
     manufacturer: "Nhà sản xuất",

@@ -113,6 +113,7 @@ async function analyzeTabular(
       specification,
       weight: mapped.weight,
       quantity: mapped.quantity,
+      heatW: mapped.heatW,
       remarks: mapped.remarks,
       fileName: mapped.fileName,
     };
@@ -222,6 +223,7 @@ async function createRecord(target: ImportTargetCategory, record: ImportRecord) 
       specification: (record.specification as string) || "",
       weight: record.weight as number | undefined,
       quantity: record.quantity as number | undefined,
+      heatW: record.heatW as number | undefined,
       remarks: record.remarks as string | undefined,
       source: "インポート",
       files: [],
@@ -256,6 +258,7 @@ async function updateRecord(target: ImportTargetCategory, id: string, record: Im
       specification: record.specification as string | undefined,
       weight: record.weight as number | undefined,
       quantity: record.quantity as number | undefined,
+      heatW: record.heatW as number | undefined,
       remarks: record.remarks as string | undefined,
     });
   } else if (target === "part-drawing") {

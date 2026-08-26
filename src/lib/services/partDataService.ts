@@ -13,6 +13,7 @@ interface PartDataRow {
   specification: string;
   weight: number | null;
   quantity: number | null;
+  heat_w: number | null;
   remarks: string | null;
   source: string;
   updated_at: string;
@@ -34,6 +35,7 @@ function rowToPart(row: PartDataRow, files: PartData["files"]): PartData {
     specification: row.specification,
     weight: row.weight ?? undefined,
     quantity: row.quantity ?? undefined,
+    heatW: row.heat_w ?? undefined,
     remarks: row.remarks ?? undefined,
     source: row.source,
     files,
@@ -106,6 +108,7 @@ class SupabasePartDataRepository implements PartDataRepository {
         specification: input.specification,
         weight: input.weight ?? null,
         quantity: input.quantity ?? null,
+        heat_w: input.heatW ?? null,
         remarks: input.remarks ?? null,
         source: input.source,
       })
@@ -124,6 +127,7 @@ class SupabasePartDataRepository implements PartDataRepository {
     if (patch.specification !== undefined) row.specification = patch.specification;
     if (patch.weight !== undefined) row.weight = patch.weight;
     if (patch.quantity !== undefined) row.quantity = patch.quantity;
+    if (patch.heatW !== undefined) row.heat_w = patch.heatW;
     if (patch.remarks !== undefined) row.remarks = patch.remarks;
     row.updated_at = new Date().toISOString();
 

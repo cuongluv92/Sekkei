@@ -46,6 +46,7 @@ export interface Dictionary {
     quantity: string;
     remarks: string;
     weight: string;
+    heatGeneration: string;
     source: string;
     kind: string;
     manufacturer: string;

@@ -44,6 +44,7 @@ const ja: Dictionary = {
     quantity: "数量",
     remarks: "備考",
     weight: "重量",
+    heatGeneration: "発熱量",
     source: "ソース",
     kind: "種類",
     manufacturer: "メーカー",

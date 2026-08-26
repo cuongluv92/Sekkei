@@ -41,6 +41,7 @@ interface LibraryItem {
   model: string;
   specification: string;
   weight?: number;
+  heatW?: number;
   remarks?: string;
   quantity?: number;
   source: string;
@@ -340,6 +341,13 @@ export function PartLibraryView<T extends LibraryItem>({
             align: "right" as const,
             render: (r: T) => (r.weight !== undefined ? `${r.weight} kg` : "—"),
           },
+          {
+            key: "heatW",
+            header: t("common.heatGeneration"),
+            width: "90px",
+            align: "right" as const,
+            render: (r: T) => (r.heatW !== undefined ? `${r.heatW} W` : "—"),
+          },
         ]
       : []),
     { key: "updatedAt", header: t("common.updatedAt"), width: "110px" },
@@ -550,6 +558,14 @@ export function PartLibraryView<T extends LibraryItem>({
                 label={t("common.weight")}
                 value={
                   selected.weight !== undefined ? `${selected.weight} kg` : "—"
+                }
+              />
+            )}
+            {showPartDataFields && (
+              <DetailField
+                label={t("common.heatGeneration")}
+                value={
+                  selected.heatW !== undefined ? `${selected.heatW} W` : "—"
                 }
               />
             )}
