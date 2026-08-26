@@ -14,7 +14,7 @@ import type { OutlineImageExportRef } from "./seismicExcelExport";
  */
 const OUTLINE_IMAGE_ANCHOR: OutlineImageAnchor = { fromCol: 12, fromRow: 10, toCol: 24, toRow: 18 };
 const OUTDOOR_VENT_LAYOUT_ANCHOR: OutlineImageAnchor = { fromCol: 2, fromRow: 30, toCol: 20, toRow: 41 };
-const INDOOR_VENT_LAYOUT_ANCHOR: OutlineImageAnchor = { fromCol: 11, fromRow: 20, toCol: 19, toRow: 29 };
+const INDOOR_VENT_LAYOUT_ANCHOR: OutlineImageAnchor = { fromCol: 12, fromRow: 20, toCol: 19, toRow: 29 };
 
 /**
  * Fills the real vendor 換気計算書 templates (JSIA-T1016:2019準拠, JSIA HP
