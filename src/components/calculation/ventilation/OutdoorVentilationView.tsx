@@ -266,14 +266,14 @@ export function OutdoorVentilationView({ caseId }: Props) {
   }
 
   if (!loaded) {
-    return <div className="py-8 text-center text-[13px] text-muted">{t("common.loading")}</div>;
+    return <div className="py-8 text-center text-[13px] text-foreground">{t("common.loading")}</div>;
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div>
         <h3 className="text-[15px] font-bold">{t("ventilationCalc.outdoorTitle")}</h3>
-        <p className="text-[12px] text-muted">{t("ventilationCalc.outdoorDescription")}</p>
+        <p className="text-[12px] text-foreground">{t("ventilationCalc.outdoorDescription")}</p>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -283,7 +283,7 @@ export function OutdoorVentilationView({ caseId }: Props) {
           </span>
           <span className="panel-title">{t("ventilationCalc.climateTitle")}</span>
         </div>
-        <p className="text-[12px] text-muted">{t("ventilationCalc.climateHint")}</p>
+        <p className="text-[12px] text-foreground">{t("ventilationCalc.climateHint")}</p>
         <div className="max-w-xs">
           <label className="field-label">{t("ventilationCalc.regionLabel")}</label>
           <select value={climateProfileId} onChange={(e) => setClimateProfileId(e.target.value)} className="field-input">
@@ -300,7 +300,7 @@ export function OutdoorVentilationView({ caseId }: Props) {
             <span className="rounded border border-border px-1.5 py-0.5 text-[10px] font-semibold text-muted-2">
               {t("ventilationCalc.autoCalcBadge")}
             </span>
-            <span className="font-mono text-[11.5px] text-muted">
+            <span className="font-mono text-[11.5px] text-foreground">
               to={climate.ambientTempC}℃ tt={climate.topTempC}℃ CP={climate.airSpecificHeatKjPerKgK} ρE=
               {climate.airDensityKgPerM3} ・ tSH={climate.equivalentOutsideTempRoofC} tSE={climate.equivalentOutsideTempFace1C}{" "}
               tWS={climate.equivalentOutsideTempFace2C} tNW={climate.equivalentOutsideTempFace3C} tNE=
@@ -320,8 +320,8 @@ export function OutdoorVentilationView({ caseId }: Props) {
               value={outlineDrawing}
               onChange={setOutlineDrawing}
             />
-            <p className="mt-1.5 text-[11.5px] text-muted">{t("ventilationCalc.outlineDrawingHintOutdoor")}</p>
-            <p className="text-[11.5px] text-muted">{t("ventilationCalc.outlineDrawingNote")}</p>
+            <p className="mt-1.5 text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingHintOutdoor")}</p>
+            <p className="text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingNote")}</p>
           </div>
         )}
       </div>
@@ -333,7 +333,7 @@ export function OutdoorVentilationView({ caseId }: Props) {
           </span>
           <span className="panel-title">{t("ventilationCalc.surfaceAreaTitle")}</span>
         </div>
-        <p className="text-[12px] text-muted">{t("ventilationCalc.surfaceAreaHintOutdoor")}</p>
+        <p className="text-[12px] text-foreground">{t("ventilationCalc.surfaceAreaHintOutdoor")}</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
           <NumField label="SRO (屋根/上面)" hintKey="ventilationCalc.roofAreaHint" value={surfaceAreas.roofM2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, roofM2Raw: v })} unit="m²" />
           <NumField label="面1 (SSE)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face1M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face1M2Raw: v })} unit="m²" />
@@ -423,7 +423,7 @@ export function NumField({
         {label} <span className="font-normal text-muted-2">({unit})</span>
       </label>
       <input type="number" min={0} step="any" value={value} onChange={(e) => onChange(e.target.value)} className="field-input" />
-      <p className="mt-1 text-[11.5px] text-muted">{t(hintKey)}</p>
+      <p className="mt-1 text-[11.5px] text-foreground">{t(hintKey)}</p>
     </div>
   );
 }
@@ -438,7 +438,7 @@ export function VentOpeningFields({ value, onChange }: { value: VentOpeningState
         </span>
         <span className="panel-title">{t("ventilationCalc.ventOpeningTitle")}</span>
       </div>
-      <p className="text-[12px] text-muted">{t("ventilationCalc.ventOpeningHint")}</p>
+      <p className="text-[12px] text-foreground">{t("ventilationCalc.ventOpeningHint")}</p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <NumField label="Ai (有効給気口面積)" hintKey="ventilationCalc.supplyAreaHint" value={value.supplyAreaM2Raw} onChange={(v) => onChange({ ...value, supplyAreaM2Raw: v })} unit="m²" />
         <NumField label="Ao (有効排気口面積)" hintKey="ventilationCalc.exhaustAreaHint" value={value.exhaustAreaM2Raw} onChange={(v) => onChange({ ...value, exhaustAreaM2Raw: v })} unit="m²" />
@@ -558,7 +558,7 @@ export function VentilationResultPanel({
           <WhyDisclosure label={t("ventilationCalc.whyWkLabel")} title={t("ventilationCalc.whyWkTitle")}>
             {t("ventilationCalc.whyWkBody")}
           </WhyDisclosure>
-          <p className="text-[12px] text-muted">{t("ventilationCalc.forcedVentilationHint")}</p>
+          <p className="text-[12px] text-foreground">{t("ventilationCalc.forcedVentilationHint")}</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <NumField
               label={t("ventilationCalc.fanCapacityLabel")}

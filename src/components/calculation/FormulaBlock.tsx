@@ -16,11 +16,11 @@ export interface FormulaLine {
 export function FormulaBlock({ badge, lines }: { badge: string; lines: FormulaLine[] }) {
   return (
     <div className="flex flex-col gap-1.5 rounded-md border border-border bg-muted/10 px-3 py-2.5">
-      <span className="w-fit rounded border border-border px-1.5 py-0.5 text-[11px] font-semibold text-muted">{badge}</span>
+      <span className="w-fit rounded border border-border px-1.5 py-0.5 text-[11px] font-semibold text-foreground">{badge}</span>
       {lines.map((line, i) => (
         <div key={i} className="flex flex-wrap items-baseline gap-x-2 font-mono text-[13px]">
-          <span className="text-muted">{line.formula}</span>
-          {line.substituted && <span className="text-muted">= {line.substituted}</span>}
+          <span className="text-foreground">{line.formula}</span>
+          {line.substituted && <span className="text-foreground">= {line.substituted}</span>}
           <span className="font-semibold text-foreground">= {line.result}</span>
         </div>
       ))}
@@ -33,7 +33,7 @@ export function SourceNote({ title, body }: { title: string; body: string }) {
   return (
     <div className="flex flex-col gap-1.5 rounded-md border border-border bg-muted/10 px-3 py-2.5">
       <span className="text-[12.5px] font-bold text-foreground">{title}</span>
-      <p className="text-[12.5px] leading-relaxed text-muted">{body}</p>
+      <p className="text-[12.5px] leading-relaxed text-foreground">{body}</p>
     </div>
   );
 }
@@ -60,7 +60,7 @@ export function WhyDisclosure({ label, title, children }: { label: string; title
       {open && (
         <div className="mt-1 flex max-w-md flex-col gap-1.5 rounded-md border border-border bg-muted/10 px-2.5 py-2">
           <span className="text-[12.5px] font-bold text-foreground">{title}</span>
-          <div className="text-[12.5px] leading-relaxed text-muted">{children}</div>
+          <div className="text-[12.5px] leading-relaxed text-foreground">{children}</div>
         </div>
       )}
     </div>
@@ -85,7 +85,7 @@ export function WhyTable({ headers, rows }: { headers: string[]; rows: (string |
           {rows.map((row, i) => (
             <tr key={i}>
               {row.map((cell, j) => (
-                <td key={j} className="border border-border px-2 py-1.5 text-muted">
+                <td key={j} className="border border-border px-2 py-1.5 text-foreground">
                   {cell}
                 </td>
               ))}

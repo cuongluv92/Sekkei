@@ -211,14 +211,14 @@ export function IndoorVentilationView({ caseId }: Props) {
   }
 
   if (!loaded) {
-    return <div className="py-8 text-center text-[13px] text-muted">{t("common.loading")}</div>;
+    return <div className="py-8 text-center text-[13px] text-foreground">{t("common.loading")}</div>;
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div>
         <h3 className="text-[15px] font-bold">{t("ventilationCalc.indoorTitle")}</h3>
-        <p className="text-[12px] text-muted">{t("ventilationCalc.indoorDescription")}</p>
+        <p className="text-[12px] text-foreground">{t("ventilationCalc.indoorDescription")}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_260px]">
@@ -231,8 +231,8 @@ export function IndoorVentilationView({ caseId }: Props) {
               value={outlineDrawing}
               onChange={setOutlineDrawing}
             />
-            <p className="mt-1.5 text-[11.5px] text-muted">{t("ventilationCalc.outlineDrawingHintIndoor")}</p>
-            <p className="text-[11.5px] text-muted">{t("ventilationCalc.outlineDrawingNote")}</p>
+            <p className="mt-1.5 text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingHintIndoor")}</p>
+            <p className="text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingNote")}</p>
           </div>
         )}
       </div>
@@ -244,7 +244,7 @@ export function IndoorVentilationView({ caseId }: Props) {
           </span>
           <span className="panel-title">{t("ventilationCalc.surfaceAreaTitle")}</span>
         </div>
-        <p className="text-[12px] text-muted">{t("ventilationCalc.surfaceAreaHintIndoor")}</p>
+        <p className="text-[12px] text-foreground">{t("ventilationCalc.surfaceAreaHintIndoor")}</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <NumField label="W (横幅)" hintKey="ventilationCalc.widthHint" value={dimensions.widthMRaw} onChange={(v) => setDimensions({ ...dimensions, widthMRaw: v })} unit="m" />
           <NumField label="H (高さ)" hintKey="ventilationCalc.heightHint" value={dimensions.heightMRaw} onChange={(v) => setDimensions({ ...dimensions, heightMRaw: v })} unit="m" />
