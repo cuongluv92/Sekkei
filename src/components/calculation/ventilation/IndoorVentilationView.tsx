@@ -6,6 +6,7 @@ import { useTranslation } from "@/lib/i18n";
 import { calculationRecordService } from "@/lib/services";
 import { designCaseService } from "@/lib/services/design";
 import { computeIndoorVentilation } from "@/lib/calc/ventilation/indoorVentilation";
+import { INDOOR_AIR_CONDITION } from "@/lib/calc/ventilation/climateProfile";
 import { sumHeatSourcesW, type HeatSourceItem } from "@/lib/calc/ventilation/heatBalance";
 import { exportIndoorVentilationExcel } from "@/lib/services/ventilationExcelExport";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
@@ -14,6 +15,7 @@ import { FormulaBlock, SourceNote } from "@/components/calculation/FormulaBlock"
 import { loadFromStorage, saveToStorage } from "@/lib/utils/localStore";
 import { HeatSourceList } from "./HeatSourceList";
 import {
+  applyFilterResistanceFromPaAndVelocity,
   blankOpeningPair,
   NumField,
   normalizeVentOpening,
@@ -343,9 +345,23 @@ export function IndoorVentilationView({ caseId }: Props) {
           fanCapacityM3PerHPerUnitRaw={ventOpening.fanCapacityM3PerHPerUnitRaw}
           onFanCapacityChange={(v) => setVentOpening({ ...ventOpening, fanCapacityM3PerHPerUnitRaw: v })}
           filterRatedVelocityMPerSRaw={ventOpening.filterRatedVelocityMPerSRaw}
-          onFilterRatedVelocityChange={(v) => setVentOpening({ ...ventOpening, filterRatedVelocityMPerSRaw: v })}
+          onFilterRatedVelocityChange={(v) =>
+            setVentOpening(
+              applyFilterResistanceFromPaAndVelocity(
+                { ...ventOpening, filterRatedVelocityMPerSRaw: v },
+                INDOOR_AIR_CONDITION.airDensityKgPerM3,
+              ),
+            )
+          }
           filterPressureLossPaRaw={ventOpening.filterPressureLossPaRaw}
-          onFilterPressureLossChange={(v) => setVentOpening({ ...ventOpening, filterPressureLossPaRaw: v })}
+          onFilterPressureLossChange={(v) =>
+            setVentOpening(
+              applyFilterResistanceFromPaAndVelocity(
+                { ...ventOpening, filterPressureLossPaRaw: v },
+                INDOOR_AIR_CONDITION.airDensityKgPerM3,
+              ),
+            )
+          }
           heatLossLabel="QBi"
         />
       )}

@@ -89,12 +89,32 @@ interface VentOpeningState {
   fanCapacityM3PerHPerUnitRaw: string;
   filterRatedVelocityMPerSRaw: string;
   /** フィルタの圧力損失(Pa) — 実物のExcel「7)使用換気扇風量及び台数の確認」
-   * 節にはあるが、どの数式からも参照されない(unzipして確認済み)ため計算
-   * には使わない、記録・参考用のみの値。 */
+   * 節にはある値で、書類上はどの数式からも参照されない(unzipして確認済み)
+   * 記録・参考用の値だが、アプリ側ではフィルタの標準風速と合わせてζFの
+   * 自動計算補助に使う(下のapplyFilterResistanceFromPaAndVelocity参照)。 */
   filterPressureLossPaRaw: string;
   /** Ai・Ao の開口W×H入力補助 — ユーザーが明示的にクリアするまで保持する(caseの保存対象)。 */
   supplyOpenings: OpeningDimensionPair[];
   exhaustOpenings: OpeningDimensionPair[];
+}
+
+/**
+ * フィルタ抵抗係数 ζF の自動計算補助 — ζF = 2ΔP / (ρ・v²) は流体力学の
+ * 損失係数の標準定義式(圧力損失Pa・風速m/s・空気密度kg/m3から算出)であり、
+ * JSIA-T1016の実物Excelファイルのどのセルにも存在しない式(unzipして
+ * 確認済み — ζFは常に直値入力で、この計算はしていない)。アプリ側だけの
+ * 補助計算であることを明示するためExcel由来の他のapply関数とは別名にした。
+ * フィルタの圧力損失・標準風速の両方が揃った時だけζF欄を上書きし、ζF欄
+ * 自体はいつでも直接編集・上書き可能(この関数を経由しない手動入力を
+ * 上書きしない)。airDensityKgPerM3は各計算(屋外は選択地域のρE、屋内は
+ * INDOOR_AIR_CONDITION.airDensityKgPerM3)と同じ値を呼び出し側から渡す。
+ */
+export function applyFilterResistanceFromPaAndVelocity(next: VentOpeningState, airDensityKgPerM3: number): VentOpeningState {
+  const dp = Number(next.filterPressureLossPaRaw);
+  const v = Number(next.filterRatedVelocityMPerSRaw);
+  if (!Number.isFinite(dp) || dp <= 0 || !Number.isFinite(v) || v <= 0) return next;
+  const zetaF = (2 * dp) / (airDensityKgPerM3 * v * v);
+  return { ...next, filterResistanceCoefficientRaw: String(Math.round(zetaF * 1e4) / 1e4) };
 }
 
 function blankVentOpening(): VentOpeningState {
@@ -505,9 +525,17 @@ export function OutdoorVentilationView({ caseId }: Props) {
           fanCapacityM3PerHPerUnitRaw={ventOpening.fanCapacityM3PerHPerUnitRaw}
           onFanCapacityChange={(v) => setVentOpening({ ...ventOpening, fanCapacityM3PerHPerUnitRaw: v })}
           filterRatedVelocityMPerSRaw={ventOpening.filterRatedVelocityMPerSRaw}
-          onFilterRatedVelocityChange={(v) => setVentOpening({ ...ventOpening, filterRatedVelocityMPerSRaw: v })}
+          onFilterRatedVelocityChange={(v) =>
+            setVentOpening(
+              applyFilterResistanceFromPaAndVelocity({ ...ventOpening, filterRatedVelocityMPerSRaw: v }, climate!.airDensityKgPerM3),
+            )
+          }
           filterPressureLossPaRaw={ventOpening.filterPressureLossPaRaw}
-          onFilterPressureLossChange={(v) => setVentOpening({ ...ventOpening, filterPressureLossPaRaw: v })}
+          onFilterPressureLossChange={(v) =>
+            setVentOpening(
+              applyFilterResistanceFromPaAndVelocity({ ...ventOpening, filterPressureLossPaRaw: v }, climate!.airDensityKgPerM3),
+            )
+          }
         />
       )}
 
