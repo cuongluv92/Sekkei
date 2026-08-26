@@ -936,6 +936,7 @@ export interface Dictionary {
       designRequest: string;
       productionRequest: string;
       drawingRegister: string;
+      scheduleQuick: string;
       designIndexKeio: string;
       designIndexOther: string;
       schedule: string;
@@ -1159,6 +1160,21 @@ export interface Dictionary {
         inspection: string;
         witness: string;
         shipping: string;
+      };
+    };
+    scheduleQuick: {
+      title: string;
+      constructionTitle: string;
+      addEntryButton: string;
+      constructionEmpty: string;
+      form: {
+        managementNumber: string;
+        constructionNumber: string;
+        projectName: string;
+        worker: string;
+        workContent: string;
+        startDate: string;
+        endDate: string;
       };
     };
     costLabor: {

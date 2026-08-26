@@ -1014,9 +1014,10 @@ const ja: Dictionary = {
       designRequest: "設計依頼書",
       productionRequest: "製作依頼書",
       drawingRegister: "図面管理台帳",
+      scheduleQuick: "工程表",
       designIndexKeio: "設計依頼書目次・京王",
       designIndexOther: "設計依頼書目次・その他",
-      schedule: "工程表",
+      schedule: "納入工程",
       costLabor: "仕入原価・工数一覧表",
     },
     workspaceBar: {
@@ -1242,6 +1243,21 @@ const ja: Dictionary = {
         inspection: "検査",
         witness: "立会",
         shipping: "出荷",
+      },
+    },
+    scheduleQuick: {
+      title: "工程表(簡易カレンダー)",
+      constructionTitle: "工事工程",
+      addEntryButton: "追加",
+      constructionEmpty: "まだ登録がありません",
+      form: {
+        managementNumber: "管理番号",
+        constructionNumber: "工事番号",
+        projectName: "件名",
+        worker: "作業者",
+        workContent: "作業内容",
+        startDate: "開始日",
+        endDate: "終了日",
       },
     },
     costLabor: {

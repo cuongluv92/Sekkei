@@ -6,6 +6,7 @@ export const DESIGN_TOP_TABS = [
   "designRequest",
   "productionRequest",
   "drawingRegister",
+  "scheduleQuick",
   "designIndexKeio",
   "designIndexOther",
   "schedule",

@@ -213,6 +213,24 @@ export interface ScheduleColorConfig {
   color: string; // hex, sourced from the uploaded template
 }
 
+/**
+ * 工事工程 (現場作業工程) — 案件(design_cases)・工程(CaseSchedule)とは完全に
+ * 独立した手入力ログ。管理番号/工事番号/件名は既存案件から自動反映せず、
+ * ここで自由に手入力する(一致している必要はない)。1件=1つの作業内容の
+ * 開始日〜終了日。
+ */
+export interface ConstructionScheduleEntry {
+  id: string;
+  managementNumber: string;
+  constructionNumber: string;
+  projectName: string;
+  workContent: string;
+  worker: string;
+  startDate: string; // ISO "YYYY-MM-DD"
+  endDate: string; // ISO "YYYY-MM-DD"
+  sortOrder: number;
+}
+
 /** 原価・工数. Computed totals (設計実動合計 / 製作実動合計) are derived from panels at read time, never stored. Phase 4 — schema only. */
 export interface CaseCostLabor {
   caseId: string;

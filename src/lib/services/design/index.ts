@@ -4,6 +4,8 @@ export { masterListService } from "./masterListService";
 export { productionRequestService } from "./productionRequestService";
 export { scheduleService } from "./scheduleService";
 export { scheduleColorService } from "./scheduleColorService";
+export { constructionScheduleService } from "./constructionScheduleService";
+export type { ConstructionScheduleEntryInput } from "./constructionScheduleService";
 export {
   exportDesignRequestExcel,
   exportProductionRequestExcel,

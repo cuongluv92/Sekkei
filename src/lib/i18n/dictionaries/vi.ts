@@ -1043,9 +1043,10 @@ const vi: Dictionary = {
       designRequest: "設計依頼書",
       productionRequest: "製作依頼書",
       drawingRegister: "図面管理台帳",
+      scheduleQuick: "工程表",
       designIndexKeio: "設計依頼書目次・京王",
       designIndexOther: "設計依頼書目次・その他",
-      schedule: "工程表",
+      schedule: "納入工程",
       costLabor: "仕入原価・工数一覧表",
     },
     workspaceBar: {
@@ -1272,6 +1273,21 @@ const vi: Dictionary = {
         inspection: "検査",
         witness: "立会",
         shipping: "出荷",
+      },
+    },
+    scheduleQuick: {
+      title: "工程表 (lịch đơn giản)",
+      constructionTitle: "工事工程",
+      addEntryButton: "Thêm",
+      constructionEmpty: "Chưa có dữ liệu",
+      form: {
+        managementNumber: "管理番号",
+        constructionNumber: "工事番号",
+        projectName: "件名",
+        worker: "Người phụ trách (作業者)",
+        workContent: "Nội dung công việc (作業内容)",
+        startDate: "Ngày bắt đầu",
+        endDate: "Ngày kết thúc",
       },
     },
     costLabor: {

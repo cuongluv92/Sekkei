@@ -19,6 +19,7 @@ import { ProductionRequestForm } from "@/components/design/ProductionRequestForm
 import { CaseLedgerTable } from "@/components/design/CaseLedgerTable";
 import { DesignRequestIndexTable } from "@/components/design/DesignRequestIndexTable";
 import { ScheduleTimeline } from "@/components/design/ScheduleTimeline";
+import { ScheduleQuickOverview } from "@/components/design/ScheduleQuickOverview";
 import { CostLaborTable } from "@/components/design/CostLaborTable";
 import { MasterListEditor } from "@/components/design/MasterListEditor";
 import { ScheduleColorSettings } from "@/components/design/ScheduleColorSettings";
@@ -26,7 +27,8 @@ import { TemplateManagementSettings } from "@/components/settings/TemplateManage
 
 /**
  * 設計管理 entry point. A single page with a top-level tab strip (order fixed:
- * 設計依頼書/製作依頼書/図面管理台帳/設計依頼書目次・京王/設計依頼書目次・その他/工程表/
+ * 設計依頼書/製作依頼書/図面管理台帳/工程表(簡易カレンダー、ScheduleQuickOverview)/
+ * 設計依頼書目次・京王/設計依頼書目次・その他/納入工程(旧⑤工程表、ScheduleTimeline)/
  * 仕入原価・工数一覧表) — no separate 案件 picker screen; the shared
  * `CaseSelector` handles that. Selection state (tab/case) lives in the URL
  * so the active 案件 survives switching between 設計依頼書 and 製作依頼書, and
@@ -123,6 +125,7 @@ export function DesignView() {
       )}
 
       {tab === "drawingRegister" && <CaseLedgerTable />}
+      {tab === "scheduleQuick" && <ScheduleQuickOverview />}
       {tab === "designIndexKeio" && (
         <DesignRequestIndexTable
           kind="keio"
