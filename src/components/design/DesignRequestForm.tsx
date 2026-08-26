@@ -7,6 +7,7 @@ import {
   designCaseService,
   exportDesignRequestExcel,
   printDesignRequestForm,
+  type DesignRequestPrintFields,
 } from "@/lib/services/design";
 import { SpecCombobox } from "@/components/design/SpecCombobox";
 import { DateInput } from "@/components/common/DateInput";
@@ -216,11 +217,18 @@ export function DesignRequestForm({ caseId }: { caseId: string }) {
     show(t("design.savedMessage"));
   }
 
+  function currentPrintFields(): DesignRequestPrintFields | null {
+    if (!designCase) return null;
+    return { case: designCase, panels: panels.slice().sort((a, b) => a.panelNo - b.panelNo) };
+  }
+
   async function handleExportExcel() {
+    const fields = currentPrintFields();
+    if (!fields) return;
     setExportError(null);
     setExportingExcel(true);
     try {
-      const { fileName } = await exportDesignRequestExcel(caseId);
+      const { fileName } = await exportDesignRequestExcel(fields);
       show(t("design.exportedMessage", { fileName }));
     } catch {
       setExportError(t("design.exportError"));
@@ -230,10 +238,12 @@ export function DesignRequestForm({ caseId }: { caseId: string }) {
   }
 
   async function handlePrint() {
+    const fields = currentPrintFields();
+    if (!fields) return;
     setExportError(null);
     setPrinting(true);
     try {
-      await printDesignRequestForm(caseId);
+      await printDesignRequestForm(fields);
     } catch {
       setExportError(t("design.exportError"));
     } finally {

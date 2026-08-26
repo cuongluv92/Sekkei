@@ -1,6 +1,6 @@
 import type ExcelJS from "exceljs";
 import { SPEC_GROUPS, WIRING_SPEC_FIELDS, type SpecFieldKey } from "@/lib/types/design";
-import { formatShortDate, loadDesignRequestPrintFields, loadProductionRequestPrintFields } from "./printFields";
+import { formatShortDate, type DesignRequestPrintFields, type ProductionRequestPrintFields } from "./printFields";
 import { loadActiveTemplate, downloadWorkbook } from "./excelWorkbook";
 import { printWorksheet } from "./excelPrintView";
 
@@ -67,8 +67,7 @@ function fillSpecs(ws: ExcelJS.Worksheet, specs: Record<string, { spec1: string;
   }
 }
 
-async function buildDesignRequestWorkbook(caseId: string): Promise<{ workbook: ExcelJS.Workbook; drawingNumber: string }> {
-  const fields = await loadDesignRequestPrintFields(caseId);
+async function buildDesignRequestWorkbook(fields: DesignRequestPrintFields): Promise<{ workbook: ExcelJS.Workbook; drawingNumber: string }> {
   const c = fields.case;
   const workbook = await loadActiveTemplate("designRequestForm");
   const ws = workbook.worksheets[0];
@@ -101,21 +100,26 @@ async function buildDesignRequestWorkbook(caseId: string): Promise<{ workbook: E
   return { workbook, drawingNumber: c.drawingNumber };
 }
 
-export async function exportDesignRequestExcel(caseId: string): Promise<{ fileName: string }> {
-  const { workbook, drawingNumber } = await buildDesignRequestWorkbook(caseId);
+/**
+ * Both this and `printDesignRequestForm` take the caller's own already-
+ * loaded (possibly unsaved-yet) form state directly, instead of re-fetching
+ * by caseId — so what the form shows on screen is exactly what gets
+ * exported/printed, with no risk of a stale DB read showing through.
+ */
+export async function exportDesignRequestExcel(fields: DesignRequestPrintFields): Promise<{ fileName: string }> {
+  const { workbook, drawingNumber } = await buildDesignRequestWorkbook(fields);
   const fileName = `設計依頼書_${drawingNumber}.xlsx`;
   await downloadWorkbook(workbook, fileName);
   return { fileName };
 }
 
 /** Prints ⑦設計依頼書 in the exact layout of the currently active template (same filled workbook as the Excel download). */
-export async function printDesignRequestForm(caseId: string): Promise<void> {
-  const { workbook } = await buildDesignRequestWorkbook(caseId);
+export async function printDesignRequestForm(fields: DesignRequestPrintFields): Promise<void> {
+  const { workbook } = await buildDesignRequestWorkbook(fields);
   printWorksheet(workbook.worksheets[0]);
 }
 
-async function buildProductionRequestWorkbook(caseId: string): Promise<{ workbook: ExcelJS.Workbook; drawingNumber: string }> {
-  const fields = await loadProductionRequestPrintFields(caseId);
+async function buildProductionRequestWorkbook(fields: ProductionRequestPrintFields): Promise<{ workbook: ExcelJS.Workbook; drawingNumber: string }> {
   const c = fields.case;
   const workbook = await loadActiveTemplate("productionRequestForm");
   const ws = workbook.worksheets[0];
@@ -172,15 +176,16 @@ async function buildProductionRequestWorkbook(caseId: string): Promise<{ workboo
   return { workbook, drawingNumber: c.drawingNumber };
 }
 
-export async function exportProductionRequestExcel(caseId: string): Promise<{ fileName: string }> {
-  const { workbook, drawingNumber } = await buildProductionRequestWorkbook(caseId);
+/** Same principle as 設計依頼書 above — takes the form's own current state, never re-fetches. */
+export async function exportProductionRequestExcel(fields: ProductionRequestPrintFields): Promise<{ fileName: string }> {
+  const { workbook, drawingNumber } = await buildProductionRequestWorkbook(fields);
   const fileName = `製作依頼書_${drawingNumber}.xlsx`;
   await downloadWorkbook(workbook, fileName);
   return { fileName };
 }
 
 /** Prints ⑧製作依頼書 in the exact layout of the currently active template (same filled workbook as the Excel download). */
-export async function printProductionRequestForm(caseId: string): Promise<void> {
-  const { workbook } = await buildProductionRequestWorkbook(caseId);
+export async function printProductionRequestForm(fields: ProductionRequestPrintFields): Promise<void> {
+  const { workbook } = await buildProductionRequestWorkbook(fields);
   printWorksheet(workbook.worksheets[0]);
 }

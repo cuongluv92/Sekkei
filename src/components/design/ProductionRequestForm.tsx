@@ -9,6 +9,7 @@ import {
   printProductionRequestForm,
   productionRequestService,
   scheduleService,
+  type ProductionRequestPrintFields,
 } from "@/lib/services/design";
 import { SpecCombobox } from "@/components/design/SpecCombobox";
 import { DateInput } from "@/components/common/DateInput";
@@ -153,11 +154,18 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
     }
   }
 
+  function currentPrintFields(): ProductionRequestPrintFields | null {
+    if (!designCase || !request || !schedule) return null;
+    return { case: designCase, panels: panels.slice().sort((a, b) => a.panelNo - b.panelNo), request, schedule };
+  }
+
   async function handleExportExcel() {
+    const fields = currentPrintFields();
+    if (!fields) return;
     setExportError(null);
     setExportingExcel(true);
     try {
-      const { fileName } = await exportProductionRequestExcel(caseId);
+      const { fileName } = await exportProductionRequestExcel(fields);
       show(t("design.exportedMessage", { fileName }));
     } catch {
       setExportError(t("design.exportError"));
@@ -167,10 +175,12 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
   }
 
   async function handlePrint() {
+    const fields = currentPrintFields();
+    if (!fields) return;
     setExportError(null);
     setPrinting(true);
     try {
-      await printProductionRequestForm(caseId);
+      await printProductionRequestForm(fields);
     } catch {
       setExportError(t("design.exportError"));
     } finally {

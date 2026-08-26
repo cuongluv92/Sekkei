@@ -10,6 +10,7 @@ export {
   printDesignRequestForm,
   printProductionRequestForm,
 } from "./excelExport";
+export type { DesignRequestPrintFields, ProductionRequestPrintFields } from "./printFields";
 export { exportDrawingLedgerExcel, printDrawingLedger } from "./ledgerExport";
 export {
   parseDrawingLedgerFile,
