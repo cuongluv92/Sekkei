@@ -1,16 +1,110 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
+import { partDataService } from "@/lib/services";
 import { sumHeatSourcesW, type HeatSourceItem } from "@/lib/calc/ventilation/heatBalance";
+import type { PartData } from "@/lib/types";
 
 export function blankHeatSourceItem(): HeatSourceItem {
-  return { name: "", heatW: 0, capacity: "", loadFactorPercent: null };
+  return { name: "", heatW: 0, capacity: "", loadFactorPercent: null, model: "" };
 }
 
 interface Props {
   value: HeatSourceItem[];
   onChange: (next: HeatSourceItem[]) => void;
+}
+
+/**
+ * 型番セル — 部品データを型番・品名・仕様で検索し、選択すると機器名称・容量・
+ * 発熱量Wをまとめて自動入力する(実物のJSIA-T1016様式には無い、アプリ独自の
+ * 入力補助)。検索でヒットしない場合や部品データに未登録の機器は、そのまま
+ * 型番欄を含め全欄を直接手入力できる(検索を強制しない)。
+ */
+function PartModelCell({
+  value,
+  onChange,
+  onSelect,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSelect: (part: PartData) => void;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<PartData[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const query = value.trim();
+    if (!query) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    const timer = setTimeout(() => {
+      partDataService.search(query).then((found) => {
+        if (cancelled) return;
+        setResults(found.slice(0, 8));
+        setLoading(false);
+      });
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [value]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        placeholder={t("ventilationCalc.heatSourceColumns.modelPlaceholder")}
+        className="field-input font-mono"
+      />
+      {open && value.trim() !== "" && (loading || results.length > 0) && (
+        <ul className="absolute z-20 mt-1 max-h-48 w-64 overflow-y-auto rounded-md border border-border-strong bg-surface-2 shadow-lg">
+          {loading && <li className="px-2.5 py-1.5 text-[12px] text-muted-2">{t("common.loading")}</li>}
+          {!loading &&
+            results.map((p) => (
+              <li key={p.id}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    onSelect(p);
+                    setOpen(false);
+                  }}
+                  className="flex w-full flex-col items-start gap-0.5 px-2.5 py-1.5 text-left hover:bg-surface-hover"
+                >
+                  <span className="font-mono text-[12.5px] text-foreground">{p.model}</span>
+                  <span className="truncate text-[11px] text-muted-2">
+                    {[p.category, p.specification].filter(Boolean).join(" / ") || "—"}
+                  </span>
+                </button>
+              </li>
+            ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -47,9 +141,10 @@ export function HeatSourceList({ value, onChange }: Props) {
       <p className="text-[12px] text-muted">{t("ventilationCalc.heatSourceHint")}</p>
 
       <div className="data-table-wrap">
-        <table className="data-table" style={{ minWidth: 640 }}>
+        <table className="data-table" style={{ minWidth: 780 }}>
           <thead>
             <tr>
+              <th style={{ width: "140px" }}>{t("ventilationCalc.heatSourceColumns.model")}</th>
               <th style={{ width: "160px" }}>{t("ventilationCalc.heatSourceColumns.name")}</th>
               <th style={{ width: "140px" }}>{t("ventilationCalc.heatSourceColumns.capacity")}</th>
               <th style={{ width: "100px" }} className="text-right">
@@ -64,13 +159,27 @@ export function HeatSourceList({ value, onChange }: Props) {
           <tbody>
             {value.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-4 text-center text-muted-2">
+                <td colSpan={6} className="py-4 text-center text-muted-2">
                   {t("ventilationCalc.heatSourceEmpty")}
                 </td>
               </tr>
             ) : (
               value.map((item, i) => (
                 <tr key={i}>
+                  <td>
+                    <PartModelCell
+                      value={item.model ?? ""}
+                      onChange={(v) => updateItem(i, { model: v })}
+                      onSelect={(part) =>
+                        updateItem(i, {
+                          model: part.model,
+                          name: part.category || item.name,
+                          capacity: part.specification || item.capacity,
+                          heatW: part.heatW ?? item.heatW,
+                        })
+                      }
+                    />
+                  </td>
                   <td>
                     <input
                       value={item.name}

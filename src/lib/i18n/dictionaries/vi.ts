@@ -548,8 +548,10 @@ const vi: Dictionary = {
     regionLabel: "Khu vực lắp đặt",
     heatSourceTitle: "Nguồn phát nhiệt trong tủ",
     heatSourceHint:
-      "Thêm từng thiết bị phát nhiệt trong tủ. Nhập trực tiếp giá trị phát nhiệt (W) theo catalogue thiết bị. Tổng phát nhiệt Qc được tính tự động.",
+      "Thêm từng thiết bị phát nhiệt trong tủ. Nhập trực tiếp giá trị phát nhiệt (W) theo catalogue thiết bị. Tổng phát nhiệt Qc được tính tự động. Nhập vào ô Model để tìm trong 部品データ — chọn 1 kết quả sẽ tự điền tên thiết bị/công suất/phát nhiệt W (vẫn sửa tay đè lên được sau khi chọn).",
     heatSourceColumns: {
+      model: "Model",
+      modelPlaceholder: "Tìm theo model",
       name: "Tên thiết bị",
       namePlaceholder: "Ví dụ: Máy biến áp 3 pha",
       capacity: "Công suất",

@@ -497,6 +497,8 @@ export interface Dictionary {
     heatSourceTitle: string;
     heatSourceHint: string;
     heatSourceColumns: {
+      model: string;
+      modelPlaceholder: string;
       name: string;
       namePlaceholder: string;
       capacity: string;

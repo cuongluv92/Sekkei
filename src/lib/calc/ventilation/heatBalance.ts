@@ -7,6 +7,10 @@ export interface HeatSourceItem {
   capacity?: string;
   /** 負荷率 % (H列) — 実物の様式にある入力欄。発熱量Wはこの値からの逆算ではなく引き続き直接入力(捏造しない)。任意。 */
   loadFactorPercent?: number | null;
+  /** 型番 — 実物のJSIA-T1016様式には無い項目(部品データから機器名称・容量・
+   * 発熱量を検索・自動反映するためのアプリ側の入力補助キー)。手入力欄
+   * (name/capacity/heatW)を選択後も直接上書き可能にする — ロックしない。 */
+  model?: string;
 }
 
 /** 合計発熱量 Qc (W) — 盤内の全発熱機器の発熱量の単純合計。 */
