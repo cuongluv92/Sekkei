@@ -228,38 +228,44 @@ function buildScheduleWorkbook(
     }
     colA.note = buildCaseDisplayLabel(c, panels);
 
-    for (let r = 0; r < ROW_SPAN; r++) {
-      const row = ws.getRow(blockStart + r);
-      for (let col = 3; col <= lastCol; col++) {
-        row.getCell(col).border = {
-          top: r === 0 ? THICK : undefined,
-          bottom: r === ROW_SPAN - 1 ? THICK : undefined,
-          left: (col - 3) % JUN_BUCKETS.length === 0 ? THICK : THIN,
-          right: THIN,
-        };
-      }
-      row.height = ROW_HEIGHT;
-    }
-
     const schedule = schedules[c.id];
-    if (!schedule) return;
-    const lookup = buildJunColorLookupByScreenRow(computeColoredSegments(schedule), colorConfigs);
-    const labels = buildMilestoneLabelsByJunRow(computeMilestones(schedule));
-    for (const monthEntry of months) {
-      for (const bucket of JUN_BUCKETS) {
-        for (let rowIndex = 0; rowIndex < ROW_SPAN; rowIndex++) {
+    const lookup = schedule
+      ? buildJunColorLookupByScreenRow(computeColoredSegments(schedule), colorConfigs)
+      : new Map<string, string>();
+    const labels = schedule ? buildMilestoneLabelsByJunRow(computeMilestones(schedule)) : new Map<string, string>();
+
+    // 画面(ScheduleTimeline.tsx)と同じ考え方 — 旬セルの左境界線は、直前の旬
+    // セルと同じ色(=同じ期間が続いている)なら消し、色が変わる/途切れる所
+    // だけに引く。そうしないと同じ色の帯が旬ごとに線で分断されて見える。
+    for (let rowIndex = 0; rowIndex < ROW_SPAN; rowIndex++) {
+      const row = ws.getRow(blockStart + rowIndex);
+      row.height = ROW_HEIGHT;
+      let prevColor: string | undefined;
+      let col = 3;
+      for (const monthEntry of months) {
+        for (const bucket of JUN_BUCKETS) {
           const key = junCellKeyRow(monthEntry.year, monthEntry.month, bucket, rowIndex);
           const hex = lookup.get(key);
-          if (!hex) continue;
-          const col = monthEntry.colStart + JUN_BUCKETS.indexOf(bucket);
-          const cell = ws.getRow(blockStart + rowIndex).getCell(col);
-          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: toArgb(hex) } };
-          const label = labels.get(key);
-          if (label) {
-            cell.value = label;
-            cell.font = { size: 8, bold: true, color: { argb: "FFFFFFFF" } };
-            cell.alignment = { horizontal: "right", vertical: "bottom" };
+          const isMonthStart = (col - 3) % JUN_BUCKETS.length === 0;
+          const continuesColor = !!hex && hex === prevColor;
+          const cell = row.getCell(col);
+          cell.border = {
+            top: rowIndex === 0 ? THICK : undefined,
+            bottom: rowIndex === ROW_SPAN - 1 ? THICK : undefined,
+            left: continuesColor ? undefined : isMonthStart ? THICK : THIN,
+            right: col === lastCol ? THIN : undefined,
+          };
+          if (hex) {
+            cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: toArgb(hex) } };
+            const label = labels.get(key);
+            if (label) {
+              cell.value = label;
+              cell.font = { size: 8, bold: true, color: { argb: "FFFFFFFF" } };
+              cell.alignment = { horizontal: "right", vertical: "bottom" };
+            }
           }
+          prevColor = hex;
+          col += 1;
         }
       }
     }
