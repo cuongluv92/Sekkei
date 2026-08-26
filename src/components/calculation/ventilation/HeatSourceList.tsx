@@ -81,7 +81,7 @@ function PartModelCell({
         className="field-input font-mono"
       />
       {open && value.trim() !== "" && (loading || results.length > 0) && (
-        <ul className="absolute z-20 mt-1 max-h-48 w-64 overflow-y-auto rounded-md border border-border-strong bg-surface-2 shadow-lg">
+        <ul className="absolute z-20 mt-1 max-h-48 w-[26rem] max-w-[80vw] overflow-y-auto rounded-md border border-border-strong bg-surface-2 shadow-lg">
           {loading && <li className="px-2.5 py-1.5 text-[12px] text-muted-2">{t("common.loading")}</li>}
           {!loading &&
             results.map((p) => (

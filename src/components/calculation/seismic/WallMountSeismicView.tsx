@@ -259,7 +259,7 @@ export function WallMountSeismicView({ caseId }: Props) {
         </div>
 
         <div className="lg:pt-8">
-          <OutlineDrawingUpload calculationType={CALCULATION_TYPE} onChange={setOutlineDrawing} />
+          <OutlineDrawingUpload calculationType={CALCULATION_TYPE} onChange={setOutlineDrawing} heightClass="h-[440px]" />
           <p className="mt-1.5 text-[10.5px] text-muted-2">{t("seismicCalc.outlineDrawingHintWall")}</p>
         </div>
       </div>

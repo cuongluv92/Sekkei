@@ -274,7 +274,7 @@ export function FloorMountSeismicView({ caseId, calculationType, titleKey, descr
         </div>
 
         <div className="lg:pt-8">
-          <OutlineDrawingUpload calculationType={calculationType} onChange={setOutlineDrawing} />
+          <OutlineDrawingUpload calculationType={calculationType} onChange={setOutlineDrawing} heightClass="h-[440px]" />
           <p className="mt-1.5 text-[10.5px] text-muted-2">{t("seismicCalc.outlineDrawingHintFloor")}</p>
         </div>
       </div>
