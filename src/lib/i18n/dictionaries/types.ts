@@ -571,6 +571,7 @@ export interface Dictionary {
     ventLayoutDrawingTitle: string;
     ventLayoutDrawingHint: string;
     addOpeningButton: string;
+    clearOpeningsButton: string;
     openingTotalAreaLabel: string;
     outdoorSourceTitle: string;
     outdoorSourceBody: string;

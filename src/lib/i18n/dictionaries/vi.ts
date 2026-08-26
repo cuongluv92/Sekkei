@@ -634,6 +634,7 @@ const vi: Dictionary = {
     ventLayoutDrawingTitle: "Bản vẽ bố trí cửa gió (mái che)",
     ventLayoutDrawingHint: "Đính kèm bản vẽ bố trí cửa cấp/thoát gió (w・h1・h・W1・W2・Wn・D) sẽ giúp tránh nhập sai (khác với bản vẽ ngoại hình).",
     addOpeningButton: "Thêm cửa gió",
+    clearOpeningsButton: "Xoá hết",
     openingTotalAreaLabel: "Tổng diện tích (m²)",
     outdoorSourceTitle: "Căn cứ tính toán・nguồn",
     outdoorSourceBody: "Tuân theo công thức tính thông gió tủ điện lắp ngoài trời của JSIA-T1016:2019「配電盤類の換気計算」. Điều kiện khí hậu theo vùng (nhiệt độ ngoài trời, nhiệt độ tương đương do bức xạ mặt trời...) lấy từ danh mục nội bộ đã đăng ký ở mục 「設定」(chỉ đăng ký những vùng đã xác minh được số liệu thật — vùng chưa đăng ký sẽ không chọn được).",

@@ -139,6 +139,12 @@ export async function exportOutdoorVentilationExcel(data: OutdoorVentilationExpo
     "屋外フィルタ無し　東京",
   ]);
   keepOnlyWorksheet(workbook, ws);
+  // フィルタ有りシートのレイアウトをフィルタ無しの場合にも流用しているため
+  // (共通項目の行・列位置が完全に一致する上位互換レイアウト — 差分はフィルタ
+  // 関連の数行のみ)、シート名(タブ名)がそのまま「フィルタ有り」表記の
+  // ままだと、フィルタを使わない計算でも開いた時に「フィルタ有り」に見えて
+  // 紛らわしい。フィルタ無しの場合はタブ名も実態に合わせて書き換える。
+  if (!data.useFilter) ws.name = ws.name.replace("フィルタ有り", "フィルタ無し");
 
   if (data.caseInfo) {
     ws.getCell("C3").value = data.caseInfo.projectName;
@@ -215,6 +221,9 @@ export async function exportOutdoorVentilationExcel(data: OutdoorVentilationExpo
 export async function exportIndoorVentilationExcel(data: IndoorVentilationExportData): Promise<{ fileName: string }> {
   const { workbook, ws } = await loadActiveTemplateSheet("ventilationIndoor", ["屋内フィルタ有り", "屋内フィルタ無し"]);
   keepOnlyWorksheet(workbook, ws);
+  // 屋外側と同じ理由 — フィルタ有りシートのレイアウトをフィルタ無しにも
+  // 流用しているため、タブ名は実態(data.useFilter)に合わせて書き換える。
+  if (!data.useFilter) ws.name = ws.name.replace("フィルタ有り", "フィルタ無し");
 
   // 提供テンプレートの見出し文言(A6)は屋内シートでも「屋外キュービクルの
   // 換気計算」のままになっている(元ファイル自体の記載漏れ) — 誤った表記を

@@ -578,6 +578,10 @@ function AreaFromDimensionsField({
     applyDimensions(next);
   }
 
+  function clearPairs() {
+    setPairs([blankOpeningPair()]);
+  }
+
   return (
     <div>
       <label className="field-label font-mono">
@@ -616,10 +620,18 @@ function AreaFromDimensionsField({
             )}
           </div>
         ))}
-        <button type="button" onClick={addPair} className="btn-ghost w-fit !py-1 !text-[11.5px]">
-          <Plus className="h-3 w-3" />
-          {t("ventilationCalc.addOpeningButton")}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button type="button" onClick={addPair} className="btn-ghost w-fit !py-1 !text-[11.5px]">
+            <Plus className="h-3 w-3" />
+            {t("ventilationCalc.addOpeningButton")}
+          </button>
+          {(pairs.length > 1 || pairs[0].w || pairs[0].h) && (
+            <button type="button" onClick={clearPairs} className="btn-ghost w-fit !py-1 !text-[11.5px] text-danger hover:bg-danger/10">
+              <Trash2 className="h-3 w-3" />
+              {t("ventilationCalc.clearOpeningsButton")}
+            </button>
+          )}
+        </div>
         <div>
           <input type="number" min={0} step="any" value={value} onChange={(e) => onChange(e.target.value)} className="field-input" />
           <span className="mt-1 block text-[10.5px] text-muted-2">{t("ventilationCalc.openingTotalAreaLabel")}</span>
