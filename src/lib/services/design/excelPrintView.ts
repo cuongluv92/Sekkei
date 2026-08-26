@@ -39,8 +39,18 @@ const DEFAULT_COL_WIDTH = 8.43;
 const DEFAULT_MARGIN_MM = 8;
 const PX_PER_MM = 96 / 25.4;
 const PX_PER_PT = 96 / 72;
-const A4_WIDTH_MM = 210;
-const A4_HEIGHT_MM = 297;
+
+/** ws.pageSetup.paperSize codes actually used in this codebase (ECMA-376 ST_PaperSize). */
+const PAGE_SIZES_MM: Record<number, { name: string; width: number; height: number }> = {
+  8: { name: "A3", width: 297, height: 420 },
+  9: { name: "A4", width: 210, height: 297 },
+};
+
+/** Falls back to A4 (this codebase's previous only option) if the template didn't set a recognized paperSize. */
+function pageSize(ws: Worksheet): { name: string; width: number; height: number } {
+  const code = ws.pageSetup?.paperSize;
+  return (typeof code === "number" && PAGE_SIZES_MM[code]) || PAGE_SIZES_MM[9];
+}
 
 interface CellRef {
   col: number;
@@ -163,8 +173,9 @@ function computeAutoFitScale(
   tableHeightPx: number,
 ): number {
   const margins = marginsMm(ws);
-  const pageWidthMm = orientation === "landscape" ? A4_HEIGHT_MM : A4_WIDTH_MM;
-  const pageHeightMm = orientation === "landscape" ? A4_WIDTH_MM : A4_HEIGHT_MM;
+  const { width, height } = pageSize(ws);
+  const pageWidthMm = orientation === "landscape" ? height : width;
+  const pageHeightMm = orientation === "landscape" ? width : height;
   const printableWidthPx = (pageWidthMm - margins.left - margins.right) * PX_PER_MM;
   const printableHeightPx = (pageHeightMm - margins.top - margins.bottom) * PX_PER_MM;
 
@@ -278,6 +289,7 @@ export function printWorksheet(ws: Worksheet): void {
 
   const orientation = ws.pageSetup?.orientation === "portrait" ? "portrait" : "landscape";
   const margins = marginsMm(ws);
+  const { name: paperName } = pageSize(ws);
   const root = document.createElement("div");
   root.id = PRINT_ROOT_ID;
   root.style.cssText = "background:#ffffff;color:#000000;color-scheme:light";
@@ -288,7 +300,7 @@ export function printWorksheet(ws: Worksheet): void {
   style.id = PRINT_STYLE_ID;
   style.textContent = `
     @media print {
-      @page { size: A4 ${orientation}; margin: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm; }
+      @page { size: ${paperName} ${orientation}; margin: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm; }
       html, body { background: #ffffff !important; }
       body > *:not(#${PRINT_ROOT_ID}) { display: none !important; }
       #${PRINT_ROOT_ID} { display: block !important; color-scheme: light; }

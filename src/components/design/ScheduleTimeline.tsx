@@ -21,6 +21,8 @@ import {
   dayCellKeyRow,
   daysInMonth,
   JUN_BUCKETS,
+  SCREEN_MONTHS_AFTER,
+  SCREEN_MONTHS_BEFORE,
   SCREEN_PROCESS_ROWS,
 } from "@/lib/utils/scheduleColoring";
 import { applyAllCascades, applyCascade, applyTodayDefaults, formatJaDate, isIsoDate } from "@/lib/utils/schedule";
@@ -82,13 +84,9 @@ const CATEGORY_KEYS: ScheduleColorConfig["category"][] = [
   "shipping",
 ];
 
-// 画面表示は「作成月の1ヶ月前〜4ヶ月後」(計6ヶ月)に絞り、横スクロール
-// を減らして各月の表示幅を広く取る。1日あたりの列幅を広げた分、月数は
-// 少なめにして見やすさを保つ。Excel出力(⑤工程表)は実テンプレート側の
-// 実際のヘッダー行をそのまま読むため、この画面表示範囲とは独立している
-// (scheduleExport.ts参照)。
-const MONTHS_BEFORE = 1;
-const MONTHS_AFTER = 4;
+// 表示月数(SCREEN_MONTHS_BEFORE/AFTER)は scheduleColoring.ts で画面と
+// Excel出力(⑤工程表)共通の定数として管理している — 両者が常に同じ範囲
+// になるようにするため。
 // 1日あたりの列幅(px) — 各月の実際の日数(28〜31)分だけ列を持たせることで、
 // 旬(初/中/下)の途中で工程が切り替わっても正確な日で色が変わるようにする
 // (列同士の境界線は表示しない — あくまで内部的な精度のため)。
@@ -177,7 +175,7 @@ export function ScheduleTimeline() {
 
   const months = useMemo(() => {
     const list: { year: number; month: number }[] = [];
-    for (let i = -MONTHS_BEFORE; i <= MONTHS_AFTER; i++) {
+    for (let i = -SCREEN_MONTHS_BEFORE; i <= SCREEN_MONTHS_AFTER; i++) {
       list.push(addMonths(focus.year, focus.month, i));
     }
     return list;
@@ -185,7 +183,7 @@ export function ScheduleTimeline() {
 
   useEffect(() => {
     if (loading) return;
-    const target = addMonths(focus.year, focus.month, -MONTHS_BEFORE);
+    const target = addMonths(focus.year, focus.month, -SCREEN_MONTHS_BEFORE);
     const index = months.findIndex(
       (m) => m.year === target.year && m.month === target.month,
     );

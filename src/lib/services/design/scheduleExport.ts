@@ -1,117 +1,228 @@
-import type { Cell, Worksheet } from "exceljs";
-import { loadActiveTemplate, downloadWorkbook } from "./excelWorkbook";
+import ExcelJS from "exceljs";
+import { downloadWorkbook } from "./excelWorkbook";
 import { scheduleColorService } from "./scheduleColorService";
 import { printWorksheet } from "./excelPrintView";
 import {
-  buildJunColorLookupByRow,
+  addMonths,
+  buildJunColorLookupByScreenRow,
+  buildMilestoneLabelsByJunRow,
   computeColoredSegments,
+  computeMilestones,
   JUN_BUCKETS,
   junCellKeyRow,
-  PROCESS_ROWS,
-  type JunBucket,
+  SCREEN_MONTHS_AFTER,
+  SCREEN_MONTHS_BEFORE,
+  SCREEN_PROCESS_ROWS,
 } from "@/lib/utils/scheduleColoring";
-import { buildProjectPanelLines } from "@/lib/utils/designNumbering";
-import type { CaseSchedule, DesignCaseWithPanels } from "@/lib/types/design";
+import { buildCaseDisplayLabel, buildProjectPanelLines } from "@/lib/utils/designNumbering";
+import type { CaseSchedule, DesignCaseWithPanels, ScheduleCategoryKey } from "@/lib/types/design";
 
 /**
- * ⑤工程表 — confirmed with the user: the uploaded template's own format is
- * authoritative (never regenerated/reshaped by the app), and its month
- * range always starts 3 months before the month it was created in (e.g.
- * created in 2026/8 → first column-group is 2026/5). Rather than hardcode
- * that "minus 3" rule, the export reads the *actual* header row (4) of
- * whatever template is currently active to find each month's starting
- * column — so it always matches the real file, even if the user's own
- * convention ever changes.
+ * ⑤工程表 — 自前生成のA3横1枚レイアウト。以前は取込済みの実テンプレート
+ * ファイル(旬3列/月・板金/BOX/部材が同じ行の4行構成)をそのまま使っていた
+ * が、画面のタイムライン(ScheduleTimeline.tsx)が実日単位の色分けや行構成
+ * (鈑金・BOX納入/アクセサリー納入/製作・検査/立会・出荷の4行)へ進化した
+ * ため、Excel側もテンプレートファイルに縛られず画面と同じ構成・同じ表示
+ * 月数(SCREEN_MONTHS_BEFORE/AFTER)で出力するように作り直した。
  *
- * Each month occupies 6 columns as 3 merged 初/中/下 pairs (confirmed from
- * the real file). This is coarser than the app's own 6-segment timeline
- * model (初1/初2/中1/中2/下1/下2, 5-day resolution) — buildJunColorLookupByRow()
- * (shared with ScheduleTimeline.tsx's on-screen rendering) folds each half-
- * segment onto its 旬 bucket, so the export can never show a different
- * date range — or a different color, since the 鈑金/BOX legend merge lives
- * in that same shared helper — than the app's own timeline.
- *
- * Each 案件 occupies 4 physical rows in the real file (confirmed via cell
- * borders: a thin top border on row+0, a thin bottom border on row+3, only
- * hairline borders in between — no merge). This isn't decorative: 板金・BOX・
- * 部材 often run in parallel with each other just before 製作 starts, so a
- * single row would lose one color to "last write wins". PROCESS_ROWS splits
- * the 7 categories across those 4 rows along the real workflow order
- * (板金・BOX・部材 → 製作 → 検査 → 立会・出荷) so overlapping phases each get
- * their own line. Column A/B mirror the real template's own row captions:
- * 図面番号／管理番号／(blank)／工事番号 and 件名／盤名称／(blank)／面数（合計）.
+ * 実際の日単位の精度(画面は1日ごとに正確に色が変わる)はExcelの印刷幅の
+ * 都合上そのまま持ち込めない — 列数が多すぎて1日あたりが読めない幅に
+ * なってしまうため、Excel側は旬(初/中/下・3列/月)単位に丸めている
+ * (buildJunColorLookupByScreenRow — 行構成だけ画面と共通のSCREEN_PROCESS_
+ * ROWSを使う)。日付ラベルは旬セルの中に小さく表示する。
  */
 
-const HEADER_ROW = 4;
-const FIRST_MONTH_COL = 3; // C
-const MONTH_COL_SPAN = 6;
-const JUN_COL_OFFSET: Record<JunBucket, number> = { 初: 0, 中: 2, 下: 4 };
+const LABEL_COL_A_WIDTH = 15;
+const LABEL_COL_B_WIDTH = 24;
+const JUN_COL_WIDTH = 5.5;
+const TITLE_ROW = 1;
+const LEGEND_ROW = 2;
+const MONTH_HEADER_ROW = 4;
+const JUN_HEADER_ROW = 5;
 const DATA_START_ROW = 6;
-const ROW_SPAN = 4; // 1案件あたりの物理行数 (罫線で確認済み)
+const ROW_SPAN = SCREEN_PROCESS_ROWS.length; // 1案件あたりの行数(画面と共通)
 
-interface MonthColumn {
-  year: number;
-  month: number;
-  colStart: number;
-}
+// 実テンプレートの凡例と同じ並び(box は sheetMetal の色見本に統合されるため単独では出さない)。
+const LEGEND_CATEGORIES: { key: ScheduleCategoryKey; label: string }[] = [
+  { key: "sheetMetal", label: "鈑金・BOX納入" },
+  { key: "accessory", label: "アクセサリー納入" },
+  { key: "production", label: "製作" },
+  { key: "inspection", label: "検査" },
+  { key: "witness", label: "立会" },
+  { key: "shipping", label: "出荷" },
+];
 
-function readMonthColumns(ws: { getRow(r: number): { getCell(c: number): Cell } }): MonthColumn[] {
-  const months: MonthColumn[] = [];
-  let col = FIRST_MONTH_COL;
-  for (;;) {
-    const value = ws.getRow(HEADER_ROW).getCell(col).value;
-    if (!(value instanceof Date)) break;
-    months.push({ year: value.getFullYear(), month: value.getMonth() + 1, colStart: col });
-    col += MONTH_COL_SPAN;
-  }
-  return months;
-}
+const THIN: Partial<ExcelJS.Border> = { style: "thin", color: { argb: "FFB6BEC9" } };
+const THICK: Partial<ExcelJS.Border> = { style: "medium", color: { argb: "FF4B5563" } };
 
 function toArgb(hex: string): string {
   return `FF${hex.replace("#", "").toUpperCase()}`;
 }
 
-async function buildScheduleWorkbook(
+interface MonthColumn {
+  year: number;
+  month: number;
+  colStart: number; // 初列の絶対列番号
+}
+
+/** 今日を中心に、画面のタイムラインと同じ月数(SCREEN_MONTHS_BEFORE〜AFTER)分の月を並べる。 */
+function computeMonths(): MonthColumn[] {
+  const now = new Date();
+  const months: MonthColumn[] = [];
+  let col = 3; // A/Bの次から
+  for (let i = -SCREEN_MONTHS_BEFORE; i <= SCREEN_MONTHS_AFTER; i++) {
+    const m = addMonths(now.getFullYear(), now.getMonth() + 1, i);
+    months.push({ year: m.year, month: m.month, colStart: col });
+    col += JUN_BUCKETS.length;
+  }
+  return months;
+}
+
+function buildHeader(ws: ExcelJS.Worksheet, months: MonthColumn[], colorByCategory: Map<ScheduleCategoryKey, string>) {
+  const lastCol = 2 + months.length * JUN_BUCKETS.length;
+
+  ws.mergeCells(TITLE_ROW, 1, TITLE_ROW, lastCol);
+  const titleCell = ws.getCell(TITLE_ROW, 1);
+  titleCell.value = "⑤ 工程表";
+  titleCell.font = { size: 14, bold: true };
+  titleCell.alignment = { horizontal: "left", vertical: "middle" };
+  ws.getRow(TITLE_ROW).height = 20;
+
+  let legendCol = 1;
+  for (const { key, label } of LEGEND_CATEGORIES) {
+    const swatch = ws.getCell(LEGEND_ROW, legendCol);
+    const color = colorByCategory.get(key);
+    if (color) swatch.fill = { type: "pattern", pattern: "solid", fgColor: { argb: toArgb(color) } };
+    swatch.border = { top: THIN, left: THIN, right: THIN, bottom: THIN };
+    const labelCell = ws.getCell(LEGEND_ROW, legendCol + 1);
+    labelCell.value = label;
+    labelCell.font = { size: 8 };
+    labelCell.alignment = { vertical: "middle" };
+    legendCol += 2;
+  }
+  ws.getRow(LEGEND_ROW).height = 14;
+
+  ws.mergeCells(MONTH_HEADER_ROW, 1, JUN_HEADER_ROW, 1);
+  const colACaption = ws.getCell(MONTH_HEADER_ROW, 1);
+  colACaption.value = "図面番号\n管理番号";
+  ws.mergeCells(MONTH_HEADER_ROW, 2, JUN_HEADER_ROW, 2);
+  const colBCaption = ws.getCell(MONTH_HEADER_ROW, 2);
+  colBCaption.value = "件名／盤名称";
+  for (const cell of [colACaption, colBCaption]) {
+    cell.font = { size: 9, bold: true };
+    cell.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
+    cell.border = { top: THIN, left: THIN, right: THIN, bottom: THIN };
+  }
+
+  for (const m of months) {
+    ws.mergeCells(MONTH_HEADER_ROW, m.colStart, MONTH_HEADER_ROW, m.colStart + JUN_BUCKETS.length - 1);
+    const monthCell = ws.getCell(MONTH_HEADER_ROW, m.colStart);
+    monthCell.value = `${m.year}/${String(m.month).padStart(2, "0")}`;
+    monthCell.font = { size: 9, bold: true };
+    monthCell.alignment = { horizontal: "center", vertical: "middle" };
+    monthCell.border = { top: THIN, left: THICK, right: THIN, bottom: THIN };
+
+    JUN_BUCKETS.forEach((bucket, i) => {
+      const cell = ws.getCell(JUN_HEADER_ROW, m.colStart + i);
+      cell.value = bucket;
+      cell.font = { size: 8 };
+      cell.alignment = { horizontal: "center", vertical: "middle" };
+      cell.border = { top: THIN, left: i === 0 ? THICK : THIN, right: THIN, bottom: THIN };
+    });
+  }
+  ws.getRow(MONTH_HEADER_ROW).height = 14;
+  ws.getRow(JUN_HEADER_ROW).height = 12;
+}
+
+function buildScheduleWorkbook(
   cases: DesignCaseWithPanels[],
   schedules: Record<string, CaseSchedule>,
-): Promise<Worksheet> {
-  const [workbook, colorConfigs] = await Promise.all([
-    loadActiveTemplate("scheduleSheet"),
-    scheduleColorService.list(),
-  ]);
-  const ws = workbook.worksheets[0];
-  const months = readMonthColumns(ws);
-  if (months.length === 0) throw new Error("schedule-template-missing-month-headers");
+  colorConfigs: { category: ScheduleCategoryKey; color: string }[],
+): ExcelJS.Worksheet {
+  const months = computeMonths();
+  const lastCol = 2 + months.length * JUN_BUCKETS.length;
+  const colorByCategory = new Map(colorConfigs.map((c) => [c.category, c.color]));
+
+  const workbook = new ExcelJS.Workbook();
+  const ws = workbook.addWorksheet("工程表", {
+    pageSetup: {
+      // exceljs's typed PaperSize enum omits A3 (OOXML code 8) even though the
+      // file format itself supports it — cast past the incomplete enum.
+      paperSize: 8 as ExcelJS.PaperSize, // A3
+      orientation: "landscape",
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      margins: { top: 0.3, bottom: 0.3, left: 0.3, right: 0.3, header: 0, footer: 0 },
+    },
+    views: [{ state: "frozen", xSplit: 2, ySplit: JUN_HEADER_ROW }],
+  });
+
+  ws.columns = [
+    { width: LABEL_COL_A_WIDTH },
+    { width: LABEL_COL_B_WIDTH },
+    ...months.flatMap(() => JUN_BUCKETS.map(() => ({ width: JUN_COL_WIDTH }))),
+  ];
+
+  buildHeader(ws, months, colorByCategory);
 
   cases.forEach(({ case: c, panels }, i) => {
     const blockStart = DATA_START_ROW + i * ROW_SPAN;
     const { projectName, panelNames } = buildProjectPanelLines(c, panels);
-    ws.getCell(`A${blockStart}`).value = c.drawingNumber;
-    ws.getCell(`A${blockStart + 1}`).value = c.managementNumber;
-    ws.getCell(`A${blockStart + 3}`).value = c.constructionNumber;
-    ws.getCell(`B${blockStart}`).value = projectName;
-    ws.getCell(`B${blockStart + 1}`).value = panelNames;
     const faceCount = panels[0]?.faceCount;
-    ws.getCell(`B${blockStart + 3}`).value = faceCount != null ? `${faceCount}面` : "";
+
+    ws.mergeCells(blockStart, 1, blockStart + ROW_SPAN - 1, 1);
+    const colA = ws.getCell(blockStart, 1);
+    colA.value = [c.drawingNumber, c.managementNumber, c.constructionNumber].filter(Boolean).join("\n");
+    ws.mergeCells(blockStart, 2, blockStart + ROW_SPAN - 1, 2);
+    const colB = ws.getCell(blockStart, 2);
+    colB.value = [projectName, panelNames, faceCount != null ? `${faceCount}面` : ""].filter(Boolean).join("\n");
+    for (const cell of [colA, colB]) {
+      cell.font = { size: 8 };
+      cell.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+      cell.border = { top: THICK, left: THIN, right: THIN, bottom: THICK };
+    }
+    colA.note = buildCaseDisplayLabel(c, panels);
+
+    for (let r = 0; r < ROW_SPAN; r++) {
+      const row = ws.getRow(blockStart + r);
+      for (let col = 3; col <= lastCol; col++) {
+        row.getCell(col).border = {
+          top: r === 0 ? THICK : undefined,
+          bottom: r === ROW_SPAN - 1 ? THICK : undefined,
+          left: (col - 3) % JUN_BUCKETS.length === 0 ? THICK : THIN,
+          right: THIN,
+        };
+      }
+      row.height = 13;
+    }
 
     const schedule = schedules[c.id];
     if (!schedule) return;
-    const lookup = buildJunColorLookupByRow(computeColoredSegments(schedule), colorConfigs);
+    const lookup = buildJunColorLookupByScreenRow(computeColoredSegments(schedule), colorConfigs);
+    const labels = buildMilestoneLabelsByJunRow(computeMilestones(schedule));
     for (const monthEntry of months) {
       for (const bucket of JUN_BUCKETS) {
-        for (let rowIndex = 0; rowIndex < PROCESS_ROWS.length; rowIndex++) {
-          const hex = lookup.get(junCellKeyRow(monthEntry.year, monthEntry.month, bucket, rowIndex));
+        for (let rowIndex = 0; rowIndex < ROW_SPAN; rowIndex++) {
+          const key = junCellKeyRow(monthEntry.year, monthEntry.month, bucket, rowIndex);
+          const hex = lookup.get(key);
           if (!hex) continue;
-          const col = monthEntry.colStart + JUN_COL_OFFSET[bucket];
-          ws.getRow(blockStart + rowIndex).getCell(col).fill = {
-            type: "pattern",
-            pattern: "solid",
-            fgColor: { argb: toArgb(hex) },
-          };
+          const col = monthEntry.colStart + JUN_BUCKETS.indexOf(bucket);
+          const cell = ws.getRow(blockStart + rowIndex).getCell(col);
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: toArgb(hex) } };
+          const label = labels.get(key);
+          if (label) {
+            cell.value = label;
+            cell.font = { size: 6, bold: true, color: { argb: "FFFFFFFF" } };
+            cell.alignment = { horizontal: "right", vertical: "bottom" };
+          }
         }
       }
     }
   });
+
+  const lastRow = DATA_START_ROW + cases.length * ROW_SPAN - 1;
+  ws.pageSetup.printArea = `A1:${ws.getColumn(lastCol).letter}${Math.max(lastRow, JUN_HEADER_ROW)}`;
 
   return ws;
 }
@@ -120,17 +231,19 @@ export async function exportScheduleExcel(
   cases: DesignCaseWithPanels[],
   schedules: Record<string, CaseSchedule>,
 ): Promise<{ fileName: string }> {
-  const ws = await buildScheduleWorkbook(cases, schedules);
+  const colorConfigs = await scheduleColorService.list();
+  const ws = buildScheduleWorkbook(cases, schedules, colorConfigs);
   const fileName = "工程表.xlsx";
   await downloadWorkbook(ws.workbook, fileName);
   return { fileName };
 }
 
-/** Prints ⑤工程表 in the exact layout of the currently active template (same colored Gantt as the Excel download). */
+/** Prints ⑤工程表 in the exact layout the Excel download produces (same colored Gantt). */
 export async function printSchedule(
   cases: DesignCaseWithPanels[],
   schedules: Record<string, CaseSchedule>,
 ): Promise<void> {
-  const ws = await buildScheduleWorkbook(cases, schedules);
+  const colorConfigs = await scheduleColorService.list();
+  const ws = buildScheduleWorkbook(cases, schedules, colorConfigs);
   printWorksheet(ws);
 }

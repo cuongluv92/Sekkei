@@ -282,6 +282,58 @@ export function buildMilestoneLabelsByRow(milestones: ScheduleMilestone[]): Map<
   return map;
 }
 
+function bucketFromDay(day: number): JunBucket {
+  return day <= 10 ? "初" : day <= 20 ? "中" : "下";
+}
+
+/**
+ * SCREEN_PROCESS_ROWS の行ごとに折りたたんだ、旬単位の色ルックアップ —
+ * `buildJunColorLookupByRow` と同じ旬粒度だが、行分けは画面と同じ
+ * SCREEN_PROCESS_ROWS を使う。Excel出力(⑤工程表)が画面のタイムラインと
+ * 同じ行構成で出力するために使う(実テンプレート由来のPROCESS_ROWSとは
+ * 別物 — こちらはアプリ側で自由にレイアウトできる出力専用)。
+ */
+export function buildJunColorLookupByScreenRow(
+  segments: ColoredSegment[],
+  colors: ScheduleColorConfig[],
+): Map<string, string> {
+  const colorByCategory = new Map(colors.map((c) => [c.category, c.color]));
+  const map = new Map<string, string>();
+  for (const seg of segments) {
+    const rowIndex = rowIndexForCategoryScreen(seg.category);
+    if (rowIndex < 0) continue;
+    const displayCategory = DISPLAY_CATEGORY_COLOR[seg.category] ?? seg.category;
+    const color = colorByCategory.get(displayCategory);
+    if (!color) continue;
+    const key = junCellKeyRow(seg.year, seg.month, bucketFromSegment(seg.segment), rowIndex);
+    if (!map.has(key)) map.set(key, color);
+  }
+  return map;
+}
+
+/**
+ * buildMilestoneLabelsByRow の旬単位版 — 実日ではなく、その日が属する旬の
+ * セルにラベルを置く(Excel出力は旬単位の3列/月構成のため)。
+ */
+export function buildMilestoneLabelsByJunRow(milestones: ScheduleMilestone[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const m of milestones) {
+    const rowIndex = rowIndexForCategoryScreen(m.category);
+    if (rowIndex < 0) continue;
+    const key = junCellKeyRow(m.year, m.month, bucketFromDay(m.day), rowIndex);
+    if (!map.has(key)) map.set(key, String(m.day));
+  }
+  return map;
+}
+
+/**
+ * 画面のタイムライン・Excel出力(⑤工程表)共通の表示月数 — 「作成月の
+ * 1ヶ月前〜3ヶ月後」(計5ヶ月)。Excel出力も画面と同じ範囲にすることで、
+ * 見た目が常に一致するようにする。
+ */
+export const SCREEN_MONTHS_BEFORE = 1;
+export const SCREEN_MONTHS_AFTER = 3;
+
 /** その年月の実際の日数 (28〜31)。 */
 export function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
