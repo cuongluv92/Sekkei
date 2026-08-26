@@ -1161,8 +1161,8 @@ const ja: Dictionary = {
         frequency: "周波数",
         controlVoltage: "制御電圧",
         protectionRating: "保護等級",
-        productionEstimatedHours: "見積工数",
-        productionActualHours: "実働工数",
+        productionEstimatedHours: "作業時間（見積）",
+        productionActualHours: "作業時間（実動）",
       },
       fields: {
         productionNotes: "製作注意事項",
