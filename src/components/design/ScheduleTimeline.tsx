@@ -23,7 +23,7 @@ import {
   JUN_BUCKETS,
   SCREEN_PROCESS_ROWS,
 } from "@/lib/utils/scheduleColoring";
-import { applyCascade, applyTodayDefaults, formatJaDate, isIsoDate } from "@/lib/utils/schedule";
+import { applyAllCascades, applyCascade, applyTodayDefaults, formatJaDate, isIsoDate } from "@/lib/utils/schedule";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type {
   CaseSchedule,
@@ -91,7 +91,7 @@ const MONTHS_AFTER = 4;
 // 1日あたりの列幅(px) — 各月の実際の日数(28〜31)分だけ列を持たせることで、
 // 旬(初/中/下)の途中で工程が切り替わっても正確な日で色が変わるようにする
 // (列同士の境界線は表示しない — あくまで内部的な精度のため)。
-const DAY_WIDTH = 4;
+const DAY_WIDTH = 8;
 const DRAWING_COL_WIDTH = 130;
 const LABEL_COL_WIDTH = 200;
 
@@ -162,7 +162,7 @@ export function ScheduleTimeline() {
     setExpandedStarts(new Set());
     scheduleService.getByCase(selectedCaseId).then((s) => {
       if (active) {
-        setEditingSchedule(applyTodayDefaults(s));
+        setEditingSchedule(applyAllCascades(applyTodayDefaults(s)));
         setEditLoading(false);
       }
     });
@@ -202,7 +202,7 @@ export function ScheduleTimeline() {
     setEditingSchedule((prev) => {
       if (!prev) return prev;
       const updated = { ...prev, [key]: value || null };
-      return value ? applyCascade(updated, key) : updated;
+      return value ? applyCascade(updated, key, expandedStarts) : updated;
     });
   }
 
@@ -676,8 +676,11 @@ export function ScheduleTimeline() {
                               }}
                             >
                               {label && (
+                                // ラベルはその日(=色付き範囲の最終日)が右端になるよう右詰めで配置し、
+                                // 文字は左(=同じ色の範囲の内側)へ伸びるようにして、塗られていない
+                                // 隣の日にはみ出さないようにする。
                                 <span
-                                  className="pointer-events-none absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 text-[9px] font-bold whitespace-nowrap text-white"
+                                  className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 text-[9px] font-bold whitespace-nowrap text-white"
                                   style={{
                                     textShadow:
                                       "0 0 2px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.9)",

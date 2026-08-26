@@ -63,8 +63,7 @@ export function addDaysIso(iso: string, days: number): string {
 
 /**
  * 板金・BOX納入 → 製作 → 検査 → 立会 → 出荷 → 納入 という実際の工程の流れに
- * 沿って、前工程の完了日から次工程の開始日の初期値を自動計算する
- * (ユーザーが既に手入力した値は絶対に上書きしない — 空欄の時だけ埋める)。
+ * 沿って、前工程の完了日から次工程の開始日の初期値を自動計算する。
  * `offsetDays` が指定されたリンクは、前工程の完了日の翌日を開始日にする
  * (製作・検査・立会・出荷は全て「前工程が終わってから」始まる — 前工程の
  * 完了日と同日にしてしまうとタイムライン上で色が重なって見えるため、
@@ -87,29 +86,86 @@ export const CASCADE_LINKS: {
 ];
 
 /**
- * `changedKey` の変更が CASCADE_LINKS のいずれかの起点なら、まだ空欄の
- * 次工程の開始日を自動で埋める。複数の起点を持つリンクは、埋まっている
- * 実日付 (自由記入テキストは除く) のうち最も遅い日付を採用する。
+ * 完了日欄(*EndDate)が「9月下旬」のような自由記入テキストで実日付として
+ * 解釈できない場合に、カスケード計算で代わりに参照する色分け専用の実日付
+ * 欄(*EndRefDate)。scheduleColoring.ts の RANGE_FIELDS と同じ対応。
  */
-export function applyCascade(
+const CASCADE_REF_FALLBACK: Partial<Record<keyof CaseSchedule, keyof CaseSchedule>> = {
+  productionEndDate: "productionEndRefDate",
+  inspectionEndDate: "inspectionEndRefDate",
+  witnessEndDate: "witnessEndRefDate",
+  shippingEndDate: "shippingEndRefDate",
+};
+
+/** fromKey の実日付を解決する — 本人が自由記入テキストなら CASCADE_REF_FALLBACK の実日付欄で代用する。 */
+function resolveCascadeSource(schedule: CaseSchedule, key: keyof CaseSchedule): string | null {
+  const raw = schedule[key] as string | null;
+  if (isIsoDate(raw)) return raw;
+  const refKey = CASCADE_REF_FALLBACK[key];
+  if (!refKey) return null;
+  const ref = schedule[refKey] as string | null;
+  return isIsoDate(ref) ? ref : null;
+}
+
+/**
+ * CASCADE_LINKS を1つ実行し、対象の次工程開始日を再計算する。`lockedKeys`
+ * に含まれる toKey は上書きしない(=ユーザーが手動編集欄を開いて自分で
+ * 入力した欄) — それ以外は前工程の日付が変わるたびに常に最新の値で
+ * 上書きする(過去に自動計算された古い値がいつまでも残ってしまうのを
+ * 防ぐため)。
+ */
+function runCascadeLinks(
   schedule: CaseSchedule,
-  changedKey: keyof CaseSchedule,
+  lockedKeys: ReadonlySet<keyof CaseSchedule>,
+  shouldRun: (link: (typeof CASCADE_LINKS)[number]) => boolean,
 ): CaseSchedule {
   let next = schedule;
   for (const link of CASCADE_LINKS) {
-    if (!link.fromKeys.includes(changedKey)) continue;
-    if (next[link.toKey]) continue;
+    if (!shouldRun(link)) continue;
+    if (lockedKeys.has(link.toKey)) continue;
     const values = link.fromKeys
-      .map((k) => next[k] as string | null)
+      .map((k) => resolveCascadeSource(next, k))
       .filter(isIsoDate)
       .sort();
     const latest = values.at(-1);
     if (latest) {
       const value = link.offsetDays ? addDaysIso(latest, link.offsetDays) : latest;
-      next = { ...next, [link.toKey]: value };
+      if (next[link.toKey] !== value) next = { ...next, [link.toKey]: value };
     }
   }
   return next;
+}
+
+/**
+ * `changedKey` (またはその参考日欄 CASCADE_REF_FALLBACK) の変更が
+ * CASCADE_LINKS のいずれかの起点なら、次工程の開始日を自動で再計算する。
+ * `lockedKeys` に含まれる開始日欄は上書きしない (画面側で手動編集欄を
+ * 開いている = ユーザーが自分で管理すると決めた欄)。
+ */
+export function applyCascade(
+  schedule: CaseSchedule,
+  changedKey: keyof CaseSchedule,
+  lockedKeys: ReadonlySet<keyof CaseSchedule> = new Set(),
+): CaseSchedule {
+  return runCascadeLinks(
+    schedule,
+    lockedKeys,
+    (link) => link.fromKeys.includes(changedKey) || link.fromKeys.some((fk) => CASCADE_REF_FALLBACK[fk] === changedKey),
+  );
+}
+
+/**
+ * 案件を開いた時など、個々のフィールド変更イベントを経ずに現在の全欄の
+ * 値からカスケードを一括で再計算する。DBから読み込んだ直後は編集操作が
+ * 発生していないため `applyCascade` は一切発火せず、過去に保存された
+ * 古い自動計算値がそのまま残ってしまう — それを防ぐために画面を開いた
+ * 直後に1回通す。
+ */
+export function applyAllCascades(
+  schedule: CaseSchedule,
+  lockedKeys: ReadonlySet<keyof CaseSchedule> = new Set(),
+): CaseSchedule {
+  return runCascadeLinks(schedule, lockedKeys, () => true);
 }
 
 /**

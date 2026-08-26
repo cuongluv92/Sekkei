@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { applyCascade, applyTodayDefaults, junDateRange } from "./schedule";
+import { applyAllCascades, applyCascade, applyTodayDefaults, junDateRange } from "./schedule";
 import type { CaseSchedule } from "@/lib/types/design";
 
 function emptySchedule(): CaseSchedule {
@@ -55,14 +55,34 @@ describe("applyCascade", () => {
     expect(result.productionStartDate).toBeNull();
   });
 
-  it("既に手入力済みの次工程開始日は絶対に上書きしない", () => {
+  it("既に値が入っていても、前工程の日付が変わったら常に最新の値で再計算する (過去の古い自動計算値が残り続けるのを防ぐ)", () => {
+    const s = {
+      ...emptySchedule(),
+      sheetMetalDeliveryDate: "2026-09-10",
+      productionStartDate: "2026-08-01", // 古い(ずれた)値が既に入っている想定
+    };
+    const result = applyCascade(s, "sheetMetalDeliveryDate");
+    expect(result.productionStartDate).toBe("2026-09-11");
+  });
+
+  it("lockedKeys に含まれる開始日欄は、ユーザーが手動編集欄を開いている印なので上書きしない", () => {
     const s = {
       ...emptySchedule(),
       sheetMetalDeliveryDate: "2026-09-10",
       productionStartDate: "2026-09-01",
     };
-    const result = applyCascade(s, "sheetMetalDeliveryDate");
+    const result = applyCascade(s, "sheetMetalDeliveryDate", new Set(["productionStartDate"]));
     expect(result.productionStartDate).toBe("2026-09-01");
+  });
+
+  it("完了日が自由記入テキストでも、参考日欄(EndRefDate)を編集すればカスケードが発火する", () => {
+    const s = {
+      ...emptySchedule(),
+      productionEndDate: "9月下旬",
+      productionEndRefDate: "2026-09-25",
+    };
+    const result = applyCascade(s, "productionEndRefDate");
+    expect(result.inspectionStartDate).toBe("2026-09-26");
   });
 
   it("製作完了日 → 検査開始日は翌日にずれる", () => {
@@ -105,6 +125,30 @@ describe("applyCascade", () => {
     const s = { ...emptySchedule(), sheetMetalManufacturer: "A社" };
     const result = applyCascade(s, "sheetMetalManufacturer" as keyof CaseSchedule);
     expect(result).toEqual(s);
+  });
+});
+
+describe("applyAllCascades", () => {
+  it("DBから読み込んだ直後など、個々の変更イベントを経ていなくても全リンクを一括で再計算する", () => {
+    const s = {
+      ...emptySchedule(),
+      sheetMetalDeliveryDate: "2026-08-28",
+      boxDeliveryDate: "2026-09-03",
+      inspectionEndDate: "2026-09-30",
+    };
+    const result = applyAllCascades(s);
+    expect(result.productionStartDate).toBe("2026-09-04"); // 遅い方(boxDeliveryDate)+1
+    expect(result.shippingStartDate).toBe("2026-10-01"); // 検査完了日+1 (立会なし)
+  });
+
+  it("lockedKeys で指定した欄は一括再計算でも上書きしない", () => {
+    const s = {
+      ...emptySchedule(),
+      sheetMetalDeliveryDate: "2026-08-28",
+      productionStartDate: "2026-09-01", // 手動で編集中の値
+    };
+    const result = applyAllCascades(s, new Set(["productionStartDate"]));
+    expect(result.productionStartDate).toBe("2026-09-01");
   });
 });
 
