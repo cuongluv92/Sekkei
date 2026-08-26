@@ -597,7 +597,7 @@ export function ScheduleTimeline() {
                       <th
                         key={`h-${m.year}-${m.month}-${bucket}`}
                         colSpan={bucketDays[i]}
-                        className={`border-b border-border bg-surface-2 py-1 text-center text-[10px] text-muted-2 ${i === 0 ? "border-l border-border-strong" : ""}`}
+                        className={`border-b border-border bg-surface-2 py-1 text-center text-[10px] text-muted-2 ${i === 0 ? "border-l border-border-strong" : "border-l border-border"}`}
                         style={{
                           width: bucketDays[i] * DAY_WIDTH,
                           minWidth: bucketDays[i] * DAY_WIDTH,
@@ -666,10 +666,24 @@ export function ScheduleTimeline() {
                           const key = dayCellKeyRow(m.year, m.month, day, rowIndex);
                           const color = lookup.get(key);
                           const label = labels.get(key);
+                          // 月の変わり目(day===1)と旬の変わり目(11日/21日)に区切り線を
+                          // 引くが、前日と同じ色(=同じ期間が続いている)場合は線を消して
+                          // 色の帯が1つのまとまりに見えるようにする(バラバラに見えるのを防ぐ)。
+                          const isMonthStart = day === 1;
+                          const isJunStart = day === 11 || day === 21;
+                          let borderLeftClass = "";
+                          if (isMonthStart || isJunStart) {
+                            const prevMonth = isMonthStart ? addMonths(m.year, m.month, -1) : { year: m.year, month: m.month };
+                            const prevDay = isMonthStart ? daysInMonth(prevMonth.year, prevMonth.month) : day - 1;
+                            const prevColor = lookup.get(dayCellKeyRow(prevMonth.year, prevMonth.month, prevDay, rowIndex));
+                            if (!color || color !== prevColor) {
+                              borderLeftClass = isMonthStart ? "border-l border-border-strong" : "border-l border-border";
+                            }
+                          }
                           return (
                             <td
                               key={`c-${c.id}-${rowIndex}-${m.year}-${m.month}-${day}`}
-                              className={`relative border-b border-border py-1 ${day === 1 ? "border-l border-border-strong" : ""} ${rowIndex === SCREEN_PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
+                              className={`relative border-b border-border py-1 ${borderLeftClass} ${rowIndex === SCREEN_PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
                               style={{
                                 width: DAY_WIDTH,
                                 minWidth: DAY_WIDTH,
