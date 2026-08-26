@@ -32,9 +32,12 @@ import type { CaseSchedule, DesignCaseWithPanels, ScheduleCategoryKey } from "@/
  * ROWSを使う)。日付ラベルは旬セルの中に小さく表示する。
  */
 
-const LABEL_COL_A_WIDTH = 16;
-const LABEL_COL_B_WIDTH = 38;
+// 列幅・行の高さは全て5刻みの整数(端数なし)に揃える — Excel/印刷どちらも
+// 同じワークシートの値をそのまま使うため、ここを整数にすれば両方に効く。
+const LABEL_COL_A_WIDTH = 15;
+const LABEL_COL_B_WIDTH = 40;
 const JUN_COL_WIDTH = 10;
+const ROW_HEIGHT = 20;
 const TITLE_ROW = 1;
 const LEGEND_ROW = 2;
 const MONTH_HEADER_ROW = 4;
@@ -114,7 +117,7 @@ function buildHeader(
   titleCell.value = "工程表";
   titleCell.font = { size: 16, bold: true };
   titleCell.alignment = { horizontal: "left", vertical: "middle" };
-  ws.getRow(TITLE_ROW).height = 22;
+  ws.getRow(TITLE_ROW).height = ROW_HEIGHT;
 
   // 凡例 — 色見本(1列)+ラベル(文字数に応じて複数列を結合)を左詰めで並べる。
   // 単一の狭い列にラベルを置くと、データ列(旬=約10幅)の境目でラベルが
@@ -130,7 +133,7 @@ function buildHeader(
     labelCell.font = { size: 10 };
     labelCell.alignment = { horizontal: "left", vertical: "middle" };
   }
-  ws.getRow(LEGEND_ROW).height = 16;
+  ws.getRow(LEGEND_ROW).height = ROW_HEIGHT;
 
   ws.mergeCells(MONTH_HEADER_ROW, 1, JUN_HEADER_ROW, 1);
   const colACaption = ws.getCell(MONTH_HEADER_ROW, 1);
@@ -160,8 +163,8 @@ function buildHeader(
       cell.border = { top: THIN, left: i === 0 ? THICK : THIN, right: THIN, bottom: THIN };
     });
   }
-  ws.getRow(MONTH_HEADER_ROW).height = 16;
-  ws.getRow(JUN_HEADER_ROW).height = 14;
+  ws.getRow(MONTH_HEADER_ROW).height = ROW_HEIGHT;
+  ws.getRow(JUN_HEADER_ROW).height = ROW_HEIGHT;
 }
 
 function buildScheduleWorkbook(
@@ -226,7 +229,7 @@ function buildScheduleWorkbook(
           right: THIN,
         };
       }
-      row.height = 15;
+      row.height = ROW_HEIGHT;
     }
 
     const schedule = schedules[c.id];
