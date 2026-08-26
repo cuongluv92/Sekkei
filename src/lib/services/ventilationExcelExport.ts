@@ -43,6 +43,8 @@ export interface VentilationCaseInfoExportData {
 export interface VentilationHeatSourceExportItem {
   name: string;
   heatW: number;
+  capacity?: string;
+  loadFactorPercent?: number | null;
 }
 
 export interface OutdoorVentilationExportData {
@@ -93,14 +95,14 @@ export interface IndoorVentilationExportData {
 const HEAT_SOURCE_ROWS = [13, 14, 15, 16, 17, 18, 19];
 
 /**
- * B(機器名称)・J(発熱W)のみ埋める — アプリの発熱源入力(HeatSourceList)は
- * 機器名と発熱量(カタログ損失値)のみを持ち、F(容量)/H(負荷率%)の内訳は
- * 保持していない(テンプレート例のような容量×負荷率からの逆算はしない
- * 方式のため)。この2列は空欄のまま(捏造しない)。
+ * B(機器名称)・F(容量)・H(負荷率%)・J(発熱W)を埋める — F/Hは実物の様式
+ * どおり自由記入・参考値(J列=発熱量は実物でも数式ではなく直値で、F×H%
+ * からの逆算はしない)。未入力ならF/Hは空欄のまま(捏造しない)。
  *
  * テンプレートの発熱源欄は7行(B13:J19)しかない — 8件目以降がある場合は
  * 合計発熱量J20(=SUM(J13:J19))がアプリの合計と食い違ってしまうため、
- * 最終行にあふれた分をまとめて計上する(件数を勝手に切り捨てない)。
+ * 最終行にあふれた分をまとめて計上する(件数を勝手に切り捨てない。この
+ * 場合F/Hは複数件の合算にならないため空欄のまま)。
  */
 function writeHeatSources(ws: import("exceljs").Worksheet, heatSources: VentilationHeatSourceExportItem[]) {
   const overflow = heatSources.length > HEAT_SOURCE_ROWS.length;
@@ -108,13 +110,19 @@ function writeHeatSources(ws: import("exceljs").Worksheet, heatSources: Ventilat
   HEAT_SOURCE_ROWS.forEach((row, i) => {
     if (i < visibleCount) {
       ws.getCell(`B${row}`).value = heatSources[i].name;
+      ws.getCell(`F${row}`).value = heatSources[i].capacity || "";
+      ws.getCell(`H${row}`).value = heatSources[i].loadFactorPercent ?? "";
       ws.getCell(`J${row}`).value = heatSources[i].heatW;
     } else if (overflow && i === HEAT_SOURCE_ROWS.length - 1) {
       const rest = heatSources.slice(visibleCount);
       ws.getCell(`B${row}`).value = `他${rest.length}件`;
+      ws.getCell(`F${row}`).value = "";
+      ws.getCell(`H${row}`).value = "";
       ws.getCell(`J${row}`).value = rest.reduce((sum, s) => sum + s.heatW, 0);
     } else {
       ws.getCell(`B${row}`).value = "";
+      ws.getCell(`F${row}`).value = "";
+      ws.getCell(`H${row}`).value = "";
       ws.getCell(`J${row}`).value = "";
     }
   });

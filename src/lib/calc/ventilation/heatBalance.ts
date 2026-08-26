@@ -3,6 +3,10 @@ import { AVERAGE_INTERNAL_TEMP_C, type OutdoorSolarCondition, type VentilationAi
 export interface HeatSourceItem {
   name: string;
   heatW: number;
+  /** 容量 (F列) — 実物のJSIA-T1016様式では自由記入の型式・容量表記 (例: "300kVA"、"50kVar")。任意。 */
+  capacity?: string;
+  /** 負荷率 % (H列) — 実物の様式にある入力欄。発熱量Wはこの値からの逆算ではなく引き続き直接入力(捏造しない)。任意。 */
+  loadFactorPercent?: number | null;
 }
 
 /** 合計発熱量 Qc (W) — 盤内の全発熱機器の発熱量の単純合計。 */

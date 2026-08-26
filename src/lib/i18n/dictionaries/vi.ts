@@ -551,6 +551,9 @@ const vi: Dictionary = {
     heatSourceColumns: {
       name: "Tên thiết bị",
       namePlaceholder: "Ví dụ: Máy biến áp 3 pha",
+      capacity: "Công suất",
+      capacityPlaceholder: "Ví dụ: 300kVA",
+      loadFactor: "Hệ số tải (%)",
       heatW: "Phát nhiệt (W)",
     },
     heatSourceEmpty: "Chưa có nguồn phát nhiệt nào",

@@ -372,11 +372,11 @@ export function OutdoorVentilationView({ caseId }: Props) {
           </div>
           <p className="text-[12px] text-foreground">{t("ventilationCalc.surfaceAreaHintOutdoor")}</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-            <NumField label="W" hintKey="ventilationCalc.dimWHint" value={surfaceAreas.widthWRaw} onChange={(v) => setSurfaceAreas(applySurfaceDimensions({ ...surfaceAreas, widthWRaw: v }))} unit="m" />
-            <NumField label="H" hintKey="ventilationCalc.dimHHint" value={surfaceAreas.heightHRaw} onChange={(v) => setSurfaceAreas(applySurfaceDimensions({ ...surfaceAreas, heightHRaw: v }))} unit="m" />
-            <NumField label="H1" hintKey="ventilationCalc.dimH1Hint" value={surfaceAreas.heightH1Raw} onChange={(v) => setSurfaceAreas(applySurfaceDimensions({ ...surfaceAreas, heightH1Raw: v }))} unit="m" />
-            <NumField label="D" hintKey="ventilationCalc.dimDHint" value={surfaceAreas.depthDRaw} onChange={(v) => setSurfaceAreas(applySurfaceDimensions({ ...surfaceAreas, depthDRaw: v }))} unit="m" />
-            <NumField label="D1" hintKey="ventilationCalc.dimD1Hint" value={surfaceAreas.depthD1Raw} onChange={(v) => setSurfaceAreas(applySurfaceDimensions({ ...surfaceAreas, depthD1Raw: v }))} unit="m" />
+            <NumField compact label="W" hintKey="ventilationCalc.dimWHint" value={surfaceAreas.widthWRaw} onChange={(v) => setSurfaceAreas(applySurfaceDimensions({ ...surfaceAreas, widthWRaw: v }))} unit="m" />
+            <NumField compact label="H" hintKey="ventilationCalc.dimHHint" value={surfaceAreas.heightHRaw} onChange={(v) => setSurfaceAreas(applySurfaceDimensions({ ...surfaceAreas, heightHRaw: v }))} unit="m" />
+            <NumField compact label="H1" hintKey="ventilationCalc.dimH1Hint" value={surfaceAreas.heightH1Raw} onChange={(v) => setSurfaceAreas(applySurfaceDimensions({ ...surfaceAreas, heightH1Raw: v }))} unit="m" />
+            <NumField compact label="D" hintKey="ventilationCalc.dimDHint" value={surfaceAreas.depthDRaw} onChange={(v) => setSurfaceAreas(applySurfaceDimensions({ ...surfaceAreas, depthDRaw: v }))} unit="m" />
+            <NumField compact label="D1" hintKey="ventilationCalc.dimD1Hint" value={surfaceAreas.depthD1Raw} onChange={(v) => setSurfaceAreas(applySurfaceDimensions({ ...surfaceAreas, depthD1Raw: v }))} unit="m" />
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
             <NumField label="SRO (屋根/上面)" hintKey="ventilationCalc.roofAreaHint" value={surfaceAreas.roofM2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, roofM2Raw: v })} unit="m²" />
@@ -476,12 +476,15 @@ export function NumField({
   value,
   onChange,
   unit,
+  compact,
 }: {
   label: string;
   hintKey: string;
   value: string;
   onChange: (v: string) => void;
   unit: string;
+  /** 短い値(寸法など)専用の小さめの入力欄。既定の高さ・文字サイズは変えない。 */
+  compact?: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -489,7 +492,14 @@ export function NumField({
       <label className="field-label font-mono">
         {label} <span className="font-normal text-muted-2">({unit})</span>
       </label>
-      <input type="number" min={0} step="any" value={value} onChange={(e) => onChange(e.target.value)} className="field-input" />
+      <input
+        type="number"
+        min={0}
+        step="any"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={compact ? "field-input !px-2 !py-1.5 !text-[13px]" : "field-input"}
+      />
       <p className="mt-1 text-[11.5px] text-foreground">{t(hintKey)}</p>
     </div>
   );

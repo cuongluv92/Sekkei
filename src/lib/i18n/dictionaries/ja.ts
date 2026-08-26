@@ -544,6 +544,9 @@ const ja: Dictionary = {
     heatSourceColumns: {
       name: "機器名称",
       namePlaceholder: "例：三相変圧器",
+      capacity: "容量",
+      capacityPlaceholder: "例：300kVA",
+      loadFactor: "負荷率 (%)",
       heatW: "発熱量 (W)",
     },
     heatSourceEmpty: "発熱源が登録されていません",

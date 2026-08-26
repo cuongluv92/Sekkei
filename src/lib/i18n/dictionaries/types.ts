@@ -498,6 +498,9 @@ export interface Dictionary {
     heatSourceColumns: {
       name: string;
       namePlaceholder: string;
+      capacity: string;
+      capacityPlaceholder: string;
+      loadFactor: string;
       heatW: string;
     };
     heatSourceEmpty: string;

@@ -5,7 +5,7 @@ import { useTranslation } from "@/lib/i18n";
 import { sumHeatSourcesW, type HeatSourceItem } from "@/lib/calc/ventilation/heatBalance";
 
 export function blankHeatSourceItem(): HeatSourceItem {
-  return { name: "", heatW: 0 };
+  return { name: "", heatW: 0, capacity: "", loadFactorPercent: null };
 }
 
 interface Props {
@@ -14,10 +14,11 @@ interface Props {
 }
 
 /**
- * JSIA-T1016換気計算書 b)「盤内部発熱源」— 盤内の発熱機器を1台ずつ追加し、
- * 発熱量(W)は機器のカタログ損失値をそのまま手入力する (容量・負荷率からの
- * 自動換算はしない。実測/カタログの発熱量そのものを使うのが計算書の方式)。
- * 合計発熱量 Qc は単純合計として自動表示する。
+ * JSIA-T1016換気計算書 b)「盤内部発熱源」— 盤内の発熱機器を1台ずつ追加する。
+ * 容量(F列、自由記入)・負荷率%(H列)は実物の様式にある入力欄をそのまま
+ * 再現した記録用の項目 — 発熱量Wはこの2つからの逆算ではなく、実測/カタログ
+ * の発熱量そのものを直接入力する(実物の様式でもJ列は数式ではなく直値)。
+ * 合計発熱量 Qc は発熱量Wの単純合計として自動表示する。
  */
 export function HeatSourceList({ value, onChange }: Props) {
   const { t } = useTranslation();
@@ -46,10 +47,14 @@ export function HeatSourceList({ value, onChange }: Props) {
       <p className="text-[12px] text-muted">{t("ventilationCalc.heatSourceHint")}</p>
 
       <div className="data-table-wrap">
-        <table className="data-table" style={{ minWidth: 480 }}>
+        <table className="data-table" style={{ minWidth: 640 }}>
           <thead>
             <tr>
               <th>{t("ventilationCalc.heatSourceColumns.name")}</th>
+              <th style={{ width: "140px" }}>{t("ventilationCalc.heatSourceColumns.capacity")}</th>
+              <th style={{ width: "100px" }} className="text-right">
+                {t("ventilationCalc.heatSourceColumns.loadFactor")}
+              </th>
               <th style={{ width: "140px" }} className="text-right">
                 {t("ventilationCalc.heatSourceColumns.heatW")}
               </th>
@@ -59,7 +64,7 @@ export function HeatSourceList({ value, onChange }: Props) {
           <tbody>
             {value.length === 0 ? (
               <tr>
-                <td colSpan={3} className="py-4 text-center text-muted-2">
+                <td colSpan={5} className="py-4 text-center text-muted-2">
                   {t("ventilationCalc.heatSourceEmpty")}
                 </td>
               </tr>
@@ -72,6 +77,24 @@ export function HeatSourceList({ value, onChange }: Props) {
                       onChange={(e) => updateItem(i, { name: e.target.value })}
                       placeholder={t("ventilationCalc.heatSourceColumns.namePlaceholder")}
                       className="field-input"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      value={item.capacity ?? ""}
+                      onChange={(e) => updateItem(i, { capacity: e.target.value })}
+                      placeholder={t("ventilationCalc.heatSourceColumns.capacityPlaceholder")}
+                      className="field-input"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      min={0}
+                      step="any"
+                      value={item.loadFactorPercent ?? ""}
+                      onChange={(e) => updateItem(i, { loadFactorPercent: e.target.value === "" ? null : Number(e.target.value) })}
+                      className="field-input text-right"
                     />
                   </td>
                   <td>
