@@ -211,7 +211,7 @@ export function IndoorVentilationView({ caseId }: Props) {
   }
 
   async function handleExcelExport() {
-    if (!dimensionsComplete || !ventOpeningComplete || totalHeatGainW <= 0) return;
+    if (!dimensionsComplete || !ventOpeningComplete || totalHeatGainW <= 0 || !result) return;
     setExportError(null);
     setExportErrorDetail(null);
     setExportingExcel(true);
@@ -240,6 +240,7 @@ export function IndoorVentilationView({ caseId }: Props) {
         hoodFlowCoefficientX,
         fanCapacityM3PerHPerUnit,
         filterRatedVelocityMPerS,
+        forcedVentilationNeeded: !result.naturalVentilationSufficient,
       });
       showExportMessage(t("ventilationCalc.exportedMessage", { fileName }));
     } catch (err) {

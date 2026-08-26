@@ -25,13 +25,21 @@ const INDOOR_VENT_LAYOUT_ANCHOR: OutlineImageAnchor = { fromCol: 12, fromRow: 20
  * outdoorVentilation.ts/indoorVentilation.ts's golden tests — this module
  * only writes the raw INPUT cells and lets Excel recompute the rest.
  *
- * JSIAの元ファイルは屋外・屋内それぞれフィルタ有り／無しで別シート(行数が
- * 異なるレイアウト)になっているが、フィルタ有りシートは共通項目について
- * フィルタ無しシートと全く同じ行・列位置を使う上位互換のレイアウトで、
- * 差分はフィルタ関連の3行のみ (ζC/ζF入力・フィルタ通過風速による必要
- * 換気扇台数の確認)。そのため2枚目のほぼ同一シートを別テンプレート種別
- * として二重管理せず、フィルタ有りシート1枚を両方のケースで使い、
- * フィルタ無しの場合はフィルタ専用セルを空欄にする方式を採用している。
+ * JSIAの元ファイルは屋外・屋内それぞれフィルタ有り／無しで別シートになって
+ * おり(unzipしてセル・数式を直接確認済み)、useFilterに応じて実物の該当
+ * シートをそのまま読み込む(見た目だけシート名を書き換える方式ではない)。
+ * 共通項目(発熱源・盤表面積・換気口面積 等)は両シートで全く同じ行・列
+ * 位置。差分はフィルタ専用セル(ζC/ζF・フィルタ通過風速・フィルタ確認用
+ * 必要換気扇台数)のみで、フィルタ無しシートにはそれらの行自体が存在しない。
+ *
+ * 屋外は「使用換気扇台数の決定」節がフィルタ有り無し両方の実物シートに
+ * 存在する(フィルタ無しは該当節が3行分前にずれるだけ)。屋内は逆に、
+ * 実物のフィルタ無しシートには強制換気セクション(41行目以降)自体が
+ * 一切存在しない(dimension="A1:U40" — JSIAの使用例自体がフィルタ無しかつ
+ * 強制換気が必要なケースを収録していないため)。そのため屋内でフィルタ無し
+ * ×強制換気が必要なケースだけは、書き込み先が実物シートに無い以上
+ * フィルタ有りシートの行構成を借用し、タブ名だけ実態(フィルタ無し)に
+ * 書き換えるフォールバックを維持する(exportIndoorVentilationExcel内で分岐)。
  */
 
 export interface VentilationCaseInfoExportData {
@@ -90,6 +98,9 @@ export interface IndoorVentilationExportData {
   hoodFlowCoefficientX: number;
   fanCapacityM3PerHPerUnit: number | null;
   filterRatedVelocityMPerS: number | null;
+  /** 自然換気だけで足りない(強制換気が必要な)判定結果 — フィルタ無しシートの
+   * 選択に使う(実物のフィルタ無しシートには強制換気セクションの行が無いため)。 */
+  forcedVentilationNeeded: boolean;
 }
 
 const HEAT_SOURCE_ROWS = [13, 14, 15, 16, 17, 18, 19];
@@ -133,18 +144,13 @@ function clearFilterOnlyCells(ws: import("exceljs").Worksheet, cells: string[]) 
 }
 
 export async function exportOutdoorVentilationExcel(data: OutdoorVentilationExportData): Promise<{ fileName: string }> {
-  const { workbook, ws } = await loadActiveTemplateSheet("ventilationOutdoor", [
-    "屋外フィルタ有り　東京",
-    "屋外フィルタ有り　那覇",
-    "屋外フィルタ無し　東京",
-  ]);
+  const { workbook, ws } = await loadActiveTemplateSheet(
+    "ventilationOutdoor",
+    data.useFilter
+      ? ["屋外フィルタ有り　東京", "屋外フィルタ有り　那覇"]
+      : ["屋外フィルタ無し　東京", "屋外フィルタ無し　那覇"],
+  );
   keepOnlyWorksheet(workbook, ws);
-  // フィルタ有りシートのレイアウトをフィルタ無しの場合にも流用しているため
-  // (共通項目の行・列位置が完全に一致する上位互換レイアウト — 差分はフィルタ
-  // 関連の数行のみ)、シート名(タブ名)がそのまま「フィルタ有り」表記の
-  // ままだと、フィルタを使わない計算でも開いた時に「フィルタ有り」に見えて
-  // 紛らわしい。フィルタ無しの場合はタブ名も実態に合わせて書き換える。
-  if (!data.useFilter) ws.name = ws.name.replace("フィルタ有り", "フィルタ無し");
 
   if (data.caseInfo) {
     ws.getCell("C3").value = data.caseInfo.projectName;
@@ -203,11 +209,13 @@ export async function exportOutdoorVentilationExcel(data: OutdoorVentilationExpo
     if (data.filterRatedVelocityMPerS != null) ws.getCell("O58").value = data.filterRatedVelocityMPerS;
     ws.getCell("Q60").value = { formula: "MAX(H53,T59)" };
   } else {
+    // 実物の「屋外フィルタ無し」シートを直接使用 — フィルタ専用行(58〜59行目)
+    // 自体が存在しないため、clearFilterOnlyCellsは不要。「使用換気扇台数の
+    // 決定」節はフィルタ有りシートよりも3行前(60行目→57行目)にずれる。
     ws.getCell("N43").value = data.noFilterDischargeCoefficient; // α (置換 — フィルタ無し時は固定値)
     ws.getCell("S55").value = data.ventResistanceCoefficient; // ζ (置換 — ζC単独)
-    clearFilterOnlyCells(ws, ["R43", "V43", "R44", "V44", "H58", "O58", "M59", "T59"]);
-    ws.getCell("J60").value = null;
-    ws.getCell("Q60").value = { formula: "H53" };
+    ws.getCell("J57").value = null; // 実物シートの例示値(換気扇の内径cm)は実データではないため消す
+    ws.getCell("Q57").value = { formula: "H53" };
   }
 
   await embedOutlineImage(workbook, ws, data.outlineDrawing, OUTLINE_IMAGE_ANCHOR);
@@ -219,11 +227,20 @@ export async function exportOutdoorVentilationExcel(data: OutdoorVentilationExpo
 }
 
 export async function exportIndoorVentilationExcel(data: IndoorVentilationExportData): Promise<{ fileName: string }> {
-  const { workbook, ws } = await loadActiveTemplateSheet("ventilationIndoor", ["屋内フィルタ有り", "屋内フィルタ無し"]);
+  // 実物の「屋内フィルタ無し」シートには強制換気セクション(41行目以降 —
+  // 強制換気風量・静圧・フィルタ確認・使用台数決定)自体が存在しない
+  // (dimension="A1:U40"であることをunzipして直接確認済み)。フィルタ無し・
+  // かつ自然換気だけで足りるケースはそのまま実物シートを使えるが、フィルタ
+  // 無しで強制換気が必要なケースは書き込み先の行が実物シートに無いため、
+  // フィルタ有りシートの行構成を借用しタブ名だけ実態(フィルタ無し)に
+  // 書き換えるフォールバックを使う。
+  const useRealNoFilterSheet = !data.useFilter && !data.forcedVentilationNeeded;
+  const { workbook, ws } = await loadActiveTemplateSheet(
+    "ventilationIndoor",
+    useRealNoFilterSheet ? ["屋内フィルタ無し"] : ["屋内フィルタ有り"],
+  );
   keepOnlyWorksheet(workbook, ws);
-  // 屋外側と同じ理由 — フィルタ有りシートのレイアウトをフィルタ無しにも
-  // 流用しているため、タブ名は実態(data.useFilter)に合わせて書き換える。
-  if (!data.useFilter) ws.name = ws.name.replace("フィルタ有り", "フィルタ無し");
+  if (!data.useFilter && !useRealNoFilterSheet) ws.name = ws.name.replace("フィルタ有り", "フィルタ無し");
 
   // 提供テンプレートの見出し文言(A6)は屋内シートでも「屋外キュービクルの
   // 換気計算」のままになっている(元ファイル自体の記載漏れ) — 誤った表記を
@@ -251,15 +268,23 @@ export async function exportIndoorVentilationExcel(data: IndoorVentilationExport
   ws.getCell("H31").value = data.supplyAreaM2; // Ai
   ws.getCell("H32").value = data.exhaustAreaM2; // Ao
   ws.getCell("S36").value = data.heightDiffM; // h
-  ws.getCell("S41").value = data.hoodFlowCoefficientX; // X
-  if (data.fanCapacityM3PerHPerUnit != null) ws.getCell("S42").value = data.fanCapacityM3PerHPerUnit; // F
 
   if (data.useFilter) {
+    ws.getCell("S41").value = data.hoodFlowCoefficientX; // X
+    if (data.fanCapacityM3PerHPerUnit != null) ws.getCell("S42").value = data.fanCapacityM3PerHPerUnit; // F
     ws.getCell("V31").value = data.ventResistanceCoefficient; // ζC
     ws.getCell("V32").value = data.filterResistanceCoefficient ?? 0; // ζF
     if (data.filterRatedVelocityMPerS != null) ws.getCell("O46").value = data.filterRatedVelocityMPerS;
     ws.getCell("Q48").value = { formula: "MAX(H41,T47)" };
+  } else if (useRealNoFilterSheet) {
+    // 実物の「屋内フィルタ無し」シートを直接使用 — 強制換気セクション自体が
+    // 存在しないため、Xやフィルタ関連セルへの書き込みは不要(41行目以降が
+    // 無い)。自然換気の判定に使うα(N31)のみ書き込む。
+    ws.getCell("N31").value = data.noFilterDischargeCoefficient; // α
   } else {
+    // フォールバック: フィルタ有りシートの行構成を借用。
+    ws.getCell("S41").value = data.hoodFlowCoefficientX; // X
+    if (data.fanCapacityM3PerHPerUnit != null) ws.getCell("S42").value = data.fanCapacityM3PerHPerUnit; // F
     ws.getCell("N31").value = data.noFilterDischargeCoefficient; // α (置換)
     ws.getCell("S43").value = data.ventResistanceCoefficient; // ζ (置換)
     clearFilterOnlyCells(ws, ["R31", "V31", "R32", "V32", "H46", "O46", "M47", "T47"]);
