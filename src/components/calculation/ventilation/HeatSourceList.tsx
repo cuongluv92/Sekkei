@@ -7,8 +7,9 @@ import { partDataService } from "@/lib/services";
 import { sumHeatSourcesW, type HeatSourceItem } from "@/lib/calc/ventilation/heatBalance";
 import type { PartData } from "@/lib/types";
 
+/** 負荷率(%)は実運用でほぼ100%のため、既定値として初期表示する — 実際と異なる機器のみ手入力で上書きする。 */
 export function blankHeatSourceItem(): HeatSourceItem {
-  return { name: "", heatW: 0, capacity: "", loadFactorPercent: null, model: "" };
+  return { name: "", heatW: 0, capacity: "", loadFactorPercent: 100, model: "" };
 }
 
 interface Props {
