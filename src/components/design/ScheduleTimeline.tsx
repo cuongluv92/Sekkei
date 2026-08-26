@@ -20,7 +20,7 @@ import {
   junCellKeyRow,
   PROCESS_ROWS,
 } from "@/lib/utils/scheduleColoring";
-import { applyCascade, applyTodayDefaults, formatJaDate } from "@/lib/utils/schedule";
+import { applyCascade, applyTodayDefaults, formatJaDate, isIsoDate } from "@/lib/utils/schedule";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type {
   CaseSchedule,
@@ -49,17 +49,21 @@ const ORDER_DELIVERY_PAIRS: {
  * 開始日が前工程から自動計算される対 (製作/検査/立会/出荷) — 開始日は
  * 常時入力欄を出さず、完了日の横の小さな矢印をクリックしたときだけ
  * 手動上書き用の欄を出す (普段は自動値のプレビューのみ表示)。
+ * endRefKey/endRefLabelKeyは完了日が自由記入テキスト(「9月下旬」等)の
+ * 場合だけ表示する、色分け計算専用の実日付入力(scheduleColoring.ts参照)。
  */
 const AUTO_START_PHASES: {
   startKey: keyof CaseSchedule;
   startLabelKey: string;
   endKey: keyof CaseSchedule;
   endLabelKey: string;
+  endRefKey: keyof CaseSchedule;
+  endRefLabelKey: string;
 }[] = [
-  { startKey: "productionStartDate", startLabelKey: "productionStart", endKey: "productionEndDate", endLabelKey: "productionEnd" },
-  { startKey: "inspectionStartDate", startLabelKey: "inspectionStart", endKey: "inspectionEndDate", endLabelKey: "inspectionEnd" },
-  { startKey: "witnessStartDate", startLabelKey: "witnessStart", endKey: "witnessEndDate", endLabelKey: "witnessEnd" },
-  { startKey: "shippingStartDate", startLabelKey: "shippingStart", endKey: "shippingEndDate", endLabelKey: "shippingEnd" },
+  { startKey: "productionStartDate", startLabelKey: "productionStart", endKey: "productionEndDate", endLabelKey: "productionEnd", endRefKey: "productionEndRefDate", endRefLabelKey: "productionEndRef" },
+  { startKey: "inspectionStartDate", startLabelKey: "inspectionStart", endKey: "inspectionEndDate", endLabelKey: "inspectionEnd", endRefKey: "inspectionEndRefDate", endRefLabelKey: "inspectionEndRef" },
+  { startKey: "witnessStartDate", startLabelKey: "witnessStart", endKey: "witnessEndDate", endLabelKey: "witnessEnd", endRefKey: "witnessEndRefDate", endRefLabelKey: "witnessEndRef" },
+  { startKey: "shippingStartDate", startLabelKey: "shippingStart", endKey: "shippingEndDate", endLabelKey: "shippingEnd", endRefKey: "shippingEndRefDate", endRefLabelKey: "shippingEndRef" },
 ];
 
 const FINAL_FIELD = { key: "deliveryDate" as const, labelKey: "delivery", quickJun: "end" as const };
@@ -339,16 +343,20 @@ export function ScheduleTimeline() {
                       </div>
                     );
                   })}
-                  {AUTO_START_PHASES.map(({ startKey, startLabelKey, endKey, endLabelKey }) => {
+                  {AUTO_START_PHASES.map(({ startKey, startLabelKey, endKey, endLabelKey, endRefKey, endRefLabelKey }) => {
                     const startValue = editingSchedule[startKey] as string | null;
                     const expanded = expandedStarts.has(startKey);
+                    const endValue = editingSchedule[endKey] as string | null;
+                    const endIsFreeText = !!endValue && !isIsoDate(endValue);
+                    const refValue = editingSchedule[endRefKey] as string | null;
+                    const refExpanded = expandedStarts.has(endRefKey);
                     return (
                       <div key={endKey}>
                         <label className="field-label">
                           {t(`design.schedule.milestones.${endLabelKey}`)}
                         </label>
                         <DateInput
-                          value={editingSchedule[endKey] as string | null}
+                          value={endValue}
                           onChange={(v) => updateEditingField(endKey, v ?? "")}
                           className="field-input"
                           quickJun="end"
@@ -377,6 +385,35 @@ export function ScheduleTimeline() {
                               quickJun="start"
                             />
                           </div>
+                        )}
+                        {endIsFreeText && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => toggleStart(endRefKey)}
+                              className="mt-1 inline-flex items-center gap-0.5 text-[10.5px] text-warning hover:text-accent"
+                            >
+                              {refExpanded ? (
+                                <ChevronDown className="h-3 w-3" />
+                              ) : (
+                                <ChevronRight className="h-3 w-3" />
+                              )}
+                              {t(`design.schedule.milestones.${endRefLabelKey}`)}
+                              {refValue ? `: ${formatJaDate(refValue)}` : ""}
+                            </button>
+                            {refExpanded && (
+                              <div className="mt-1">
+                                <DateInput
+                                  value={refValue}
+                                  onChange={(v) => updateEditingField(endRefKey, v ?? "")}
+                                  className="field-input"
+                                />
+                                <p className="mt-0.5 text-[10px] text-muted-2">
+                                  {t("design.schedule.endRefHint")}
+                                </p>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     );

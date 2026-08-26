@@ -15,12 +15,16 @@ function emptySchedule(): CaseSchedule {
     accessoryDeliveryDate: null,
     productionStartDate: null,
     productionEndDate: null,
+    productionEndRefDate: null,
     inspectionStartDate: null,
     inspectionEndDate: null,
+    inspectionEndRefDate: null,
     witnessStartDate: null,
     witnessEndDate: null,
+    witnessEndRefDate: null,
     shippingStartDate: null,
     shippingEndDate: null,
+    shippingEndRefDate: null,
     deliveryDate: null,
   };
 }

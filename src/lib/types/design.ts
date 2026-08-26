@@ -160,13 +160,18 @@ export interface ProductionRequest {
 }
 
 /**
- * 工程 milestones. Phase 3 — schema only; dates are real `YYYY-MM-DD`, never
- * 初旬/中旬/下旬 text. Also the single source of truth for the real ⑧製作依頼書
+ * 工程 milestones. 0029マイグレーションで各日付欄は自由記入テキスト
+ * (「9月下旬」等)も許容する`text`型になった — 実日付`YYYY-MM-DD`とは限らない
+ * (isIsoDateで判定)。Also the single source of truth for the real ⑧製作依頼書
  * template's ＢＯＸ/鈑金/部材/完成/出荷/納品/立会 date row (confirmed: those cells
  * are the same "予定日" concept as the matching end-date here — edited from
  * either 工程表 or 製作依頼書, never a separate copy) — boxManufacturer /
  * sheetMetalManufacturer are the vendor name shown above the date in that
  * template's BOX/鈑金 cells specifically.
+ *
+ * production/inspection/witness/shippingの各End*RefDateは、対応する完了日欄が
+ * 自由記入テキストで色分け計算に使えない場合の補助入力(常に実日付のみ)。
+ * 完了日欄が実日付ならそちらを優先し、Refは無視する(scheduleColoring.ts参照)。
  */
 export interface CaseSchedule {
   caseId: string;
@@ -180,12 +185,16 @@ export interface CaseSchedule {
   accessoryDeliveryDate: string | null;
   productionStartDate: string | null;
   productionEndDate: string | null;
+  productionEndRefDate: string | null;
   inspectionStartDate: string | null;
   inspectionEndDate: string | null;
+  inspectionEndRefDate: string | null;
   witnessStartDate: string | null;
   witnessEndDate: string | null;
+  witnessEndRefDate: string | null;
   shippingStartDate: string | null;
   shippingEndDate: string | null;
+  shippingEndRefDate: string | null;
   deliveryDate: string | null;
 }
 

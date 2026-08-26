@@ -7,14 +7,17 @@ const RANGE_FIELDS: {
   category: ScheduleCategoryKey;
   startKey: keyof CaseSchedule;
   endKey: keyof CaseSchedule;
+  /** 完了日欄(endKey)が自由記入テキストで実日付として解釈できない場合の
+   * 色分け専用フォールバック — 常に実日付のみを持つ補助欄。 */
+  endRefKey?: keyof CaseSchedule;
 }[] = [
   { category: "sheetMetal", startKey: "sheetMetalOrderDate", endKey: "sheetMetalDeliveryDate" },
   { category: "box", startKey: "boxOrderDate", endKey: "boxDeliveryDate" },
   { category: "accessory", startKey: "accessoryOrderDate", endKey: "accessoryDeliveryDate" },
-  { category: "production", startKey: "productionStartDate", endKey: "productionEndDate" },
-  { category: "inspection", startKey: "inspectionStartDate", endKey: "inspectionEndDate" },
-  { category: "witness", startKey: "witnessStartDate", endKey: "witnessEndDate" },
-  { category: "shipping", startKey: "shippingStartDate", endKey: "shippingEndDate" },
+  { category: "production", startKey: "productionStartDate", endKey: "productionEndDate", endRefKey: "productionEndRefDate" },
+  { category: "inspection", startKey: "inspectionStartDate", endKey: "inspectionEndDate", endRefKey: "inspectionEndRefDate" },
+  { category: "witness", startKey: "witnessStartDate", endKey: "witnessEndDate", endRefKey: "witnessEndRefDate" },
+  { category: "shipping", startKey: "shippingStartDate", endKey: "shippingEndDate", endRefKey: "shippingEndRefDate" },
 ];
 
 function parseDate(value: string | null | undefined): Date | null {
@@ -36,9 +39,12 @@ export interface ColoredSegment extends MonthSegment {
  */
 export function computeColoredSegments(schedule: CaseSchedule): ColoredSegment[] {
   const out: ColoredSegment[] = [];
-  for (const { category, startKey, endKey } of RANGE_FIELDS) {
+  for (const { category, startKey, endKey, endRefKey } of RANGE_FIELDS) {
     const start = parseDate(schedule[startKey] as string | null);
-    const end = parseDate(schedule[endKey] as string | null) ?? start;
+    const end =
+      parseDate(schedule[endKey] as string | null) ??
+      (endRefKey ? parseDate(schedule[endRefKey] as string | null) : null) ??
+      start;
     if (!start || !end) continue;
     const [s, e] = start <= end ? [start, end] : [end, start];
     for (const seg of enumerateSegmentsBetween(s, e)) {

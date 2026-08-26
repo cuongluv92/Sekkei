@@ -19,12 +19,16 @@ function blankSchedule(caseId: string): CaseSchedule {
     accessoryDeliveryDate: null,
     productionStartDate: null,
     productionEndDate: null,
+    productionEndRefDate: null,
     inspectionStartDate: null,
     inspectionEndDate: null,
+    inspectionEndRefDate: null,
     witnessStartDate: null,
     witnessEndDate: null,
+    witnessEndRefDate: null,
     shippingStartDate: null,
     shippingEndDate: null,
+    shippingEndRefDate: null,
     deliveryDate: null,
     boxManufacturer: "",
     sheetMetalManufacturer: "",
@@ -61,6 +65,26 @@ describe("computeColoredSegments + buildJunColorLookup — end-to-end 工程表 
     const lookup = buildJunColorLookup(computeColoredSegments(schedule), COLORS);
     expect(lookup.get(junCellKey(2026, 8, "下"))).toBe("#555555");
     expect(lookup.get(junCellKey(2026, 9, "初"))).toBe("#555555");
+  });
+
+  it("falls back to the End Ref Date when the completion date is free text (e.g. \"9月下旬\")", () => {
+    const schedule = blankSchedule("c1");
+    schedule.productionStartDate = "2026-09-01";
+    schedule.productionEndDate = "9月下旬"; // 自由記入テキスト — isIsoDateがfalseになる
+    schedule.productionEndRefDate = "2026-09-25"; // 色分け専用の実日付
+
+    const lookup = buildJunColorLookup(computeColoredSegments(schedule), COLORS);
+    expect(lookup.get(junCellKey(2026, 9, "下"))).toBe("#444444");
+  });
+
+  it("without an End Ref Date, free-text completion falls back to a single-day range at the start date (pre-existing behavior, not extended by the free text)", () => {
+    const schedule = blankSchedule("c1");
+    schedule.productionStartDate = "2026-09-01";
+    schedule.productionEndDate = "9月下旬";
+
+    const lookup = buildJunColorLookup(computeColoredSegments(schedule), COLORS);
+    expect(lookup.get(junCellKey(2026, 9, "初"))).toBe("#444444"); // start date only (day 1)
+    expect(lookup.get(junCellKey(2026, 9, "下"))).toBeUndefined(); // never reaches 下旬 — the free text itself isn't interpreted
   });
 
   it("folds box onto sheetMetal's color (real template's combined legend swatch)", () => {

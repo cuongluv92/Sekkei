@@ -11,12 +11,16 @@ interface CaseScheduleRow {
   accessory_delivery_date: string | null;
   production_start_date: string | null;
   production_end_date: string | null;
+  production_end_ref_date: string | null;
   inspection_start_date: string | null;
   inspection_end_date: string | null;
+  inspection_end_ref_date: string | null;
   witness_start_date: string | null;
   witness_end_date: string | null;
+  witness_end_ref_date: string | null;
   shipping_start_date: string | null;
   shipping_end_date: string | null;
+  shipping_end_ref_date: string | null;
   delivery_date: string | null;
   box_manufacturer: string;
   sheet_metal_manufacturer: string;
@@ -33,12 +37,16 @@ function emptySchedule(caseId: string): CaseSchedule {
     accessoryDeliveryDate: null,
     productionStartDate: null,
     productionEndDate: null,
+    productionEndRefDate: null,
     inspectionStartDate: null,
     inspectionEndDate: null,
+    inspectionEndRefDate: null,
     witnessStartDate: null,
     witnessEndDate: null,
+    witnessEndRefDate: null,
     shippingStartDate: null,
     shippingEndDate: null,
+    shippingEndRefDate: null,
     deliveryDate: null,
     boxManufacturer: "",
     sheetMetalManufacturer: "",
@@ -56,12 +64,16 @@ function fromRow(row: CaseScheduleRow): CaseSchedule {
     accessoryDeliveryDate: row.accessory_delivery_date,
     productionStartDate: row.production_start_date,
     productionEndDate: row.production_end_date,
+    productionEndRefDate: row.production_end_ref_date,
     inspectionStartDate: row.inspection_start_date,
     inspectionEndDate: row.inspection_end_date,
+    inspectionEndRefDate: row.inspection_end_ref_date,
     witnessStartDate: row.witness_start_date,
     witnessEndDate: row.witness_end_date,
+    witnessEndRefDate: row.witness_end_ref_date,
     shippingStartDate: row.shipping_start_date,
     shippingEndDate: row.shipping_end_date,
+    shippingEndRefDate: row.shipping_end_ref_date,
     deliveryDate: row.delivery_date,
     boxManufacturer: row.box_manufacturer,
     sheetMetalManufacturer: row.sheet_metal_manufacturer,
@@ -79,12 +91,16 @@ function toRow(schedule: CaseSchedule) {
     accessory_delivery_date: schedule.accessoryDeliveryDate,
     production_start_date: schedule.productionStartDate,
     production_end_date: schedule.productionEndDate,
+    production_end_ref_date: schedule.productionEndRefDate,
     inspection_start_date: schedule.inspectionStartDate,
     inspection_end_date: schedule.inspectionEndDate,
+    inspection_end_ref_date: schedule.inspectionEndRefDate,
     witness_start_date: schedule.witnessStartDate,
     witness_end_date: schedule.witnessEndDate,
+    witness_end_ref_date: schedule.witnessEndRefDate,
     shipping_start_date: schedule.shippingStartDate,
     shipping_end_date: schedule.shippingEndDate,
+    shipping_end_ref_date: schedule.shippingEndRefDate,
     delivery_date: schedule.deliveryDate,
     box_manufacturer: schedule.boxManufacturer,
     sheet_metal_manufacturer: schedule.sheetMetalManufacturer,

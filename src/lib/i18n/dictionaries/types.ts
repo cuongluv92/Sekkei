@@ -1127,6 +1127,7 @@ export interface Dictionary {
       monthLabel: string;
       milestonesTitle: string;
       autoLabel: string;
+      endRefHint: string;
       timelineTitle: string;
       legendTitle: string;
       milestones: {
@@ -1138,12 +1139,16 @@ export interface Dictionary {
         accessoryDelivery: string;
         productionStart: string;
         productionEnd: string;
+        productionEndRef: string;
         inspectionStart: string;
         inspectionEnd: string;
+        inspectionEndRef: string;
         witnessStart: string;
         witnessEnd: string;
+        witnessEndRef: string;
         shippingStart: string;
         shippingEnd: string;
+        shippingEndRef: string;
         delivery: string;
       };
       categories: {
