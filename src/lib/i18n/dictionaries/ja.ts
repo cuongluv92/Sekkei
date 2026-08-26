@@ -622,6 +622,7 @@ const ja: Dictionary = {
     addOpeningButton: "開口を追加",
     clearOpeningsButton: "クリア",
     openingTotalAreaLabel: "合計面積 (m²)",
+    openingCountLabel: "開口 {count}件",
     clearDraftButton: "下書きをクリア",
     draftNote: "案件未選択のため、入力内容はこの端末に一時保存されます(「下書きをクリア」を押すまで残ります)",
     outdoorSourceTitle: "計算根拠・出典",

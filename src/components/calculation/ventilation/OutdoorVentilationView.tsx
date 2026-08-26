@@ -1,6 +1,6 @@
 "use client";
 
-import { FileSpreadsheet, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, FileSpreadsheet, Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { calculationRecordService, ventilationClimateProfileService } from "@/lib/services";
@@ -649,6 +649,10 @@ function AreaFromDimensionsField({
   onPairsChange: (next: OpeningDimensionPair[]) => void;
 }) {
   const { t } = useTranslation();
+  // 7〜10面盤など開口が多いケースで画面が縦に長くなりすぎないよう、既に
+  // 複数件入力済み(保存済みcaseの読み込み時など)は初期状態で折りたたむ。
+  // 未入力(まだ1件も入れていない)場合は最初から開いておく。
+  const [expanded, setExpanded] = useState(() => pairs.length <= 1);
 
   function applyDimensions(next: OpeningDimensionPair[]) {
     const total = next.reduce((sum, p) => {
@@ -681,54 +685,68 @@ function AreaFromDimensionsField({
 
   return (
     <div>
-      <label className="field-label font-mono">
-        {label} <span className="font-normal text-muted-2">(m²)</span>
-      </label>
+      <div className="flex items-center justify-between gap-2">
+        <label className="field-label font-mono">
+          {label} <span className="font-normal text-muted-2">(m²)</span>
+        </label>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="btn-ghost !py-0.5 !px-1.5 !text-[11px] text-muted-2"
+        >
+          {t("ventilationCalc.openingCountLabel", { count: pairs.length })}
+          {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        </button>
+      </div>
       <div className="flex flex-col gap-1.5">
-        {pairs.map((p, i) => (
-          <div key={i} className="grid grid-cols-[1fr_1fr_auto] items-center gap-1.5">
-            <input
-              type="number"
-              min={0}
-              step="any"
-              placeholder="W (m)"
-              value={p.w}
-              onChange={(e) => updatePair(i, { w: e.target.value })}
-              className="field-input"
-            />
-            <input
-              type="number"
-              min={0}
-              step="any"
-              placeholder="H (m)"
-              value={p.h}
-              onChange={(e) => updatePair(i, { h: e.target.value })}
-              className="field-input"
-            />
-            {pairs.length > 1 && (
-              <button
-                type="button"
-                onClick={() => removePair(i)}
-                className="btn-ghost btn-icon !p-1.5 text-danger hover:bg-danger/10"
-                title={t("common.delete")}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
+        {expanded && (
+          <>
+            {pairs.map((p, i) => (
+              <div key={i} className="grid grid-cols-[1fr_1fr_auto] items-center gap-1.5">
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  placeholder="W (m)"
+                  value={p.w}
+                  onChange={(e) => updatePair(i, { w: e.target.value })}
+                  className="field-input"
+                />
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  placeholder="H (m)"
+                  value={p.h}
+                  onChange={(e) => updatePair(i, { h: e.target.value })}
+                  className="field-input"
+                />
+                {pairs.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removePair(i)}
+                    className="btn-ghost btn-icon !p-1.5 text-danger hover:bg-danger/10"
+                    title={t("common.delete")}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+            <div className="flex items-center gap-1.5">
+              <button type="button" onClick={addPair} className="btn-ghost w-fit !py-1 !text-[11.5px]">
+                <Plus className="h-3 w-3" />
+                {t("ventilationCalc.addOpeningButton")}
               </button>
-            )}
-          </div>
-        ))}
-        <div className="flex items-center gap-1.5">
-          <button type="button" onClick={addPair} className="btn-ghost w-fit !py-1 !text-[11.5px]">
-            <Plus className="h-3 w-3" />
-            {t("ventilationCalc.addOpeningButton")}
-          </button>
-          {(pairs.length > 1 || pairs[0].w || pairs[0].h) && (
-            <button type="button" onClick={clearPairs} className="btn-ghost w-fit !py-1 !text-[11.5px] text-danger hover:bg-danger/10">
-              <Trash2 className="h-3 w-3" />
-              {t("ventilationCalc.clearOpeningsButton")}
-            </button>
-          )}
-        </div>
+              {(pairs.length > 1 || pairs[0].w || pairs[0].h) && (
+                <button type="button" onClick={clearPairs} className="btn-ghost w-fit !py-1 !text-[11.5px] text-danger hover:bg-danger/10">
+                  <Trash2 className="h-3 w-3" />
+                  {t("ventilationCalc.clearOpeningsButton")}
+                </button>
+              )}
+            </div>
+          </>
+        )}
         <div>
           <input type="number" min={0} step="any" value={value} onChange={(e) => onChange(e.target.value)} className="field-input" />
           <span className="mt-1 block text-[10.5px] text-muted-2">{t("ventilationCalc.openingTotalAreaLabel")}</span>

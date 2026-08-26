@@ -639,6 +639,7 @@ const vi: Dictionary = {
     addOpeningButton: "Thêm cửa gió",
     clearOpeningsButton: "Xoá hết",
     openingTotalAreaLabel: "Tổng diện tích (m²)",
+    openingCountLabel: "{count} khai báo",
     clearDraftButton: "Xoá bản nháp",
     draftNote: "Chưa chọn案件 nên dữ liệu nhập tạm lưu trên máy này (còn giữ đến khi bấm \"Xoá bản nháp\")",
     outdoorSourceTitle: "Căn cứ tính toán・nguồn",
