@@ -1078,6 +1078,8 @@ export interface Dictionary {
         frequency: string;
         controlVoltage: string;
         protectionRating: string;
+        productionEstimatedHours: string;
+        productionActualHours: string;
       };
       fields: {
         productionNotes: string;

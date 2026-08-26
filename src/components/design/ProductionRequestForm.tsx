@@ -273,7 +273,7 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
           <span className="panel-title">{t("design.production.panelsTitle")}</span>
         </div>
         <div className="data-table-wrap">
-          <table className="data-table" style={{ minWidth: 1180 }}>
+          <table className="data-table" style={{ minWidth: 1380 }}>
             <thead>
               <tr>
                 <th style={{ width: "36px" }}>{t("design.panels.panelNo")}</th>
@@ -285,6 +285,12 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
                     {t(`design.production.panelColumns.${f.labelKey}`)}
                   </th>
                 ))}
+                <th style={{ width: "100px" }}>
+                  {t("design.production.panelColumns.productionEstimatedHours")}
+                </th>
+                <th style={{ width: "100px" }}>
+                  {t("design.production.panelColumns.productionActualHours")}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -303,6 +309,30 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
                       />
                     </td>
                   ))}
+                  <td>
+                    <input
+                      type="number"
+                      value={panel.productionEstimatedHours ?? ""}
+                      onChange={(e) =>
+                        updatePanel(panel.id, {
+                          productionEstimatedHours: e.target.value === "" ? null : Number(e.target.value),
+                        })
+                      }
+                      className="field-input py-1.5"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      value={panel.productionActualHours ?? ""}
+                      onChange={(e) =>
+                        updatePanel(panel.id, {
+                          productionActualHours: e.target.value === "" ? null : Number(e.target.value),
+                        })
+                      }
+                      className="field-input py-1.5"
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>
