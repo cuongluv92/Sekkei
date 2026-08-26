@@ -53,7 +53,6 @@ interface SavedInput {
   force: SeismicForceInputState;
   geometry: GeometryInputState;
   bolt: AnchorBoltInputState;
-  outlineDrawing?: OutlineDrawingRef | null;
 }
 
 interface Props {
@@ -94,7 +93,6 @@ export function FloorMountSeismicView({ caseId, calculationType, titleKey, descr
       setForce(blankSeismicForceInputState());
       setGeometry(blankGeometry());
       setBolt(blankAnchorBoltInputState());
-      setOutlineDrawing(null);
       setLoaded(true);
       return;
     }
@@ -105,7 +103,6 @@ export function FloorMountSeismicView({ caseId, calculationType, titleKey, descr
       setForce(saved?.force ?? blankSeismicForceInputState());
       setGeometry(saved?.geometry ?? blankGeometry());
       setBolt(saved?.bolt ?? blankAnchorBoltInputState());
-      setOutlineDrawing(saved?.outlineDrawing ?? null);
       setSavedAt(record?.updatedAt ?? null);
       setLoaded(true);
     });
@@ -149,7 +146,7 @@ export function FloorMountSeismicView({ caseId, calculationType, titleKey, descr
       const saved = await calculationRecordService.save(
         caseId,
         calculationType,
-        { force, geometry, bolt, outlineDrawing } as unknown as Record<string, unknown>,
+        { force, geometry, bolt } as unknown as Record<string, unknown>,
         anchorResult ? { pulloutForceKn: anchorResult.pulloutForceKn } : {},
       );
       setSavedAt(saved.updatedAt);
@@ -277,12 +274,7 @@ export function FloorMountSeismicView({ caseId, calculationType, titleKey, descr
         </div>
 
         <div className="lg:pt-8">
-          <OutlineDrawingUpload
-            caseId={caseId || "draft"}
-            calculationType={calculationType}
-            value={outlineDrawing}
-            onChange={setOutlineDrawing}
-          />
+          <OutlineDrawingUpload calculationType={calculationType} onChange={setOutlineDrawing} />
           <p className="mt-1.5 text-[10.5px] text-muted-2">{t("seismicCalc.outlineDrawingHintFloor")}</p>
         </div>
       </div>

@@ -505,6 +505,11 @@ export interface Dictionary {
     surfaceAreaTitle: string;
     surfaceAreaHintOutdoor: string;
     surfaceAreaHintIndoor: string;
+    dimWHint: string;
+    dimHHint: string;
+    dimH1Hint: string;
+    dimDHint: string;
+    dimD1Hint: string;
     roofAreaHint: string;
     faceAreaHint: string;
     widthHint: string;

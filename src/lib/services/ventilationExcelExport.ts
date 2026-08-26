@@ -51,6 +51,11 @@ export interface OutdoorVentilationExportData {
   ventLayoutDrawing?: OutlineImageExportRef | null;
   climate: { ambientTempC: number; topTempC: number };
   heatSources: VentilationHeatSourceExportItem[];
+  /** ユーザーが外形寸法(W/H/H1/D/D1)を入力していれば、実物テンプレートの
+   * F23:N23セル(外形寸法欄)にも書き込む — 面積欄(SRO等)がこの寸法からの
+   * 自動計算か直接入力かに関わらず、寸法が分かっているなら空欄のままに
+   * しない。 */
+  dimensions?: { widthM: number; heightM: number; heightH1M: number; depthM: number; depthD1M: number } | null;
   surfaceAreas: { roofM2: number; face1M2: number; face2M2: number; face3M2: number; face4M2: number };
   transmittance: { roofWPerM2K: number; sideWPerM2K: number };
   equivalentOutsideTemp: { roofC: number; face1C: number; face2C: number; face3C: number; face4C: number };
@@ -143,10 +148,19 @@ export async function exportOutdoorVentilationExcel(data: OutdoorVentilationExpo
   // b) 盤内部発熱源
   writeHeatSources(ws, data.heatSources);
 
-  // c) 盤表面面積 — テンプレートはW/H/H1/D/D1の外形寸法から面積を計算する式
-  // だが、アプリは面積そのものを保持している(寸法の内訳を持たない)ため、
-  // 面積セル(F25/H25/J25/L25/N25/P25)を直接上書きする。外形寸法欄(F23等)
-  // は空欄のまま(誤った寸法を捏造しないため)。
+  // c) 盤表面面積 — テンプレートはW/H/H1/D/D1の外形寸法(F23/H23/J23/L23/N23)
+  // から面積を計算する式(F25=F23*N23等)だが、アプリの面積欄は寸法から自動
+  // 計算した後も直接上書きできるため、面積セル(F25等)は常にアプリの現在値
+  // で直接上書きする(テンプレートの数式に頼らない — 面積を直接入力した
+  // ケースと寸法から計算したケースを区別しない)。外形寸法欄はユーザーが
+  // 寸法を入力していれば併せて書き込む(未入力なら空欄のまま — 捏造しない)。
+  if (data.dimensions) {
+    ws.getCell("F23").value = data.dimensions.widthM; // W
+    ws.getCell("H23").value = data.dimensions.heightM; // H
+    ws.getCell("J23").value = data.dimensions.heightH1M; // H1
+    ws.getCell("L23").value = data.dimensions.depthM; // D
+    ws.getCell("N23").value = data.dimensions.depthD1M; // D1
+  }
   const { roofM2, face1M2, face2M2, face3M2, face4M2 } = data.surfaceAreas;
   ws.getCell("F25").value = roofM2; // SRO
   ws.getCell("J25").value = face1M2; // SSE

@@ -58,8 +58,6 @@ interface SavedInput {
   heatSources: HeatSourceItem[];
   dimensions: DimensionState;
   ventOpening: VentOpeningState;
-  outlineDrawing?: OutlineDrawingRef | null;
-  ventLayoutDrawing?: OutlineDrawingRef | null;
 }
 
 const CALCULATION_TYPE = "ventilation-indoor";
@@ -94,8 +92,6 @@ export function IndoorVentilationView({ caseId }: Props) {
       setHeatSources([]);
       setDimensions(blankDimensions());
       setVentOpening(blankVentOpening());
-      setOutlineDrawing(null);
-      setVentLayoutDrawing(null);
       setLoaded(true);
       return;
     }
@@ -106,8 +102,6 @@ export function IndoorVentilationView({ caseId }: Props) {
       setHeatSources(saved?.heatSources ?? []);
       setDimensions(saved?.dimensions ?? blankDimensions());
       setVentOpening(saved?.ventOpening ?? blankVentOpening());
-      setOutlineDrawing(saved?.outlineDrawing ?? null);
-      setVentLayoutDrawing(saved?.ventLayoutDrawing ?? null);
       setSavedAt(record?.updatedAt ?? null);
       setLoaded(true);
     });
@@ -168,7 +162,7 @@ export function IndoorVentilationView({ caseId }: Props) {
       const saved = await calculationRecordService.save(
         caseId,
         CALCULATION_TYPE,
-        { heatSources, dimensions, ventOpening, outlineDrawing, ventLayoutDrawing } as unknown as Record<string, unknown>,
+        { heatSources, dimensions, ventOpening } as unknown as Record<string, unknown>,
         result ? { naturalVentilationSufficient: result.naturalVentilationSufficient, finalFanCount: result.finalFanCount } : {},
       );
       setSavedAt(saved.updatedAt);
@@ -226,8 +220,6 @@ export function IndoorVentilationView({ caseId }: Props) {
         <p className="text-[12px] text-foreground">{t("ventilationCalc.indoorDescription")}</p>
       </div>
 
-      <HeatSourceList value={heatSources} onChange={setHeatSources} />
-
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-3 border-t border-border pt-4">
           <div className="flex items-center gap-2">
@@ -254,12 +246,11 @@ export function IndoorVentilationView({ caseId }: Props) {
               ]}
             />
           )}
+          <HeatSourceList value={heatSources} onChange={setHeatSources} />
         </div>
         <div className="border-t border-border pt-4">
           <OutlineDrawingUpload
-            caseId={caseId || "draft"}
             calculationType={CALCULATION_TYPE}
-            value={outlineDrawing}
             onChange={setOutlineDrawing}
             title={t("ventilationCalc.outlineDrawingTitle")}
             hint={t("ventilationCalc.outlineDrawingHintIndoor")}
@@ -273,9 +264,7 @@ export function IndoorVentilationView({ caseId }: Props) {
         <VentOpeningFields value={ventOpening} onChange={setVentOpening} />
         <div className="border-t border-border pt-4">
           <OutlineDrawingUpload
-            caseId={caseId || "draft"}
             calculationType={`${CALCULATION_TYPE}-vent-layout`}
-            value={ventLayoutDrawing}
             onChange={setVentLayoutDrawing}
             title={t("ventilationCalc.ventLayoutDrawingTitle")}
             hint={t("ventilationCalc.ventLayoutDrawingHint")}

@@ -23,6 +23,7 @@ export type { VentilationClimateProfileDraft } from "./ventilationClimateProfile
 export { weightShapeImageService } from "./weightShapeImageService";
 export { panelWeightLayerImageService } from "./panelWeightLayerImageService";
 export { calculationRecordService } from "./calculationRecordService";
+export { globalCalcAssetService } from "./globalCalcAssetService";
 export { partAssemblyService } from "./partAssemblyService";
 export { uploadPartFile } from "./fileUploadService";
 export { importService } from "./importService";

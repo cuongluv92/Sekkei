@@ -1,8 +1,9 @@
 "use client";
 
 import { Image as ImageIcon, Loader2, Trash2, Upload } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
+import { globalCalcAssetService } from "@/lib/services";
 import { getPublicUrl, removeFile, uploadFile } from "@/lib/supabase/storage";
 
 export interface OutlineDrawingRef {
@@ -12,10 +13,9 @@ export interface OutlineDrawingRef {
 }
 
 interface Props {
-  caseId: string;
   calculationType: string;
-  value: OutlineDrawingRef | null;
-  onChange: (next: OutlineDrawingRef | null) => void;
+  /** 現在の画像が変わるたび(初回読み込み含む)呼ばれる — Excel出力にこの参照を渡す呼び出し側のため。 */
+  onChange?: (next: OutlineDrawingRef | null) => void;
   /** 既定の「外形図」ラベルを上書きする(同一画面に複数枚アップロード欄を置く場合に使う)。 */
   title?: string;
   hint?: string;
@@ -26,17 +26,37 @@ interface Props {
 /**
  * 外形図 (盤の製作図・写真) の任意アップロード欄 — JSIA-T1016換気計算書の
  * 各シートには常に「注記 外形図は製作図による」とあり、耐震計算・換気計算
- * いずれも入力根拠として製品図面を参照する。Storage (bucket oku-pro-files)
- * に `outline-drawings/<caseId>/<calculationType>.<ext>` として保存し、参照
- * (ファイル名・パス・日付) は呼び出し側の入力オブジェクトに含めて保存する
- * (この計算モジュール専用のテーブルは持たない — WeightShapeCalcSection と
- * 同じ Storage 直接利用パターン)。
+ * いずれも入力根拠として製品図面を参照する。
+ *
+ * 案件ごとではなく calculationType ごとに1枚だけ保持する共通の参考画像
+ * (ユーザーからの明示指示: 案件を切り替えても同じ画像を使い、都度アップロード
+ * し直さない)。メタデータは calculation_global_assets テーブル(1行 =
+ * 1 calculationType)、実体は Storage (bucket oku-pro-files) の
+ * `outline-drawings/_global/<calculationType>.<ext>` に保存する。
  */
-export function OutlineDrawingUpload({ caseId, calculationType, value, onChange, title, hint, heightClass }: Props) {
+export function OutlineDrawingUpload({ calculationType, onChange, title, hint, heightClass }: Props) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [value, setValue] = useState<OutlineDrawingRef | null>(null);
+  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    globalCalcAssetService.get(calculationType).then((asset) => {
+      if (cancelled) return;
+      const next = asset ? { fileName: asset.fileName, storagePath: asset.storagePath, uploadedAt: asset.uploadedAt } : null;
+      setValue(next);
+      onChange?.(next);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calculationType]);
 
   async function handleUpload(file: File) {
     setError(null);
@@ -44,9 +64,13 @@ export function OutlineDrawingUpload({ caseId, calculationType, value, onChange,
     try {
       const extMatch = /\.([A-Za-z0-9]+)$/.exec(file.name);
       const ext = extMatch ? extMatch[1].toLowerCase() : "png";
-      const path = `outline-drawings/${caseId}/${calculationType}.${ext}`;
+      const path = `outline-drawings/_global/${calculationType}.${ext}`;
       await uploadFile(path, file);
-      onChange({ fileName: file.name, storagePath: path, uploadedAt: new Date().toISOString().slice(0, 10) });
+      const uploadedAt = new Date().toISOString().slice(0, 10);
+      await globalCalcAssetService.set(calculationType, file.name, path, uploadedAt);
+      const next = { fileName: file.name, storagePath: path, uploadedAt };
+      setValue(next);
+      onChange?.(next);
     } catch {
       setError(t("common.uploadError"));
     } finally {
@@ -60,7 +84,9 @@ export function OutlineDrawingUpload({ caseId, calculationType, value, onChange,
     setUploading(true);
     try {
       await removeFile(value.storagePath);
-      onChange(null);
+      await globalCalcAssetService.remove(calculationType);
+      setValue(null);
+      onChange?.(null);
     } catch {
       setError(t("common.uploadError"));
     } finally {
@@ -76,8 +102,9 @@ export function OutlineDrawingUpload({ caseId, calculationType, value, onChange,
       <div
         className={`relative flex ${heightClass ?? "h-[220px]"} w-full items-center justify-center overflow-hidden rounded-lg border border-border-strong bg-surface-2 p-2`}
       >
-
-        {value ? (
+        {loading ? (
+          <Loader2 className="h-8 w-8 animate-spin text-muted-2" />
+        ) : value ? (
           // eslint-disable-next-line @next/next/no-img-element -- real Storage URL, not a static asset next/image can optimize
           <img src={getPublicUrl(value.storagePath)} alt={value.fileName} className="max-h-full max-w-full object-contain" />
         ) : (
@@ -95,7 +122,7 @@ export function OutlineDrawingUpload({ caseId, calculationType, value, onChange,
             </span>
           </button>
         )}
-        {value && (
+        {value && !loading && (
           <div className="absolute top-2 right-2 flex items-center gap-1.5">
             <button
               type="button"

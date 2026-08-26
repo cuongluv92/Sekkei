@@ -25,6 +25,14 @@ interface SurfaceAreaState {
   face4M2Raw: string;
   roofTransmittanceRaw: string;
   sideTransmittanceRaw: string;
+  /** 外形寸法 — 面積の自動計算補助 (実物のJSIA-T1016テンプレートで確認済みの
+   * 式: SRO=W×D1, SSE=SNW=H×D, SWS=W×H, SNE=W×H1)。面積欄自体はこの補助の
+   * 有無に関わらずいつでも直接上書きできる。 */
+  widthWRaw: string;
+  heightHRaw: string;
+  heightH1Raw: string;
+  depthDRaw: string;
+  depthD1Raw: string;
 }
 
 function blankSurfaceAreas(): SurfaceAreaState {
@@ -36,6 +44,35 @@ function blankSurfaceAreas(): SurfaceAreaState {
     face4M2Raw: "",
     roofTransmittanceRaw: "6.6",
     sideTransmittanceRaw: "6.1",
+    widthWRaw: "",
+    heightHRaw: "",
+    heightH1Raw: "",
+    depthDRaw: "",
+    depthD1Raw: "",
+  };
+}
+
+/**
+ * 外形寸法(W・H・H1・D・D1)から5面の面積を計算する — 実物のJSIA-T1016
+ * 「屋外フィルタ有り 東京」シートのF25:P25セルの数式(F23*N23 等)をunzipして
+ * 直接確認済み。5寸法すべてが揃った時だけ上書きし、面積欄は常に直接編集も
+ * 可能(この関数を経由しない手動入力を上書きしない)。
+ */
+function applySurfaceDimensions(next: SurfaceAreaState): SurfaceAreaState {
+  const W = Number(next.widthWRaw);
+  const H = Number(next.heightHRaw);
+  const H1 = Number(next.heightH1Raw);
+  const D = Number(next.depthDRaw);
+  const D1 = Number(next.depthD1Raw);
+  if (![W, H, H1, D, D1].every((v) => Number.isFinite(v) && v > 0)) return next;
+  const round = (v: number) => String(Math.round(v * 1e6) / 1e6);
+  return {
+    ...next,
+    roofM2Raw: round(W * D1),
+    face1M2Raw: round(H * D),
+    face2M2Raw: round(W * H),
+    face3M2Raw: round(H * D),
+    face4M2Raw: round(W * H1),
   };
 }
 
@@ -72,8 +109,6 @@ interface SavedInput {
   heatSources: HeatSourceItem[];
   surfaceAreas: SurfaceAreaState;
   ventOpening: VentOpeningState;
-  outlineDrawing?: OutlineDrawingRef | null;
-  ventLayoutDrawing?: OutlineDrawingRef | null;
 }
 
 const CALCULATION_TYPE = "ventilation-outdoor";
@@ -115,8 +150,6 @@ export function OutdoorVentilationView({ caseId }: Props) {
       setHeatSources([]);
       setSurfaceAreas(blankSurfaceAreas());
       setVentOpening(blankVentOpening());
-      setOutlineDrawing(null);
-      setVentLayoutDrawing(null);
       setLoaded(true);
       return;
     }
@@ -128,8 +161,6 @@ export function OutdoorVentilationView({ caseId }: Props) {
       setHeatSources(saved?.heatSources ?? []);
       setSurfaceAreas(saved?.surfaceAreas ?? blankSurfaceAreas());
       setVentOpening(saved?.ventOpening ?? blankVentOpening());
-      setOutlineDrawing(saved?.outlineDrawing ?? null);
-      setVentLayoutDrawing(saved?.ventLayoutDrawing ?? null);
       setSavedAt(record?.updatedAt ?? null);
       setLoaded(true);
     });
@@ -215,10 +246,7 @@ export function OutdoorVentilationView({ caseId }: Props) {
       const saved = await calculationRecordService.save(
         caseId,
         CALCULATION_TYPE,
-        { climateProfileId, heatSources, surfaceAreas, ventOpening, outlineDrawing, ventLayoutDrawing } as unknown as Record<
-          string,
-          unknown
-        >,
+        { climateProfileId, heatSources, surfaceAreas, ventOpening } as unknown as Record<string, unknown>,
         result ? { naturalVentilationSufficient: result.naturalVentilationSufficient, finalFanCount: result.finalFanCount } : {},
       );
       setSavedAt(saved.updatedAt);
@@ -245,6 +273,20 @@ export function OutdoorVentilationView({ caseId }: Props) {
         ventLayoutDrawing,
         climate: { ambientTempC: climate.ambientTempC, topTempC: climate.topTempC },
         heatSources,
+        dimensions:
+          Number(surfaceAreas.widthWRaw) > 0 &&
+          Number(surfaceAreas.heightHRaw) > 0 &&
+          Number(surfaceAreas.heightH1Raw) > 0 &&
+          Number(surfaceAreas.depthDRaw) > 0 &&
+          Number(surfaceAreas.depthD1Raw) > 0
+            ? {
+                widthM: Number(surfaceAreas.widthWRaw),
+                heightM: Number(surfaceAreas.heightHRaw),
+                heightH1M: Number(surfaceAreas.heightH1Raw),
+                depthM: Number(surfaceAreas.depthDRaw),
+                depthD1M: Number(surfaceAreas.depthD1Raw),
+              }
+            : null,
         surfaceAreas: { roofM2, face1M2, face2M2, face3M2, face4M2 },
         transmittance: { roofWPerM2K: roofTransmittance, sideWPerM2K: sideTransmittance },
         equivalentOutsideTemp: {
@@ -318,8 +360,6 @@ export function OutdoorVentilationView({ caseId }: Props) {
         )}
       </div>
 
-      <HeatSourceList value={heatSources} onChange={setHeatSources} />
-
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-3 border-t border-border pt-4">
           <div className="flex items-center gap-2">
@@ -329,6 +369,13 @@ export function OutdoorVentilationView({ caseId }: Props) {
             <span className="panel-title">{t("ventilationCalc.surfaceAreaTitle")}</span>
           </div>
           <p className="text-[12px] text-foreground">{t("ventilationCalc.surfaceAreaHintOutdoor")}</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <NumField label="W" hintKey="ventilationCalc.dimWHint" value={surfaceAreas.widthWRaw} onChange={(v) => setSurfaceAreas(applySurfaceDimensions({ ...surfaceAreas, widthWRaw: v }))} unit="m" />
+            <NumField label="H" hintKey="ventilationCalc.dimHHint" value={surfaceAreas.heightHRaw} onChange={(v) => setSurfaceAreas(applySurfaceDimensions({ ...surfaceAreas, heightHRaw: v }))} unit="m" />
+            <NumField label="H1" hintKey="ventilationCalc.dimH1Hint" value={surfaceAreas.heightH1Raw} onChange={(v) => setSurfaceAreas(applySurfaceDimensions({ ...surfaceAreas, heightH1Raw: v }))} unit="m" />
+            <NumField label="D" hintKey="ventilationCalc.dimDHint" value={surfaceAreas.depthDRaw} onChange={(v) => setSurfaceAreas(applySurfaceDimensions({ ...surfaceAreas, depthDRaw: v }))} unit="m" />
+            <NumField label="D1" hintKey="ventilationCalc.dimD1Hint" value={surfaceAreas.depthD1Raw} onChange={(v) => setSurfaceAreas(applySurfaceDimensions({ ...surfaceAreas, depthD1Raw: v }))} unit="m" />
+          </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
             <NumField label="SRO (屋根/上面)" hintKey="ventilationCalc.roofAreaHint" value={surfaceAreas.roofM2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, roofM2Raw: v })} unit="m²" />
             <NumField label="面1 (SSE)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face1M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face1M2Raw: v })} unit="m²" />
@@ -349,12 +396,11 @@ export function OutdoorVentilationView({ caseId }: Props) {
               ]}
             />
           )}
+          <HeatSourceList value={heatSources} onChange={setHeatSources} />
         </div>
         <div className="border-t border-border pt-4">
           <OutlineDrawingUpload
-            caseId={caseId || "draft"}
             calculationType={CALCULATION_TYPE}
-            value={outlineDrawing}
             onChange={setOutlineDrawing}
             title={t("ventilationCalc.outlineDrawingTitle")}
             hint={t("ventilationCalc.outlineDrawingHintOutdoor")}
@@ -368,9 +414,7 @@ export function OutdoorVentilationView({ caseId }: Props) {
         <VentOpeningFields value={ventOpening} onChange={setVentOpening} />
         <div className="border-t border-border pt-4">
           <OutlineDrawingUpload
-            caseId={caseId || "draft"}
             calculationType={`${CALCULATION_TYPE}-vent-layout`}
-            value={ventLayoutDrawing}
             onChange={setVentLayoutDrawing}
             title={t("ventilationCalc.ventLayoutDrawingTitle")}
             hint={t("ventilationCalc.ventLayoutDrawingHint")}
