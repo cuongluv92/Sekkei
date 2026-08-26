@@ -280,17 +280,17 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
                 <th style={{ width: "130px" }}>{t("design.panels.panelName")}</th>
                 <th style={{ width: "110px" }}>{t("design.panels.panelStructure")}</th>
                 <th style={{ width: "60px" }}>{t("design.panels.faceCount")}</th>
-                {PANEL_ELECTRICAL_FIELDS.map((f) => (
-                  <th key={f.key} style={{ width: "120px" }}>
-                    {t(`design.production.panelColumns.${f.labelKey}`)}
-                  </th>
-                ))}
                 <th style={{ width: "100px" }}>
                   {t("design.production.panelColumns.productionEstimatedHours")}
                 </th>
                 <th style={{ width: "100px" }}>
                   {t("design.production.panelColumns.productionActualHours")}
                 </th>
+                {PANEL_ELECTRICAL_FIELDS.map((f) => (
+                  <th key={f.key} style={{ width: "120px" }}>
+                    {t(`design.production.panelColumns.${f.labelKey}`)}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -300,15 +300,6 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
                   <td className="text-muted">{panel.panelName || "—"}</td>
                   <td className="text-muted">{panel.panelStructure || "—"}</td>
                   <td className="text-muted">{panel.faceCount ?? "—"}</td>
-                  {PANEL_ELECTRICAL_FIELDS.map((f) => (
-                    <td key={f.key}>
-                      <SpecCombobox
-                        listKey={f.listKey}
-                        value={(panel[f.key] as string) ?? ""}
-                        onChange={(v) => updatePanel(panel.id, { [f.key]: v } as Partial<CasePanel>)}
-                      />
-                    </td>
-                  ))}
                   <td>
                     <input
                       type="number"
@@ -333,6 +324,15 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
                       className="field-input py-1.5"
                     />
                   </td>
+                  {PANEL_ELECTRICAL_FIELDS.map((f) => (
+                    <td key={f.key}>
+                      <SpecCombobox
+                        listKey={f.listKey}
+                        value={(panel[f.key] as string) ?? ""}
+                        onChange={(v) => updatePanel(panel.id, { [f.key]: v } as Partial<CasePanel>)}
+                      />
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
