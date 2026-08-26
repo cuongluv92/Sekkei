@@ -270,7 +270,7 @@ export function OutdoorVentilationView({ caseId }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <div>
         <h3 className="text-[15px] font-bold">{t("ventilationCalc.outdoorTitle")}</h3>
         <p className="text-[12px] text-muted">{t("ventilationCalc.outdoorDescription")}</p>
@@ -310,41 +310,10 @@ export function OutdoorVentilationView({ caseId }: Props) {
         )}
       </div>
 
-      <HeatSourceList value={heatSources} onChange={setHeatSources} />
-
-      <div className="grid grid-cols-1 gap-4 border-t border-border pt-4 lg:grid-cols-[1fr_320px]">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
-              {t("ventilationCalc.manualInputBadge")}
-            </span>
-            <span className="panel-title">{t("ventilationCalc.surfaceAreaTitle")}</span>
-          </div>
-          <p className="text-[12px] text-muted">{t("ventilationCalc.surfaceAreaHintOutdoor")}</p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <NumField label="SRO (屋根/上面)" hintKey="ventilationCalc.roofAreaHint" value={surfaceAreas.roofM2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, roofM2Raw: v })} unit="m²" />
-            <NumField label="面1 (SSE)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face1M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face1M2Raw: v })} unit="m²" />
-            <NumField label="面2 (SWS)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face2M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face2M2Raw: v })} unit="m²" />
-            <NumField label="面3 (SNW)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face3M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face3M2Raw: v })} unit="m²" />
-            <NumField label="面4 (SNE)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face4M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face4M2Raw: v })} unit="m²" />
-            <NumField label="URO" hintKey="ventilationCalc.transmittanceRoofHint" value={surfaceAreas.roofTransmittanceRaw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, roofTransmittanceRaw: v })} unit="W/m²K" />
-            <NumField label="USO" hintKey="ventilationCalc.transmittanceSideHint" value={surfaceAreas.sideTransmittanceRaw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, sideTransmittanceRaw: v })} unit="W/m²K" />
-          </div>
-          {result && (
-            <FormulaBlock
-              badge={t("ventilationCalc.autoCalcBadge")}
-              lines={[
-                {
-                  formula: "QBO = URO(tt−to)SRO + USO(ti−to)ΣS − URO・tSH・SRO − USO・Σ(t面・S面)",
-                  result: `${result.naturalHeatLossW.toFixed(1)} W`,
-                },
-              ]}
-            />
-          )}
-        </div>
-
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_260px]">
+        <HeatSourceList value={heatSources} onChange={setHeatSources} />
         {caseId && (
-          <div className="lg:pt-8">
+          <div>
             <OutlineDrawingUpload
               caseId={caseId}
               calculationType={CALCULATION_TYPE}
@@ -352,7 +321,38 @@ export function OutdoorVentilationView({ caseId }: Props) {
               onChange={setOutlineDrawing}
             />
             <p className="mt-1.5 text-[10.5px] text-muted-2">{t("ventilationCalc.outlineDrawingHintOutdoor")}</p>
+            <p className="text-[10.5px] text-muted-2">{t("ventilationCalc.outlineDrawingNote")}</p>
           </div>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3 border-t border-border pt-4">
+        <div className="flex items-center gap-2">
+          <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
+            {t("ventilationCalc.manualInputBadge")}
+          </span>
+          <span className="panel-title">{t("ventilationCalc.surfaceAreaTitle")}</span>
+        </div>
+        <p className="text-[12px] text-muted">{t("ventilationCalc.surfaceAreaHintOutdoor")}</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+          <NumField label="SRO (屋根/上面)" hintKey="ventilationCalc.roofAreaHint" value={surfaceAreas.roofM2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, roofM2Raw: v })} unit="m²" />
+          <NumField label="面1 (SSE)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face1M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face1M2Raw: v })} unit="m²" />
+          <NumField label="面2 (SWS)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face2M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face2M2Raw: v })} unit="m²" />
+          <NumField label="面3 (SNW)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face3M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face3M2Raw: v })} unit="m²" />
+          <NumField label="面4 (SNE)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face4M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face4M2Raw: v })} unit="m²" />
+          <NumField label="URO" hintKey="ventilationCalc.transmittanceRoofHint" value={surfaceAreas.roofTransmittanceRaw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, roofTransmittanceRaw: v })} unit="W/m²K" />
+          <NumField label="USO" hintKey="ventilationCalc.transmittanceSideHint" value={surfaceAreas.sideTransmittanceRaw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, sideTransmittanceRaw: v })} unit="W/m²K" />
+        </div>
+        {result && (
+          <FormulaBlock
+            badge={t("ventilationCalc.autoCalcBadge")}
+            lines={[
+              {
+                formula: "QBO = URO(tt−to)SRO + USO(ti−to)ΣS − URO・tSH・SRO − USO・Σ(t面・S面)",
+                result: `${result.naturalHeatLossW.toFixed(1)} W`,
+              },
+            ]}
+          />
         )}
       </div>
 

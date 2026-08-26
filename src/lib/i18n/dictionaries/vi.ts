@@ -612,6 +612,7 @@ const vi: Dictionary = {
     exportError: "Xuất Excel thất bại. Có thể chưa đăng ký template (Cài đặt > Quản lý template).",
     outlineDrawingHintOutdoor: "Đính kèm bản vẽ ngoại hình thể hiện cách đo SRO・mặt 1~4 sẽ giúp tránh nhập sai.",
     outlineDrawingHintIndoor: "Đính kèm bản vẽ ngoại hình thể hiện cách đo W・H・D sẽ giúp tránh nhập sai.",
+    outlineDrawingNote: "注記　外形図は製作図による",
     outdoorSourceTitle: "Căn cứ tính toán・nguồn",
     outdoorSourceBody: "Tuân theo công thức tính thông gió tủ điện lắp ngoài trời của JSIA-T1016:2019「配電盤類の換気計算」. Điều kiện khí hậu theo vùng (nhiệt độ ngoài trời, nhiệt độ tương đương do bức xạ mặt trời...) lấy từ danh mục nội bộ đã đăng ký ở mục 「設定」(chỉ đăng ký những vùng đã xác minh được số liệu thật — vùng chưa đăng ký sẽ không chọn được).",
     indoorSourceTitle: "Căn cứ tính toán・nguồn",

@@ -551,6 +551,7 @@ export interface Dictionary {
     exportError: string;
     outlineDrawingHintOutdoor: string;
     outlineDrawingHintIndoor: string;
+    outlineDrawingNote: string;
     outdoorSourceTitle: string;
     outdoorSourceBody: string;
     indoorSourceTitle: string;

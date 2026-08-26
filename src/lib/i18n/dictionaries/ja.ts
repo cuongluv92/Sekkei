@@ -597,6 +597,7 @@ const ja: Dictionary = {
     exportError: "Excel出力に失敗しました。テンプレートが未登録の可能性があります（設定 > テンプレート管理）。",
     outlineDrawingHintOutdoor: "SRO・面1～4の測り方が分かる外形図を添付すると、入力ミスを防げます。",
     outlineDrawingHintIndoor: "W・H・D の測り方が分かる外形図を添付すると、入力ミスを防げます。",
+    outlineDrawingNote: "注記　外形図は製作図による",
     outdoorSourceTitle: "計算根拠・出典",
     outdoorSourceBody: "JSIA-T1016:2019「配電盤類の換気計算」屋外キュービクルの計算式に準拠。地域の気象条件（外気温度・相当外気温度など）は「設定」で登録した社内選定マスタの値を使用します（実在が確認できた地域のみ登録— 未登録の地域は選べません）。",
     indoorSourceTitle: "計算根拠・出典",
