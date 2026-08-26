@@ -98,13 +98,13 @@ on conflict (list_key, value) do nothing;
 
 insert into schedule_colors (category, color)
 values
-  ('sheetMetal', '#8b8f99'),
-  ('box', '#8b8f99'),
-  ('accessory', '#a855f7'),
-  ('production', '#4f8ff0'),
-  ('inspection', '#e7ac4c'),
-  ('witness', '#f25c66'),
-  ('shipping', '#30d17f')
+  ('sheetMetal', '#92d050'),
+  ('box', '#92d050'),
+  ('accessory', '#ffe699'),
+  ('production', '#a5a5a5'),
+  ('inspection', '#00b0f0'),
+  ('witness', '#ffc000'),
+  ('shipping', '#f4b183')
 on conflict (category) do nothing;
 
 -- ---------------------------------------------------------------------

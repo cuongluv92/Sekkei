@@ -1,6 +1,6 @@
 "use client";
 
-import { FileSpreadsheet, Loader2, Printer } from "lucide-react";
+import { ChevronDown, ChevronRight, FileSpreadsheet, Loader2, Printer } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import {
@@ -20,7 +20,7 @@ import {
   junCellKeyRow,
   PROCESS_ROWS,
 } from "@/lib/utils/scheduleColoring";
-import { applyCascade, applyCreationDefaults } from "@/lib/utils/schedule";
+import { applyCascade, applyTodayDefaults, formatJaDate } from "@/lib/utils/schedule";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type {
   CaseSchedule,
@@ -28,7 +28,8 @@ import type {
   ScheduleColorConfig,
 } from "@/lib/types/design";
 
-const MILESTONE_FIELDS: {
+/** 発注日→納入日 の対 (自動計算されない、常時表示のフィールド)。 */
+const ORDER_DELIVERY_FIELDS: {
   key: keyof CaseSchedule;
   labelKey: string;
   quickJun: "start" | "end";
@@ -39,16 +40,26 @@ const MILESTONE_FIELDS: {
   { key: "boxDeliveryDate", labelKey: "boxDelivery", quickJun: "end" },
   { key: "accessoryOrderDate", labelKey: "accessoryOrder", quickJun: "start" },
   { key: "accessoryDeliveryDate", labelKey: "accessoryDelivery", quickJun: "end" },
-  { key: "productionStartDate", labelKey: "productionStart", quickJun: "start" },
-  { key: "productionEndDate", labelKey: "productionEnd", quickJun: "end" },
-  { key: "inspectionStartDate", labelKey: "inspectionStart", quickJun: "start" },
-  { key: "inspectionEndDate", labelKey: "inspectionEnd", quickJun: "end" },
-  { key: "witnessStartDate", labelKey: "witnessStart", quickJun: "start" },
-  { key: "witnessEndDate", labelKey: "witnessEnd", quickJun: "end" },
-  { key: "shippingStartDate", labelKey: "shippingStart", quickJun: "start" },
-  { key: "shippingEndDate", labelKey: "shippingEnd", quickJun: "end" },
-  { key: "deliveryDate", labelKey: "delivery", quickJun: "end" },
 ];
+
+/**
+ * 開始日が前工程から自動計算される対 (製作/検査/立会/出荷) — 開始日は
+ * 常時入力欄を出さず、完了日の横の小さな矢印をクリックしたときだけ
+ * 手動上書き用の欄を出す (普段は自動値のプレビューのみ表示)。
+ */
+const AUTO_START_PHASES: {
+  startKey: keyof CaseSchedule;
+  startLabelKey: string;
+  endKey: keyof CaseSchedule;
+  endLabelKey: string;
+}[] = [
+  { startKey: "productionStartDate", startLabelKey: "productionStart", endKey: "productionEndDate", endLabelKey: "productionEnd" },
+  { startKey: "inspectionStartDate", startLabelKey: "inspectionStart", endKey: "inspectionEndDate", endLabelKey: "inspectionEnd" },
+  { startKey: "witnessStartDate", startLabelKey: "witnessStart", endKey: "witnessEndDate", endLabelKey: "witnessEnd" },
+  { startKey: "shippingStartDate", startLabelKey: "shippingStart", endKey: "shippingEndDate", endLabelKey: "shippingEnd" },
+];
+
+const FINAL_FIELD = { key: "deliveryDate" as const, labelKey: "delivery", quickJun: "end" as const };
 
 // "box"(BOX納入) は実テンプレートの凡例上「鈑金・BOX納入」の1色見本に含まれる
 // ため、凡例には独立した見本を出さない (色設定自体はsheetMetal/box別々のまま — 表示だけ統合)。
@@ -100,6 +111,7 @@ export function ScheduleTimeline() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [expandedStarts, setExpandedStarts] = useState<Set<keyof CaseSchedule>>(new Set());
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -133,17 +145,17 @@ export function ScheduleTimeline() {
     }
     let active = true;
     setEditLoading(true);
+    setExpandedStarts(new Set());
     scheduleService.getByCase(selectedCaseId).then((s) => {
       if (active) {
-        const createdAt = cases.find((x) => x.case.id === selectedCaseId)?.case.createdAt;
-        setEditingSchedule(applyCreationDefaults(s, createdAt));
+        setEditingSchedule(applyTodayDefaults(s));
         setEditLoading(false);
       }
     });
     return () => {
       active = false;
     };
-  }, [selectedCaseId, cases]);
+  }, [selectedCaseId]);
 
   const months = useMemo(() => {
     const list: { year: number; month: number }[] = [];
@@ -175,6 +187,15 @@ export function ScheduleTimeline() {
       if (!prev) return prev;
       const updated = { ...prev, [key]: value || null };
       return value ? applyCascade(updated, key) : updated;
+    });
+  }
+
+  function toggleStart(key: keyof CaseSchedule) {
+    setExpandedStarts((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
     });
   }
 
@@ -275,7 +296,7 @@ export function ScheduleTimeline() {
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-                  {MILESTONE_FIELDS.map(({ key, labelKey, quickJun }) => (
+                  {ORDER_DELIVERY_FIELDS.map(({ key, labelKey, quickJun }) => (
                     <div key={key}>
                       <label className="field-label">
                         {t(`design.schedule.milestones.${labelKey}`)}
@@ -288,6 +309,59 @@ export function ScheduleTimeline() {
                       />
                     </div>
                   ))}
+                  {AUTO_START_PHASES.map(({ startKey, startLabelKey, endKey, endLabelKey }) => {
+                    const startValue = editingSchedule[startKey] as string | null;
+                    const expanded = expandedStarts.has(startKey);
+                    return (
+                      <div key={endKey}>
+                        <label className="field-label">
+                          {t(`design.schedule.milestones.${endLabelKey}`)}
+                        </label>
+                        <DateInput
+                          value={editingSchedule[endKey] as string | null}
+                          onChange={(v) => updateEditingField(endKey, v ?? "")}
+                          className="field-input"
+                          quickJun="end"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleStart(startKey)}
+                          className="mt-1 inline-flex items-center gap-0.5 text-[10.5px] text-muted-2 hover:text-accent"
+                        >
+                          {expanded ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3" />
+                          )}
+                          {t(`design.schedule.milestones.${startLabelKey}`)}
+                          {startValue
+                            ? `: ${formatJaDate(startValue)}`
+                            : ` (${t("design.schedule.autoLabel")})`}
+                        </button>
+                        {expanded && (
+                          <div className="mt-1">
+                            <DateInput
+                              value={startValue}
+                              onChange={(v) => updateEditingField(startKey, v ?? "")}
+                              className="field-input"
+                              quickJun="start"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <div>
+                    <label className="field-label">
+                      {t(`design.schedule.milestones.${FINAL_FIELD.labelKey}`)}
+                    </label>
+                    <DateInput
+                      value={editingSchedule[FINAL_FIELD.key] as string | null}
+                      onChange={(v) => updateEditingField(FINAL_FIELD.key, v ?? "")}
+                      className="field-input"
+                      quickJun={FINAL_FIELD.quickJun}
+                    />
+                  </div>
                 </div>
                 {saveError && (
                   <p className="text-[12.5px] text-danger">{saveError}</p>

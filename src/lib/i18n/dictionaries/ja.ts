@@ -1176,6 +1176,7 @@ const ja: Dictionary = {
       yearLabel: "年",
       monthLabel: "月",
       milestonesTitle: "工程日程",
+      autoLabel: "自動",
       timelineTitle: "タイムライン",
       legendTitle: "凡例",
       milestones: {

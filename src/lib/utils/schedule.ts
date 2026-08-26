@@ -41,29 +41,53 @@ export function junDateRange(year: number, month: number, bucket: JunBucket): { 
   return { start: `${ym}-21`, end: `${ym}-${pad(lastDay)}` };
 }
 
+/** "YYYY-MM-DD" 形式の実日付かどうか — 旬指定などの自由記入テキスト（例:「9月中旬」）は除外する。 */
+export function isIsoDate(value: string | null | undefined): value is string {
+  return !!value && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+/** ISO日付を日本式 "YYYY/MM/DD" に整形する。実日付でなければ (自由記入テキストならそのまま) 元の値を返す。 */
+export function formatJaDate(value: string | null | undefined): string {
+  if (!value) return "";
+  if (!isIsoDate(value)) return value;
+  const [y, m, d] = value.split("-");
+  return `${y}/${m}/${d}`;
+}
+
+export function addDaysIso(iso: string, days: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(y, m - 1, d + days);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 /**
- * 板金・BOX・部材の納入 → 製作 → 検査 → 立会 → 出荷 → 納入 という実際の工程の
- * 流れに沿って、前工程の完了日をそのまま次工程の開始日の初期値にする
+ * 板金・BOX納入 → 製作 → 検査 → 立会 → 出荷 → 納入 という実際の工程の流れに
+ * 沿って、前工程の完了日から次工程の開始日の初期値を自動計算する
  * (ユーザーが既に手入力した値は絶対に上書きしない — 空欄の時だけ埋める)。
+ * `offsetDays` が指定されたリンクは、前工程の完了日の翌日を開始日にする
+ * (検査・立会・出荷は「前工程が終わってから」始まる — 同日に重ねない)。
+ * 立会が実施されない場合、出荷開始日は検査完了日+1にフォールバックする
+ * (fromKeysのうち埋まっている最も遅い日付を採用する仕組みが、自然にこの
+ * フォールバックを兼ねる — 立会完了日があればそちらが検査完了日より後に
+ * なるため優先され、無ければ検査完了日が使われる)。
  */
 export const CASCADE_LINKS: {
   fromKeys: (keyof CaseSchedule)[];
   toKey: keyof CaseSchedule;
+  offsetDays?: number;
 }[] = [
-  {
-    fromKeys: ["sheetMetalDeliveryDate", "boxDeliveryDate", "accessoryDeliveryDate"],
-    toKey: "productionStartDate",
-  },
-  { fromKeys: ["productionEndDate"], toKey: "inspectionStartDate" },
-  { fromKeys: ["inspectionEndDate"], toKey: "witnessStartDate" },
-  { fromKeys: ["witnessEndDate"], toKey: "shippingStartDate" },
+  { fromKeys: ["sheetMetalDeliveryDate", "boxDeliveryDate"], toKey: "productionStartDate" },
+  { fromKeys: ["productionEndDate"], toKey: "inspectionStartDate", offsetDays: 1 },
+  { fromKeys: ["inspectionEndDate"], toKey: "witnessStartDate", offsetDays: 1 },
+  { fromKeys: ["witnessEndDate", "inspectionEndDate"], toKey: "shippingStartDate", offsetDays: 1 },
   { fromKeys: ["shippingEndDate"], toKey: "deliveryDate" },
 ];
 
 /**
  * `changedKey` の変更が CASCADE_LINKS のいずれかの起点なら、まだ空欄の
- * 次工程の開始日を自動で埋める。複数の起点 (鈑金/BOX/部材の3納期) を持つ
- * リンクは、埋まっている値のうち最も遅い日付を採用する。
+ * 次工程の開始日を自動で埋める。複数の起点を持つリンクは、埋まっている
+ * 実日付 (自由記入テキストは除く) のうち最も遅い日付を採用する。
  */
 export function applyCascade(
   schedule: CaseSchedule,
@@ -75,34 +99,35 @@ export function applyCascade(
     if (next[link.toKey]) continue;
     const values = link.fromKeys
       .map((k) => next[k] as string | null)
-      .filter((v): v is string => Boolean(v))
+      .filter(isIsoDate)
       .sort();
     const latest = values.at(-1);
-    if (latest) next = { ...next, [link.toKey]: latest };
+    if (latest) {
+      const value = link.offsetDays ? addDaysIso(latest, link.offsetDays) : latest;
+      next = { ...next, [link.toKey]: value };
+    }
   }
   return next;
 }
 
 /**
- * 発注日系 (前工程を持たない起点) が未入力のときは、案件の作成日を初期値
- * として表示する。あくまで編集可能な初期値であり、保存ボタンを押すまでは
- * 確定しない。
+ * 発注日系 (前工程を持たない起点) が未入力のときは、今日の日付を初期値
+ * として表示する (フォームを開いた=発注しに来た日、という想定)。あくまで
+ * 編集可能な初期値であり、保存ボタンを押すまでは確定しない。
  */
-export const CREATION_DEFAULT_KEYS: (keyof CaseSchedule)[] = [
+export const TODAY_DEFAULT_KEYS: (keyof CaseSchedule)[] = [
   "sheetMetalOrderDate",
   "boxOrderDate",
   "accessoryOrderDate",
 ];
 
-export function applyCreationDefaults(
-  schedule: CaseSchedule,
-  createdAt: string | null | undefined,
-): CaseSchedule {
-  if (!createdAt) return schedule;
-  const createdDate = createdAt.slice(0, 10);
+export function applyTodayDefaults(schedule: CaseSchedule): CaseSchedule {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   let next = schedule;
-  for (const key of CREATION_DEFAULT_KEYS) {
-    if (!next[key]) next = { ...next, [key]: createdDate };
+  for (const key of TODAY_DEFAULT_KEYS) {
+    if (!next[key]) next = { ...next, [key]: today };
   }
   return next;
 }

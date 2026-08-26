@@ -1,11 +1,16 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { JUN_BUCKETS, junDateRange, type JunBucket } from "@/lib/utils/schedule";
+import { isIsoDate, JUN_BUCKETS, junDateRange, type JunBucket } from "@/lib/utils/schedule";
 
 interface DateInputProps {
-  /** ISO "YYYY-MM-DD", or null/"" for empty — same contract as the native `<input type="date">` this replaces. */
+  /**
+   * ISO "YYYY-MM-DD" for an exact date, null/"" for empty, or free text
+   * (e.g. "9月中旬", "下旬") when the exact day isn't known yet — the field
+   * is typeable directly, the calendar button is only for picking an exact
+   * day.
+   */
   value: string | null;
   onChange: (value: string | null) => void;
   className?: string;
@@ -55,12 +60,17 @@ function parseIso(
  */
 export function DateInput({ value, onChange, className, quickJun }: DateInputProps) {
   const [open, setOpen] = useState(false);
+  const [text, setText] = useState(() => (isIsoDate(value) ? formatJa(value) : (value ?? "")));
   const [view, setView] = useState(() => {
     const parsed = parseIso(value);
     const now = new Date();
     return parsed ?? { year: now.getFullYear(), month0: now.getMonth() };
   });
   const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setText(isIsoDate(value) ? formatJa(value) : (value ?? ""));
+  }, [value]);
 
   useEffect(() => {
     if (!open) return;
@@ -76,6 +86,11 @@ export function DateInput({ value, onChange, className, quickJun }: DateInputPro
   function openPicker() {
     setView(parseIso(value) ?? view);
     setOpen((o) => !o);
+  }
+
+  function commitText() {
+    const trimmed = text.trim();
+    onChange(trimmed || null);
   }
 
   function shiftMonth(delta: number) {
@@ -94,17 +109,28 @@ export function DateInput({ value, onChange, className, quickJun }: DateInputPro
   ];
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className="relative flex items-stretch gap-1">
+      <input
+        type="text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commitText}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            commitText();
+            (e.target as HTMLInputElement).blur();
+          }
+        }}
+        placeholder="YYYY/MM/DD"
+        className={`${className ?? "field-input"} font-mono tabular-nums`}
+      />
       <button
         type="button"
         onClick={openPicker}
-        className={`${className ?? "field-input"} text-left`}
+        title="カレンダーから選択"
+        className="flex shrink-0 items-center justify-center rounded-md border border-border-strong px-2 text-muted hover:bg-surface-hover hover:text-foreground"
       >
-        {value ? (
-          <span className="font-mono tabular-nums">{formatJa(value)}</span>
-        ) : (
-          <span className="text-muted-2">YYYY/MM/DD</span>
-        )}
+        <CalendarDays className="h-3.5 w-3.5" />
       </button>
       {open && (
         <div className="absolute z-20 mt-1 w-64 rounded-md border border-border-strong bg-surface-2 p-2.5 shadow-lg">

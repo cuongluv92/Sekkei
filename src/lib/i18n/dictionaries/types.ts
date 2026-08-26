@@ -1093,6 +1093,7 @@ export interface Dictionary {
       yearLabel: string;
       monthLabel: string;
       milestonesTitle: string;
+      autoLabel: string;
       timelineTitle: string;
       legendTitle: string;
       milestones: {

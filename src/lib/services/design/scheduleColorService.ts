@@ -2,21 +2,26 @@ import { requireSupabase } from "@/lib/supabase/client";
 import type { ScheduleCategoryKey, ScheduleColorConfig } from "@/lib/types/design";
 
 /**
- * Starter palette only — used to backfill any category missing from the
- * `schedule_colors` table (e.g. before the seed script has run), never read
- * directly by the timeline renderer, which always goes through
- * `scheduleColorService.list()`. Editable from 設定 > 工程色設定; once a real
- * ⑤工程表 template is uploaded (Phase 5/6) these should be replaced with the
- * template's actual legend colors.
+ * Matches the real ⑤工程表 template's own legend exactly (extracted directly
+ * from the uploaded template's XML — legend cell fills at BK1/BS2/CA1 are
+ * plain RGB, BK2/BS1/CA2 are theme colors with a tint, resolved via the
+ * theme's clrScheme + HLS tint formula): 板金・BOX納入=Accent6(緑) #92D050,
+ * アクセサリー納入=Accent4 Lighter60% #FFE699, 製作=Accent3 #A5A5A5,
+ * 検査=#00B0F0, 立会=Accent4 #FFC000, 出荷=Accent2 Lighter40% #F4B183.
+ * Backfills any category missing from the `schedule_colors` table (e.g.
+ * before the seed script has run), never read directly by the timeline
+ * renderer, which always goes through `scheduleColorService.list()`.
+ * Editable from 設定 > 工程色設定 — use the reset button there to re-apply
+ * these values to already-seeded rows.
  */
 const DEFAULT_COLORS: ScheduleColorConfig[] = [
-  { category: "sheetMetal", color: "#8b8f99" },
-  { category: "box", color: "#8b8f99" },
-  { category: "accessory", color: "#a855f7" },
-  { category: "production", color: "#4f8ff0" },
-  { category: "inspection", color: "#e7ac4c" },
-  { category: "witness", color: "#f25c66" },
-  { category: "shipping", color: "#30d17f" },
+  { category: "sheetMetal", color: "#92d050" },
+  { category: "box", color: "#92d050" },
+  { category: "accessory", color: "#ffe699" },
+  { category: "production", color: "#a5a5a5" },
+  { category: "inspection", color: "#00b0f0" },
+  { category: "witness", color: "#ffc000" },
+  { category: "shipping", color: "#f4b183" },
 ];
 
 interface ScheduleColorRow {

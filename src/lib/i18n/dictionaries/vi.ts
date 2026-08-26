@@ -1204,6 +1204,7 @@ const vi: Dictionary = {
       yearLabel: "年",
       monthLabel: "月",
       milestonesTitle: "Mốc tiến độ",
+      autoLabel: "tự động",
       timelineTitle: "Timeline",
       legendTitle: "Chú giải màu",
       milestones: {
