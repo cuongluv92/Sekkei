@@ -93,7 +93,10 @@ function argbToCss(argb?: string): string | undefined {
 
 function borderSideCss(side?: { style?: string; color?: { argb?: string } }): string {
   if (!side?.style) return "none";
-  const width = side.style === "thick" ? "2.5px" : side.style === "medium" ? "1.5px" : "1px";
+  // Whole-pixel widths only — a fractional CSS border width (the old 1.5px/
+  // 2.5px) gets anti-aliased by the browser at print time, which is what
+  // made every line look soft/blurry and heavier than intended on paper.
+  const width = side.style === "thick" ? "3px" : side.style === "medium" ? "2px" : "1px";
   const style = side.style === "double" ? "double" : side.style === "dashed" || side.style === "dotted" ? "dashed" : "solid";
   const color = argbToCss(side.color?.argb) ?? "#000000";
   return `${width} ${style} ${color}`;
@@ -275,7 +278,10 @@ export function renderWorksheetHtml(ws: Worksheet): string {
     rowsHtml.push(`<tr style="height:${heightPt}pt">${cellsHtml.join("")}</tr>`);
   }
 
-  const colgroup = colWidthsPx.map((w) => `<col style="width:${w * scale}px" />`).join("");
+  // Rounded to whole pixels — a fractional column width leaves cell edges
+  // (and the borders drawn on them) off the pixel grid, which is the other
+  // half of the same blurriness the border-width fix above addresses.
+  const colgroup = colWidthsPx.map((w) => `<col style="width:${Math.round(w * scale)}px" />`).join("");
   return (
     `<table style="border-collapse:collapse;table-layout:fixed;font-family:'Yu Gothic','Meiryo',sans-serif;background:#ffffff;color:#000000">` +
     `<colgroup>${colgroup}</colgroup><tbody>${rowsHtml.join("")}</tbody></table>`
