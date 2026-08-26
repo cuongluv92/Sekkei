@@ -12,7 +12,7 @@ import { exportSeismicCubicleExcel, exportSeismicFreeStandingExcel } from "@/lib
 import type { SeismicAnchorAllowable } from "@/lib/types";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calculation/OutlineDrawingUpload";
-import { FormulaBlock, SourceNote, WhyPanel } from "@/components/calculation/FormulaBlock";
+import { FormulaBlock, SourceNote, WhyDisclosure } from "@/components/calculation/FormulaBlock";
 import {
   AnchorBoltSection,
   blankAnchorBoltInputState,
@@ -184,6 +184,7 @@ export function FloorMountSeismicView({ caseId, calculationType, titleKey, descr
               drawingNumber: caseInfo.case.drawingNumber,
             }
           : undefined,
+        outlineDrawing,
         force: { regionZ: force.regionZ, ks: forceResult.ks, weightKg: Number(force.weightKgRaw) },
         geometry: {
           centerOfGravityHeightMm: cgHeight,
@@ -268,14 +269,11 @@ export function FloorMountSeismicView({ caseId, calculationType, titleKey, descr
             />
           )}
 
-          <WhyPanel
-            title={t("seismicCalc.whyTitle")}
-            items={[
-              { label: "Rb", body: t("seismicCalc.whyRbFloorBody") },
-              { label: "Q = FH / n", body: t("seismicCalc.whyQFloorBody") },
-              { label: "σ = Rb/A、τ = Q/A", body: t("seismicCalc.whyStressBody") },
-            ]}
-          />
+          {forceResult && geometryComplete && anchorResult && (
+            <WhyDisclosure label={t("seismicCalc.whyRbQLabel")} title={t("seismicCalc.whyRbQTitleFloor")}>
+              {t("seismicCalc.whyRbQBodyFloor")}
+            </WhyDisclosure>
+          )}
         </div>
 
         {caseId && (

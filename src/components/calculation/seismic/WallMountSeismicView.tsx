@@ -12,7 +12,7 @@ import { exportSeismicWallMountedExcel } from "@/lib/services/seismicExcelExport
 import type { SeismicAnchorAllowable } from "@/lib/types";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calculation/OutlineDrawingUpload";
-import { FormulaBlock, SourceNote, WhyPanel } from "@/components/calculation/FormulaBlock";
+import { FormulaBlock, SourceNote, WhyDisclosure } from "@/components/calculation/FormulaBlock";
 import {
   AnchorBoltSection,
   blankAnchorBoltInputState,
@@ -172,6 +172,7 @@ export function WallMountSeismicView({ caseId }: Props) {
               drawingNumber: caseInfo.case.drawingNumber,
             }
           : undefined,
+        outlineDrawing,
         force: { regionZ: force.regionZ, ks: forceResult.ks, weightKg: Number(force.weightKgRaw) },
         geometry: {
           horizontalSpanMm: horizontalSpan,
@@ -253,14 +254,11 @@ export function WallMountSeismicView({ caseId }: Props) {
             />
           )}
 
-          <WhyPanel
-            title={t("seismicCalc.whyTitle")}
-            items={[
-              { label: "Rb", body: t("seismicCalc.whyRbWallBody") },
-              { label: "Q = √(FH² + (W+FV)²) / n", body: t("seismicCalc.whyQWallBody") },
-              { label: "σ = Rb/A、τ = Q/A", body: t("seismicCalc.whyStressBody") },
-            ]}
-          />
+          {anchorResult && (
+            <WhyDisclosure label={t("seismicCalc.whyRbQLabel")} title={t("seismicCalc.whyRbQTitleWall")}>
+              {t("seismicCalc.whyRbQBodyWall")}
+            </WhyDisclosure>
+          )}
         </div>
 
         {caseId && (

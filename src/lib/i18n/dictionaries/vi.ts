@@ -581,13 +581,16 @@ const vi: Dictionary = {
     judgementTitle: "Kết luận về lượng nhiệt thông gió",
     naturalSufficient: "Thông gió tự nhiên đủ giữ nhiệt độ trong tủ ≤ 40℃",
     forcedRequired: "Thông gió tự nhiên không đủ — cần thông gió cưỡng bức",
-    whyTitle: "Ý nghĩa của từng giá trị — vì sao lại ra số này",
+    whyJudgeLabel: "Vì sao αxAx・QV・kết luận ra như vậy",
+    whyJudgeTitle: "Căn cứ diện tích thông gió hiệu quả・nhiệt thoát tự nhiên — JSIA-T1016",
     whyEffectiveAreaBody:
       "αxAx (diện tích thông gió hiệu quả) là kết quả tổng hợp diện tích hiệu dụng (α×A) của cửa cấp gió và cửa thoát gió, coi như không khí đi tuần tự qua 2 cửa này (trở lực nối tiếp nhau). Hằng số (322/304) trong công thức là hệ số cố định dùng trong tính toán JSIA-T1016 — đã kiểm tra trực tiếp công thức nhúng trong file Excel chính thức của JSIA và xác nhận cùng một con số 「322/304」 xuất hiện y hệt trong tất cả các ví dụ tính toán có điều kiện vùng/nhiệt độ khác nhau (Tokyo, Naha, có/không filter) — đây không phải giá trị thay đổi theo nhiệt độ.",
     whyQvBody:
       "QV (lượng nhiệt thoát ra nhờ thông gió tự nhiên) thể hiện lượng nhiệt có thể thoát tự nhiên nhờ đối lưu tự nhiên (hiệu ứng ống khói) sinh ra từ chênh lệch độ cao h giữa cửa cấp/thoát gió và chênh lệch nhiệt độ trong-ngoài tủ. Biểu thức (ti−to)/(273+ti) trong dấu căn cho thấy: chênh lệch nhiệt độ càng lớn, và nhiệt độ tuyệt đối (273+ti) càng thấp, thì lực đẩy nổi càng mạnh (theo phương trình trạng thái khí).",
     whyJudgeBody:
       "So sánh QC (tổng nhiệt phát sinh trong tủ) với QBO (hoặc QBi — nhiệt tự nhiên tỏa ra từ bề mặt tủ) + QV (nhiệt thoát nhờ thông gió tự nhiên). Nếu QC lớn hơn, tức là chỉ thông gió tự nhiên không đủ giữ nhiệt độ trong tủ dưới ngưỡng cho phép (40℃), khi đó cần thông gió cưỡng bức (dùng quạt).",
+    whyWkLabel: "Vì sao WK ra công thức như vậy",
+    whyWkTitle: "Căn cứ lưu lượng gió cưỡng bức cần thiết WK — JSIA-T1016",
     whyWkBody:
       "WK (lưu lượng gió cưỡng bức cần thiết) được tính bằng cách lấy phần nhiệt còn thiếu mà thông gió tự nhiên chưa xử lý được (QC−QBO−QV) chia cho độ tăng nhiệt độ của luồng khí thổi vào (ti−to), để quy đổi ra lưu lượng gió cần thiết. Hệ số 3.6 là hệ số quy đổi đơn vị (3600 để đổi kJ/s sang kJ/h, gộp với 1/1000 để khớp đơn vị nhiệt dung riêng và khối lượng riêng).",
     forcedVentilationTitle: "Thông gió cưỡng bức",
@@ -661,17 +664,15 @@ const vi: Dictionary = {
     weightPlaceholder: "Ví dụ: 150",
     weightHint:
       "Nhập tổng trọng lượng tủ (kg) bao gồm dây dẫn và thiết bị bên trong. Nếu dùng kết quả từ module tính trọng lượng, nhập giá trị tổng của module đó.",
-    whyTitle: "Ý nghĩa của từng giá trị — vì sao lại ra số này",
+    whyKsLabel: "Vì sao phân loại này ra KS như vậy",
+    whyKsTitle: "Bảng tra KS (độ chấn động tiêu chuẩn thiết kế) — JSIA-T1018 bảng 1",
     whyKsBody:
-      "KS (độ chấn động tiêu chuẩn thiết kế) là tỷ lệ giữa lực động đất theo phương ngang và trọng lượng tủ. Theo bảng 1 của JSIA-T1018, KS có 12 giá trị (2.0/1.5/1.0/0.6/0.4) tùy vào tổ hợp 3 yếu tố: 「phân loại công trình (công trình đặc thù / công trình thông thường)」×「mức độ quan trọng của thiết bị (thiết bị quan trọng / thiết bị thông thường)」×「vị trí lắp đặt theo tầng (tầng trên cùng・sân thượng・tháp mái / tầng giữa / tầng hầm và tầng 1)」. Tầng càng cao thì rung động động đất càng bị khuếch đại nên KS càng lớn; thiết bị mà hỏng sẽ ảnh hưởng đến ứng phó thiên tai hoặc an toàn tính mạng (công trình đặc thù, thiết bị quan trọng) thì KS cũng càng lớn. Hệ thống tự tra bảng này dựa theo 3 lựa chọn bạn nhập.",
+      "KS (độ chấn động tiêu chuẩn thiết kế) là tỷ lệ giữa lực động đất theo phương ngang và trọng lượng tủ. KS có 12 giá trị (2.0/1.5/1.0/0.6/0.4) tùy vào tổ hợp「phân loại công trình」×「mức độ quan trọng của thiết bị」×「vị trí lắp đặt theo tầng」. Tầng càng cao thì rung động động đất càng bị khuếch đại nên KS càng lớn; thiết bị mà hỏng sẽ ảnh hưởng đến ứng phó thiên tai hoặc an toàn tính mạng thì KS cũng càng lớn.",
+    whyZLabel: "Vì sao giá trị này ra Z như vậy",
+    whyZTitle: "Căn cứ của Z (hệ số vùng) — Thông báo số 1793 năm Showa 55",
     whyZBody:
-      "Z (hệ số vùng) là tỷ lệ giữa cường độ động đất dự kiến của khu vực đó so với mức chuẩn toàn quốc (Z=1.0), được quy định trong Thông báo số 1793 năm Showa 55 của Bộ Xây dựng (dựa theo điều 88 Nghị định thi hành Luật Tiêu chuẩn Xây dựng) cho từng tỉnh/thành/quận huyện, giá trị từ 0.7 đến 1.0. Không nơi nào trên toàn quốc có Z lớn hơn 1.0. Nếu không rõ địa điểm lắp đặt, hoặc muốn tính theo hướng an toàn chung cho toàn quốc, hãy chọn 1.0.",
-    whyKhBody:
-      "KH (độ chấn động ngang) được tính theo công thức KH = Z × KS. Bằng cách nhân 「cường độ động đất của khu vực (Z)」 với 「mức độ dễ rung và mức độ quan trọng theo điều kiện lắp đặt (KS)」, ta được tỷ lệ lực động đất phương ngang thực tế mà tủ này phải chịu, tính theo trọng lượng. Ví dụ ở Tokyo (Z=1.0), tầng trên cùng, thiết bị quan trọng (KS=2.0) thì KH = 1.0 × 2.0 = 2.0.",
-    whyFhBody:
-      "FH (lực động đất phương ngang) được tính theo công thức FH = KH × W. W là tổng trọng lượng tủ đã quy đổi sang kN (W[kN] = khối lượng[kg] × 9.8 × 0.001). 「Độ chấn động (KH) × trọng lượng (W)」 cho ra độ lớn lực phương ngang mà tủ chịu khi động đất. Có thể hiểu công thức này như phương trình F=ma, với a được thay bằng 「gia tốc trọng trường g × KH」.",
-    whyFvBody:
-      "FV (lực động đất phương thẳng đứng) được tính theo công thức FV = FH ÷ 2. JSIA-T1018 quy định đơn giản hóa: lực động đất phương thẳng đứng được lấy bằng một nửa lực phương ngang, để tính toán theo hướng an toàn.",
+      "Z (hệ số vùng) là tỷ lệ giữa cường độ động đất dự kiến của khu vực đó so với mức chuẩn toàn quốc (Z=1.0), được quy định trong Thông báo số 1793 năm Showa 55 của Bộ Xây dựng (dựa theo điều 88 Nghị định thi hành Luật Tiêu chuẩn Xây dựng) cho từng tỉnh/thành/quận huyện, giá trị từ 0.7 đến 1.0. Không nơi nào trên toàn quốc có Z lớn hơn 1.0.",
+    whyZTableRegionHeader: "Ví dụ khu vực (tỉnh/thành)",
     section2TitleFloor: "② Thông số tủ (kích thước, bố trí bu lông)",
     section2HintFloor:
       "Nhập kích thước ngoài của tủ, vị trí trọng tâm và số lượng bu lông neo. ℓG không phải lúc nào cũng bằng một nửa nhịp (khi có thiết bị nặng lệch tâm như máy biến áp, trọng tâm sẽ lệch khỏi trung tâm) — hãy xác nhận vị trí trọng tâm thực tế từ bản vẽ trước khi nhập.",
@@ -685,12 +686,10 @@ const vi: Dictionary = {
     n1Hint: "Số bu lông neo một bên theo chiều ngang",
     n2Hint: "Số bu lông neo một bên theo chiều sâu",
     nTotalHint: "Tổng số bu lông neo",
-    whyRbFloorBody:
-      "Rb (lực nhổ) được tính từ cân bằng lực chống lật của tủ. Mô-men lật do lực động đất ngang FH tác dụng ở độ cao trọng tâm hG (FH×hG) trừ đi mô-men chống lật do trọng lượng bản thân tủ ((W−FV)×ℓG), phần còn lại (lực có xu hướng làm lật tủ) được phân bổ theo cánh tay đòn ℓ và số bu lông nt của hàng bu lông xa điểm tựa lật nhất. Sở dĩ dùng W−FV là vì khi lực động đất thẳng đứng FV hướng lên, trọng lượng giữ tủ (W) sẽ giảm đi tương ứng. Tính riêng cho phương ngang và phương sâu, lấy giá trị lớn hơn (khắt khe hơn).",
-    whyQFloorBody:
-      "Q (lực cắt trên mỗi bu lông) được tính theo công thức Q = FH / n — chia đều lực động đất ngang FH cho tổng số bu lông n (không phân biệt hướng lật, mọi bu lông đều chịu lực ngang như nhau).",
-    whyStressBody:
-      "σ (ứng suất kéo) và τ (ứng suất cắt) lần lượt là Rb và Q chia cho diện tích tiết diện A của một bu lông. Quy về ứng suất (kN/cm2) để có thể so sánh trực tiếp với ứng suất cho phép quy định theo vật liệu và đường kính bu lông.",
+    whyRbQLabel: "Vì sao Rb・Q・σ・τ ra công thức như vậy",
+    whyRbQTitleFloor: "Căn cứ lực nhổ・lực cắt — JSIA-T1018 mục 5.1.1",
+    whyRbQBodyFloor:
+      "Rb (lực nhổ) = phần còn lại sau khi lấy mô-men lật (FH×hG) trừ đi mô-men chống lật do trọng lượng bản thân ((W−FV)×ℓG), rồi phân bổ theo cánh tay đòn ℓ và số bu lông nt của hàng bu lông xa điểm tựa lật nhất. Tính riêng cho phương ngang và phương sâu, lấy giá trị lớn hơn (khắt khe hơn). Q (lực cắt) = FH chia đều cho tổng số bu lông n. σ・τ lần lượt là Rb・Q chia cho diện tích tiết diện A của một bu lông, để so sánh trực tiếp với ứng suất cho phép theo vật liệu và đường kính bu lông.",
     widthDirection: "Chiều ngang",
     depthDirection: "Chiều sâu",
     governingDirection: "Chiều chi phối",
@@ -701,10 +700,9 @@ const vi: Dictionary = {
     nt1Hint: "Số bu lông một bên mặt trên/dưới nt1",
     nt2Hint: "Số bu lông một bên mặt bên nt2",
     governingFormula: "Công thức áp dụng",
-    whyRbWallBody:
-      "Rb (lực nhổ) được tính bằng 2 công thức (①②), lấy giá trị lớn hơn. Công thức ① lấy chuẩn theo bu lông mặt trên/dưới, công thức ② lấy chuẩn theo bu lông mặt bên, đều dựa trên cân bằng giữa mô-men làm tủ bung ra khỏi tường (FH×cánh tay đòn) và lực ép tủ vào tường do trọng lượng cộng lực động đất thẳng đứng ((W+FV)×ℓ3G). Tính cả 2 mặt để đảm bảo không mặt nào bị bung ra, rồi lấy giá trị khắt khe hơn (lớn hơn).",
-    whyQWallBody:
-      "Q (lực cắt trên mỗi bu lông) được tính theo công thức Q = √(FH² + (W+FV)²) / n. Với tủ treo tường, bu lông chịu đồng thời lực động đất ngang FH và lực hướng xuống do tổng trọng lượng cộng lực động đất thẳng đứng (W+FV). Hai lực này vuông góc nhau nên hợp lực được tính theo định lý Pythagoras (tổng hợp vector), sau đó chia đều cho số bu lông n.",
+    whyRbQTitleWall: "Căn cứ lực nhổ・lực cắt — JSIA-T1018 mục 5.1.2",
+    whyRbQBodyWall:
+      "Rb (lực nhổ) tính bằng 2 công thức (① mặt trên/dưới, ② mặt bên), dựa trên cân bằng giữa mô-men làm tủ bung ra khỏi tường (FH×cánh tay đòn) và lực ép tủ vào tường do trọng lượng cộng lực động đất thẳng đứng ((W+FV)×ℓ3G), lấy giá trị lớn hơn (khắt khe hơn). Q (lực cắt) = √(FH² + (W+FV)²) / n — vì lực ngang FH và lực hướng xuống (W+FV) vuông góc nhau nên hợp lực tính theo định lý Pythagoras, rồi chia đều cho số bu lông n. σ・τ lần lượt là Rb・Q chia cho diện tích tiết diện A của một bu lông, để so sánh trực tiếp với ứng suất cho phép theo vật liệu và đường kính bu lông.",
     section3Title: "③ Chọn và kiểm tra bu lông neo",
     section3Hint:
       "Nhập vật liệu, đường kính, hãng sản xuất, phương pháp thi công và độ dày bê tông của bu lông. Tải trọng nhổ cho phép Ta (dữ liệu nội bộ công ty) cần đăng ký trước trong mục \"Cài đặt\". Nếu chưa đăng ký, kết quả kiểm tra lực nhổ sẽ tự động là \"Không đạt\" (theo hướng an toàn).",

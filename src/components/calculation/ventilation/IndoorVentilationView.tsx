@@ -187,6 +187,7 @@ export function IndoorVentilationView({ caseId }: Props) {
               managementNumber: detail.case.managementNumber,
             }
           : undefined,
+        outlineDrawing,
         dimensions: { widthM, heightM, depthM },
         heatSources,
         transmittance: { roofWPerM2K: roofTransmittance, sideWPerM2K: sideTransmittance },

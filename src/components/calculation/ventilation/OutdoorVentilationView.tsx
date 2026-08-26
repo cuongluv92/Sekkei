@@ -11,7 +11,7 @@ import { exportOutdoorVentilationExcel } from "@/lib/services/ventilationExcelEx
 import type { VentilationClimateProfile } from "@/lib/types";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calculation/OutlineDrawingUpload";
-import { FormulaBlock, SourceNote, WhyPanel } from "@/components/calculation/FormulaBlock";
+import { FormulaBlock, SourceNote, WhyDisclosure } from "@/components/calculation/FormulaBlock";
 import { HeatSourceList } from "./HeatSourceList";
 
 /** 地域未選択時のデフォルト — 社内選定マスタに常に存在する基準地域。 */
@@ -234,6 +234,7 @@ export function OutdoorVentilationView({ caseId }: Props) {
               managementNumber: detail.case.managementNumber,
             }
           : undefined,
+        outlineDrawing,
         climate: { ambientTempC: climate.ambientTempC, topTempC: climate.topTempC },
         heatSources,
         surfaceAreas: { roofM2, face1M2, face2M2, face3M2, face4M2 },
@@ -527,21 +528,17 @@ export function VentilationResultPanel({
           },
         ]}
       />
+      <WhyDisclosure label={t("ventilationCalc.whyJudgeLabel")} title={t("ventilationCalc.whyJudgeTitle")}>
+        <p className="mb-1.5">{t("ventilationCalc.whyEffectiveAreaBody")}</p>
+        <p className="mb-1.5">{t("ventilationCalc.whyQvBody")}</p>
+        <p>{t("ventilationCalc.whyJudgeBody")}</p>
+      </WhyDisclosure>
+
       <div className={naturalVentilationSufficient ? "rounded-md border border-success/40 bg-success/10 px-3 py-2" : "rounded-md border border-warning/40 bg-warning/10 px-3 py-2"}>
         <span className={naturalVentilationSufficient ? "badge-success" : "badge-danger"}>
           {naturalVentilationSufficient ? t("ventilationCalc.naturalSufficient") : t("ventilationCalc.forcedRequired")}
         </span>
       </div>
-
-      <WhyPanel
-        title={t("ventilationCalc.whyTitle")}
-        items={[
-          { label: "αxAx", body: t("ventilationCalc.whyEffectiveAreaBody") },
-          { label: "QV", body: t("ventilationCalc.whyQvBody") },
-          { label: `QC vs ${heatLossLabel}+QV`, body: t("ventilationCalc.whyJudgeBody") },
-          ...(naturalVentilationSufficient ? [] : [{ label: "WK", body: t("ventilationCalc.whyWkBody") }]),
-        ]}
-      />
 
       {!naturalVentilationSufficient && (
         <div className="flex flex-col gap-3 border-t border-border pt-3">
@@ -555,6 +552,9 @@ export function VentilationResultPanel({
             badge={t("ventilationCalc.autoCalcBadge")}
             lines={[{ formula: "WK = 3.6・(QC−QBO−QV)/(Cp・ρE・(ti−to)・X)", result: `${requiredForcedAirflowM3PerH?.toFixed(1) ?? "—"} m³/h` }]}
           />
+          <WhyDisclosure label={t("ventilationCalc.whyWkLabel")} title={t("ventilationCalc.whyWkTitle")}>
+            {t("ventilationCalc.whyWkBody")}
+          </WhyDisclosure>
           <p className="text-[12px] text-muted">{t("ventilationCalc.forcedVentilationHint")}</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <NumField

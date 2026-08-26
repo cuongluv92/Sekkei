@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "@/lib/i18n";
-import { WhyPanel } from "@/components/calculation/FormulaBlock";
+import { WhyDisclosure, WhyTable } from "@/components/calculation/FormulaBlock";
 import {
   computeHorizontalForce,
   computeKh,
@@ -19,6 +19,26 @@ import {
 } from "@/lib/calc/seismic/standardIntensity";
 
 const REGION_Z_OPTIONS = [0.7, 0.8, 0.9, 1.0];
+
+/** JSIA-T1018:2012 表1「局部震度法による建築設備機器の設計用標準震度(KS)」— 4組合せ×3階層=12値、全て標準本文で確認済み。 */
+const KS_TABLE_ROWS: (string | number)[][] = [
+  ["特定の施設", "重要機器", 2.0, 1.5, 1.0],
+  ["特定の施設", "一般機器", 1.5, 1.0, 0.6],
+  ["一般の施設", "重要機器", 1.5, 1.0, 0.6],
+  ["一般の施設", "一般機器", 1.0, 0.6, 0.4],
+];
+
+/**
+ * 地域係数Zの例 — 提供いただいたExcel(自立形シート 表10-15)に実際に載って
+ * いる都道府県のみ(全47都道府県の網羅ではない)。Excelのセルを直接読み取り、
+ * 手入力の書き写しではない。載っていない地域や不明な場合は1.0を選ぶ。
+ */
+const Z_TABLE_ROWS: (string | number)[][] = [
+  [0.7, "沖縄"],
+  [0.8, "山口・佐賀・福岡・長崎"],
+  [0.9, "秋田・島根・愛媛・山形・岡山・高知・新潟・広島"],
+  [1.0, "東京・大阪など、上記以外の全国"],
+];
 
 export interface SeismicForceInputState {
   facilityCategory: SeismicFacilityCategoryValue;
@@ -121,6 +141,10 @@ export function SeismicForceSection({ value, onChange }: Props) {
               </option>
             ))}
           </select>
+          <WhyDisclosure label={t("seismicCalc.whyKsLabel")} title={t("seismicCalc.whyKsTitle")}>
+            <p className="mb-1.5">{t("seismicCalc.whyKsBody")}</p>
+            <WhyTable headers={[t("seismicCalc.facilityCategoryLabel"), t("seismicCalc.importanceLabel"), t("seismicCalc.floorPosition.upper"), t("seismicCalc.floorPosition.middle"), t("seismicCalc.floorPosition.groundOrFirst")]} rows={KS_TABLE_ROWS} />
+          </WhyDisclosure>
         </div>
         <div>
           <label className="field-label">{t("seismicCalc.regionZLabel")}</label>
@@ -132,6 +156,10 @@ export function SeismicForceSection({ value, onChange }: Props) {
             ))}
           </select>
           <p className="mt-1 text-[11px] text-muted-2">{t("seismicCalc.regionZHint")}</p>
+          <WhyDisclosure label={t("seismicCalc.whyZLabel")} title={t("seismicCalc.whyZTitle")}>
+            <p className="mb-1.5">{t("seismicCalc.whyZBody")}</p>
+            <WhyTable headers={["Z", t("seismicCalc.whyZTableRegionHeader")]} rows={Z_TABLE_ROWS} />
+          </WhyDisclosure>
         </div>
         <div>
           <label className="field-label">{t("seismicCalc.weightLabel")}</label>
@@ -161,17 +189,6 @@ export function SeismicForceSection({ value, onChange }: Props) {
         <ForceStat label="FH = KH × W" value={result ? result.horizontalForceKn.toFixed(3) : "—"} unit="kN" />
         <ForceStat label="FV = FH / 2" value={result ? result.verticalForceKn.toFixed(3) : "—"} unit="kN" />
       </div>
-
-      <WhyPanel
-        title={t("seismicCalc.whyTitle")}
-        items={[
-          { label: "KS", body: t("seismicCalc.whyKsBody") },
-          { label: "Z", body: t("seismicCalc.whyZBody") },
-          { label: "KH = Z × KS", body: t("seismicCalc.whyKhBody") },
-          { label: "FH = KH × W", body: t("seismicCalc.whyFhBody") },
-          { label: "FV = FH ÷ 2", body: t("seismicCalc.whyFvBody") },
-        ]}
-      />
     </div>
   );
 }

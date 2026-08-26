@@ -1,5 +1,20 @@
 import type { BoltDiameter, BoltMaterial } from "@/lib/types";
-import { downloadWorkbook, keepOnlyWorksheet, loadActiveTemplateSheet } from "./design/excelWorkbook";
+import { downloadWorkbook, embedOutlineImage, keepOnlyWorksheet, loadActiveTemplateSheet, type OutlineImageAnchor } from "./design/excelWorkbook";
+
+/** Minimal shape of OutlineDrawingUpload's stored ref — kept local so this service layer doesn't depend on a "use client" component module. */
+export interface OutlineImageExportRef {
+  storagePath: string;
+  fileName: string;
+}
+
+/**
+ * 外形図の埋め込み位置 — 実際のベンダーテンプレートをunzipしてdrawing*.xmlの
+ * アンカー座標を直接確認した値（自立形/壁掛形とも「２-１. 盤諸元」節の
+ * 直後、A56〜U76前後に外形図（OLEオブジェクトだが表示位置は同じ）が
+ * 置かれている）。0始まりのcol/row。
+ */
+const FLOOR_MOUNT_IMAGE_ANCHOR: OutlineImageAnchor = { fromCol: 0, fromRow: 55, toCol: 20, toRow: 76 };
+const WALL_MOUNT_IMAGE_ANCHOR: OutlineImageAnchor = { fromCol: 0, fromRow: 55, toCol: 20, toRow: 75 };
 
 /**
  * Fills the real vendor 耐震計算書 templates (自立形／壁掛形／キュービクル —
@@ -98,6 +113,7 @@ async function buildFloorMountWorkbook(
   force: SeismicForceExportData,
   geometry: FloorMountGeometryExportData,
   bolt: SeismicBoltExportData,
+  outlineDrawing: OutlineImageExportRef | null | undefined,
 ) {
   const { workbook, ws } = await loadActiveTemplateSheet("seismicFreeStanding", ["自立形", "キュービクル"]);
   keepOnlyWorksheet(workbook, ws);
@@ -143,6 +159,8 @@ async function buildFloorMountWorkbook(
     compareCell: "T154",
   });
 
+  await embedOutlineImage(workbook, ws, outlineDrawing, FLOOR_MOUNT_IMAGE_ANCHOR);
+
   return { workbook, drawingNumber: caseInfo?.drawingNumber ?? "" };
 }
 
@@ -151,8 +169,16 @@ export async function exportSeismicFreeStandingExcel(input: {
   force: SeismicForceExportData;
   geometry: FloorMountGeometryExportData;
   bolt: SeismicBoltExportData;
+  outlineDrawing?: OutlineImageExportRef | null;
 }): Promise<{ fileName: string }> {
-  const { workbook, drawingNumber } = await buildFloorMountWorkbook("freeStanding", input.caseInfo, input.force, input.geometry, input.bolt);
+  const { workbook, drawingNumber } = await buildFloorMountWorkbook(
+    "freeStanding",
+    input.caseInfo,
+    input.force,
+    input.geometry,
+    input.bolt,
+    input.outlineDrawing,
+  );
   const fileName = `耐震計算書_自立形_${drawingNumber || todayJa().replace(/\//g, "")}.xlsx`;
   await downloadWorkbook(workbook, fileName);
   return { fileName };
@@ -163,8 +189,16 @@ export async function exportSeismicCubicleExcel(input: {
   force: SeismicForceExportData;
   geometry: FloorMountGeometryExportData;
   bolt: SeismicBoltExportData;
+  outlineDrawing?: OutlineImageExportRef | null;
 }): Promise<{ fileName: string }> {
-  const { workbook, drawingNumber } = await buildFloorMountWorkbook("cubicle", input.caseInfo, input.force, input.geometry, input.bolt);
+  const { workbook, drawingNumber } = await buildFloorMountWorkbook(
+    "cubicle",
+    input.caseInfo,
+    input.force,
+    input.geometry,
+    input.bolt,
+    input.outlineDrawing,
+  );
   const fileName = `耐震計算書_キュービクル_${drawingNumber || todayJa().replace(/\//g, "")}.xlsx`;
   await downloadWorkbook(workbook, fileName);
   return { fileName };
@@ -175,8 +209,9 @@ export async function exportSeismicWallMountedExcel(input: {
   force: SeismicForceExportData;
   geometry: WallMountGeometryExportData;
   bolt: SeismicBoltExportData;
+  outlineDrawing?: OutlineImageExportRef | null;
 }): Promise<{ fileName: string }> {
-  const { caseInfo, force, geometry, bolt } = input;
+  const { caseInfo, force, geometry, bolt, outlineDrawing } = input;
   const { workbook, ws } = await loadActiveTemplateSheet("seismicWallMounted", ["壁掛形"]);
   keepOnlyWorksheet(workbook, ws);
 
@@ -222,6 +257,8 @@ export async function exportSeismicWallMountedExcel(input: {
     fs: "P151",
     compareCell: "T148",
   });
+
+  await embedOutlineImage(workbook, ws, outlineDrawing, WALL_MOUNT_IMAGE_ANCHOR);
 
   const fileName = `耐震計算書_壁掛形_${caseInfo?.drawingNumber || todayJa().replace(/\//g, "")}.xlsx`;
   await downloadWorkbook(workbook, fileName);

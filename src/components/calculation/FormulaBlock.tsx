@@ -1,3 +1,8 @@
+"use client";
+
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { useState } from "react";
+
 /**
  * 計算結果の横に、実際に使った式と代入値をそのまま表示する共通部品 —
  * 数値だけでなく計算過程を追えるようにする (耐震計算・換気計算 共通)。
@@ -33,28 +38,61 @@ export function SourceNote({ title, body }: { title: string; body: string }) {
   );
 }
 
-export interface WhyItem {
-  label: string;
-  body: string;
+/**
+ * 「なぜこの値・この表になるのか」を、対象の項目・式のすぐ隣に置く小さな
+ * 折りたたみ開閉部品。クリックするまでは1行のリンクだけを表示し、開くと
+ * 短い理由説明（＋必要なら参照表）を表示する。入力の仕方そのもの（どれを
+ * 選ぶか）は各項目下の既存ヒントで案内済みなので、ここに重複させない —
+ * 中身は「なぜその区分・その数値になっているか」の根拠だけに絞る。
+ */
+export function WhyDisclosure({ label, title, children }: { label: string; title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-1">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-0.5 text-[10.5px] font-medium text-accent hover:underline"
+      >
+        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        {label}
+      </button>
+      {open && (
+        <div className="mt-1 flex max-w-md flex-col gap-1.5 rounded-md border border-border bg-muted/10 px-2.5 py-2">
+          <span className="text-[10.5px] font-bold text-foreground">{title}</span>
+          <div className="text-[11px] leading-relaxed text-muted-2">{children}</div>
+        </div>
+      )}
+    </div>
+  );
 }
 
-/**
- * 「なぜこの値になるのか」を係数・変数ごとに個別説明する専用セクション。
- * 前提知識がない読み手でも、式の各項の意味を理解して手計算で検算できる
- * ことを目的とする (単に出典を示すだけの SourceNote とは別に用意する)。
- */
-export function WhyPanel({ title, items }: { title: string; items: WhyItem[] }) {
+/** WhyDisclosure内で参照表を表示するための共通テーブル (横スクロール対応)。 */
+export function WhyTable({ headers, rows }: { headers: string[]; rows: (string | number)[][] }) {
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/10 px-3 py-2.5">
-      <span className="text-[11px] font-bold text-foreground">{title}</span>
-      <dl className="flex flex-col gap-2">
-        {items.map((item, i) => (
-          <div key={i}>
-            <dt className="font-mono text-[11px] font-semibold text-foreground">{item.label}</dt>
-            <dd className="text-[11px] leading-relaxed text-muted-2">{item.body}</dd>
-          </div>
-        ))}
-      </dl>
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-[10.5px]">
+        <thead>
+          <tr>
+            {headers.map((h, i) => (
+              <th key={i} className="border border-border px-1.5 py-1 text-left font-semibold text-foreground">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i}>
+              {row.map((cell, j) => (
+                <td key={j} className="border border-border px-1.5 py-1 text-muted-2">
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
