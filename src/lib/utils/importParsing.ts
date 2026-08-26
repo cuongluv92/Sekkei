@@ -138,15 +138,16 @@ function parseWeightKg(raw: string): number | undefined {
 
 /**
  * 発熱量(W)セルをパースする — カタログ値は素の数値のことが多いが、
- * 「150W」「1,200W」のように単位・桁区切りカンマ付きで書かれるケースも
- * 許容する。負荷率などからの逆算はしない(捏造しない — 換気計算の
- * HeatSourceItem.heatWと同じ方針で常に直値)。
+ * 「150W」「1,200W」「1.5kW」のように単位・桁区切りカンマ付きで書かれる
+ * ケースも許容する(重量のkg/g変換と同じ方針)。負荷率などからの逆算は
+ * しない(捏造しない — 換気計算のHeatSourceItem.heatWと同じ方針で常に直値)。
  */
 function parseHeatW(raw: string): number | undefined {
-  const match = /^([\d,.]+)\s*w?$/i.exec(raw.trim());
+  const match = /^([\d,.]+)\s*(kw|w)?$/i.exec(raw.trim());
   if (!match) return undefined;
   const value = Number(match[1].replace(/,/g, ""));
-  return Number.isFinite(value) ? value : undefined;
+  if (!Number.isFinite(value)) return undefined;
+  return match[2]?.toLowerCase() === "kw" ? value * 1000 : value;
 }
 
 /** Maps one parsed spreadsheet row to normalized fields for the given target category, based only on recognized header text. */
