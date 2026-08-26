@@ -50,7 +50,7 @@ export function HeatSourceList({ value, onChange }: Props) {
         <table className="data-table" style={{ minWidth: 640 }}>
           <thead>
             <tr>
-              <th>{t("ventilationCalc.heatSourceColumns.name")}</th>
+              <th style={{ width: "160px" }}>{t("ventilationCalc.heatSourceColumns.name")}</th>
               <th style={{ width: "140px" }}>{t("ventilationCalc.heatSourceColumns.capacity")}</th>
               <th style={{ width: "100px" }} className="text-right">
                 {t("ventilationCalc.heatSourceColumns.loadFactor")}

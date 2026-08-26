@@ -45,13 +45,23 @@ export function OutlineDrawingUpload({ calculationType, onChange, title, hint, h
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    globalCalcAssetService.get(calculationType).then((asset) => {
-      if (cancelled) return;
-      const next = asset ? { fileName: asset.fileName, storagePath: asset.storagePath, uploadedAt: asset.uploadedAt } : null;
-      setValue(next);
-      onChange?.(next);
-      setLoading(false);
-    });
+    setError(null);
+    globalCalcAssetService
+      .get(calculationType)
+      .then((asset) => {
+        if (cancelled) return;
+        const next = asset ? { fileName: asset.fileName, storagePath: asset.storagePath, uploadedAt: asset.uploadedAt } : null;
+        setValue(next);
+        onChange?.(next);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("外形図読み込みエラー:", err);
+        setError(t("common.uploadError"));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
     };

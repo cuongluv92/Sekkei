@@ -1,6 +1,6 @@
 "use client";
 
-import { FileSpreadsheet, Loader2, Save } from "lucide-react";
+import { FileSpreadsheet, Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { calculationRecordService, ventilationClimateProfileService } from "@/lib/services";
@@ -138,6 +138,7 @@ export function OutdoorVentilationView({ caseId }: Props) {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [exportErrorDetail, setExportErrorDetail] = useState<string | null>(null);
 
   useEffect(() => {
     ventilationClimateProfileService.list().then(setClimateProfiles);
@@ -258,6 +259,7 @@ export function OutdoorVentilationView({ caseId }: Props) {
   async function handleExcelExport() {
     if (!climate || !surfaceAreasComplete || !ventOpeningComplete || totalHeatGainW <= 0) return;
     setExportError(null);
+    setExportErrorDetail(null);
     setExportingExcel(true);
     try {
       const detail = caseId ? await designCaseService.getDetail(caseId) : null;
@@ -308,8 +310,15 @@ export function OutdoorVentilationView({ caseId }: Props) {
         filterRatedVelocityMPerS,
       });
       showExportMessage(t("ventilationCalc.exportedMessage", { fileName }));
-    } catch {
-      setExportError(t("ventilationCalc.exportError"));
+    } catch (err) {
+      console.error("換気計算(屋外)Excel出力エラー:", err);
+      const message = err instanceof Error ? err.message : String(err);
+      setExportError(
+        message.startsWith("no-active-template")
+          ? t("ventilationCalc.exportErrorNoTemplate")
+          : t("ventilationCalc.exportError"),
+      );
+      setExportErrorDetail(message);
     } finally {
       setExportingExcel(false);
     }
@@ -464,7 +473,12 @@ export function OutdoorVentilationView({ caseId }: Props) {
         </button>
         {savedAt && <span className="text-[11px] text-muted-2">{t("ventilationCalc.savedAt", { date: savedAt.slice(0, 10) })}</span>}
         {exportMessage && <span className="text-[11px] text-success">{exportMessage}</span>}
-        {exportError && <span className="text-[11px] text-danger">{exportError}</span>}
+        {exportError && (
+          <span className="text-[11px] text-danger">
+            {exportError}
+            {exportErrorDetail && <span className="font-mono text-muted-2"> ({exportErrorDetail})</span>}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -505,6 +519,15 @@ export function NumField({
   );
 }
 
+interface OpeningDimensionPair {
+  w: string;
+  h: string;
+}
+
+function blankOpeningPair(): OpeningDimensionPair {
+  return { w: "", h: "" };
+}
+
 /**
  * Ai・Ao (有効給気口面積・有効排気口面積) は実物のJSIA-T1016テンプレートでは
  * 単一の面積セル(m²)への直接入力(製品図から算出した値を書き込むだけ)で、
@@ -512,6 +535,9 @@ export function NumField({
  * みで、面積セル自体も数式ではなく直値)。ここでは開口幅W・開口高さHを
  * 入力すると面積を自動計算する補助欄を追加するが、これはExcelテンプレート
  * 由来の項目ではなくアプリ側の入力補助 — 面積欄はいつでも直接上書き可能。
+ *
+ * 開口は1箇所とは限らない(例: 4〜6面盤を連結した1系統で、盤ごとに給排気口
+ * を持つ場合)ため、W×H欄は複数追加でき、合計面積を自動計算する。
  */
 function AreaFromDimensionsField({
   label,
@@ -525,15 +551,31 @@ function AreaFromDimensionsField({
   onChange: (v: string) => void;
 }) {
   const { t } = useTranslation();
-  const [widthRaw, setWidthRaw] = useState("");
-  const [heightRaw, setHeightRaw] = useState("");
+  const [pairs, setPairs] = useState<OpeningDimensionPair[]>([blankOpeningPair()]);
 
-  function applyDimensions(w: string, h: string) {
-    const wNum = Number(w);
-    const hNum = Number(h);
-    if (Number.isFinite(wNum) && wNum > 0 && Number.isFinite(hNum) && hNum > 0) {
-      onChange(String(Math.round(wNum * hNum * 1e6) / 1e6));
-    }
+  function applyDimensions(next: OpeningDimensionPair[]) {
+    const total = next.reduce((sum, p) => {
+      const w = Number(p.w);
+      const h = Number(p.h);
+      return Number.isFinite(w) && w > 0 && Number.isFinite(h) && h > 0 ? sum + w * h : sum;
+    }, 0);
+    if (total > 0) onChange(String(Math.round(total * 1e6) / 1e6));
+  }
+
+  function updatePair(i: number, patch: Partial<OpeningDimensionPair>) {
+    const next = pairs.map((p, idx) => (idx === i ? { ...p, ...patch } : p));
+    setPairs(next);
+    applyDimensions(next);
+  }
+
+  function addPair() {
+    setPairs([...pairs, blankOpeningPair()]);
+  }
+
+  function removePair(i: number) {
+    const next = pairs.filter((_, idx) => idx !== i);
+    setPairs(next);
+    applyDimensions(next);
   }
 
   return (
@@ -541,40 +583,46 @@ function AreaFromDimensionsField({
       <label className="field-label font-mono">
         {label} <span className="font-normal text-muted-2">(m²)</span>
       </label>
-      <div className="grid grid-cols-3 gap-1.5">
-        <div>
-          <input
-            type="number"
-            min={0}
-            step="any"
-            placeholder="W"
-            value={widthRaw}
-            onChange={(e) => {
-              setWidthRaw(e.target.value);
-              applyDimensions(e.target.value, heightRaw);
-            }}
-            className="field-input"
-          />
-          <span className="mt-1 block text-[10.5px] text-muted-2">開口幅 W (m)</span>
-        </div>
-        <div>
-          <input
-            type="number"
-            min={0}
-            step="any"
-            placeholder="H"
-            value={heightRaw}
-            onChange={(e) => {
-              setHeightRaw(e.target.value);
-              applyDimensions(widthRaw, e.target.value);
-            }}
-            className="field-input"
-          />
-          <span className="mt-1 block text-[10.5px] text-muted-2">開口高さ H (m)</span>
-        </div>
+      <div className="flex flex-col gap-1.5">
+        {pairs.map((p, i) => (
+          <div key={i} className="grid grid-cols-[1fr_1fr_auto] items-center gap-1.5">
+            <input
+              type="number"
+              min={0}
+              step="any"
+              placeholder="W (m)"
+              value={p.w}
+              onChange={(e) => updatePair(i, { w: e.target.value })}
+              className="field-input"
+            />
+            <input
+              type="number"
+              min={0}
+              step="any"
+              placeholder="H (m)"
+              value={p.h}
+              onChange={(e) => updatePair(i, { h: e.target.value })}
+              className="field-input"
+            />
+            {pairs.length > 1 && (
+              <button
+                type="button"
+                onClick={() => removePair(i)}
+                className="btn-ghost btn-icon !p-1.5 text-danger hover:bg-danger/10"
+                title={t("common.delete")}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        ))}
+        <button type="button" onClick={addPair} className="btn-ghost w-fit !py-1 !text-[11.5px]">
+          <Plus className="h-3 w-3" />
+          {t("ventilationCalc.addOpeningButton")}
+        </button>
         <div>
           <input type="number" min={0} step="any" value={value} onChange={(e) => onChange(e.target.value)} className="field-input" />
-          <span className="mt-1 block text-[10.5px] text-muted-2">面積 (m²)</span>
+          <span className="mt-1 block text-[10.5px] text-muted-2">{t("ventilationCalc.openingTotalAreaLabel")}</span>
         </div>
       </div>
       <p className="mt-1 text-[11.5px] text-foreground">{t(hintKey)}</p>

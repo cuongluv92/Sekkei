@@ -563,12 +563,15 @@ export interface Dictionary {
     savedAt: string;
     exportedMessage: string;
     exportError: string;
+    exportErrorNoTemplate: string;
     outlineDrawingHintOutdoor: string;
     outlineDrawingHintIndoor: string;
     outlineDrawingNote: string;
     outlineDrawingTitle: string;
     ventLayoutDrawingTitle: string;
     ventLayoutDrawingHint: string;
+    addOpeningButton: string;
+    openingTotalAreaLabel: string;
     outdoorSourceTitle: string;
     outdoorSourceBody: string;
     indoorSourceTitle: string;

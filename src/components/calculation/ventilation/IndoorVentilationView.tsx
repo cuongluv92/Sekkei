@@ -85,6 +85,7 @@ export function IndoorVentilationView({ caseId }: Props) {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [exportErrorDetail, setExportErrorDetail] = useState<string | null>(null);
 
   useEffect(() => {
     setLoaded(false);
@@ -174,6 +175,7 @@ export function IndoorVentilationView({ caseId }: Props) {
   async function handleExcelExport() {
     if (!dimensionsComplete || !ventOpeningComplete || totalHeatGainW <= 0) return;
     setExportError(null);
+    setExportErrorDetail(null);
     setExportingExcel(true);
     try {
       const detail = caseId ? await designCaseService.getDetail(caseId) : null;
@@ -202,8 +204,15 @@ export function IndoorVentilationView({ caseId }: Props) {
         filterRatedVelocityMPerS,
       });
       showExportMessage(t("ventilationCalc.exportedMessage", { fileName }));
-    } catch {
-      setExportError(t("ventilationCalc.exportError"));
+    } catch (err) {
+      console.error("換気計算(屋内)Excel出力エラー:", err);
+      const message = err instanceof Error ? err.message : String(err);
+      setExportError(
+        message.startsWith("no-active-template")
+          ? t("ventilationCalc.exportErrorNoTemplate")
+          : t("ventilationCalc.exportError"),
+      );
+      setExportErrorDetail(message);
     } finally {
       setExportingExcel(false);
     }
@@ -315,7 +324,12 @@ export function IndoorVentilationView({ caseId }: Props) {
         </button>
         {savedAt && <span className="text-[11px] text-muted-2">{t("ventilationCalc.savedAt", { date: savedAt.slice(0, 10) })}</span>}
         {exportMessage && <span className="text-[11px] text-success">{exportMessage}</span>}
-        {exportError && <span className="text-[11px] text-danger">{exportError}</span>}
+        {exportError && (
+          <span className="text-[11px] text-danger">
+            {exportError}
+            {exportErrorDetail && <span className="font-mono text-muted-2"> ({exportErrorDetail})</span>}
+          </span>
+        )}
       </div>
     </div>
   );
