@@ -28,10 +28,17 @@ const KIND_ACCEPT: Record<DesignTemplateKind, string> = {
  * instead of being bundled as a static file in the app. Uploading replaces
  * the active version (previous versions are kept, just deactivated, so a
  * bad upload can be rolled back without re-uploading the old file).
+ *
+ * `kinds` narrows the table to a subset (e.g. only the 2 kinds relevant to
+ * 換気計算/耐震計算) so this can be embedded directly in a calculation
+ * page's設定モーダル — without it users had no way to find the template
+ * upload from those pages (it otherwise only lived inside 設計管理's設定).
+ * Omit to show every kind, as 設計管理 does.
  */
-export function TemplateManagementSettings() {
+export function TemplateManagementSettings({ kinds }: { kinds?: DesignTemplateKind[] } = {}) {
   const { t } = useTranslation();
   const { message, show } = useMockFeedback();
+  const visibleKinds = kinds ?? DESIGN_TEMPLATE_KINDS;
   const [active, setActive] = useState<Record<string, DesignTemplateVersion | null>>({});
   const [history, setHistory] = useState<Record<string, DesignTemplateVersion[]>>({});
   const [openHistory, setOpenHistory] = useState<DesignTemplateKind | null>(null);
@@ -41,9 +48,9 @@ export function TemplateManagementSettings() {
 
   useEffect(() => {
     let active_ = true;
-    Promise.all(DESIGN_TEMPLATE_KINDS.map((kind) => designTemplateService.getActive(kind))).then((results) => {
+    Promise.all(visibleKinds.map((kind) => designTemplateService.getActive(kind))).then((results) => {
       if (!active_) return;
-      setActive(Object.fromEntries(DESIGN_TEMPLATE_KINDS.map((kind, i) => [kind, results[i]])));
+      setActive(Object.fromEntries(visibleKinds.map((kind, i) => [kind, results[i]])));
     });
     return () => {
       active_ = false;
@@ -111,7 +118,7 @@ export function TemplateManagementSettings() {
             </tr>
           </thead>
           <tbody>
-            {DESIGN_TEMPLATE_KINDS.map((kind) => {
+            {visibleKinds.map((kind) => {
               const tpl = active[kind];
               return (
                 <Fragment key={kind}>

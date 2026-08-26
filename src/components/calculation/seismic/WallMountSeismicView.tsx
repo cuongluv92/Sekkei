@@ -261,17 +261,15 @@ export function WallMountSeismicView({ caseId }: Props) {
           )}
         </div>
 
-        {caseId && (
-          <div className="lg:pt-8">
-            <OutlineDrawingUpload
-              caseId={caseId}
-              calculationType={CALCULATION_TYPE}
-              value={outlineDrawing}
-              onChange={setOutlineDrawing}
-            />
-            <p className="mt-1.5 text-[10.5px] text-muted-2">{t("seismicCalc.outlineDrawingHintWall")}</p>
-          </div>
-        )}
+        <div className="lg:pt-8">
+          <OutlineDrawingUpload
+            caseId={caseId || "draft"}
+            calculationType={CALCULATION_TYPE}
+            value={outlineDrawing}
+            onChange={setOutlineDrawing}
+          />
+          <p className="mt-1.5 text-[10.5px] text-muted-2">{t("seismicCalc.outlineDrawingHintWall")}</p>
+        </div>
       </div>
 
       <AnchorBoltSection

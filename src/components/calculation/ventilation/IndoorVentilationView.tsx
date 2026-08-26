@@ -228,34 +228,32 @@ export function IndoorVentilationView({ caseId }: Props) {
 
       <HeatSourceList value={heatSources} onChange={setHeatSources} />
 
-      {caseId && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <OutlineDrawingUpload
-              caseId={caseId}
-              calculationType={CALCULATION_TYPE}
-              value={outlineDrawing}
-              onChange={setOutlineDrawing}
-              title={t("ventilationCalc.outlineDrawingTitle")}
-              hint={t("ventilationCalc.outlineDrawingHintIndoor")}
-              heightClass="h-[440px]"
-            />
-            <p className="mt-1.5 text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingNote")}</p>
-          </div>
-          <div>
-            <OutlineDrawingUpload
-              caseId={caseId}
-              calculationType={`${CALCULATION_TYPE}-vent-layout`}
-              value={ventLayoutDrawing}
-              onChange={setVentLayoutDrawing}
-              title={t("ventilationCalc.ventLayoutDrawingTitle")}
-              hint={t("ventilationCalc.ventLayoutDrawingHint")}
-              heightClass="h-[440px]"
-            />
-            <p className="mt-1.5 text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingNote")}</p>
-          </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <OutlineDrawingUpload
+            caseId={caseId || "draft"}
+            calculationType={CALCULATION_TYPE}
+            value={outlineDrawing}
+            onChange={setOutlineDrawing}
+            title={t("ventilationCalc.outlineDrawingTitle")}
+            hint={t("ventilationCalc.outlineDrawingHintIndoor")}
+            heightClass="h-[440px]"
+          />
+          <p className="mt-1.5 text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingNote")}</p>
         </div>
-      )}
+        <div>
+          <OutlineDrawingUpload
+            caseId={caseId || "draft"}
+            calculationType={`${CALCULATION_TYPE}-vent-layout`}
+            value={ventLayoutDrawing}
+            onChange={setVentLayoutDrawing}
+            title={t("ventilationCalc.ventLayoutDrawingTitle")}
+            hint={t("ventilationCalc.ventLayoutDrawingHint")}
+            heightClass="h-[440px]"
+          />
+          <p className="mt-1.5 text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingNote")}</p>
+        </div>
+      </div>
 
       <div className="flex flex-col gap-3 border-t border-border pt-4">
         <div className="flex items-center gap-2">

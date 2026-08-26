@@ -8,11 +8,14 @@ import { CaseSelector } from "@/components/common/CaseSelector";
 import { Modal } from "@/components/common/Modal";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SeismicAnchorBoltSettings } from "@/components/settings/SeismicAnchorBoltSettings";
+import { TemplateManagementSettings } from "@/components/settings/TemplateManagementSettings";
+import type { DesignTemplateKind } from "@/lib/types/design";
 import { FloorMountSeismicView } from "./FloorMountSeismicView";
 import { WallMountSeismicView } from "./WallMountSeismicView";
 
 type SeismicTab = "freeStanding" | "wallMounted" | "cubicle";
 const TABS: SeismicTab[] = ["freeStanding", "wallMounted", "cubicle"];
+const TEMPLATE_KINDS: DesignTemplateKind[] = ["seismicFreeStanding", "seismicWallMounted"];
 
 /**
  * JSIA-T1018:2012「配電盤類の耐震設計マニュアル」準拠の耐震計算。案件ごとに
@@ -88,8 +91,17 @@ export function SeismicCalculationView() {
       </div>
 
       {settingsOpen && (
-        <Modal title={t("seismicAnchorBoltSettings.title")} onClose={() => setSettingsOpen(false)} widthClassName="max-w-4xl">
-          <SeismicAnchorBoltSettings />
+        <Modal title={t("common.settings")} onClose={() => setSettingsOpen(false)} widthClassName="max-w-4xl">
+          <div className="flex flex-col gap-5">
+            <div>
+              <span className="mb-2 block text-[13px] font-bold text-foreground">{t("seismicAnchorBoltSettings.title")}</span>
+              <SeismicAnchorBoltSettings />
+            </div>
+            <div className="border-t border-border pt-4">
+              <span className="mb-2 block text-[13px] font-bold text-foreground">{t("settings.templateManagement.title")}</span>
+              <TemplateManagementSettings kinds={TEMPLATE_KINDS} />
+            </div>
+          </div>
         </Modal>
       )}
     </div>

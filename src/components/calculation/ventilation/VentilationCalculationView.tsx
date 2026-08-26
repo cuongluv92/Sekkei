@@ -8,11 +8,14 @@ import { CaseSelector } from "@/components/common/CaseSelector";
 import { Modal } from "@/components/common/Modal";
 import { PageHeader } from "@/components/common/PageHeader";
 import { VentilationClimateSettings } from "@/components/settings/VentilationClimateSettings";
+import { TemplateManagementSettings } from "@/components/settings/TemplateManagementSettings";
+import type { DesignTemplateKind } from "@/lib/types/design";
 import { OutdoorVentilationView } from "./OutdoorVentilationView";
 import { IndoorVentilationView } from "./IndoorVentilationView";
 
 type VentilationTab = "outdoor" | "indoor";
 const TABS: VentilationTab[] = ["outdoor", "indoor"];
+const TEMPLATE_KINDS: DesignTemplateKind[] = ["ventilationOutdoor", "ventilationIndoor"];
 
 /**
  * JSIA-T1016:2019「配電盤類の換気計算」準拠の換気計算。案件ごとに保存する
@@ -69,8 +72,17 @@ export function VentilationCalculationView() {
       </div>
 
       {settingsOpen && (
-        <Modal title={t("ventilationClimateSettings.title")} onClose={() => setSettingsOpen(false)} widthClassName="max-w-6xl">
-          <VentilationClimateSettings />
+        <Modal title={t("common.settings")} onClose={() => setSettingsOpen(false)} widthClassName="max-w-6xl">
+          <div className="flex flex-col gap-5">
+            <div>
+              <span className="mb-2 block text-[13px] font-bold text-foreground">{t("ventilationClimateSettings.title")}</span>
+              <VentilationClimateSettings />
+            </div>
+            <div className="border-t border-border pt-4">
+              <span className="mb-2 block text-[13px] font-bold text-foreground">{t("settings.templateManagement.title")}</span>
+              <TemplateManagementSettings kinds={TEMPLATE_KINDS} />
+            </div>
+          </div>
         </Modal>
       )}
     </div>
