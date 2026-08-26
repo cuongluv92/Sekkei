@@ -50,6 +50,21 @@ function parseIso(
   return { year: y, month0: m - 1, day: d };
 }
 
+const DATE_LIKE = /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/;
+
+/**
+ * Typed text that looks like a date (either separator, single-digit month/
+ * day allowed) is normalized back to canonical ISO "YYYY-MM-DD" so it keeps
+ * round-tripping through cascade/coloring/print logic — otherwise the raw
+ * text is kept as-is (free text, e.g. "9月中旬").
+ */
+function normalizeTyped(raw: string): string {
+  const m = raw.match(DATE_LIKE);
+  if (!m) return raw;
+  const [, y, mo, d] = m;
+  return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+}
+
 /**
  * Native `<input type="date">` renders its calendar popup, placeholder, and
  * weekday/month names in the browser's own OS/UI locale — not the page's
@@ -90,7 +105,9 @@ export function DateInput({ value, onChange, className, quickJun }: DateInputPro
 
   function commitText() {
     const trimmed = text.trim();
-    onChange(trimmed || null);
+    const normalized = trimmed ? normalizeTyped(trimmed) : null;
+    if (normalized === (value ?? null)) return; // 未編集 (blurしただけ) なら何もしない — 表示用フォーマットで上書きしてしまうのを防ぐ
+    onChange(normalized);
   }
 
   function shiftMonth(delta: number) {
