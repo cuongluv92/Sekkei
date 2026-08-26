@@ -220,6 +220,8 @@ export function IndoorVentilationView({ caseId }: Props) {
         <p className="text-[12px] text-foreground">{t("ventilationCalc.indoorDescription")}</p>
       </div>
 
+      <HeatSourceList value={heatSources} onChange={setHeatSources} />
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-3 border-t border-border pt-4">
           <div className="flex items-center gap-2">
@@ -246,7 +248,6 @@ export function IndoorVentilationView({ caseId }: Props) {
               ]}
             />
           )}
-          <HeatSourceList value={heatSources} onChange={setHeatSources} />
         </div>
         <div className="border-t border-border pt-4">
           <OutlineDrawingUpload

@@ -360,6 +360,8 @@ export function OutdoorVentilationView({ caseId }: Props) {
         )}
       </div>
 
+      <HeatSourceList value={heatSources} onChange={setHeatSources} />
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-3 border-t border-border pt-4">
           <div className="flex items-center gap-2">
@@ -396,7 +398,6 @@ export function OutdoorVentilationView({ caseId }: Props) {
               ]}
             />
           )}
-          <HeatSourceList value={heatSources} onChange={setHeatSources} />
         </div>
         <div className="border-t border-border pt-4">
           <OutlineDrawingUpload
