@@ -2,7 +2,7 @@
 
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { isIsoDate, JUN_BUCKETS, junDateRange, type JunBucket } from "@/lib/utils/schedule";
+import { isIsoDate } from "@/lib/utils/schedule";
 
 interface DateInputProps {
   /**
@@ -14,13 +14,6 @@ interface DateInputProps {
   value: string | null;
   onChange: (value: string | null) => void;
   className?: string;
-  /**
-   * Shows 初/中/下 quick-pick buttons for the currently-viewed month, so a
-   * "9月中" style entry doesn't require finding the exact day. `"start"`
-   * picks the bucket's first day, `"end"` its last day — matching whichever
-   * end of a date-range field this input represents.
-   */
-  quickJun?: "start" | "end";
 }
 
 const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"];
@@ -73,7 +66,7 @@ function normalizeTyped(raw: string): string {
  * regardless of host locale). This replaces it with a fully custom popup so
  * every label is hard-coded Japanese, independent of the viewer's browser.
  */
-export function DateInput({ value, onChange, className, quickJun }: DateInputProps) {
+export function DateInput({ value, onChange, className }: DateInputProps) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(() => (isIsoDate(value) ? formatJa(value) : (value ?? "")));
   const [view, setView] = useState(() => {
@@ -203,25 +196,6 @@ export function DateInput({ value, onChange, className, quickJun }: DateInputPro
               );
             })}
           </div>
-          {quickJun && (
-            <div className="mt-2 flex items-center gap-1 border-t border-border pt-2">
-              <span className="text-[11px] text-muted-2">旬選択</span>
-              {JUN_BUCKETS.map((bucket: JunBucket) => (
-                <button
-                  type="button"
-                  key={bucket}
-                  onClick={() => {
-                    const range = junDateRange(view.year, view.month0 + 1, bucket);
-                    onChange(quickJun === "start" ? range.start : range.end);
-                    setOpen(false);
-                  }}
-                  className="rounded border border-border-strong px-1.5 py-0.5 text-[11px] font-semibold text-foreground hover:bg-surface-hover"
-                >
-                  {bucket}
-                </button>
-              ))}
-            </div>
-          )}
           <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
             <button
               type="button"

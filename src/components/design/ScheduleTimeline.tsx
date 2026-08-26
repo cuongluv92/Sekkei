@@ -66,7 +66,7 @@ const AUTO_START_PHASES: {
   { startKey: "shippingStartDate", startLabelKey: "shippingStart", endKey: "shippingEndDate", endLabelKey: "shippingEnd", endRefKey: "shippingEndRefDate", endRefLabelKey: "shippingEndRef" },
 ];
 
-const FINAL_FIELD = { key: "deliveryDate" as const, labelKey: "delivery", quickJun: "end" as const };
+const FINAL_FIELD = { key: "deliveryDate" as const, labelKey: "delivery" };
 
 // "box"(BOX納入) は実テンプレートの凡例上「鈑金・BOX納入」の1色見本に含まれる
 // ため、凡例には独立した見本を出さない (色設定自体はsheetMetal/box別々のまま — 表示だけ統合)。
@@ -79,11 +79,12 @@ const CATEGORY_KEYS: ScheduleColorConfig["category"][] = [
   "shipping",
 ];
 
-// 実テンプレート(⑤工程表 Excel)は「作成月の3ヶ月前」から始まり13ヶ月分
-// (3ヶ月前+当月+9ヶ月後) しか列を持たない — A3用紙に収まる範囲。画面表示
-// もこの範囲に合わせる (それより広い範囲を見せても実際は出力できない)。
-const MONTHS_BEFORE = 3;
-const MONTHS_AFTER = 9;
+// 画面表示は「作成月の2ヶ月前〜4ヶ月後」(計7ヶ月・約半年分)に絞り、横
+// スクロールを減らして各月の表示幅を広く取る。Excel出力(⑤工程表)は実
+// テンプレート側の実際のヘッダー行をそのまま読むため、この画面表示範囲
+// とは独立している(scheduleExport.ts参照)。
+const MONTHS_BEFORE = 2;
+const MONTHS_AFTER = 4;
 const SEGMENT_WIDTH = 40;
 const DRAWING_COL_WIDTH = 130;
 const LABEL_COL_WIDTH = 200;
@@ -174,7 +175,7 @@ export function ScheduleTimeline() {
 
   useEffect(() => {
     if (loading) return;
-    const target = addMonths(focus.year, focus.month, -3);
+    const target = addMonths(focus.year, focus.month, -MONTHS_BEFORE);
     const index = months.findIndex(
       (m) => m.year === target.year && m.month === target.month,
     );
@@ -315,7 +316,6 @@ export function ScheduleTimeline() {
                           value={editingSchedule[deliveryKey] as string | null}
                           onChange={(v) => updateEditingField(deliveryKey, v ?? "")}
                           className="field-input"
-                          quickJun="end"
                         />
                         <button
                           type="button"
@@ -336,7 +336,6 @@ export function ScheduleTimeline() {
                               value={orderValue}
                               onChange={(v) => updateEditingField(orderKey, v ?? "")}
                               className="field-input"
-                              quickJun="start"
                             />
                           </div>
                         )}
@@ -359,7 +358,6 @@ export function ScheduleTimeline() {
                           value={endValue}
                           onChange={(v) => updateEditingField(endKey, v ?? "")}
                           className="field-input"
-                          quickJun="end"
                         />
                         <button
                           type="button"
@@ -382,7 +380,6 @@ export function ScheduleTimeline() {
                               value={startValue}
                               onChange={(v) => updateEditingField(startKey, v ?? "")}
                               className="field-input"
-                              quickJun="start"
                             />
                           </div>
                         )}
@@ -426,7 +423,6 @@ export function ScheduleTimeline() {
                       value={editingSchedule[FINAL_FIELD.key] as string | null}
                       onChange={(v) => updateEditingField(FINAL_FIELD.key, v ?? "")}
                       className="field-input"
-                      quickJun={FINAL_FIELD.quickJun}
                     />
                   </div>
                 </div>

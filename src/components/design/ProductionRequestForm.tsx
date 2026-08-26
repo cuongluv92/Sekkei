@@ -362,7 +362,6 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
                   value={schedule[f.key]}
                   onChange={(v) => updateSchedule(f.key, v)}
                   className="field-input py-1.5"
-                  quickJun="end"
                 />
               </div>
             ))}
