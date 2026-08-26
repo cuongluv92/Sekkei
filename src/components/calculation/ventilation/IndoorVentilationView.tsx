@@ -228,8 +228,34 @@ export function IndoorVentilationView({ caseId }: Props) {
 
       <HeatSourceList value={heatSources} onChange={setHeatSources} />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="flex flex-col gap-3 border-t border-border pt-4">
+          <div className="flex items-center gap-2">
+            <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
+              {t("ventilationCalc.manualInputBadge")}
+            </span>
+            <span className="panel-title">{t("ventilationCalc.surfaceAreaTitle")}</span>
+          </div>
+          <p className="text-[12px] text-foreground">{t("ventilationCalc.surfaceAreaHintIndoor")}</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <NumField label="W (横幅)" hintKey="ventilationCalc.widthHint" value={dimensions.widthMRaw} onChange={(v) => setDimensions({ ...dimensions, widthMRaw: v })} unit="m" />
+            <NumField label="H (高さ)" hintKey="ventilationCalc.heightHint" value={dimensions.heightMRaw} onChange={(v) => setDimensions({ ...dimensions, heightMRaw: v })} unit="m" />
+            <NumField label="D (奥行)" hintKey="ventilationCalc.depthHint" value={dimensions.depthMRaw} onChange={(v) => setDimensions({ ...dimensions, depthMRaw: v })} unit="m" />
+            <NumField label="URi" hintKey="ventilationCalc.transmittanceRoofHint" value={dimensions.roofTransmittanceRaw} onChange={(v) => setDimensions({ ...dimensions, roofTransmittanceRaw: v })} unit="W/m²K" />
+            <NumField label="USi" hintKey="ventilationCalc.transmittanceSideHint" value={dimensions.sideTransmittanceRaw} onChange={(v) => setDimensions({ ...dimensions, sideTransmittanceRaw: v })} unit="W/m²K" />
+          </div>
+          {result && (
+            <FormulaBlock
+              badge={t("ventilationCalc.autoCalcBadge")}
+              lines={[
+                { formula: "SRi = W × D", result: `${result.roofAreaM2.toFixed(2)} m²` },
+                { formula: "SSi = 2(W×H) + 2(D×H)", result: `${result.sideAreaM2.toFixed(2)} m²` },
+                { formula: "QBi = URi(tt−to)SRi + USi(ti−to)SSi", result: `${result.naturalHeatLossW.toFixed(1)} W` },
+              ]}
+            />
+          )}
+        </div>
+        <div className="border-t border-border pt-4">
           <OutlineDrawingUpload
             caseId={caseId || "draft"}
             calculationType={CALCULATION_TYPE}
@@ -241,7 +267,11 @@ export function IndoorVentilationView({ caseId }: Props) {
           />
           <p className="mt-1.5 text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingNote")}</p>
         </div>
-        <div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <VentOpeningFields value={ventOpening} onChange={setVentOpening} />
+        <div className="border-t border-border pt-4">
           <OutlineDrawingUpload
             caseId={caseId || "draft"}
             calculationType={`${CALCULATION_TYPE}-vent-layout`}
@@ -254,35 +284,6 @@ export function IndoorVentilationView({ caseId }: Props) {
           <p className="mt-1.5 text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingNote")}</p>
         </div>
       </div>
-
-      <div className="flex flex-col gap-3 border-t border-border pt-4">
-        <div className="flex items-center gap-2">
-          <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
-            {t("ventilationCalc.manualInputBadge")}
-          </span>
-          <span className="panel-title">{t("ventilationCalc.surfaceAreaTitle")}</span>
-        </div>
-        <p className="text-[12px] text-foreground">{t("ventilationCalc.surfaceAreaHintIndoor")}</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <NumField label="W (横幅)" hintKey="ventilationCalc.widthHint" value={dimensions.widthMRaw} onChange={(v) => setDimensions({ ...dimensions, widthMRaw: v })} unit="m" />
-          <NumField label="H (高さ)" hintKey="ventilationCalc.heightHint" value={dimensions.heightMRaw} onChange={(v) => setDimensions({ ...dimensions, heightMRaw: v })} unit="m" />
-          <NumField label="D (奥行)" hintKey="ventilationCalc.depthHint" value={dimensions.depthMRaw} onChange={(v) => setDimensions({ ...dimensions, depthMRaw: v })} unit="m" />
-          <NumField label="URi" hintKey="ventilationCalc.transmittanceRoofHint" value={dimensions.roofTransmittanceRaw} onChange={(v) => setDimensions({ ...dimensions, roofTransmittanceRaw: v })} unit="W/m²K" />
-          <NumField label="USi" hintKey="ventilationCalc.transmittanceSideHint" value={dimensions.sideTransmittanceRaw} onChange={(v) => setDimensions({ ...dimensions, sideTransmittanceRaw: v })} unit="W/m²K" />
-        </div>
-        {result && (
-          <FormulaBlock
-            badge={t("ventilationCalc.autoCalcBadge")}
-            lines={[
-              { formula: "SRi = W × D", result: `${result.roofAreaM2.toFixed(2)} m²` },
-              { formula: "SSi = 2(W×H) + 2(D×H)", result: `${result.sideAreaM2.toFixed(2)} m²` },
-              { formula: "QBi = URi(tt−to)SRi + USi(ti−to)SSi", result: `${result.naturalHeatLossW.toFixed(1)} W` },
-            ]}
-          />
-        )}
-      </div>
-
-      <VentOpeningFields value={ventOpening} onChange={setVentOpening} />
 
       {result && (
         <VentilationResultPanel

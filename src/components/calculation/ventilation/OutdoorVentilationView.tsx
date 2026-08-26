@@ -320,8 +320,37 @@ export function OutdoorVentilationView({ caseId }: Props) {
 
       <HeatSourceList value={heatSources} onChange={setHeatSources} />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="flex flex-col gap-3 border-t border-border pt-4">
+          <div className="flex items-center gap-2">
+            <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
+              {t("ventilationCalc.manualInputBadge")}
+            </span>
+            <span className="panel-title">{t("ventilationCalc.surfaceAreaTitle")}</span>
+          </div>
+          <p className="text-[12px] text-foreground">{t("ventilationCalc.surfaceAreaHintOutdoor")}</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+            <NumField label="SRO (屋根/上面)" hintKey="ventilationCalc.roofAreaHint" value={surfaceAreas.roofM2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, roofM2Raw: v })} unit="m²" />
+            <NumField label="面1 (SSE)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face1M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face1M2Raw: v })} unit="m²" />
+            <NumField label="面2 (SWS)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face2M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face2M2Raw: v })} unit="m²" />
+            <NumField label="面3 (SNW)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face3M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face3M2Raw: v })} unit="m²" />
+            <NumField label="面4 (SNE)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face4M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face4M2Raw: v })} unit="m²" />
+            <NumField label="URO" hintKey="ventilationCalc.transmittanceRoofHint" value={surfaceAreas.roofTransmittanceRaw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, roofTransmittanceRaw: v })} unit="W/m²K" />
+            <NumField label="USO" hintKey="ventilationCalc.transmittanceSideHint" value={surfaceAreas.sideTransmittanceRaw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, sideTransmittanceRaw: v })} unit="W/m²K" />
+          </div>
+          {result && (
+            <FormulaBlock
+              badge={t("ventilationCalc.autoCalcBadge")}
+              lines={[
+                {
+                  formula: "QBO = URO(tt−to)SRO + USO(ti−to)ΣS − URO・tSH・SRO − USO・Σ(t面・S面)",
+                  result: `${result.naturalHeatLossW.toFixed(1)} W`,
+                },
+              ]}
+            />
+          )}
+        </div>
+        <div className="border-t border-border pt-4">
           <OutlineDrawingUpload
             caseId={caseId || "draft"}
             calculationType={CALCULATION_TYPE}
@@ -333,7 +362,11 @@ export function OutdoorVentilationView({ caseId }: Props) {
           />
           <p className="mt-1.5 text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingNote")}</p>
         </div>
-        <div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <VentOpeningFields value={ventOpening} onChange={setVentOpening} />
+        <div className="border-t border-border pt-4">
           <OutlineDrawingUpload
             caseId={caseId || "draft"}
             calculationType={`${CALCULATION_TYPE}-vent-layout`}
@@ -346,38 +379,6 @@ export function OutdoorVentilationView({ caseId }: Props) {
           <p className="mt-1.5 text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingNote")}</p>
         </div>
       </div>
-
-      <div className="flex flex-col gap-3 border-t border-border pt-4">
-        <div className="flex items-center gap-2">
-          <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
-            {t("ventilationCalc.manualInputBadge")}
-          </span>
-          <span className="panel-title">{t("ventilationCalc.surfaceAreaTitle")}</span>
-        </div>
-        <p className="text-[12px] text-foreground">{t("ventilationCalc.surfaceAreaHintOutdoor")}</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-          <NumField label="SRO (屋根/上面)" hintKey="ventilationCalc.roofAreaHint" value={surfaceAreas.roofM2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, roofM2Raw: v })} unit="m²" />
-          <NumField label="面1 (SSE)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face1M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face1M2Raw: v })} unit="m²" />
-          <NumField label="面2 (SWS)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face2M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face2M2Raw: v })} unit="m²" />
-          <NumField label="面3 (SNW)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face3M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face3M2Raw: v })} unit="m²" />
-          <NumField label="面4 (SNE)" hintKey="ventilationCalc.faceAreaHint" value={surfaceAreas.face4M2Raw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, face4M2Raw: v })} unit="m²" />
-          <NumField label="URO" hintKey="ventilationCalc.transmittanceRoofHint" value={surfaceAreas.roofTransmittanceRaw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, roofTransmittanceRaw: v })} unit="W/m²K" />
-          <NumField label="USO" hintKey="ventilationCalc.transmittanceSideHint" value={surfaceAreas.sideTransmittanceRaw} onChange={(v) => setSurfaceAreas({ ...surfaceAreas, sideTransmittanceRaw: v })} unit="W/m²K" />
-        </div>
-        {result && (
-          <FormulaBlock
-            badge={t("ventilationCalc.autoCalcBadge")}
-            lines={[
-              {
-                formula: "QBO = URO(tt−to)SRO + USO(ti−to)ΣS − URO・tSH・SRO − USO・Σ(t面・S面)",
-                result: `${result.naturalHeatLossW.toFixed(1)} W`,
-              },
-            ]}
-          />
-        )}
-      </div>
-
-      <VentOpeningFields value={ventOpening} onChange={setVentOpening} />
 
       {result && (
         <VentilationResultPanel
@@ -449,6 +450,83 @@ export function NumField({
   );
 }
 
+/**
+ * Ai・Ao (有効給気口面積・有効排気口面積) は実物のJSIA-T1016テンプレートでは
+ * 単一の面積セル(m²)への直接入力(製品図から算出した値を書き込むだけ)で、
+ * W×H欄はテンプレート側には存在しない(B43:G43/B44:G44 結合セルにラベルの
+ * みで、面積セル自体も数式ではなく直値)。ここでは開口幅W・開口高さHを
+ * 入力すると面積を自動計算する補助欄を追加するが、これはExcelテンプレート
+ * 由来の項目ではなくアプリ側の入力補助 — 面積欄はいつでも直接上書き可能。
+ */
+function AreaFromDimensionsField({
+  label,
+  hintKey,
+  value,
+  onChange,
+}: {
+  label: string;
+  hintKey: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [widthRaw, setWidthRaw] = useState("");
+  const [heightRaw, setHeightRaw] = useState("");
+
+  function applyDimensions(w: string, h: string) {
+    const wNum = Number(w);
+    const hNum = Number(h);
+    if (Number.isFinite(wNum) && wNum > 0 && Number.isFinite(hNum) && hNum > 0) {
+      onChange(String(Math.round(wNum * hNum * 1e6) / 1e6));
+    }
+  }
+
+  return (
+    <div>
+      <label className="field-label font-mono">
+        {label} <span className="font-normal text-muted-2">(m²)</span>
+      </label>
+      <div className="grid grid-cols-3 gap-1.5">
+        <div>
+          <input
+            type="number"
+            min={0}
+            step="any"
+            placeholder="W"
+            value={widthRaw}
+            onChange={(e) => {
+              setWidthRaw(e.target.value);
+              applyDimensions(e.target.value, heightRaw);
+            }}
+            className="field-input"
+          />
+          <span className="mt-1 block text-[10.5px] text-muted-2">開口幅 W (m)</span>
+        </div>
+        <div>
+          <input
+            type="number"
+            min={0}
+            step="any"
+            placeholder="H"
+            value={heightRaw}
+            onChange={(e) => {
+              setHeightRaw(e.target.value);
+              applyDimensions(widthRaw, e.target.value);
+            }}
+            className="field-input"
+          />
+          <span className="mt-1 block text-[10.5px] text-muted-2">開口高さ H (m)</span>
+        </div>
+        <div>
+          <input type="number" min={0} step="any" value={value} onChange={(e) => onChange(e.target.value)} className="field-input" />
+          <span className="mt-1 block text-[10.5px] text-muted-2">面積 (m²)</span>
+        </div>
+      </div>
+      <p className="mt-1 text-[11.5px] text-foreground">{t(hintKey)}</p>
+    </div>
+  );
+}
+
 export function VentOpeningFields({ value, onChange }: { value: VentOpeningState; onChange: (v: VentOpeningState) => void }) {
   const { t } = useTranslation();
   return (
@@ -460,9 +538,11 @@ export function VentOpeningFields({ value, onChange }: { value: VentOpeningState
         <span className="panel-title">{t("ventilationCalc.ventOpeningTitle")}</span>
       </div>
       <p className="text-[12px] text-foreground">{t("ventilationCalc.ventOpeningHint")}</p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <AreaFromDimensionsField label="Ai (有効給気口面積)" hintKey="ventilationCalc.supplyAreaHint" value={value.supplyAreaM2Raw} onChange={(v) => onChange({ ...value, supplyAreaM2Raw: v })} />
+        <AreaFromDimensionsField label="Ao (有効排気口面積)" hintKey="ventilationCalc.exhaustAreaHint" value={value.exhaustAreaM2Raw} onChange={(v) => onChange({ ...value, exhaustAreaM2Raw: v })} />
+      </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <NumField label="Ai (有効給気口面積)" hintKey="ventilationCalc.supplyAreaHint" value={value.supplyAreaM2Raw} onChange={(v) => onChange({ ...value, supplyAreaM2Raw: v })} unit="m²" />
-        <NumField label="Ao (有効排気口面積)" hintKey="ventilationCalc.exhaustAreaHint" value={value.exhaustAreaM2Raw} onChange={(v) => onChange({ ...value, exhaustAreaM2Raw: v })} unit="m²" />
         <NumField label="h (給排気口の高低差)" hintKey="ventilationCalc.heightDiffHint" value={value.heightDiffMRaw} onChange={(v) => onChange({ ...value, heightDiffMRaw: v })} unit="m" />
         <NumField label="X (換気フード流量係数)" hintKey="ventilationCalc.hoodCoefficientHint" value={value.hoodFlowCoefficientXRaw} onChange={(v) => onChange({ ...value, hoodFlowCoefficientXRaw: v })} unit="—" />
       </div>
