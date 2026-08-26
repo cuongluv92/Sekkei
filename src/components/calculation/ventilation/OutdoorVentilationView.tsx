@@ -12,6 +12,7 @@ import type { VentilationClimateProfile } from "@/lib/types";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calculation/OutlineDrawingUpload";
 import { FormulaBlock, SourceNote, WhyDisclosure } from "@/components/calculation/FormulaBlock";
+import { loadFromStorage, saveToStorage } from "@/lib/utils/localStore";
 import { HeatSourceList } from "./HeatSourceList";
 
 /** 地域未選択時のデフォルト — 社内選定マスタに常に存在する基準地域。 */
@@ -128,6 +129,20 @@ interface SavedInput {
 
 const CALCULATION_TYPE = "ventilation-outdoor";
 
+/**
+ * 案件未選択(下書き)時の一時保存 — ユーザーからの明示指示により、案件を
+ * 選ばずに入力していても画面を離れる/再読み込みしても消えないようにする
+ * (calculationRecordServiceはcase_id必須のため使えない — localStorageに
+ * ブラウザ単位で保持し、「クリア」ボタンを押すまで残す)。
+ */
+const DRAFT_STORAGE_KEY = "sekkei.ventilation-outdoor.draft";
+
+interface DraftState {
+  heatSources: HeatSourceItem[];
+  surfaceAreas: SurfaceAreaState;
+  ventOpening: VentOpeningState;
+}
+
 interface Props {
   caseId: string;
 }
@@ -162,10 +177,12 @@ export function OutdoorVentilationView({ caseId }: Props) {
   useEffect(() => {
     setLoaded(false);
     if (!caseId) {
+      const draft = loadFromStorage<DraftState | null>(DRAFT_STORAGE_KEY, null);
       setClimateProfileId("");
-      setHeatSources([]);
-      setSurfaceAreas(blankSurfaceAreas());
-      setVentOpening(blankVentOpening());
+      setHeatSources(draft?.heatSources ?? []);
+      setSurfaceAreas(draft?.surfaceAreas ?? blankSurfaceAreas());
+      setVentOpening(normalizeVentOpening(draft?.ventOpening));
+      setSavedAt(null);
       setLoaded(true);
       return;
     }
@@ -184,6 +201,20 @@ export function OutdoorVentilationView({ caseId }: Props) {
       cancelled = true;
     };
   }, [caseId]);
+
+  // 案件未選択(下書き)時のみ: 入力の変化をlocalStorageへ随時保存する
+  // (「クリア」ボタンを押すまで画面遷移・再読み込みをまたいで残す)。
+  useEffect(() => {
+    if (caseId || !loaded) return;
+    saveToStorage<DraftState>(DRAFT_STORAGE_KEY, { heatSources, surfaceAreas, ventOpening });
+  }, [caseId, loaded, heatSources, surfaceAreas, ventOpening]);
+
+  function handleClearDraft() {
+    saveToStorage<DraftState | null>(DRAFT_STORAGE_KEY, null);
+    setHeatSources([]);
+    setSurfaceAreas(blankSurfaceAreas());
+    setVentOpening(blankVentOpening());
+  }
 
   // 保存済みの地域選択が無い場合は東京をデフォルトにする(未選択のまま「—」を
   // 表示し続けない — 社内選定マスタに登録済みの地域のうち東京を基準値とする)。
@@ -486,6 +517,13 @@ export function OutdoorVentilationView({ caseId }: Props) {
           {exportingExcel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
           {t("common.excelExport")}
         </button>
+        {!caseId && (
+          <button type="button" onClick={handleClearDraft} className="btn-ghost !py-1 !text-[12px] text-danger hover:bg-danger/10">
+            <Trash2 className="h-3.5 w-3.5" />
+            {t("ventilationCalc.clearDraftButton")}
+          </button>
+        )}
+        {!caseId && <span className="text-[11px] text-muted-2">{t("ventilationCalc.draftNote")}</span>}
         {savedAt && <span className="text-[11px] text-muted-2">{t("ventilationCalc.savedAt", { date: savedAt.slice(0, 10) })}</span>}
         {exportMessage && <span className="text-[11px] text-success">{exportMessage}</span>}
         {exportError && (

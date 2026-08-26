@@ -1,6 +1,6 @@
 "use client";
 
-import { FileSpreadsheet, Loader2, Save } from "lucide-react";
+import { FileSpreadsheet, Loader2, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { calculationRecordService } from "@/lib/services";
@@ -11,6 +11,7 @@ import { exportIndoorVentilationExcel } from "@/lib/services/ventilationExcelExp
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calculation/OutlineDrawingUpload";
 import { FormulaBlock, SourceNote } from "@/components/calculation/FormulaBlock";
+import { loadFromStorage, saveToStorage } from "@/lib/utils/localStore";
 import { HeatSourceList } from "./HeatSourceList";
 import {
   blankOpeningPair,
@@ -73,6 +74,17 @@ interface SavedInput {
 
 const CALCULATION_TYPE = "ventilation-indoor";
 
+/**
+ * 案件未選択(下書き)時の一時保存 — 屋外版と同じ理由(OutdoorVentilationView.tsx参照)。
+ */
+const DRAFT_STORAGE_KEY = "sekkei.ventilation-indoor.draft";
+
+interface DraftState {
+  heatSources: HeatSourceItem[];
+  dimensions: DimensionState;
+  ventOpening: VentOpeningState;
+}
+
 interface Props {
   caseId: string;
 }
@@ -101,9 +113,11 @@ export function IndoorVentilationView({ caseId }: Props) {
   useEffect(() => {
     setLoaded(false);
     if (!caseId) {
-      setHeatSources([]);
-      setDimensions(blankDimensions());
-      setVentOpening(blankVentOpening());
+      const draft = loadFromStorage<DraftState | null>(DRAFT_STORAGE_KEY, null);
+      setHeatSources(draft?.heatSources ?? []);
+      setDimensions(draft?.dimensions ?? blankDimensions());
+      setVentOpening(normalizeVentOpening(draft?.ventOpening));
+      setSavedAt(null);
       setLoaded(true);
       return;
     }
@@ -121,6 +135,19 @@ export function IndoorVentilationView({ caseId }: Props) {
       cancelled = true;
     };
   }, [caseId]);
+
+  // 案件未選択(下書き)時のみ: 入力の変化をlocalStorageへ随時保存する。
+  useEffect(() => {
+    if (caseId || !loaded) return;
+    saveToStorage<DraftState>(DRAFT_STORAGE_KEY, { heatSources, dimensions, ventOpening });
+  }, [caseId, loaded, heatSources, dimensions, ventOpening]);
+
+  function handleClearDraft() {
+    saveToStorage<DraftState | null>(DRAFT_STORAGE_KEY, null);
+    setHeatSources([]);
+    setDimensions(blankDimensions());
+    setVentOpening(blankVentOpening());
+  }
 
   const totalHeatGainW = sumHeatSourcesW(heatSources);
 
@@ -333,6 +360,13 @@ export function IndoorVentilationView({ caseId }: Props) {
           {exportingExcel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
           {t("common.excelExport")}
         </button>
+        {!caseId && (
+          <button type="button" onClick={handleClearDraft} className="btn-ghost !py-1 !text-[12px] text-danger hover:bg-danger/10">
+            <Trash2 className="h-3.5 w-3.5" />
+            {t("ventilationCalc.clearDraftButton")}
+          </button>
+        )}
+        {!caseId && <span className="text-[11px] text-muted-2">{t("ventilationCalc.draftNote")}</span>}
         {savedAt && <span className="text-[11px] text-muted-2">{t("ventilationCalc.savedAt", { date: savedAt.slice(0, 10) })}</span>}
         {exportMessage && <span className="text-[11px] text-success">{exportMessage}</span>}
         {exportError && (

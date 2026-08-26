@@ -573,6 +573,8 @@ export interface Dictionary {
     addOpeningButton: string;
     clearOpeningsButton: string;
     openingTotalAreaLabel: string;
+    clearDraftButton: string;
+    draftNote: string;
     outdoorSourceTitle: string;
     outdoorSourceBody: string;
     indoorSourceTitle: string;

@@ -619,6 +619,8 @@ const ja: Dictionary = {
     addOpeningButton: "開口を追加",
     clearOpeningsButton: "クリア",
     openingTotalAreaLabel: "合計面積 (m²)",
+    clearDraftButton: "下書きをクリア",
+    draftNote: "案件未選択のため、入力内容はこの端末に一時保存されます(「下書きをクリア」を押すまで残ります)",
     outdoorSourceTitle: "計算根拠・出典",
     outdoorSourceBody: "JSIA-T1016:2019「配電盤類の換気計算」屋外キュービクルの計算式に準拠。地域の気象条件（外気温度・相当外気温度など）は「設定」で登録した社内選定マスタの値を使用します（実在が確認できた地域のみ登録— 未登録の地域は選べません）。",
     indoorSourceTitle: "計算根拠・出典",
