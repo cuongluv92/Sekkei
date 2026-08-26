@@ -28,18 +28,21 @@ import type {
   ScheduleColorConfig,
 } from "@/lib/types/design";
 
-/** 発注日→納入日 の対 (自動計算されない、常時表示のフィールド)。 */
-const ORDER_DELIVERY_FIELDS: {
-  key: keyof CaseSchedule;
-  labelKey: string;
-  quickJun: "start" | "end";
+/**
+ * 発注日→納入日 の対 — 発注日は案件を開くと当日の日付が自動で初期表示
+ * される(applyTodayDefaults)ため、通常は見る必要が薄い。納入日を常時
+ * 表示欄にし、発注日は製作/検査/立会/出荷の開始日と同じ折りたたみ表示
+ * (expandedStarts/toggleStart)にして画面を縮める。
+ */
+const ORDER_DELIVERY_PAIRS: {
+  orderKey: keyof CaseSchedule;
+  orderLabelKey: string;
+  deliveryKey: keyof CaseSchedule;
+  deliveryLabelKey: string;
 }[] = [
-  { key: "sheetMetalOrderDate", labelKey: "sheetMetalOrder", quickJun: "start" },
-  { key: "sheetMetalDeliveryDate", labelKey: "sheetMetalDelivery", quickJun: "end" },
-  { key: "boxOrderDate", labelKey: "boxOrder", quickJun: "start" },
-  { key: "boxDeliveryDate", labelKey: "boxDelivery", quickJun: "end" },
-  { key: "accessoryOrderDate", labelKey: "accessoryOrder", quickJun: "start" },
-  { key: "accessoryDeliveryDate", labelKey: "accessoryDelivery", quickJun: "end" },
+  { orderKey: "sheetMetalOrderDate", orderLabelKey: "sheetMetalOrder", deliveryKey: "sheetMetalDeliveryDate", deliveryLabelKey: "sheetMetalDelivery" },
+  { orderKey: "boxOrderDate", orderLabelKey: "boxOrder", deliveryKey: "boxDeliveryDate", deliveryLabelKey: "boxDelivery" },
+  { orderKey: "accessoryOrderDate", orderLabelKey: "accessoryOrder", deliveryKey: "accessoryDeliveryDate", deliveryLabelKey: "accessoryDelivery" },
 ];
 
 /**
@@ -296,19 +299,46 @@ export function ScheduleTimeline() {
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-                  {ORDER_DELIVERY_FIELDS.map(({ key, labelKey, quickJun }) => (
-                    <div key={key}>
-                      <label className="field-label">
-                        {t(`design.schedule.milestones.${labelKey}`)}
-                      </label>
-                      <DateInput
-                        value={editingSchedule[key] as string | null}
-                        onChange={(v) => updateEditingField(key, v ?? "")}
-                        className="field-input"
-                        quickJun={quickJun}
-                      />
-                    </div>
-                  ))}
+                  {ORDER_DELIVERY_PAIRS.map(({ orderKey, orderLabelKey, deliveryKey, deliveryLabelKey }) => {
+                    const orderValue = editingSchedule[orderKey] as string | null;
+                    const expanded = expandedStarts.has(orderKey);
+                    return (
+                      <div key={deliveryKey}>
+                        <label className="field-label">
+                          {t(`design.schedule.milestones.${deliveryLabelKey}`)}
+                        </label>
+                        <DateInput
+                          value={editingSchedule[deliveryKey] as string | null}
+                          onChange={(v) => updateEditingField(deliveryKey, v ?? "")}
+                          className="field-input"
+                          quickJun="end"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleStart(orderKey)}
+                          className="mt-1 inline-flex items-center gap-0.5 text-[10.5px] text-muted-2 hover:text-accent"
+                        >
+                          {expanded ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3" />
+                          )}
+                          {t(`design.schedule.milestones.${orderLabelKey}`)}
+                          {orderValue ? `: ${formatJaDate(orderValue)}` : ""}
+                        </button>
+                        {expanded && (
+                          <div className="mt-1">
+                            <DateInput
+                              value={orderValue}
+                              onChange={(v) => updateEditingField(orderKey, v ?? "")}
+                              className="field-input"
+                              quickJun="start"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                   {AUTO_START_PHASES.map(({ startKey, startLabelKey, endKey, endLabelKey }) => {
                     const startValue = editingSchedule[startKey] as string | null;
                     const expanded = expandedStarts.has(startKey);
