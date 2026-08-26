@@ -208,7 +208,7 @@ export function WallMountSeismicView({ caseId }: Props) {
 
       <SeismicForceSection value={force} onChange={setForce} />
 
-      <div className="grid grid-cols-1 gap-4 border-t border-border pt-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-4 border-t border-border pt-4 lg:grid-cols-2">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
