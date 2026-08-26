@@ -231,8 +231,8 @@ export function IndoorVentilationView({ caseId }: Props) {
               value={outlineDrawing}
               onChange={setOutlineDrawing}
             />
-            <p className="mt-1.5 text-[10.5px] text-muted-2">{t("ventilationCalc.outlineDrawingHintIndoor")}</p>
-            <p className="text-[10.5px] text-muted-2">{t("ventilationCalc.outlineDrawingNote")}</p>
+            <p className="mt-1.5 text-[11.5px] text-muted">{t("ventilationCalc.outlineDrawingHintIndoor")}</p>
+            <p className="text-[11.5px] text-muted">{t("ventilationCalc.outlineDrawingNote")}</p>
           </div>
         )}
       </div>

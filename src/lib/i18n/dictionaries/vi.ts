@@ -584,7 +584,7 @@ const vi: Dictionary = {
     whyJudgeLabel: "Vì sao αxAx・QV・kết luận ra như vậy",
     whyJudgeTitle: "Căn cứ diện tích thông gió hiệu quả・nhiệt thoát tự nhiên — JSIA-T1016",
     whyEffectiveAreaBody:
-      "αxAx (diện tích thông gió hiệu quả) là kết quả tổng hợp diện tích hiệu dụng (α×A) của cửa cấp gió và cửa thoát gió, coi như không khí đi tuần tự qua 2 cửa này (trở lực nối tiếp nhau). Hằng số (322/304) trong công thức là hệ số cố định dùng trong tính toán JSIA-T1016 — đã kiểm tra trực tiếp công thức nhúng trong file Excel chính thức của JSIA và xác nhận cùng một con số 「322/304」 xuất hiện y hệt trong tất cả các ví dụ tính toán có điều kiện vùng/nhiệt độ khác nhau (Tokyo, Naha, có/không filter) — đây không phải giá trị thay đổi theo nhiệt độ.",
+      "αxAx (diện tích thông gió hiệu quả) là kết quả tổng hợp diện tích hiệu dụng (α×A) của cửa cấp gió và cửa thoát gió, coi như không khí đi tuần tự qua 2 cửa này (trở lực nối tiếp nhau). Hằng số (322/304) trong công thức là hệ số cố định dùng trong tính toán JSIA-T1016 — đã kiểm tra trực tiếp công thức nhúng trong file Excel chính thức của JSIA (Tokyo, 2 trường hợp có/không filter) và xác nhận cùng một con số 「322/304」 xuất hiện y hệt ở cả hai — đây không phải giá trị thay đổi theo nhiệt độ.",
     whyQvBody:
       "QV (lượng nhiệt thoát ra nhờ thông gió tự nhiên) thể hiện lượng nhiệt có thể thoát tự nhiên nhờ đối lưu tự nhiên (hiệu ứng ống khói) sinh ra từ chênh lệch độ cao h giữa cửa cấp/thoát gió và chênh lệch nhiệt độ trong-ngoài tủ. Biểu thức (ti−to)/(273+ti) trong dấu căn cho thấy: chênh lệch nhiệt độ càng lớn, và nhiệt độ tuyệt đối (273+ti) càng thấp, thì lực đẩy nổi càng mạnh (theo phương trình trạng thái khí).",
     whyJudgeBody:
@@ -593,6 +593,14 @@ const vi: Dictionary = {
     whyWkTitle: "Căn cứ lưu lượng gió cưỡng bức cần thiết WK — JSIA-T1016",
     whyWkBody:
       "WK (lưu lượng gió cưỡng bức cần thiết) được tính bằng cách lấy phần nhiệt còn thiếu mà thông gió tự nhiên chưa xử lý được (QC−QBO−QV) chia cho độ tăng nhiệt độ của luồng khí thổi vào (ti−to), để quy đổi ra lưu lượng gió cần thiết. Hệ số 3.6 là hệ số quy đổi đơn vị (3600 để đổi kJ/s sang kJ/h, gộp với 1/1000 để khớp đơn vị nhiệt dung riêng và khối lượng riêng).",
+    whyOpeningAreaLabel: "Diện tích cửa cấp/thoát gió hiệu quả được xác định thế nào",
+    whyOpeningAreaTitle: "Căn cứ ngoại hình・diện tích cửa cấp/thoát gió — sheet 使用方法 (sách tính換気 JSIA-T1016)",
+    whyOpeningAreaBody:
+      "Nguyên văn sheet 使用方法, mục 2) 外形寸法: 「外形寸法は、製品図より記載ください。また、有効給・排気口面積はJSIA-T1016換気計算例の実効換気口面積の算出を参考に、製品図に基づき算出してください。なお、通気口へフィルタを使用する場合は、使用するフィルタの抵抗係数を確認し記入してください。」 — tức là Ai・Ao không phải giá trị áng chừng hay tra bảng, mà phải tính riêng cho từng sản phẩm từ hình dạng lỗ thoáng thực tế trên bản vẽ chế tạo (góc lá chớp, mắt lưới...), theo đúng phương pháp tính diện tích cửa thông gió hiệu quả trong ví dụ tính toán của JSIA-T1016. Nếu dùng filter, ζF (hệ số trở lực filter) cũng lấy từ catalogue của đúng loại filter đang dùng.",
+    whyFanCountLabel: "Vì sao số quạt sử dụng lại ra con số này",
+    whyFanCountTitle: "Cách quyết định số quạt thông gió sử dụng — sheet 使用方法 (sách tính換気 JSIA-T1016)",
+    whyFanCountBody:
+      "Nguyên văn sheet 使用方法, mục 3) 換気扇: 「使用する換気扇の風量は、カタログを確認して記入してください。なお、給気口へフィルタを取付けた場合の換気扇台数は、5)で算出した台数と7)で確認した台数のうち、台数の多いほうで最終決定してください。」 — mục 5) là số quạt lý thuyết (WK chia cho lưu lượng 1 quạt), mục 7) là số quạt cần để tốc độ gió qua filter không vượt quá tốc độ gió cho phép của filter. Khi dùng filter, cùng một lưu lượng nhưng tốc độ qua filter tăng lên, nên đôi khi số quạt lý thuyết là chưa đủ — phải lấy số LỚN HƠN trong 2 con số này. Công cụ tính của app cũng áp dụng đúng quy tắc này: luôn tính cả 2 con số và lấy số lớn hơn làm số quạt sử dụng cuối cùng.",
     forcedVentilationTitle: "Thông gió cưỡng bức",
     forcedVentilationHint:
       "Nhập lưu lượng quạt thông gió sử dụng (theo catalogue). Nếu dùng bộ lọc, nhập thêm tốc độ gió chuẩn của bộ lọc (theo catalogue) để kiểm tra số lượng quạt cần theo giới hạn lưu lượng qua bộ lọc.",

@@ -533,6 +533,12 @@ export interface Dictionary {
     whyWkLabel: string;
     whyWkTitle: string;
     whyWkBody: string;
+    whyOpeningAreaLabel: string;
+    whyOpeningAreaTitle: string;
+    whyOpeningAreaBody: string;
+    whyFanCountLabel: string;
+    whyFanCountTitle: string;
+    whyFanCountBody: string;
     forcedVentilationTitle: string;
     forcedVentilationHint: string;
     fanCapacityLabel: string;

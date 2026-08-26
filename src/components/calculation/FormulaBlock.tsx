@@ -16,11 +16,11 @@ export interface FormulaLine {
 export function FormulaBlock({ badge, lines }: { badge: string; lines: FormulaLine[] }) {
   return (
     <div className="flex flex-col gap-1.5 rounded-md border border-border bg-muted/10 px-3 py-2.5">
-      <span className="w-fit rounded border border-border px-1.5 py-0.5 text-[10px] font-semibold text-muted-2">{badge}</span>
+      <span className="w-fit rounded border border-border px-1.5 py-0.5 text-[11px] font-semibold text-muted">{badge}</span>
       {lines.map((line, i) => (
-        <div key={i} className="flex flex-wrap items-baseline gap-x-2 font-mono text-[11.5px]">
-          <span className="text-muted-2">{line.formula}</span>
-          {line.substituted && <span className="text-muted-2">= {line.substituted}</span>}
+        <div key={i} className="flex flex-wrap items-baseline gap-x-2 font-mono text-[13px]">
+          <span className="text-muted">{line.formula}</span>
+          {line.substituted && <span className="text-muted">= {line.substituted}</span>}
           <span className="font-semibold text-foreground">= {line.result}</span>
         </div>
       ))}
@@ -32,8 +32,8 @@ export function FormulaBlock({ badge, lines }: { badge: string; lines: FormulaLi
 export function SourceNote({ title, body }: { title: string; body: string }) {
   return (
     <div className="flex flex-col gap-1.5 rounded-md border border-border bg-muted/10 px-3 py-2.5">
-      <span className="text-[11px] font-bold text-foreground">{title}</span>
-      <p className="text-[11px] leading-relaxed text-muted-2">{body}</p>
+      <span className="text-[12.5px] font-bold text-foreground">{title}</span>
+      <p className="text-[12.5px] leading-relaxed text-muted">{body}</p>
     </div>
   );
 }
@@ -52,15 +52,15 @@ export function WhyDisclosure({ label, title, children }: { label: string; title
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-0.5 text-[10.5px] font-medium text-accent hover:underline"
+        className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-accent hover:underline"
       >
-        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
         {label}
       </button>
       {open && (
         <div className="mt-1 flex max-w-md flex-col gap-1.5 rounded-md border border-border bg-muted/10 px-2.5 py-2">
-          <span className="text-[10.5px] font-bold text-foreground">{title}</span>
-          <div className="text-[11px] leading-relaxed text-muted-2">{children}</div>
+          <span className="text-[12.5px] font-bold text-foreground">{title}</span>
+          <div className="text-[12.5px] leading-relaxed text-muted">{children}</div>
         </div>
       )}
     </div>
@@ -71,11 +71,11 @@ export function WhyDisclosure({ label, title, children }: { label: string; title
 export function WhyTable({ headers, rows }: { headers: string[]; rows: (string | number)[][] }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-[10.5px]">
+      <table className="w-full border-collapse text-[12.5px]">
         <thead>
           <tr>
             {headers.map((h, i) => (
-              <th key={i} className="border border-border px-1.5 py-1 text-left font-semibold text-foreground">
+              <th key={i} className="border border-border px-2 py-1.5 text-left font-semibold text-foreground">
                 {h}
               </th>
             ))}
@@ -85,7 +85,7 @@ export function WhyTable({ headers, rows }: { headers: string[]; rows: (string |
           {rows.map((row, i) => (
             <tr key={i}>
               {row.map((cell, j) => (
-                <td key={j} className="border border-border px-1.5 py-1 text-muted-2">
+                <td key={j} className="border border-border px-2 py-1.5 text-muted">
                   {cell}
                 </td>
               ))}

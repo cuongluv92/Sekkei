@@ -320,8 +320,8 @@ export function OutdoorVentilationView({ caseId }: Props) {
               value={outlineDrawing}
               onChange={setOutlineDrawing}
             />
-            <p className="mt-1.5 text-[10.5px] text-muted-2">{t("ventilationCalc.outlineDrawingHintOutdoor")}</p>
-            <p className="text-[10.5px] text-muted-2">{t("ventilationCalc.outlineDrawingNote")}</p>
+            <p className="mt-1.5 text-[11.5px] text-muted">{t("ventilationCalc.outlineDrawingHintOutdoor")}</p>
+            <p className="text-[11.5px] text-muted">{t("ventilationCalc.outlineDrawingNote")}</p>
           </div>
         )}
       </div>
@@ -423,7 +423,7 @@ export function NumField({
         {label} <span className="font-normal text-muted-2">({unit})</span>
       </label>
       <input type="number" min={0} step="any" value={value} onChange={(e) => onChange(e.target.value)} className="field-input" />
-      <p className="mt-1 text-[10.5px] text-muted-2">{t(hintKey)}</p>
+      <p className="mt-1 text-[11.5px] text-muted">{t(hintKey)}</p>
     </div>
   );
 }
@@ -461,6 +461,9 @@ export function VentOpeningFields({ value, onChange }: { value: VentOpeningState
           <NumField label="αi及びαo" hintKey="ventilationCalc.noFilterDischargeHint" value={value.noFilterDischargeCoefficientRaw} onChange={(v) => onChange({ ...value, noFilterDischargeCoefficientRaw: v })} unit="—" />
         </div>
       )}
+      <WhyDisclosure label={t("ventilationCalc.whyOpeningAreaLabel")} title={t("ventilationCalc.whyOpeningAreaTitle")}>
+        {t("ventilationCalc.whyOpeningAreaBody")}
+      </WhyDisclosure>
     </div>
   );
 }
@@ -604,6 +607,11 @@ export function VentilationResultPanel({
                 </tbody>
               </table>
             </div>
+          )}
+          {filterLimitedFanCount != null && (
+            <WhyDisclosure label={t("ventilationCalc.whyFanCountLabel")} title={t("ventilationCalc.whyFanCountTitle")}>
+              {t("ventilationCalc.whyFanCountBody")}
+            </WhyDisclosure>
           )}
         </div>
       )}
