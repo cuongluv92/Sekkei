@@ -14,8 +14,8 @@
   --border: #d7dbe1;
   --border-strong: #a8afb9;
   --foreground: #14171c;
-  --muted: #48505c;
-  --muted-2: #67707c;
+  --muted: #363c45;
+  --muted-2: #4d545f;
   --accent: #2f6fe0;
   --accent-strong: #1f56c4;
   --accent-foreground: #ffffff;
@@ -83,8 +83,21 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * ほぼ全ての文字サイズはTailwindの任意値 (text-[12px]など) で絶対px指定
+ * されており、bodyのfont-sizeを変えても連動しない。PC幅では画面全体を
+ * zoomで底上げすることで、個々のクラスを書き換えずにアプリ全体の文字・
+ * 余白を一律で少し大きく/広くする（読みにくいという指摘への対応）。
+ * モバイル幅はそのまま (スマホ表示は問題ないとのフィードバック済み)。
+ */
+@media (min-width: 1024px) {
+  body {
+    zoom: 1.08;
+  }
 }
 
 /* Thin scrollbars, still visible against the darker background. */

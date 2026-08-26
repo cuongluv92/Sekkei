@@ -73,6 +73,7 @@ interface SavedInput {
   surfaceAreas: SurfaceAreaState;
   ventOpening: VentOpeningState;
   outlineDrawing?: OutlineDrawingRef | null;
+  ventLayoutDrawing?: OutlineDrawingRef | null;
 }
 
 const CALCULATION_TYPE = "ventilation-outdoor";
@@ -96,6 +97,7 @@ export function OutdoorVentilationView({ caseId }: Props) {
   const [surfaceAreas, setSurfaceAreas] = useState<SurfaceAreaState>(blankSurfaceAreas());
   const [ventOpening, setVentOpening] = useState<VentOpeningState>(blankVentOpening());
   const [outlineDrawing, setOutlineDrawing] = useState<OutlineDrawingRef | null>(null);
+  const [ventLayoutDrawing, setVentLayoutDrawing] = useState<OutlineDrawingRef | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -114,6 +116,7 @@ export function OutdoorVentilationView({ caseId }: Props) {
       setSurfaceAreas(blankSurfaceAreas());
       setVentOpening(blankVentOpening());
       setOutlineDrawing(null);
+      setVentLayoutDrawing(null);
       setLoaded(true);
       return;
     }
@@ -126,6 +129,7 @@ export function OutdoorVentilationView({ caseId }: Props) {
       setSurfaceAreas(saved?.surfaceAreas ?? blankSurfaceAreas());
       setVentOpening(saved?.ventOpening ?? blankVentOpening());
       setOutlineDrawing(saved?.outlineDrawing ?? null);
+      setVentLayoutDrawing(saved?.ventLayoutDrawing ?? null);
       setSavedAt(record?.updatedAt ?? null);
       setLoaded(true);
     });
@@ -211,7 +215,10 @@ export function OutdoorVentilationView({ caseId }: Props) {
       const saved = await calculationRecordService.save(
         caseId,
         CALCULATION_TYPE,
-        { climateProfileId, heatSources, surfaceAreas, ventOpening, outlineDrawing } as unknown as Record<string, unknown>,
+        { climateProfileId, heatSources, surfaceAreas, ventOpening, outlineDrawing, ventLayoutDrawing } as unknown as Record<
+          string,
+          unknown
+        >,
         result ? { naturalVentilationSufficient: result.naturalVentilationSufficient, finalFanCount: result.finalFanCount } : {},
       );
       setSavedAt(saved.updatedAt);
@@ -235,6 +242,7 @@ export function OutdoorVentilationView({ caseId }: Props) {
             }
           : undefined,
         outlineDrawing,
+        ventLayoutDrawing,
         climate: { ambientTempC: climate.ambientTempC, topTempC: climate.topTempC },
         heatSources,
         surfaceAreas: { roofM2, face1M2, face2M2, face3M2, face4M2 },
@@ -310,21 +318,36 @@ export function OutdoorVentilationView({ caseId }: Props) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_260px]">
-        <HeatSourceList value={heatSources} onChange={setHeatSources} />
-        {caseId && (
+      <HeatSourceList value={heatSources} onChange={setHeatSources} />
+
+      {caseId && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <OutlineDrawingUpload
               caseId={caseId}
               calculationType={CALCULATION_TYPE}
               value={outlineDrawing}
               onChange={setOutlineDrawing}
+              title={t("ventilationCalc.outlineDrawingTitle")}
+              hint={t("ventilationCalc.outlineDrawingHintOutdoor")}
+              heightClass="h-[440px]"
             />
-            <p className="mt-1.5 text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingHintOutdoor")}</p>
-            <p className="text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingNote")}</p>
+            <p className="mt-1.5 text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingNote")}</p>
           </div>
-        )}
-      </div>
+          <div>
+            <OutlineDrawingUpload
+              caseId={caseId}
+              calculationType={`${CALCULATION_TYPE}-vent-layout`}
+              value={ventLayoutDrawing}
+              onChange={setVentLayoutDrawing}
+              title={t("ventilationCalc.ventLayoutDrawingTitle")}
+              hint={t("ventilationCalc.ventLayoutDrawingHint")}
+              heightClass="h-[440px]"
+            />
+            <p className="mt-1.5 text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingNote")}</p>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3 border-t border-border pt-4">
         <div className="flex items-center gap-2">

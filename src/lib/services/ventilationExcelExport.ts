@@ -2,16 +2,19 @@ import { downloadWorkbook, embedOutlineImage, keepOnlyWorksheet, loadActiveTempl
 import type { OutlineImageExportRef } from "./seismicExcelExport";
 
 /**
- * 外形図の埋め込み位置 — 実際のJSIA-T1016ファイルをunzipしてdrawing*.xmlの
- * アンカー座標を直接確認した値。屋外(フィルタ有り東京シート)は「c) 盤表面
- * 面積」節の直後(行31〜42、W/H/H1/D/D1の正面図/側面図)、屋内(フィルタ有り
- * シート)はb)発熱源表の右側(行11〜19、W/H/Dの正面図/側面図)に置かれている
- * — この2枚とも元ファイルではW/H/D寸法を示す外形図が、キュービクル形状の
- * 図と換気口配置図の2枚のうち「寸法を示す方」であることを画像を実際に
- * 開いて確認済み。0始まりのcol/row。
+ * 外形図・給排気口配置図の埋め込み位置 — 実際のJSIA-T1016ファイルをunzipして
+ * drawing*.xmlのアンカー座標を直接確認し、埋め込み画像そのものも開いて内容を
+ * 確認した値(0始まりのcol/row)。元ファイルの各シートには寸法図が2枚あり、
+ * 別々の図であることを画像を直接見て確認済み:
+ *   図1/図3(正面図・側面図、W/H/D/H1/D1) — 屋外・屋内とも同じ位置
+ *     (b)発熱源表の右側、行11〜19)
+ *   図2(屋外・給排気口配置図/庇図、w/h1/h/W1/W2/Wn/D) — 「c) 盤表面積」節の
+ *     直後、行31〜42
+ *   図5(屋内・給排気口配置図/庇図) — 換気口欄の直後、行21〜30
  */
-const OUTDOOR_IMAGE_ANCHOR: OutlineImageAnchor = { fromCol: 2, fromRow: 30, toCol: 20, toRow: 41 };
-const INDOOR_IMAGE_ANCHOR: OutlineImageAnchor = { fromCol: 12, fromRow: 10, toCol: 24, toRow: 18 };
+const OUTLINE_IMAGE_ANCHOR: OutlineImageAnchor = { fromCol: 12, fromRow: 10, toCol: 24, toRow: 18 };
+const OUTDOOR_VENT_LAYOUT_ANCHOR: OutlineImageAnchor = { fromCol: 2, fromRow: 30, toCol: 20, toRow: 41 };
+const INDOOR_VENT_LAYOUT_ANCHOR: OutlineImageAnchor = { fromCol: 11, fromRow: 20, toCol: 19, toRow: 29 };
 
 /**
  * Fills the real vendor 換気計算書 templates (JSIA-T1016:2019準拠, JSIA HP
@@ -45,6 +48,7 @@ export interface VentilationHeatSourceExportItem {
 export interface OutdoorVentilationExportData {
   caseInfo?: VentilationCaseInfoExportData;
   outlineDrawing?: OutlineImageExportRef | null;
+  ventLayoutDrawing?: OutlineImageExportRef | null;
   climate: { ambientTempC: number; topTempC: number };
   heatSources: VentilationHeatSourceExportItem[];
   surfaceAreas: { roofM2: number; face1M2: number; face2M2: number; face3M2: number; face4M2: number };
@@ -65,6 +69,7 @@ export interface OutdoorVentilationExportData {
 export interface IndoorVentilationExportData {
   caseInfo?: VentilationCaseInfoExportData;
   outlineDrawing?: OutlineImageExportRef | null;
+  ventLayoutDrawing?: OutlineImageExportRef | null;
   dimensions: { widthM: number; heightM: number; depthM: number };
   heatSources: VentilationHeatSourceExportItem[];
   transmittance: { roofWPerM2K: number; sideWPerM2K: number };
@@ -177,7 +182,8 @@ export async function exportOutdoorVentilationExcel(data: OutdoorVentilationExpo
     ws.getCell("Q60").value = { formula: "H53" };
   }
 
-  await embedOutlineImage(workbook, ws, data.outlineDrawing, OUTDOOR_IMAGE_ANCHOR);
+  await embedOutlineImage(workbook, ws, data.outlineDrawing, OUTLINE_IMAGE_ANCHOR);
+  await embedOutlineImage(workbook, ws, data.ventLayoutDrawing, OUTDOOR_VENT_LAYOUT_ANCHOR);
 
   const fileName = `換気計算書_屋外_${data.caseInfo?.managementNumber || new Date().toLocaleDateString("ja-JP").replace(/\//g, "")}.xlsx`;
   await downloadWorkbook(workbook, fileName);
@@ -230,7 +236,8 @@ export async function exportIndoorVentilationExcel(data: IndoorVentilationExport
     ws.getCell("Q48").value = { formula: "H41" };
   }
 
-  await embedOutlineImage(workbook, ws, data.outlineDrawing, INDOOR_IMAGE_ANCHOR);
+  await embedOutlineImage(workbook, ws, data.outlineDrawing, OUTLINE_IMAGE_ANCHOR);
+  await embedOutlineImage(workbook, ws, data.ventLayoutDrawing, INDOOR_VENT_LAYOUT_ANCHOR);
 
   const fileName = `換気計算書_屋内_${data.caseInfo?.managementNumber || new Date().toLocaleDateString("ja-JP").replace(/\//g, "")}.xlsx`;
   await downloadWorkbook(workbook, fileName);

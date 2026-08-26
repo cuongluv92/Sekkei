@@ -16,6 +16,11 @@ interface Props {
   calculationType: string;
   value: OutlineDrawingRef | null;
   onChange: (next: OutlineDrawingRef | null) => void;
+  /** 既定の「外形図」ラベルを上書きする(同一画面に複数枚アップロード欄を置く場合に使う)。 */
+  title?: string;
+  hint?: string;
+  /** プレビュー枠の高さ (Tailwind任意値クラス)。既定は h-[220px]。 */
+  heightClass?: string;
 }
 
 /**
@@ -27,7 +32,7 @@ interface Props {
  * (この計算モジュール専用のテーブルは持たない — WeightShapeCalcSection と
  * 同じ Storage 直接利用パターン)。
  */
-export function OutlineDrawingUpload({ caseId, calculationType, value, onChange }: Props) {
+export function OutlineDrawingUpload({ caseId, calculationType, value, onChange, title, hint, heightClass }: Props) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -65,10 +70,13 @@ export function OutlineDrawingUpload({ caseId, calculationType, value, onChange 
 
   return (
     <div className="flex flex-col gap-2 border-t border-border pt-4">
-      <span className="panel-title">{t("calculation.outlineDrawing.title")}</span>
-      <p className="text-[11.5px] text-muted-2">{t("calculation.outlineDrawing.hint")}</p>
+      <span className="panel-title">{title ?? t("calculation.outlineDrawing.title")}</span>
+      <p className="text-[11.5px] text-muted-2">{hint ?? t("calculation.outlineDrawing.hint")}</p>
 
-      <div className="relative flex h-[220px] w-full max-w-md items-center justify-center overflow-hidden rounded-lg border border-border-strong bg-surface-2 p-2">
+      <div
+        className={`relative flex ${heightClass ?? "h-[220px]"} w-full items-center justify-center overflow-hidden rounded-lg border border-border-strong bg-surface-2 p-2`}
+      >
+
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element -- real Storage URL, not a static asset next/image can optimize
           <img src={getPublicUrl(value.storagePath)} alt={value.fileName} className="max-h-full max-w-full object-contain" />

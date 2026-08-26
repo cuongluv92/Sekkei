@@ -59,6 +59,7 @@ interface SavedInput {
   dimensions: DimensionState;
   ventOpening: VentOpeningState;
   outlineDrawing?: OutlineDrawingRef | null;
+  ventLayoutDrawing?: OutlineDrawingRef | null;
 }
 
 const CALCULATION_TYPE = "ventilation-indoor";
@@ -80,6 +81,7 @@ export function IndoorVentilationView({ caseId }: Props) {
   const [dimensions, setDimensions] = useState<DimensionState>(blankDimensions());
   const [ventOpening, setVentOpening] = useState<VentOpeningState>(blankVentOpening());
   const [outlineDrawing, setOutlineDrawing] = useState<OutlineDrawingRef | null>(null);
+  const [ventLayoutDrawing, setVentLayoutDrawing] = useState<OutlineDrawingRef | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -93,6 +95,7 @@ export function IndoorVentilationView({ caseId }: Props) {
       setDimensions(blankDimensions());
       setVentOpening(blankVentOpening());
       setOutlineDrawing(null);
+      setVentLayoutDrawing(null);
       setLoaded(true);
       return;
     }
@@ -104,6 +107,7 @@ export function IndoorVentilationView({ caseId }: Props) {
       setDimensions(saved?.dimensions ?? blankDimensions());
       setVentOpening(saved?.ventOpening ?? blankVentOpening());
       setOutlineDrawing(saved?.outlineDrawing ?? null);
+      setVentLayoutDrawing(saved?.ventLayoutDrawing ?? null);
       setSavedAt(record?.updatedAt ?? null);
       setLoaded(true);
     });
@@ -164,7 +168,7 @@ export function IndoorVentilationView({ caseId }: Props) {
       const saved = await calculationRecordService.save(
         caseId,
         CALCULATION_TYPE,
-        { heatSources, dimensions, ventOpening, outlineDrawing } as unknown as Record<string, unknown>,
+        { heatSources, dimensions, ventOpening, outlineDrawing, ventLayoutDrawing } as unknown as Record<string, unknown>,
         result ? { naturalVentilationSufficient: result.naturalVentilationSufficient, finalFanCount: result.finalFanCount } : {},
       );
       setSavedAt(saved.updatedAt);
@@ -188,6 +192,7 @@ export function IndoorVentilationView({ caseId }: Props) {
             }
           : undefined,
         outlineDrawing,
+        ventLayoutDrawing,
         dimensions: { widthM, heightM, depthM },
         heatSources,
         transmittance: { roofWPerM2K: roofTransmittance, sideWPerM2K: sideTransmittance },
@@ -221,21 +226,36 @@ export function IndoorVentilationView({ caseId }: Props) {
         <p className="text-[12px] text-foreground">{t("ventilationCalc.indoorDescription")}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_260px]">
-        <HeatSourceList value={heatSources} onChange={setHeatSources} />
-        {caseId && (
+      <HeatSourceList value={heatSources} onChange={setHeatSources} />
+
+      {caseId && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <OutlineDrawingUpload
               caseId={caseId}
               calculationType={CALCULATION_TYPE}
               value={outlineDrawing}
               onChange={setOutlineDrawing}
+              title={t("ventilationCalc.outlineDrawingTitle")}
+              hint={t("ventilationCalc.outlineDrawingHintIndoor")}
+              heightClass="h-[440px]"
             />
-            <p className="mt-1.5 text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingHintIndoor")}</p>
-            <p className="text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingNote")}</p>
+            <p className="mt-1.5 text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingNote")}</p>
           </div>
-        )}
-      </div>
+          <div>
+            <OutlineDrawingUpload
+              caseId={caseId}
+              calculationType={`${CALCULATION_TYPE}-vent-layout`}
+              value={ventLayoutDrawing}
+              onChange={setVentLayoutDrawing}
+              title={t("ventilationCalc.ventLayoutDrawingTitle")}
+              hint={t("ventilationCalc.ventLayoutDrawingHint")}
+              heightClass="h-[440px]"
+            />
+            <p className="mt-1.5 text-[11.5px] text-foreground">{t("ventilationCalc.outlineDrawingNote")}</p>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3 border-t border-border pt-4">
         <div className="flex items-center gap-2">
