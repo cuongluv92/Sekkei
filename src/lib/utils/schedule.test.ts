@@ -91,10 +91,33 @@ describe("applyCascade", () => {
     expect(result.inspectionStartDate).toBe("2026-09-26");
   });
 
-  it("検査完了日 → 立会開始日は翌日にずれる", () => {
-    const s = { ...emptySchedule(), inspectionEndDate: "2026-09-30" };
+  it("立会完了日が入力済みなら、検査完了日 → 立会開始日は翌日にずれる", () => {
+    const s = { ...emptySchedule(), inspectionEndDate: "2026-09-30", witnessEndDate: "2026-10-10" };
     const result = applyCascade(s, "inspectionEndDate");
     expect(result.witnessStartDate).toBe("2026-10-01");
+  });
+
+  it("立会完了日が空欄なら、検査完了日が変わっても立会開始日は自動で埋めない (立会は実施されないことも多いため)", () => {
+    const s = { ...emptySchedule(), inspectionEndDate: "2026-09-30" };
+    const result = applyCascade(s, "inspectionEndDate");
+    expect(result.witnessStartDate).toBeNull();
+  });
+
+  it("立会完了日を入力すると、既に埋まっている検査完了日から立会開始日が発火する", () => {
+    const s = { ...emptySchedule(), inspectionEndDate: "2026-09-30", witnessEndDate: "2026-10-10" };
+    const result = applyCascade(s, "witnessEndDate");
+    expect(result.witnessStartDate).toBe("2026-10-01");
+  });
+
+  it("一度自動計算された立会開始日も、立会完了日を消すとクリアされる (ロックされていない限り)", () => {
+    const s = {
+      ...emptySchedule(),
+      inspectionEndDate: "2026-09-30",
+      witnessEndDate: "",
+      witnessStartDate: "2026-10-01", // 過去に自動計算された値
+    };
+    const result = applyCascade(s, "witnessEndDate");
+    expect(result.witnessStartDate).toBeNull();
   });
 
   it("立会完了日 → 出荷開始日は翌日にずれる", () => {

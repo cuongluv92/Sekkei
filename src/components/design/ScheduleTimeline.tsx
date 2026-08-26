@@ -93,6 +93,9 @@ const MONTHS_AFTER = 4;
 // 旬(初/中/下)の途中で工程が切り替わっても正確な日で色が変わるようにする
 // (列同士の境界線は表示しない — あくまで内部的な精度のため)。
 const DAY_WIDTH = 8;
+// 案件1行あたりの高さ(px) — 帯グラフの文字を大きくしても収まるように、
+// パディングだけに頼らずセルの高さを明示的に確保する。
+const ROW_HEIGHT = 30;
 const DRAWING_COL_WIDTH = 130;
 const LABEL_COL_WIDTH = 200;
 
@@ -683,19 +686,21 @@ export function ScheduleTimeline() {
                           return (
                             <td
                               key={`c-${c.id}-${rowIndex}-${m.year}-${m.month}-${day}`}
-                              className={`relative border-b border-border py-1 ${borderLeftClass} ${rowIndex === SCREEN_PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
+                              className={`relative border-b border-border ${borderLeftClass} ${rowIndex === SCREEN_PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
                               style={{
                                 width: DAY_WIDTH,
                                 minWidth: DAY_WIDTH,
+                                height: ROW_HEIGHT,
                                 backgroundColor: color,
                               }}
                             >
                               {label && (
                                 // ラベルはその日(=色付き範囲の最終日)が右端になるよう右詰めで配置し、
                                 // 文字は左(=同じ色の範囲の内側)へ伸びるようにして、塗られていない
-                                // 隣の日にはみ出さないようにする。
+                                // 隣の日にはみ出さないようにする。右端からは少し余白を空けて、
+                                // 境界線に文字がくっつかないようにする。
                                 <span
-                                  className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 text-[9px] font-bold whitespace-nowrap text-white"
+                                  className="pointer-events-none absolute top-1/2 right-1 z-10 -translate-y-1/2 text-[12px] font-bold whitespace-nowrap text-white"
                                   style={{
                                     textShadow:
                                       "0 0 2px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.9)",

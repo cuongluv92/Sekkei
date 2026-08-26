@@ -72,15 +72,20 @@ export function addDaysIso(iso: string, days: number): string {
  * (fromKeysのうち埋まっている最も遅い日付を採用する仕組みが、自然にこの
  * フォールバックを兼ねる — 立会完了日があればそちらが検査完了日より後に
  * なるため優先され、無ければ検査完了日が使われる)。
+ * `requiresKey` を指定したリンクは、そのキーに何か値が入っている時だけ
+ * 発火する — 立会は実施されないことも多い工程なので、立会完了日が
+ * 空欄のうちは立会開始日を自動で出さない(空欄になったら既存の自動値も
+ * クリアする)。
  */
 export const CASCADE_LINKS: {
   fromKeys: (keyof CaseSchedule)[];
   toKey: keyof CaseSchedule;
   offsetDays?: number;
+  requiresKey?: keyof CaseSchedule;
 }[] = [
   { fromKeys: ["sheetMetalDeliveryDate", "boxDeliveryDate"], toKey: "productionStartDate", offsetDays: 1 },
   { fromKeys: ["productionEndDate"], toKey: "inspectionStartDate", offsetDays: 1 },
-  { fromKeys: ["inspectionEndDate"], toKey: "witnessStartDate", offsetDays: 1 },
+  { fromKeys: ["inspectionEndDate"], toKey: "witnessStartDate", offsetDays: 1, requiresKey: "witnessEndDate" },
   { fromKeys: ["witnessEndDate", "inspectionEndDate"], toKey: "shippingStartDate", offsetDays: 1 },
   { fromKeys: ["shippingEndDate"], toKey: "deliveryDate" },
 ];
@@ -123,6 +128,12 @@ function runCascadeLinks(
   for (const link of CASCADE_LINKS) {
     if (!shouldRun(link)) continue;
     if (lockedKeys.has(link.toKey)) continue;
+    if (link.requiresKey && !next[link.requiresKey]) {
+      // 条件欄(例: 立会完了日)が空欄 = その工程は実施されない想定なので、
+      // 開始日を自動計算しない。過去の自動値が残っていればクリアする。
+      if (next[link.toKey] !== null) next = { ...next, [link.toKey]: null };
+      continue;
+    }
     const values = link.fromKeys
       .map((k) => resolveCascadeSource(next, k))
       .filter(isIsoDate)
@@ -137,10 +148,11 @@ function runCascadeLinks(
 }
 
 /**
- * `changedKey` (またはその参考日欄 CASCADE_REF_FALLBACK) の変更が
- * CASCADE_LINKS のいずれかの起点なら、次工程の開始日を自動で再計算する。
- * `lockedKeys` に含まれる開始日欄は上書きしない (画面側で手動編集欄を
- * 開いている = ユーザーが自分で管理すると決めた欄)。
+ * `changedKey` (またはその参考日欄 CASCADE_REF_FALLBACK、あるいは
+ * requiresKey) の変更が CASCADE_LINKS のいずれかの起点なら、次工程の
+ * 開始日を自動で再計算する。`lockedKeys` に含まれる開始日欄は上書き
+ * しない (画面側で手動編集欄を開いている = ユーザーが自分で管理すると
+ * 決めた欄)。
  */
 export function applyCascade(
   schedule: CaseSchedule,
@@ -150,7 +162,10 @@ export function applyCascade(
   return runCascadeLinks(
     schedule,
     lockedKeys,
-    (link) => link.fromKeys.includes(changedKey) || link.fromKeys.some((fk) => CASCADE_REF_FALLBACK[fk] === changedKey),
+    (link) =>
+      link.fromKeys.includes(changedKey) ||
+      link.fromKeys.some((fk) => CASCADE_REF_FALLBACK[fk] === changedKey) ||
+      link.requiresKey === changedKey,
   );
 }
 
