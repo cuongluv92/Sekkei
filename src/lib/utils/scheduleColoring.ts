@@ -152,6 +152,77 @@ export function buildJunColorLookupByRow(
   return map;
 }
 
+export interface ColoredDay {
+  year: number;
+  month: number; // 1-12
+  day: number;
+  category: ScheduleCategoryKey;
+}
+
+/**
+ * Dates -> 実日単位のカラー化情報。`computeColoredSegments` (初/中/下の5日
+ * 単位) より1段細かく、日付範囲の境界を正確な日で持つ。旬単位への丸めで
+ * 起きていた「同じ旬内で工程が重なって片方の色が消える」問題を、タイム
+ * ライン側で実際の日数に応じた列幅にして解消するために使う。
+ */
+export function computeColoredDays(schedule: CaseSchedule): ColoredDay[] {
+  const out: ColoredDay[] = [];
+  for (const { category, startKey, endKey, endRefKey } of RANGE_FIELDS) {
+    const start = parseDate(schedule[startKey] as string | null);
+    const end =
+      parseDate(schedule[endKey] as string | null) ??
+      (endRefKey ? parseDate(schedule[endRefKey] as string | null) : null) ??
+      start;
+    if (!start || !end) continue;
+    const [s, e] = start <= end ? [start, end] : [end, start];
+    const cursor = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+    const last = new Date(e.getFullYear(), e.getMonth(), e.getDate());
+    while (cursor <= last) {
+      out.push({ year: cursor.getFullYear(), month: cursor.getMonth() + 1, day: cursor.getDate(), category });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+  const delivery = parseDate(schedule.deliveryDate);
+  if (delivery) {
+    out.push({ year: delivery.getFullYear(), month: delivery.getMonth() + 1, day: delivery.getDate(), category: "shipping" });
+  }
+  return out;
+}
+
+export function dayCellKeyRow(year: number, month: number, day: number, rowIndex: number) {
+  return `${year}-${month}-${day}-${rowIndex}`;
+}
+
+/**
+ * PROCESS_ROWS の行ごとに折りたたんだ、実日単位のカラールックアップ —
+ * `buildJunColorLookupByRow` の日単位版。画面のタイムラインはこちらを使い、
+ * 各セルの色は実際のその日の日付から決まるため、旬の途中で工程が切り替
+ * わっても正確な日で色が切り替わる (先勝ちは同じ行・同じ日に複数カテゴリ
+ * が重なる場合のみ発生する、本当の意味での重複)。
+ */
+export function buildDayColorLookupByRow(
+  days: ColoredDay[],
+  colors: ScheduleColorConfig[],
+): Map<string, string> {
+  const colorByCategory = new Map(colors.map((c) => [c.category, c.color]));
+  const map = new Map<string, string>();
+  for (const d of days) {
+    const rowIndex = rowIndexForCategory(d.category);
+    if (rowIndex < 0) continue;
+    const displayCategory = DISPLAY_CATEGORY_COLOR[d.category] ?? d.category;
+    const color = colorByCategory.get(displayCategory);
+    if (!color) continue;
+    const key = dayCellKeyRow(d.year, d.month, d.day, rowIndex);
+    if (!map.has(key)) map.set(key, color);
+  }
+  return map;
+}
+
+/** その年月の実際の日数 (28〜31)。 */
+export function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
+
 /** Normalizes month arithmetic (1-12) across year boundaries in either direction. */
 export function addMonths(year: number, month: number, delta: number): { year: number; month: number } {
   const zeroBased = month - 1 + delta;

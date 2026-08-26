@@ -14,10 +14,11 @@ import { buildCaseDisplayLabel, buildProjectPanelLines } from "@/lib/utils/desig
 import { DateInput } from "@/components/common/DateInput";
 import {
   addMonths,
-  buildJunColorLookupByRow,
-  computeColoredSegments,
+  buildDayColorLookupByRow,
+  computeColoredDays,
+  dayCellKeyRow,
+  daysInMonth,
   JUN_BUCKETS,
-  junCellKeyRow,
   PROCESS_ROWS,
 } from "@/lib/utils/scheduleColoring";
 import { applyCascade, applyTodayDefaults, formatJaDate, isIsoDate } from "@/lib/utils/schedule";
@@ -85,7 +86,10 @@ const CATEGORY_KEYS: ScheduleColorConfig["category"][] = [
 // とは独立している(scheduleExport.ts参照)。
 const MONTHS_BEFORE = 2;
 const MONTHS_AFTER = 4;
-const SEGMENT_WIDTH = 40;
+// 1日あたりの列幅(px) — 各月の実際の日数(28〜31)分だけ列を持たせることで、
+// 旬(初/中/下)の途中で工程が切り替わっても正確な日で色が変わるようにする
+// (列同士の境界線は表示しない — あくまで内部的な精度のため)。
+const DAY_WIDTH = 4;
 const DRAWING_COL_WIDTH = 130;
 const LABEL_COL_WIDTH = 200;
 
@@ -180,8 +184,10 @@ export function ScheduleTimeline() {
       (m) => m.year === target.year && m.month === target.month,
     );
     if (index >= 0 && scrollContainerRef.current) {
-      scrollContainerRef.current.scrollLeft =
-        index * SEGMENT_WIDTH * JUN_BUCKETS.length;
+      const offset = months
+        .slice(0, index)
+        .reduce((sum, m) => sum + daysInMonth(m.year, m.month) * DAY_WIDTH, 0);
+      scrollContainerRef.current.scrollLeft = offset;
     }
   }, [focus, loading, months]);
 
@@ -566,38 +572,45 @@ export function ScheduleTimeline() {
                   >
                     {t("design.ledger.columns.projectName")}／{t("design.ledger.columns.panelNames")}
                   </th>
-                  {months.map((m) => (
-                    <th
-                      key={`y-${m.year}-${m.month}`}
-                      colSpan={JUN_BUCKETS.length}
-                      className="border-b border-l border-border-strong bg-surface-2 px-1 py-1 text-center text-[11px] font-semibold whitespace-nowrap text-muted"
-                    >
-                      {m.year}/{String(m.month).padStart(2, "0")}
-                    </th>
-                  ))}
+                  {months.map((m) => {
+                    const dim = daysInMonth(m.year, m.month);
+                    return (
+                      <th
+                        key={`y-${m.year}-${m.month}`}
+                        colSpan={dim}
+                        className="border-b border-l border-border-strong bg-surface-2 px-1 py-1 text-center text-[11px] font-semibold whitespace-nowrap text-muted"
+                      >
+                        {m.year}/{String(m.month).padStart(2, "0")}
+                      </th>
+                    );
+                  })}
                 </tr>
                 <tr>
-                  {months.map((m) =>
-                    JUN_BUCKETS.map((bucket, i) => (
+                  {months.map((m) => {
+                    const dim = daysInMonth(m.year, m.month);
+                    // 初=1〜10日, 中=11〜20日, 下=21日〜月末 — 列幅は実際の日数分に比例させる。
+                    const bucketDays = [10, 10, dim - 20];
+                    return JUN_BUCKETS.map((bucket, i) => (
                       <th
                         key={`h-${m.year}-${m.month}-${bucket}`}
+                        colSpan={bucketDays[i]}
                         className={`border-b border-border bg-surface-2 py-1 text-center text-[10px] text-muted-2 ${i === 0 ? "border-l border-border-strong" : ""}`}
                         style={{
-                          width: SEGMENT_WIDTH,
-                          minWidth: SEGMENT_WIDTH,
+                          width: bucketDays[i] * DAY_WIDTH,
+                          minWidth: bucketDays[i] * DAY_WIDTH,
                         }}
                       >
                         {bucket}
                       </th>
-                    )),
-                  )}
+                    ));
+                  })}
                 </tr>
               </thead>
               <tbody>
                 {visibleCases.map(({ case: c, panels }) => {
                   const schedule = schedules[c.id];
                   const lookup = schedule
-                    ? buildJunColorLookupByRow(computeColoredSegments(schedule), colors)
+                    ? buildDayColorLookupByRow(computeColoredDays(schedule), colors)
                     : new Map<string, string>();
                   const { projectName, panelNames } = buildProjectPanelLines(c, panels);
                   const faceCount = panels[0]?.faceCount;
@@ -640,24 +653,26 @@ export function ScheduleTimeline() {
                           </td>
                         </>
                       )}
-                      {months.map((m) =>
-                        JUN_BUCKETS.map((bucket, i) => {
+                      {months.map((m) => {
+                        const dim = daysInMonth(m.year, m.month);
+                        return Array.from({ length: dim }, (_, dayIdx) => {
+                          const day = dayIdx + 1;
                           const color = lookup.get(
-                            junCellKeyRow(m.year, m.month, bucket, rowIndex),
+                            dayCellKeyRow(m.year, m.month, day, rowIndex),
                           );
                           return (
                             <td
-                              key={`c-${c.id}-${rowIndex}-${m.year}-${m.month}-${bucket}`}
-                              className={`border-b border-border py-1 ${i === 0 ? "border-l border-border-strong" : ""} ${rowIndex === PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
+                              key={`c-${c.id}-${rowIndex}-${m.year}-${m.month}-${day}`}
+                              className={`border-b border-border py-1 ${day === 1 ? "border-l border-border-strong" : ""} ${rowIndex === PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
                               style={{
-                                width: SEGMENT_WIDTH,
-                                minWidth: SEGMENT_WIDTH,
+                                width: DAY_WIDTH,
+                                minWidth: DAY_WIDTH,
                                 backgroundColor: color,
                               }}
                             />
                           );
-                        }),
-                      )}
+                        });
+                      })}
                     </tr>
                   ));
                 })}

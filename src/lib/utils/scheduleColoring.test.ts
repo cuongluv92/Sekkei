@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildDayColorLookupByRow,
   buildJunColorLookup,
   buildJunColorLookupByRow,
+  computeColoredDays,
   computeColoredSegments,
+  dayCellKeyRow,
+  daysInMonth,
   junCellKey,
   junCellKeyRow,
 } from "./scheduleColoring";
@@ -171,5 +175,55 @@ describe("buildJunColorLookupByRow — 実テンプレートの4行ブロック�
 
     const lookup = buildJunColorLookupByRow(computeColoredSegments(schedule), []);
     expect(lookup.size).toBe(0);
+  });
+});
+
+describe("computeColoredDays + buildDayColorLookupByRow — 画面タイムライン用の実日単位カラー化 (旬の途中で色が切り替わっても正確な日で表現する)", () => {
+  it("同じ行(部材系)で日付範囲が重ならなければ、旬の途中でも両方とも正確な日だけ色が付く", () => {
+    const schedule = blankSchedule("c1");
+    schedule.sheetMetalOrderDate = "2026-09-01";
+    schedule.sheetMetalDeliveryDate = "2026-09-08"; // 初旬(1〜10日)の前半だけ
+    schedule.accessoryOrderDate = "2026-09-09";
+    schedule.accessoryDeliveryDate = "2026-09-15"; // 初旬の後半〜中旬にまたがる
+
+    const lookup = buildDayColorLookupByRow(computeColoredDays(schedule), COLORS);
+    // 9/1〜9/8 は鈑金(sheetMetal)色
+    expect(lookup.get(dayCellKeyRow(2026, 9, 1, 0))).toBe("#111111");
+    expect(lookup.get(dayCellKeyRow(2026, 9, 8, 0))).toBe("#111111");
+    // 9/9 は既に鈑金の範囲を超えているので部材(accessory)色に切り替わる —
+    // 旧来の旬単位(buildJunColorLookupByRow)なら初旬まるごと鈑金色に潰れてしまっていた箇所
+    expect(lookup.get(dayCellKeyRow(2026, 9, 9, 0))).toBe("#333333");
+    expect(lookup.get(dayCellKeyRow(2026, 9, 15, 0))).toBe("#333333");
+    // 範囲外の日には何も入らない
+    expect(lookup.get(dayCellKeyRow(2026, 9, 16, 0))).toBeUndefined();
+  });
+
+  it("完了日が自由記入テキストでも End Ref Date があれば実日まで正確に塗られる", () => {
+    const schedule = blankSchedule("c1");
+    schedule.productionStartDate = "2026-09-01";
+    schedule.productionEndDate = "9月下旬";
+    schedule.productionEndRefDate = "2026-09-25";
+
+    const lookup = buildDayColorLookupByRow(computeColoredDays(schedule), COLORS);
+    expect(lookup.get(dayCellKeyRow(2026, 9, 25, 1))).toBe("#444444");
+    expect(lookup.get(dayCellKeyRow(2026, 9, 26, 1))).toBeUndefined();
+  });
+
+  it("設定色がなければ何も入らない", () => {
+    const schedule = blankSchedule("c1");
+    schedule.productionStartDate = "2026-08-03";
+    schedule.productionEndDate = "2026-08-05";
+
+    const lookup = buildDayColorLookupByRow(computeColoredDays(schedule), []);
+    expect(lookup.size).toBe(0);
+  });
+});
+
+describe("daysInMonth", () => {
+  it("31日の月・30日の月・うるう年でない2月・うるう年の2月をそれぞれ正しく返す", () => {
+    expect(daysInMonth(2026, 8)).toBe(31);
+    expect(daysInMonth(2026, 9)).toBe(30);
+    expect(daysInMonth(2026, 2)).toBe(28);
+    expect(daysInMonth(2028, 2)).toBe(29);
   });
 });
