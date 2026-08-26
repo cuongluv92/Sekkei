@@ -66,7 +66,9 @@ export function addDaysIso(iso: string, days: number): string {
  * 沿って、前工程の完了日から次工程の開始日の初期値を自動計算する
  * (ユーザーが既に手入力した値は絶対に上書きしない — 空欄の時だけ埋める)。
  * `offsetDays` が指定されたリンクは、前工程の完了日の翌日を開始日にする
- * (検査・立会・出荷は「前工程が終わってから」始まる — 同日に重ねない)。
+ * (製作・検査・立会・出荷は全て「前工程が終わってから」始まる — 前工程の
+ * 完了日と同日にしてしまうとタイムライン上で色が重なって見えるため、
+ * 必ず+1日する)。
  * 立会が実施されない場合、出荷開始日は検査完了日+1にフォールバックする
  * (fromKeysのうち埋まっている最も遅い日付を採用する仕組みが、自然にこの
  * フォールバックを兼ねる — 立会完了日があればそちらが検査完了日より後に
@@ -77,7 +79,7 @@ export const CASCADE_LINKS: {
   toKey: keyof CaseSchedule;
   offsetDays?: number;
 }[] = [
-  { fromKeys: ["sheetMetalDeliveryDate", "boxDeliveryDate"], toKey: "productionStartDate" },
+  { fromKeys: ["sheetMetalDeliveryDate", "boxDeliveryDate"], toKey: "productionStartDate", offsetDays: 1 },
   { fromKeys: ["productionEndDate"], toKey: "inspectionStartDate", offsetDays: 1 },
   { fromKeys: ["inspectionEndDate"], toKey: "witnessStartDate", offsetDays: 1 },
   { fromKeys: ["witnessEndDate", "inspectionEndDate"], toKey: "shippingStartDate", offsetDays: 1 },

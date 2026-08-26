@@ -152,6 +152,26 @@ export function buildJunColorLookupByRow(
   return map;
 }
 
+/**
+ * 画面のライブタイムライン専用の行分け — 実テンプレート(Excel)側は罫線で
+ * 確認済みの固定4行構造(PROCESS_ROWS)を必ず守る必要があるが、画面表示
+ * はそれに縛られる必要がないため、見やすさ優先で行のまとめ方を変えて
+ * いる: 鈑金・BOX納入/アクセサリー納入をそれぞれ独立行にし(部材が板金・
+ * BOXと同じ行にいると重なって消えやすいため)、代わりに製作と検査は
+ * カスケードで必ず日付がずれる(開始日=前工程完了日+1)ため同じ行に
+ * まとめても重ならない。
+ */
+export const SCREEN_PROCESS_ROWS: ScheduleCategoryKey[][] = [
+  ["sheetMetal", "box"],
+  ["accessory"],
+  ["production", "inspection"],
+  ["witness", "shipping"],
+];
+
+function rowIndexForCategoryScreen(category: ScheduleCategoryKey): number {
+  return SCREEN_PROCESS_ROWS.findIndex((categories) => categories.includes(category));
+}
+
 export interface ColoredDay {
   year: number;
   month: number; // 1-12
@@ -194,11 +214,11 @@ export function dayCellKeyRow(year: number, month: number, day: number, rowIndex
 }
 
 /**
- * PROCESS_ROWS の行ごとに折りたたんだ、実日単位のカラールックアップ —
- * `buildJunColorLookupByRow` の日単位版。画面のタイムラインはこちらを使い、
- * 各セルの色は実際のその日の日付から決まるため、旬の途中で工程が切り替
- * わっても正確な日で色が切り替わる (先勝ちは同じ行・同じ日に複数カテゴリ
- * が重なる場合のみ発生する、本当の意味での重複)。
+ * SCREEN_PROCESS_ROWS の行ごとに折りたたんだ、実日単位のカラールックアップ
+ * — `buildJunColorLookupByRow` の日単位版。画面のタイムラインはこちらを
+ * 使い、各セルの色は実際のその日の日付から決まるため、旬の途中で工程が
+ * 切り替わっても正確な日で色が切り替わる (先勝ちは同じ行・同じ日に複数
+ * カテゴリが重なる場合のみ発生する、本当の意味での重複)。
  */
 export function buildDayColorLookupByRow(
   days: ColoredDay[],
@@ -207,13 +227,57 @@ export function buildDayColorLookupByRow(
   const colorByCategory = new Map(colors.map((c) => [c.category, c.color]));
   const map = new Map<string, string>();
   for (const d of days) {
-    const rowIndex = rowIndexForCategory(d.category);
+    const rowIndex = rowIndexForCategoryScreen(d.category);
     if (rowIndex < 0) continue;
     const displayCategory = DISPLAY_CATEGORY_COLOR[d.category] ?? d.category;
     const color = colorByCategory.get(displayCategory);
     if (!color) continue;
     const key = dayCellKeyRow(d.year, d.month, d.day, rowIndex);
     if (!map.has(key)) map.set(key, color);
+  }
+  return map;
+}
+
+export interface ScheduleMilestone {
+  year: number;
+  month: number; // 1-12
+  day: number;
+  category: ScheduleCategoryKey;
+}
+
+/**
+ * 各カテゴリの「代表日」(納入日/完了日 = RANGE_FIELDS の endKey、自由記入
+ * テキストの場合は endRefKey) だけを取り出す — タイムライン上にその日の
+ * 日付を数字ラベルとして表示するために使う。
+ */
+export function computeMilestones(schedule: CaseSchedule): ScheduleMilestone[] {
+  const out: ScheduleMilestone[] = [];
+  for (const { category, endKey, endRefKey } of RANGE_FIELDS) {
+    const end =
+      parseDate(schedule[endKey] as string | null) ??
+      (endRefKey ? parseDate(schedule[endRefKey] as string | null) : null);
+    if (!end) continue;
+    out.push({ year: end.getFullYear(), month: end.getMonth() + 1, day: end.getDate(), category });
+  }
+  const delivery = parseDate(schedule.deliveryDate);
+  if (delivery) {
+    out.push({ year: delivery.getFullYear(), month: delivery.getMonth() + 1, day: delivery.getDate(), category: "shipping" });
+  }
+  return out;
+}
+
+/**
+ * SCREEN_PROCESS_ROWS の行ごとに折りたたんだ日付ラベル (日のみの文字列) —
+ * 同じ行・同じ日に複数カテゴリの代表日が重なる場合は1つだけ表示する
+ * (例: 鈑金納入日とBOX納入日が同日なら「10」を1つだけ出す)。
+ */
+export function buildMilestoneLabelsByRow(milestones: ScheduleMilestone[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const m of milestones) {
+    const rowIndex = rowIndexForCategoryScreen(m.category);
+    if (rowIndex < 0) continue;
+    const key = dayCellKeyRow(m.year, m.month, m.day, rowIndex);
+    if (!map.has(key)) map.set(key, String(m.day));
   }
   return map;
 }

@@ -15,11 +15,13 @@ import { DateInput } from "@/components/common/DateInput";
 import {
   addMonths,
   buildDayColorLookupByRow,
+  buildMilestoneLabelsByRow,
   computeColoredDays,
+  computeMilestones,
   dayCellKeyRow,
   daysInMonth,
   JUN_BUCKETS,
-  PROCESS_ROWS,
+  SCREEN_PROCESS_ROWS,
 } from "@/lib/utils/scheduleColoring";
 import { applyCascade, applyTodayDefaults, formatJaDate, isIsoDate } from "@/lib/utils/schedule";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
@@ -612,9 +614,12 @@ export function ScheduleTimeline() {
                   const lookup = schedule
                     ? buildDayColorLookupByRow(computeColoredDays(schedule), colors)
                     : new Map<string, string>();
+                  const labels = schedule
+                    ? buildMilestoneLabelsByRow(computeMilestones(schedule))
+                    : new Map<string, string>();
                   const { projectName, panelNames } = buildProjectPanelLines(c, panels);
                   const faceCount = panels[0]?.faceCount;
-                  return PROCESS_ROWS.map((_, rowIndex) => (
+                  return SCREEN_PROCESS_ROWS.map((_, rowIndex) => (
                     <tr
                       key={`${c.id}-${rowIndex}`}
                       className={c.id === selectedCaseId ? "bg-accent/10" : ""}
@@ -622,7 +627,7 @@ export function ScheduleTimeline() {
                       {rowIndex === 0 && (
                         <>
                           <td
-                            rowSpan={PROCESS_ROWS.length}
+                            rowSpan={SCREEN_PROCESS_ROWS.length}
                             className="sticky left-0 z-10 border-b border-border bg-surface px-3 py-1.5 text-[12px] whitespace-pre-line align-top"
                             style={{ width: DRAWING_COL_WIDTH, minWidth: DRAWING_COL_WIDTH }}
                           >
@@ -639,7 +644,7 @@ export function ScheduleTimeline() {
                             </button>
                           </td>
                           <td
-                            rowSpan={PROCESS_ROWS.length}
+                            rowSpan={SCREEN_PROCESS_ROWS.length}
                             className="sticky z-10 border-b border-border bg-surface px-3 py-1.5 text-[12px] whitespace-pre-line align-top"
                             style={{ left: DRAWING_COL_WIDTH, width: LABEL_COL_WIDTH, minWidth: LABEL_COL_WIDTH }}
                           >
@@ -657,19 +662,31 @@ export function ScheduleTimeline() {
                         const dim = daysInMonth(m.year, m.month);
                         return Array.from({ length: dim }, (_, dayIdx) => {
                           const day = dayIdx + 1;
-                          const color = lookup.get(
-                            dayCellKeyRow(m.year, m.month, day, rowIndex),
-                          );
+                          const key = dayCellKeyRow(m.year, m.month, day, rowIndex);
+                          const color = lookup.get(key);
+                          const label = labels.get(key);
                           return (
                             <td
                               key={`c-${c.id}-${rowIndex}-${m.year}-${m.month}-${day}`}
-                              className={`border-b border-border py-1 ${day === 1 ? "border-l border-border-strong" : ""} ${rowIndex === PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
+                              className={`relative border-b border-border py-1 ${day === 1 ? "border-l border-border-strong" : ""} ${rowIndex === SCREEN_PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
                               style={{
                                 width: DAY_WIDTH,
                                 minWidth: DAY_WIDTH,
                                 backgroundColor: color,
                               }}
-                            />
+                            >
+                              {label && (
+                                <span
+                                  className="pointer-events-none absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 text-[9px] font-bold whitespace-nowrap text-white"
+                                  style={{
+                                    textShadow:
+                                      "0 0 2px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.9)",
+                                  }}
+                                >
+                                  {label}
+                                </span>
+                              )}
+                            </td>
                           );
                         });
                       })}

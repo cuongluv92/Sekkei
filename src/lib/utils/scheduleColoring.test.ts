@@ -3,8 +3,10 @@ import {
   buildDayColorLookupByRow,
   buildJunColorLookup,
   buildJunColorLookupByRow,
+  buildMilestoneLabelsByRow,
   computeColoredDays,
   computeColoredSegments,
+  computeMilestones,
   dayCellKeyRow,
   daysInMonth,
   junCellKey,
@@ -179,23 +181,31 @@ describe("buildJunColorLookupByRow — 実テンプレートの4行ブロック�
 });
 
 describe("computeColoredDays + buildDayColorLookupByRow — 画面タイムライン用の実日単位カラー化 (旬の途中で色が切り替わっても正確な日で表現する)", () => {
-  it("同じ行(部材系)で日付範囲が重ならなければ、旬の途中でも両方とも正確な日だけ色が付く", () => {
+  it("鈑金・BOX納入(行0)とアクセサリー納入(行1)は別行のため、同じ期間でも両方とも正確な日だけ色が付き重ならない", () => {
     const schedule = blankSchedule("c1");
     schedule.sheetMetalOrderDate = "2026-09-01";
-    schedule.sheetMetalDeliveryDate = "2026-09-08"; // 初旬(1〜10日)の前半だけ
-    schedule.accessoryOrderDate = "2026-09-09";
-    schedule.accessoryDeliveryDate = "2026-09-15"; // 初旬の後半〜中旬にまたがる
+    schedule.sheetMetalDeliveryDate = "2026-09-08";
+    schedule.accessoryOrderDate = "2026-09-01";
+    schedule.accessoryDeliveryDate = "2026-09-08"; // 鈑金と全く同じ期間でも行が違うので両方残る
 
     const lookup = buildDayColorLookupByRow(computeColoredDays(schedule), COLORS);
-    // 9/1〜9/8 は鈑金(sheetMetal)色
-    expect(lookup.get(dayCellKeyRow(2026, 9, 1, 0))).toBe("#111111");
-    expect(lookup.get(dayCellKeyRow(2026, 9, 8, 0))).toBe("#111111");
-    // 9/9 は既に鈑金の範囲を超えているので部材(accessory)色に切り替わる —
-    // 旧来の旬単位(buildJunColorLookupByRow)なら初旬まるごと鈑金色に潰れてしまっていた箇所
-    expect(lookup.get(dayCellKeyRow(2026, 9, 9, 0))).toBe("#333333");
-    expect(lookup.get(dayCellKeyRow(2026, 9, 15, 0))).toBe("#333333");
+    expect(lookup.get(dayCellKeyRow(2026, 9, 5, 0))).toBe("#111111"); // sheetMetal, 行0
+    expect(lookup.get(dayCellKeyRow(2026, 9, 5, 1))).toBe("#333333"); // accessory, 行1
     // 範囲外の日には何も入らない
-    expect(lookup.get(dayCellKeyRow(2026, 9, 16, 0))).toBeUndefined();
+    expect(lookup.get(dayCellKeyRow(2026, 9, 9, 0))).toBeUndefined();
+  });
+
+  it("製作と検査は同じ行(2)にまとめても、開始日が前工程の翌日にずれるため重ならず正確な日で色が切り替わる", () => {
+    const schedule = blankSchedule("c1");
+    schedule.productionStartDate = "2026-09-01";
+    schedule.productionEndDate = "2026-09-10";
+    schedule.inspectionStartDate = "2026-09-11";
+    schedule.inspectionEndDate = "2026-09-15";
+
+    const lookup = buildDayColorLookupByRow(computeColoredDays(schedule), COLORS);
+    expect(lookup.get(dayCellKeyRow(2026, 9, 10, 2))).toBe("#444444"); // production, 行2
+    expect(lookup.get(dayCellKeyRow(2026, 9, 11, 2))).toBe("#555555"); // inspection, 行2 (同じ行だが正確な日で切り替わる)
+    expect(lookup.get(dayCellKeyRow(2026, 9, 15, 2))).toBe("#555555");
   });
 
   it("完了日が自由記入テキストでも End Ref Date があれば実日まで正確に塗られる", () => {
@@ -205,8 +215,8 @@ describe("computeColoredDays + buildDayColorLookupByRow — 画面タイムラ�
     schedule.productionEndRefDate = "2026-09-25";
 
     const lookup = buildDayColorLookupByRow(computeColoredDays(schedule), COLORS);
-    expect(lookup.get(dayCellKeyRow(2026, 9, 25, 1))).toBe("#444444");
-    expect(lookup.get(dayCellKeyRow(2026, 9, 26, 1))).toBeUndefined();
+    expect(lookup.get(dayCellKeyRow(2026, 9, 25, 2))).toBe("#444444"); // production, 行2
+    expect(lookup.get(dayCellKeyRow(2026, 9, 26, 2))).toBeUndefined();
   });
 
   it("設定色がなければ何も入らない", () => {
@@ -216,6 +226,50 @@ describe("computeColoredDays + buildDayColorLookupByRow — 画面タイムラ�
 
     const lookup = buildDayColorLookupByRow(computeColoredDays(schedule), []);
     expect(lookup.size).toBe(0);
+  });
+});
+
+describe("computeMilestones + buildMilestoneLabelsByRow — タイムラインの日付ラベル (納入日/完了日)", () => {
+  it("鈑金納入日とBOX納入日が同じ日なら、行0のラベルは1つだけになる", () => {
+    const schedule = blankSchedule("c1");
+    schedule.sheetMetalDeliveryDate = "2026-09-10";
+    schedule.boxDeliveryDate = "2026-09-10";
+
+    const labels = buildMilestoneLabelsByRow(computeMilestones(schedule));
+    expect(labels.get(dayCellKeyRow(2026, 9, 10, 0))).toBe("10");
+    expect(labels.size).toBe(1);
+  });
+
+  it("アクセサリー納入日(行1)は日だけの文字列になる", () => {
+    const schedule = blankSchedule("c1");
+    schedule.accessoryDeliveryDate = "2026-08-28";
+
+    const labels = buildMilestoneLabelsByRow(computeMilestones(schedule));
+    expect(labels.get(dayCellKeyRow(2026, 8, 28, 1))).toBe("28");
+  });
+
+  it("製作完了日と検査完了日は同じ行(2)でも別の日なので両方ラベルが付く", () => {
+    const schedule = blankSchedule("c1");
+    schedule.productionEndDate = "2026-09-10";
+    schedule.inspectionEndDate = "2026-09-15";
+
+    const labels = buildMilestoneLabelsByRow(computeMilestones(schedule));
+    expect(labels.get(dayCellKeyRow(2026, 9, 10, 2))).toBe("10");
+    expect(labels.get(dayCellKeyRow(2026, 9, 15, 2))).toBe("15");
+  });
+
+  it("完了日が自由記入テキストでも End Ref Date があればそちらの日でラベルが付く", () => {
+    const schedule = blankSchedule("c1");
+    schedule.witnessEndDate = "10月上旬";
+    schedule.witnessEndRefDate = "2026-10-05";
+
+    const labels = buildMilestoneLabelsByRow(computeMilestones(schedule));
+    expect(labels.get(dayCellKeyRow(2026, 10, 5, 3))).toBe("5");
+  });
+
+  it("日付が何もなければ空になる", () => {
+    const labels = buildMilestoneLabelsByRow(computeMilestones(blankSchedule("c1")));
+    expect(labels.size).toBe(0);
   });
 });
 

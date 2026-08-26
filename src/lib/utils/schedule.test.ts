@@ -30,20 +30,20 @@ function emptySchedule(): CaseSchedule {
 }
 
 describe("applyCascade", () => {
-  it("鈑金納入日 → 製作開始日が空欄なら自動で埋める", () => {
+  it("鈑金納入日 → 製作開始日は翌日にずれる", () => {
     const s = { ...emptySchedule(), sheetMetalDeliveryDate: "2026-09-10" };
     const result = applyCascade(s, "sheetMetalDeliveryDate");
-    expect(result.productionStartDate).toBe("2026-09-10");
+    expect(result.productionStartDate).toBe("2026-09-11");
   });
 
-  it("鈑金・BOXの納期がどちらも埋まっている場合は遅い方の日付を採用する (オフセットなし)", () => {
+  it("鈑金・BOXの納期がどちらも埋まっている場合は遅い方の日付+1を採用する", () => {
     const s = {
       ...emptySchedule(),
       sheetMetalDeliveryDate: "2026-09-10",
       boxDeliveryDate: "2026-09-15",
     };
     const result = applyCascade(s, "boxDeliveryDate");
-    expect(result.productionStartDate).toBe("2026-09-15");
+    expect(result.productionStartDate).toBe("2026-09-16");
   });
 
   it("アクセサリー納入日は製作開始日のカスケードに影響しない", () => {
