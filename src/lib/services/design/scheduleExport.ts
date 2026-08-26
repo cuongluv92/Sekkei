@@ -18,7 +18,7 @@ import { buildCaseDisplayLabel, buildProjectPanelLines } from "@/lib/utils/desig
 import type { CaseSchedule, DesignCaseWithPanels, ScheduleCategoryKey } from "@/lib/types/design";
 
 /**
- * ⑤工程表 — 自前生成のA3横1枚レイアウト。以前は取込済みの実テンプレート
+ * 納入工程(旧⑤工程表) — 自前生成のA3横1枚レイアウト。以前は取込済みの実テンプレート
  * ファイル(旬3列/月・板金/BOX/部材が同じ行の4行構成)をそのまま使っていた
  * が、画面のタイムライン(ScheduleTimeline.tsx)が実日単位の色分けや行構成
  * (鈑金・BOX納入/アクセサリー納入/製作・検査/立会・出荷の4行)へ進化した
@@ -121,7 +121,7 @@ function buildHeader(
 ) {
   ws.mergeCells(TITLE_ROW, 1, TITLE_ROW, printLastCol);
   const titleCell = ws.getCell(TITLE_ROW, 1);
-  titleCell.value = "工程表";
+  titleCell.value = "納入工程";
   titleCell.font = { size: 16, bold: true };
   titleCell.alignment = { horizontal: "left", vertical: "middle" };
   ws.getRow(TITLE_ROW).height = ROW_HEIGHT;
@@ -188,7 +188,7 @@ function buildScheduleWorkbook(
   const colorByCategory = new Map(colorConfigs.map((c) => [c.category, c.color]));
 
   const workbook = new ExcelJS.Workbook();
-  const ws = workbook.addWorksheet("工程表", {
+  const ws = workbook.addWorksheet("納入工程", {
     pageSetup: {
       // exceljs's typed PaperSize enum omits A3 (OOXML code 8) even though the
       // file format itself supports it — cast past the incomplete enum.
@@ -283,12 +283,12 @@ export async function exportScheduleExcel(
 ): Promise<{ fileName: string }> {
   const colorConfigs = await scheduleColorService.list();
   const ws = buildScheduleWorkbook(cases, schedules, colorConfigs);
-  const fileName = "工程表.xlsx";
+  const fileName = "納入工程.xlsx";
   await downloadWorkbook(ws.workbook, fileName);
   return { fileName };
 }
 
-/** Prints ⑤工程表 in the exact layout the Excel download produces (same colored Gantt). */
+/** Prints 納入工程 in the exact layout the Excel download produces (same colored Gantt). */
 export async function printSchedule(
   cases: DesignCaseWithPanels[],
   schedules: Record<string, CaseSchedule>,
