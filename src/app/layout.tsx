@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Noto_Sans_JP, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n";
+import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import { ActiveCaseProvider } from "@/lib/store/ActiveCaseProvider";
 import { PartAssemblyProvider } from "@/lib/store/PartAssemblyProvider";
 import { AppShell } from "@/components/layout/AppShell";
@@ -41,14 +42,26 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${plusJakartaSans.variable} ${notoSansJP.variable} ${geistMono.variable} h-full`}
     >
       <body className="h-full antialiased">
-        <LanguageProvider>
-          <WelcomeIntro />
-          <ActiveCaseProvider>
-            <PartAssemblyProvider>
-              <AppShell>{children}</AppShell>
-            </PartAssemblyProvider>
-          </ActiveCaseProvider>
-        </LanguageProvider>
+        {/* テーマ切替 (ThemeProvider) の反映はマウント後の useEffect なので、
+            dark保存済みユーザーが一瞬だけlight既定値でペイントされるのを
+            防ぐため、ハイドレーション前にこの同期スクリプトでdata-theme属性
+            を先に付与する。 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('sekkei.theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}",
+          }}
+        />
+        <ThemeProvider>
+          <LanguageProvider>
+            <WelcomeIntro />
+            <ActiveCaseProvider>
+              <PartAssemblyProvider>
+                <AppShell>{children}</AppShell>
+              </PartAssemblyProvider>
+            </ActiveCaseProvider>
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

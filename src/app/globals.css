@@ -1,6 +1,31 @@
 @import "tailwindcss";
 
+/*
+ * Light は既定テーマ。dark は `<html data-theme="dark">` を切替ボタン
+ * (ThemeProvider) が付与したときだけ有効になるオプション扱い — ダーク値は
+ * 元の :root 定義をそのまま [data-theme="dark"] に移しただけで、見た目は
+ * 変えていない。
+ */
 :root {
+  --background: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #eef0f3;
+  --surface-hover: #e4e7ec;
+  --border: #d7dbe1;
+  --border-strong: #a8afb9;
+  --foreground: #14171c;
+  --muted: #48505c;
+  --muted-2: #67707c;
+  --accent: #2f6fe0;
+  --accent-strong: #1f56c4;
+  --accent-foreground: #ffffff;
+  --success: #157a48;
+  --warning: #9c6208;
+  --danger: #c22a3a;
+  --info: #2f6fe0;
+}
+
+:root[data-theme="dark"] {
   --background: #0a0b0d;
   --surface: #111318;
   --surface-2: #1b1f27;
@@ -47,6 +72,9 @@
 }
 
 html {
+  color-scheme: light;
+}
+html[data-theme="dark"] {
   color-scheme: dark;
 }
 
@@ -113,10 +141,10 @@ body {
 
   /* ---- Form controls ---- */
   .field-input {
-    @apply w-full rounded-lg border border-accent/30 bg-surface px-3 py-2 text-[14px] text-foreground
+    @apply w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-[14px] text-foreground
       transition-colors placeholder:text-muted-2 outline-none hover:border-accent/55 focus:border-accent
       focus:ring-2 focus:ring-accent/25 disabled:cursor-not-allowed disabled:opacity-50
-      disabled:hover:border-accent/30;
+      disabled:hover:border-border-strong;
   }
   .field-label {
     @apply mb-1.5 block text-[12.5px] font-semibold tracking-wide text-muted uppercase;
