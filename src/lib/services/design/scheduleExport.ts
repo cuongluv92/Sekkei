@@ -32,9 +32,9 @@ import type { CaseSchedule, DesignCaseWithPanels, ScheduleCategoryKey } from "@/
  * ROWSを使う)。日付ラベルは旬セルの中に小さく表示する。
  */
 
-const LABEL_COL_A_WIDTH = 15;
-const LABEL_COL_B_WIDTH = 24;
-const JUN_COL_WIDTH = 5.5;
+const LABEL_COL_A_WIDTH = 16;
+const LABEL_COL_B_WIDTH = 38;
+const JUN_COL_WIDTH = 10;
 const TITLE_ROW = 1;
 const LEGEND_ROW = 2;
 const MONTH_HEADER_ROW = 4;
@@ -59,6 +59,31 @@ function toArgb(hex: string): string {
   return `FF${hex.replace("#", "").toUpperCase()}`;
 }
 
+interface LegendEntry {
+  key: ScheduleCategoryKey;
+  label: string;
+  swatchCol: number;
+  labelColStart: number;
+  labelColEnd: number;
+}
+
+/**
+ * 凡例(色見本+ラベル)の列配置を1箇所で計算する — 実際に描画する buildHeader
+ * と、必要な最終列数を知りたい buildScheduleWorkbook (印刷範囲・列幅設定)
+ * の両方がこれを使うことで、2箇所に同じ配置ロジックを重複させない。
+ */
+function layoutLegend(): LegendEntry[] {
+  let col = 1;
+  return LEGEND_CATEGORIES.map(({ key, label }) => {
+    const labelSpan = label.length > 4 ? 2 : 1;
+    const swatchCol = col;
+    const labelColStart = swatchCol + 1;
+    const labelColEnd = labelColStart + labelSpan - 1;
+    col = labelColEnd + 2; // 次のエントリの色見本(1列の間隔を空ける)
+    return { key, label, swatchCol, labelColStart, labelColEnd };
+  });
+}
+
 interface MonthColumn {
   year: number;
   month: number;
@@ -78,29 +103,34 @@ function computeMonths(): MonthColumn[] {
   return months;
 }
 
-function buildHeader(ws: ExcelJS.Worksheet, months: MonthColumn[], colorByCategory: Map<ScheduleCategoryKey, string>) {
-  const lastCol = 2 + months.length * JUN_BUCKETS.length;
-
-  ws.mergeCells(TITLE_ROW, 1, TITLE_ROW, lastCol);
+function buildHeader(
+  ws: ExcelJS.Worksheet,
+  months: MonthColumn[],
+  colorByCategory: Map<ScheduleCategoryKey, string>,
+  printLastCol: number,
+) {
+  ws.mergeCells(TITLE_ROW, 1, TITLE_ROW, printLastCol);
   const titleCell = ws.getCell(TITLE_ROW, 1);
-  titleCell.value = "⑤ 工程表";
-  titleCell.font = { size: 14, bold: true };
+  titleCell.value = "工程表";
+  titleCell.font = { size: 16, bold: true };
   titleCell.alignment = { horizontal: "left", vertical: "middle" };
-  ws.getRow(TITLE_ROW).height = 20;
+  ws.getRow(TITLE_ROW).height = 22;
 
-  let legendCol = 1;
-  for (const { key, label } of LEGEND_CATEGORIES) {
-    const swatch = ws.getCell(LEGEND_ROW, legendCol);
+  // 凡例 — 色見本(1列)+ラベル(文字数に応じて複数列を結合)を左詰めで並べる。
+  // 単一の狭い列にラベルを置くと、データ列(旬=約10幅)の境目でラベルが
+  // 隣の色見本に重なって見えてしまうため、必ずラベル分の幅を結合で確保する。
+  for (const { key, label, swatchCol, labelColStart, labelColEnd } of layoutLegend()) {
+    const swatch = ws.getCell(LEGEND_ROW, swatchCol);
     const color = colorByCategory.get(key);
     if (color) swatch.fill = { type: "pattern", pattern: "solid", fgColor: { argb: toArgb(color) } };
     swatch.border = { top: THIN, left: THIN, right: THIN, bottom: THIN };
-    const labelCell = ws.getCell(LEGEND_ROW, legendCol + 1);
+    if (labelColEnd > labelColStart) ws.mergeCells(LEGEND_ROW, labelColStart, LEGEND_ROW, labelColEnd);
+    const labelCell = ws.getCell(LEGEND_ROW, labelColStart);
     labelCell.value = label;
-    labelCell.font = { size: 8 };
-    labelCell.alignment = { vertical: "middle" };
-    legendCol += 2;
+    labelCell.font = { size: 10 };
+    labelCell.alignment = { horizontal: "left", vertical: "middle" };
   }
-  ws.getRow(LEGEND_ROW).height = 14;
+  ws.getRow(LEGEND_ROW).height = 16;
 
   ws.mergeCells(MONTH_HEADER_ROW, 1, JUN_HEADER_ROW, 1);
   const colACaption = ws.getCell(MONTH_HEADER_ROW, 1);
@@ -109,7 +139,7 @@ function buildHeader(ws: ExcelJS.Worksheet, months: MonthColumn[], colorByCatego
   const colBCaption = ws.getCell(MONTH_HEADER_ROW, 2);
   colBCaption.value = "件名／盤名称";
   for (const cell of [colACaption, colBCaption]) {
-    cell.font = { size: 9, bold: true };
+    cell.font = { size: 10, bold: true };
     cell.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
     cell.border = { top: THIN, left: THIN, right: THIN, bottom: THIN };
   }
@@ -118,20 +148,20 @@ function buildHeader(ws: ExcelJS.Worksheet, months: MonthColumn[], colorByCatego
     ws.mergeCells(MONTH_HEADER_ROW, m.colStart, MONTH_HEADER_ROW, m.colStart + JUN_BUCKETS.length - 1);
     const monthCell = ws.getCell(MONTH_HEADER_ROW, m.colStart);
     monthCell.value = `${m.year}/${String(m.month).padStart(2, "0")}`;
-    monthCell.font = { size: 9, bold: true };
+    monthCell.font = { size: 10, bold: true };
     monthCell.alignment = { horizontal: "center", vertical: "middle" };
     monthCell.border = { top: THIN, left: THICK, right: THIN, bottom: THIN };
 
     JUN_BUCKETS.forEach((bucket, i) => {
       const cell = ws.getCell(JUN_HEADER_ROW, m.colStart + i);
       cell.value = bucket;
-      cell.font = { size: 8 };
+      cell.font = { size: 10 };
       cell.alignment = { horizontal: "center", vertical: "middle" };
       cell.border = { top: THIN, left: i === 0 ? THICK : THIN, right: THIN, bottom: THIN };
     });
   }
-  ws.getRow(MONTH_HEADER_ROW).height = 14;
-  ws.getRow(JUN_HEADER_ROW).height = 12;
+  ws.getRow(MONTH_HEADER_ROW).height = 16;
+  ws.getRow(JUN_HEADER_ROW).height = 14;
 }
 
 function buildScheduleWorkbook(
@@ -140,7 +170,9 @@ function buildScheduleWorkbook(
   colorConfigs: { category: ScheduleCategoryKey; color: string }[],
 ): ExcelJS.Worksheet {
   const months = computeMonths();
-  const lastCol = 2 + months.length * JUN_BUCKETS.length;
+  const lastCol = 2 + months.length * JUN_BUCKETS.length; // データ(月/旬)グリッドの最終列
+  const legendLastCol = Math.max(...layoutLegend().map((e) => e.labelColEnd));
+  const printLastCol = Math.max(lastCol, legendLastCol); // 凡例の方が広い場合はそちらに合わせる
   const colorByCategory = new Map(colorConfigs.map((c) => [c.category, c.color]));
 
   const workbook = new ExcelJS.Workbook();
@@ -161,10 +193,10 @@ function buildScheduleWorkbook(
   ws.columns = [
     { width: LABEL_COL_A_WIDTH },
     { width: LABEL_COL_B_WIDTH },
-    ...months.flatMap(() => JUN_BUCKETS.map(() => ({ width: JUN_COL_WIDTH }))),
+    ...Array.from({ length: printLastCol - 2 }, () => ({ width: JUN_COL_WIDTH })),
   ];
 
-  buildHeader(ws, months, colorByCategory);
+  buildHeader(ws, months, colorByCategory, printLastCol);
 
   cases.forEach(({ case: c, panels }, i) => {
     const blockStart = DATA_START_ROW + i * ROW_SPAN;
@@ -178,7 +210,7 @@ function buildScheduleWorkbook(
     const colB = ws.getCell(blockStart, 2);
     colB.value = [projectName, panelNames, faceCount != null ? `${faceCount}面` : ""].filter(Boolean).join("\n");
     for (const cell of [colA, colB]) {
-      cell.font = { size: 8 };
+      cell.font = { size: 10 };
       cell.alignment = { horizontal: "left", vertical: "top", wrapText: true };
       cell.border = { top: THICK, left: THIN, right: THIN, bottom: THICK };
     }
@@ -194,7 +226,7 @@ function buildScheduleWorkbook(
           right: THIN,
         };
       }
-      row.height = 13;
+      row.height = 15;
     }
 
     const schedule = schedules[c.id];
@@ -213,7 +245,7 @@ function buildScheduleWorkbook(
           const label = labels.get(key);
           if (label) {
             cell.value = label;
-            cell.font = { size: 6, bold: true, color: { argb: "FFFFFFFF" } };
+            cell.font = { size: 8, bold: true, color: { argb: "FFFFFFFF" } };
             cell.alignment = { horizontal: "right", vertical: "bottom" };
           }
         }
@@ -222,7 +254,7 @@ function buildScheduleWorkbook(
   });
 
   const lastRow = DATA_START_ROW + cases.length * ROW_SPAN - 1;
-  ws.pageSetup.printArea = `A1:${ws.getColumn(lastCol).letter}${Math.max(lastRow, JUN_HEADER_ROW)}`;
+  ws.pageSetup.printArea = `A1:${ws.getColumn(printLastCol).letter}${Math.max(lastRow, JUN_HEADER_ROW)}`;
 
   return ws;
 }
