@@ -74,15 +74,21 @@ interface LegendEntry {
  * 凡例(色見本+ラベル)の列配置を1箇所で計算する — 実際に描画する buildHeader
  * と、必要な最終列数を知りたい buildScheduleWorkbook (印刷範囲・列幅設定)
  * の両方がこれを使うことで、2箇所に同じ配置ロジックを重複させない。
+ *
+ * 行全体に間延びさせず、コンパクトに(エントリ間の間隔なし)まとめた上で
+ * `endCol`(月グリッドの最終列)に右詰めする — 1列目から間隔を空けて
+ * 並べると、行の左端から右端まで間延びして見えてしまうため。
  */
-function layoutLegend(): LegendEntry[] {
-  let col = 1;
-  return LEGEND_CATEGORIES.map(({ key, label }) => {
-    const labelSpan = label.length > 4 ? 2 : 1;
+function layoutLegend(endCol: number): LegendEntry[] {
+  const spans = LEGEND_CATEGORIES.map(({ label }) => (label.length > 4 ? 2 : 1));
+  const totalWidth = spans.reduce((sum, span) => sum + 1 + span, 0); // 色見本(1列)+ラベル(span列) の合計
+  // 右詰めの開始列 — シート左端(1列目)より前にはみ出さないようクランプする。
+  let col = Math.max(1, endCol - totalWidth + 1);
+  return LEGEND_CATEGORIES.map(({ key, label }, i) => {
     const swatchCol = col;
     const labelColStart = swatchCol + 1;
-    const labelColEnd = labelColStart + labelSpan - 1;
-    col = labelColEnd + 2; // 次のエントリの色見本(1列の間隔を空ける)
+    const labelColEnd = labelColStart + spans[i] - 1;
+    col = labelColEnd + 1; // 次のエントリはすぐ隣(色見本の枠線で区切りが分かるため間隔は空けない)
     return { key, label, swatchCol, labelColStart, labelColEnd };
   });
 }
@@ -111,6 +117,7 @@ function buildHeader(
   months: MonthColumn[],
   colorByCategory: Map<ScheduleCategoryKey, string>,
   printLastCol: number,
+  legendEntries: LegendEntry[],
 ) {
   ws.mergeCells(TITLE_ROW, 1, TITLE_ROW, printLastCol);
   const titleCell = ws.getCell(TITLE_ROW, 1);
@@ -119,10 +126,11 @@ function buildHeader(
   titleCell.alignment = { horizontal: "left", vertical: "middle" };
   ws.getRow(TITLE_ROW).height = ROW_HEIGHT;
 
-  // 凡例 — 色見本(1列)+ラベル(文字数に応じて複数列を結合)を左詰めで並べる。
+  // 凡例 — 色見本(1列)+ラベル(文字数に応じて複数列を結合)を、間隔を空けず
+  // コンパクトにまとめて月グリッドの右端に寄せる(layoutLegend参照)。
   // 単一の狭い列にラベルを置くと、データ列(旬=約10幅)の境目でラベルが
   // 隣の色見本に重なって見えてしまうため、必ずラベル分の幅を結合で確保する。
-  for (const { key, label, swatchCol, labelColStart, labelColEnd } of layoutLegend()) {
+  for (const { key, label, swatchCol, labelColStart, labelColEnd } of legendEntries) {
     const swatch = ws.getCell(LEGEND_ROW, swatchCol);
     const color = colorByCategory.get(key);
     if (color) swatch.fill = { type: "pattern", pattern: "solid", fgColor: { argb: toArgb(color) } };
@@ -174,8 +182,9 @@ function buildScheduleWorkbook(
 ): ExcelJS.Worksheet {
   const months = computeMonths();
   const lastCol = 2 + months.length * JUN_BUCKETS.length; // データ(月/旬)グリッドの最終列
-  const legendLastCol = Math.max(...layoutLegend().map((e) => e.labelColEnd));
-  const printLastCol = Math.max(lastCol, legendLastCol); // 凡例の方が広い場合はそちらに合わせる
+  const legendEntries = layoutLegend(lastCol); // 月グリッドの右端に右詰め
+  const legendLastCol = Math.max(...legendEntries.map((e) => e.labelColEnd));
+  const printLastCol = Math.max(lastCol, legendLastCol); // 凡例がそれでもはみ出す場合はそちらに合わせる
   const colorByCategory = new Map(colorConfigs.map((c) => [c.category, c.color]));
 
   const workbook = new ExcelJS.Workbook();
@@ -199,7 +208,7 @@ function buildScheduleWorkbook(
     ...Array.from({ length: printLastCol - 2 }, () => ({ width: JUN_COL_WIDTH })),
   ];
 
-  buildHeader(ws, months, colorByCategory, printLastCol);
+  buildHeader(ws, months, colorByCategory, printLastCol, legendEntries);
 
   cases.forEach(({ case: c, panels }, i) => {
     const blockStart = DATA_START_ROW + i * ROW_SPAN;
