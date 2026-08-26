@@ -573,6 +573,7 @@ const ja: Dictionary = {
     heightDiffHint: "給気口と排気口の高さの差 h",
     hoodCoefficientHint: "換気フードの流量係数（計算書の標準値を初期表示）",
     useFilterLabel: "給排気口にフィルタを使用する",
+    filterSectionNote: "ここのζC・ζFは静圧計算用の抵抗係数です。フィルタの標準風速の入力欄は、下の判定結果で強制換気が必要になった場合に表示されます。",
     ventResistanceHint: "換気口抵抗係数（計算書の標準値を初期表示）",
     filterResistanceHint: "フィルタ抵抗係数（フィルタのカタログ値を入力）",
     noFilterDischargeHint: "給排気口の流量係数（フィルタ無しの標準値を初期表示）",

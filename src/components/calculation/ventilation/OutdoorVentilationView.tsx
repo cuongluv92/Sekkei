@@ -741,9 +741,12 @@ export function VentOpeningFields({ value, onChange }: { value: VentOpeningState
       </label>
 
       {value.useFilter ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <NumField label="ζC (換気口抵抗係数)" hintKey="ventilationCalc.ventResistanceHint" value={value.ventResistanceCoefficientRaw} onChange={(v) => onChange({ ...value, ventResistanceCoefficientRaw: v })} unit="—" />
-          <NumField label="ζF (フィルタ抵抗係数)" hintKey="ventilationCalc.filterResistanceHint" value={value.filterResistanceCoefficientRaw} onChange={(v) => onChange({ ...value, filterResistanceCoefficientRaw: v })} unit="—" />
+        <div className="flex flex-col gap-1.5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <NumField label="ζC (換気口抵抗係数)" hintKey="ventilationCalc.ventResistanceHint" value={value.ventResistanceCoefficientRaw} onChange={(v) => onChange({ ...value, ventResistanceCoefficientRaw: v })} unit="—" />
+            <NumField label="ζF (フィルタ抵抗係数)" hintKey="ventilationCalc.filterResistanceHint" value={value.filterResistanceCoefficientRaw} onChange={(v) => onChange({ ...value, filterResistanceCoefficientRaw: v })} unit="—" />
+          </div>
+          <p className="text-[11.5px] text-foreground">{t("ventilationCalc.filterSectionNote")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

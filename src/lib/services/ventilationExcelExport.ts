@@ -201,12 +201,21 @@ export async function exportOutdoorVentilationExcel(data: OutdoorVentilationExpo
   ws.getCell("H44").value = data.exhaustAreaM2; // Ao
   ws.getCell("S48").value = data.heightDiffM; // h
   ws.getCell("S53").value = data.hoodFlowCoefficientX; // X
-  if (data.fanCapacityM3PerHPerUnit != null) ws.getCell("S54").value = data.fanCapacityM3PerHPerUnit; // F
+  // S54(送風機能力)はH53(台数)・H55(静圧)の実式が直接参照するため、未入力なら
+  // テンプレートの例示値(1680等)を残さず明示的に空欄にする(捏造データを
+  // 計算式に流し込まない — unzipして直接確認済み)。
+  ws.getCell("S54").value = data.fanCapacityM3PerHPerUnit ?? null; // F
 
   if (data.useFilter) {
     ws.getCell("V43").value = data.ventResistanceCoefficient; // ζC
     ws.getCell("V44").value = data.filterResistanceCoefficient ?? 0; // ζF
-    if (data.filterRatedVelocityMPerS != null) ws.getCell("O58").value = data.filterRatedVelocityMPerS;
+    // O58(フィルタの標準風速)はM59(風量)の実式が直接参照するため、S54と同じ
+    // 理由で未入力時は明示的に空欄にする。H58(フィルタの圧力損失Pa)はどの
+    // 数式からも参照されていない(unzipして確認済み — カタログ照合用の参考
+    // 値でしかない)ためアプリでは収集しておらず、テンプレートの例示値
+    // (9.3Pa等)をそのまま出力しないよう常に空欄にする。
+    ws.getCell("O58").value = data.filterRatedVelocityMPerS ?? null;
+    ws.getCell("H58").value = null;
     ws.getCell("Q60").value = { formula: "MAX(H53,T59)" };
   } else {
     // 実物の「屋外フィルタ無し」シートを直接使用 — フィルタ専用行(58〜59行目)
@@ -271,10 +280,17 @@ export async function exportIndoorVentilationExcel(data: IndoorVentilationExport
 
   if (data.useFilter) {
     ws.getCell("S41").value = data.hoodFlowCoefficientX; // X
-    if (data.fanCapacityM3PerHPerUnit != null) ws.getCell("S42").value = data.fanCapacityM3PerHPerUnit; // F
+    // S42(送風機能力)はH41(台数)・H43(静圧)の実式が直接参照するため、未入力
+    // なら明示的に空欄にする(テンプレートの例示値を計算式に残さない)。
+    ws.getCell("S42").value = data.fanCapacityM3PerHPerUnit ?? null; // F
     ws.getCell("V31").value = data.ventResistanceCoefficient; // ζC
     ws.getCell("V32").value = data.filterResistanceCoefficient ?? 0; // ζF
-    if (data.filterRatedVelocityMPerS != null) ws.getCell("O46").value = data.filterRatedVelocityMPerS;
+    // O46(フィルタの標準風速)はM47(風量)の実式が直接参照するため同様に未
+    // 入力時は空欄にする。H46(フィルタの圧力損失Pa)はどの数式からも参照
+    // されていない(unzipして確認済み)ためアプリでは収集しておらず、常に
+    // 空欄にする。
+    ws.getCell("O46").value = data.filterRatedVelocityMPerS ?? null;
+    ws.getCell("H46").value = null;
     ws.getCell("Q48").value = { formula: "MAX(H41,T47)" };
   } else if (useRealNoFilterSheet) {
     // 実物の「屋内フィルタ無し」シートを直接使用 — 強制換気セクション自体が
@@ -284,7 +300,7 @@ export async function exportIndoorVentilationExcel(data: IndoorVentilationExport
   } else {
     // フォールバック: フィルタ有りシートの行構成を借用。
     ws.getCell("S41").value = data.hoodFlowCoefficientX; // X
-    if (data.fanCapacityM3PerHPerUnit != null) ws.getCell("S42").value = data.fanCapacityM3PerHPerUnit; // F
+    ws.getCell("S42").value = data.fanCapacityM3PerHPerUnit ?? null; // F
     ws.getCell("N31").value = data.noFilterDischargeCoefficient; // α (置換)
     ws.getCell("S43").value = data.ventResistanceCoefficient; // ζ (置換)
     clearFilterOnlyCells(ws, ["R31", "V31", "R32", "V32", "H46", "O46", "M47", "T47"]);

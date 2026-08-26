@@ -527,6 +527,7 @@ export interface Dictionary {
     heightDiffHint: string;
     hoodCoefficientHint: string;
     useFilterLabel: string;
+    filterSectionNote: string;
     ventResistanceHint: string;
     filterResistanceHint: string;
     noFilterDischargeHint: string;

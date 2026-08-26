@@ -583,6 +583,7 @@ const vi: Dictionary = {
     heightDiffHint: "Chênh lệch độ cao giữa cửa gió vào và ra h",
     hoodCoefficientHint: "Hệ số lưu lượng của chụp gió (giá trị chuẩn từ tài liệu)",
     useFilterLabel: "Cửa gió vào/ra có dùng bộ lọc (フィルタ)",
+    filterSectionNote: "ζC, ζF ở đây là hệ số cản dùng để tính áp suất tĩnh. Ô nhập「フィルタの標準風速」(tốc độ gió chuẩn của lọc) sẽ hiện bên dưới khi kết quả cho thấy cần thông gió cưỡng bức.",
     ventResistanceHint: "Hệ số trở lực cửa gió (giá trị chuẩn từ tài liệu)",
     filterResistanceHint: "Hệ số trở lực bộ lọc (nhập theo catalogue bộ lọc)",
     noFilterDischargeHint: "Hệ số lưu lượng cửa gió vào/ra (giá trị chuẩn khi không dùng bộ lọc)",
