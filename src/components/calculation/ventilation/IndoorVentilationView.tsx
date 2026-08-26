@@ -12,7 +12,14 @@ import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calculation/OutlineDrawingUpload";
 import { FormulaBlock, SourceNote } from "@/components/calculation/FormulaBlock";
 import { HeatSourceList } from "./HeatSourceList";
-import { NumField, VentilationResultPanel, VentOpeningFields } from "./OutdoorVentilationView";
+import {
+  blankOpeningPair,
+  NumField,
+  normalizeVentOpening,
+  VentilationResultPanel,
+  VentOpeningFields,
+  type OpeningDimensionPair,
+} from "./OutdoorVentilationView";
 
 interface DimensionState {
   widthMRaw: string;
@@ -37,6 +44,8 @@ interface VentOpeningState {
   hoodFlowCoefficientXRaw: string;
   fanCapacityM3PerHPerUnitRaw: string;
   filterRatedVelocityMPerSRaw: string;
+  supplyOpenings: OpeningDimensionPair[];
+  exhaustOpenings: OpeningDimensionPair[];
 }
 
 function blankVentOpening(): VentOpeningState {
@@ -51,6 +60,8 @@ function blankVentOpening(): VentOpeningState {
     hoodFlowCoefficientXRaw: "0.8",
     fanCapacityM3PerHPerUnitRaw: "",
     filterRatedVelocityMPerSRaw: "",
+    supplyOpenings: [blankOpeningPair()],
+    exhaustOpenings: [blankOpeningPair()],
   };
 }
 
@@ -102,7 +113,7 @@ export function IndoorVentilationView({ caseId }: Props) {
       const saved = record?.input as unknown as SavedInput | undefined;
       setHeatSources(saved?.heatSources ?? []);
       setDimensions(saved?.dimensions ?? blankDimensions());
-      setVentOpening(saved?.ventOpening ?? blankVentOpening());
+      setVentOpening(normalizeVentOpening(saved?.ventOpening));
       setSavedAt(record?.updatedAt ?? null);
       setLoaded(true);
     });

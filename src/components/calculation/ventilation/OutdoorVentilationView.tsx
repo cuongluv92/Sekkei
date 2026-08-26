@@ -87,6 +87,9 @@ interface VentOpeningState {
   hoodFlowCoefficientXRaw: string;
   fanCapacityM3PerHPerUnitRaw: string;
   filterRatedVelocityMPerSRaw: string;
+  /** Ai・Ao の開口W×H入力補助 — ユーザーが明示的にクリアするまで保持する(caseの保存対象)。 */
+  supplyOpenings: OpeningDimensionPair[];
+  exhaustOpenings: OpeningDimensionPair[];
 }
 
 function blankVentOpening(): VentOpeningState {
@@ -101,6 +104,18 @@ function blankVentOpening(): VentOpeningState {
     hoodFlowCoefficientXRaw: "0.8",
     fanCapacityM3PerHPerUnitRaw: "",
     filterRatedVelocityMPerSRaw: "",
+    supplyOpenings: [blankOpeningPair()],
+    exhaustOpenings: [blankOpeningPair()],
+  };
+}
+
+/** 保存済みcaseの読み込み時、supplyOpenings/exhaustOpenings追加前に保存されたデータには存在しないため補完する。 */
+export function normalizeVentOpening(saved: VentOpeningState | undefined): VentOpeningState {
+  const base = saved ?? blankVentOpening();
+  return {
+    ...base,
+    supplyOpenings: base.supplyOpenings?.length ? base.supplyOpenings : [blankOpeningPair()],
+    exhaustOpenings: base.exhaustOpenings?.length ? base.exhaustOpenings : [blankOpeningPair()],
   };
 }
 
@@ -161,7 +176,7 @@ export function OutdoorVentilationView({ caseId }: Props) {
       setClimateProfileId(saved?.climateProfileId ?? "");
       setHeatSources(saved?.heatSources ?? []);
       setSurfaceAreas(saved?.surfaceAreas ?? blankSurfaceAreas());
-      setVentOpening(saved?.ventOpening ?? blankVentOpening());
+      setVentOpening(normalizeVentOpening(saved?.ventOpening));
       setSavedAt(record?.updatedAt ?? null);
       setLoaded(true);
     });
@@ -519,12 +534,12 @@ export function NumField({
   );
 }
 
-interface OpeningDimensionPair {
+export interface OpeningDimensionPair {
   w: string;
   h: string;
 }
 
-function blankOpeningPair(): OpeningDimensionPair {
+export function blankOpeningPair(): OpeningDimensionPair {
   return { w: "", h: "" };
 }
 
@@ -538,20 +553,26 @@ function blankOpeningPair(): OpeningDimensionPair {
  *
  * 開口は1箇所とは限らない(例: 4〜6面盤を連結した1系統で、盤ごとに給排気口
  * を持つ場合)ため、W×H欄は複数追加でき、合計面積を自動計算する。
+ * pairs はcaseの保存対象(VentOpeningState)に含めて呼び出し側が保持する —
+ * ユーザーからの指示により「明示的にクリアするまで」画面を離れても消えない
+ * ようにするため、ここではローカルstateを持たない制御コンポーネントにする。
  */
 function AreaFromDimensionsField({
   label,
   hintKey,
   value,
   onChange,
+  pairs,
+  onPairsChange,
 }: {
   label: string;
   hintKey: string;
   value: string;
   onChange: (v: string) => void;
+  pairs: OpeningDimensionPair[];
+  onPairsChange: (next: OpeningDimensionPair[]) => void;
 }) {
   const { t } = useTranslation();
-  const [pairs, setPairs] = useState<OpeningDimensionPair[]>([blankOpeningPair()]);
 
   function applyDimensions(next: OpeningDimensionPair[]) {
     const total = next.reduce((sum, p) => {
@@ -564,22 +585,22 @@ function AreaFromDimensionsField({
 
   function updatePair(i: number, patch: Partial<OpeningDimensionPair>) {
     const next = pairs.map((p, idx) => (idx === i ? { ...p, ...patch } : p));
-    setPairs(next);
+    onPairsChange(next);
     applyDimensions(next);
   }
 
   function addPair() {
-    setPairs([...pairs, blankOpeningPair()]);
+    onPairsChange([...pairs, blankOpeningPair()]);
   }
 
   function removePair(i: number) {
     const next = pairs.filter((_, idx) => idx !== i);
-    setPairs(next);
+    onPairsChange(next);
     applyDimensions(next);
   }
 
   function clearPairs() {
-    setPairs([blankOpeningPair()]);
+    onPairsChange([blankOpeningPair()]);
   }
 
   return (
@@ -654,8 +675,22 @@ export function VentOpeningFields({ value, onChange }: { value: VentOpeningState
       </div>
       <p className="text-[12px] text-foreground">{t("ventilationCalc.ventOpeningHint")}</p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <AreaFromDimensionsField label="Ai (有効給気口面積)" hintKey="ventilationCalc.supplyAreaHint" value={value.supplyAreaM2Raw} onChange={(v) => onChange({ ...value, supplyAreaM2Raw: v })} />
-        <AreaFromDimensionsField label="Ao (有効排気口面積)" hintKey="ventilationCalc.exhaustAreaHint" value={value.exhaustAreaM2Raw} onChange={(v) => onChange({ ...value, exhaustAreaM2Raw: v })} />
+        <AreaFromDimensionsField
+          label="Ai (有効給気口面積)"
+          hintKey="ventilationCalc.supplyAreaHint"
+          value={value.supplyAreaM2Raw}
+          onChange={(v) => onChange({ ...value, supplyAreaM2Raw: v })}
+          pairs={value.supplyOpenings}
+          onPairsChange={(next) => onChange({ ...value, supplyOpenings: next })}
+        />
+        <AreaFromDimensionsField
+          label="Ao (有効排気口面積)"
+          hintKey="ventilationCalc.exhaustAreaHint"
+          value={value.exhaustAreaM2Raw}
+          onChange={(v) => onChange({ ...value, exhaustAreaM2Raw: v })}
+          pairs={value.exhaustOpenings}
+          onPairsChange={(next) => onChange({ ...value, exhaustOpenings: next })}
+        />
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <NumField label="h (給排気口の高低差)" hintKey="ventilationCalc.heightDiffHint" value={value.heightDiffMRaw} onChange={(v) => onChange({ ...value, heightDiffMRaw: v })} unit="m" />
