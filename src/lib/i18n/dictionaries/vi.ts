@@ -617,6 +617,8 @@ const vi: Dictionary = {
     fanCapacityHint: "Lưu lượng theo catalogue của quạt sử dụng (mỗi quạt)",
     filterVelocityLabel: "Tốc độ gió chuẩn của bộ lọc",
     filterVelocityHint: "Giá trị catalogue bộ lọc (điều kiện tổn thất áp suất ở tốc độ gió chuẩn)",
+    filterPressureLossLabel: "Tổn thất áp suất của bộ lọc",
+    filterPressureLossHint: "Giá trị catalogue bộ lọc (tổn thất áp suất ở tốc độ gió chuẩn). Chỉ để ghi chú tham khảo, không ảnh hưởng đến kết quả tính toán.",
     resultColumns: {
       baseFanCount: "Số quạt cần (theo lưu lượng WK)",
       staticPressure: "Kiểm tra áp suất tĩnh của quạt",

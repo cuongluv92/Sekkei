@@ -79,6 +79,9 @@ export interface OutdoorVentilationExportData {
   hoodFlowCoefficientX: number;
   fanCapacityM3PerHPerUnit: number | null;
   filterRatedVelocityMPerS: number | null;
+  /** フィルタの圧力損失(Pa) — 実物シートには記録欄があるが、どの数式からも
+   * 参照されない(unzipして確認済み)ため計算結果には影響しない参考値。 */
+  filterPressureLossPa: number | null;
 }
 
 export interface IndoorVentilationExportData {
@@ -98,6 +101,8 @@ export interface IndoorVentilationExportData {
   hoodFlowCoefficientX: number;
   fanCapacityM3PerHPerUnit: number | null;
   filterRatedVelocityMPerS: number | null;
+  /** フィルタの圧力損失(Pa) — 屋外側と同じ理由で計算には使わない参考値。 */
+  filterPressureLossPa: number | null;
   /** 自然換気だけで足りない(強制換気が必要な)判定結果 — フィルタ無しシートの
    * 選択に使う(実物のフィルタ無しシートには強制換気セクションの行が無いため)。 */
   forcedVentilationNeeded: boolean;
@@ -212,10 +217,11 @@ export async function exportOutdoorVentilationExcel(data: OutdoorVentilationExpo
     // O58(フィルタの標準風速)はM59(風量)の実式が直接参照するため、S54と同じ
     // 理由で未入力時は明示的に空欄にする。H58(フィルタの圧力損失Pa)はどの
     // 数式からも参照されていない(unzipして確認済み — カタログ照合用の参考
-    // 値でしかない)ためアプリでは収集しておらず、テンプレートの例示値
-    // (9.3Pa等)をそのまま出力しないよう常に空欄にする。
+    // 値でしかない)ため計算結果には影響しないが、実物シートの記録欄として
+    // 入力されていればそのまま書き込む(未入力ならテンプレートの例示値を
+    // 残さず空欄にする)。
     ws.getCell("O58").value = data.filterRatedVelocityMPerS ?? null;
-    ws.getCell("H58").value = null;
+    ws.getCell("H58").value = data.filterPressureLossPa ?? null;
     ws.getCell("Q60").value = { formula: "MAX(H53,T59)" };
   } else {
     // 実物の「屋外フィルタ無し」シートを直接使用 — フィルタ専用行(58〜59行目)
@@ -287,10 +293,10 @@ export async function exportIndoorVentilationExcel(data: IndoorVentilationExport
     ws.getCell("V32").value = data.filterResistanceCoefficient ?? 0; // ζF
     // O46(フィルタの標準風速)はM47(風量)の実式が直接参照するため同様に未
     // 入力時は空欄にする。H46(フィルタの圧力損失Pa)はどの数式からも参照
-    // されていない(unzipして確認済み)ためアプリでは収集しておらず、常に
-    // 空欄にする。
+    // されていない(unzipして確認済み)ため計算結果には影響しないが、記録
+    // 欄として入力されていればそのまま書き込む。
     ws.getCell("O46").value = data.filterRatedVelocityMPerS ?? null;
-    ws.getCell("H46").value = null;
+    ws.getCell("H46").value = data.filterPressureLossPa ?? null;
     ws.getCell("Q48").value = { formula: "MAX(H41,T47)" };
   } else if (useRealNoFilterSheet) {
     // 実物の「屋内フィルタ無し」シートを直接使用 — 強制換気セクション自体が

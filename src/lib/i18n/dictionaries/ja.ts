@@ -600,6 +600,8 @@ const ja: Dictionary = {
     fanCapacityHint: "使用する換気扇のカタログ風量（1台あたり）",
     filterVelocityLabel: "フィルタの標準風速",
     filterVelocityHint: "フィルタのカタログ値（標準風速時の圧力損失条件）",
+    filterPressureLossLabel: "フィルタの圧力損失",
+    filterPressureLossHint: "フィルタのカタログ値（標準風速時の圧力損失）。記録用の参考値で、計算結果には影響しません。",
     resultColumns: {
       baseFanCount: "必要換気扇台数（風量WKより）",
       staticPressure: "換気扇の静圧確認",

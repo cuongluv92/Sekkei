@@ -88,6 +88,10 @@ interface VentOpeningState {
   hoodFlowCoefficientXRaw: string;
   fanCapacityM3PerHPerUnitRaw: string;
   filterRatedVelocityMPerSRaw: string;
+  /** フィルタの圧力損失(Pa) — 実物のExcel「7)使用換気扇風量及び台数の確認」
+   * 節にはあるが、どの数式からも参照されない(unzipして確認済み)ため計算
+   * には使わない、記録・参考用のみの値。 */
+  filterPressureLossPaRaw: string;
   /** Ai・Ao の開口W×H入力補助 — ユーザーが明示的にクリアするまで保持する(caseの保存対象)。 */
   supplyOpenings: OpeningDimensionPair[];
   exhaustOpenings: OpeningDimensionPair[];
@@ -105,18 +109,21 @@ function blankVentOpening(): VentOpeningState {
     hoodFlowCoefficientXRaw: "0.8",
     fanCapacityM3PerHPerUnitRaw: "",
     filterRatedVelocityMPerSRaw: "",
+    filterPressureLossPaRaw: "",
     supplyOpenings: [blankOpeningPair()],
     exhaustOpenings: [blankOpeningPair()],
   };
 }
 
-/** 保存済みcaseの読み込み時、supplyOpenings/exhaustOpenings追加前に保存されたデータには存在しないため補完する。 */
+/** 保存済みcaseの読み込み時、supplyOpenings/exhaustOpenings・filterPressureLossPaRaw
+ * 追加前に保存されたデータには存在しないため補完する。 */
 export function normalizeVentOpening(saved: VentOpeningState | undefined): VentOpeningState {
   const base = saved ?? blankVentOpening();
   return {
     ...base,
     supplyOpenings: base.supplyOpenings?.length ? base.supplyOpenings : [blankOpeningPair()],
     exhaustOpenings: base.exhaustOpenings?.length ? base.exhaustOpenings : [blankOpeningPair()],
+    filterPressureLossPaRaw: base.filterPressureLossPaRaw ?? "",
   };
 }
 
@@ -354,6 +361,7 @@ export function OutdoorVentilationView({ caseId }: Props) {
         hoodFlowCoefficientX,
         fanCapacityM3PerHPerUnit,
         filterRatedVelocityMPerS,
+        filterPressureLossPa: Number(ventOpening.filterPressureLossPaRaw) || null,
       });
       showExportMessage(t("ventilationCalc.exportedMessage", { fileName }));
     } catch (err) {
@@ -498,6 +506,8 @@ export function OutdoorVentilationView({ caseId }: Props) {
           onFanCapacityChange={(v) => setVentOpening({ ...ventOpening, fanCapacityM3PerHPerUnitRaw: v })}
           filterRatedVelocityMPerSRaw={ventOpening.filterRatedVelocityMPerSRaw}
           onFilterRatedVelocityChange={(v) => setVentOpening({ ...ventOpening, filterRatedVelocityMPerSRaw: v })}
+          filterPressureLossPaRaw={ventOpening.filterPressureLossPaRaw}
+          onFilterPressureLossChange={(v) => setVentOpening({ ...ventOpening, filterPressureLossPaRaw: v })}
         />
       )}
 
@@ -777,6 +787,8 @@ export function VentilationResultPanel({
   onFanCapacityChange,
   filterRatedVelocityMPerSRaw,
   onFilterRatedVelocityChange,
+  filterPressureLossPaRaw,
+  onFilterPressureLossChange,
   heatLossLabel = "QBO",
 }: {
   totalHeatGainW: number;
@@ -795,6 +807,8 @@ export function VentilationResultPanel({
   onFanCapacityChange: (v: string) => void;
   filterRatedVelocityMPerSRaw: string;
   onFilterRatedVelocityChange: (v: string) => void;
+  filterPressureLossPaRaw: string;
+  onFilterPressureLossChange: (v: string) => void;
   /** 自然放熱の記号 — 屋外はQBO、屋内はQBi (呼び方が違うだけで判定式は同じ)。 */
   heatLossLabel?: string;
 }) {
@@ -866,6 +880,15 @@ export function VentilationResultPanel({
                 value={filterRatedVelocityMPerSRaw}
                 onChange={onFilterRatedVelocityChange}
                 unit="m/s"
+              />
+            )}
+            {useFilter && (
+              <NumField
+                label={t("ventilationCalc.filterPressureLossLabel")}
+                hintKey="ventilationCalc.filterPressureLossHint"
+                value={filterPressureLossPaRaw}
+                onChange={onFilterPressureLossChange}
+                unit="Pa"
               />
             )}
           </div>

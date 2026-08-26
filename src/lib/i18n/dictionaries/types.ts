@@ -554,6 +554,8 @@ export interface Dictionary {
     fanCapacityHint: string;
     filterVelocityLabel: string;
     filterVelocityHint: string;
+    filterPressureLossLabel: string;
+    filterPressureLossHint: string;
     resultColumns: {
       baseFanCount: string;
       staticPressure: string;

@@ -45,6 +45,7 @@ interface VentOpeningState {
   hoodFlowCoefficientXRaw: string;
   fanCapacityM3PerHPerUnitRaw: string;
   filterRatedVelocityMPerSRaw: string;
+  filterPressureLossPaRaw: string;
   supplyOpenings: OpeningDimensionPair[];
   exhaustOpenings: OpeningDimensionPair[];
 }
@@ -61,6 +62,7 @@ function blankVentOpening(): VentOpeningState {
     hoodFlowCoefficientXRaw: "0.8",
     fanCapacityM3PerHPerUnitRaw: "",
     filterRatedVelocityMPerSRaw: "",
+    filterPressureLossPaRaw: "",
     supplyOpenings: [blankOpeningPair()],
     exhaustOpenings: [blankOpeningPair()],
   };
@@ -240,6 +242,7 @@ export function IndoorVentilationView({ caseId }: Props) {
         hoodFlowCoefficientX,
         fanCapacityM3PerHPerUnit,
         filterRatedVelocityMPerS,
+        filterPressureLossPa: Number(ventOpening.filterPressureLossPaRaw) || null,
         forcedVentilationNeeded: !result.naturalVentilationSufficient,
       });
       showExportMessage(t("ventilationCalc.exportedMessage", { fileName }));
@@ -341,6 +344,8 @@ export function IndoorVentilationView({ caseId }: Props) {
           onFanCapacityChange={(v) => setVentOpening({ ...ventOpening, fanCapacityM3PerHPerUnitRaw: v })}
           filterRatedVelocityMPerSRaw={ventOpening.filterRatedVelocityMPerSRaw}
           onFilterRatedVelocityChange={(v) => setVentOpening({ ...ventOpening, filterRatedVelocityMPerSRaw: v })}
+          filterPressureLossPaRaw={ventOpening.filterPressureLossPaRaw}
+          onFilterPressureLossChange={(v) => setVentOpening({ ...ventOpening, filterPressureLossPaRaw: v })}
           heatLossLabel="QBi"
         />
       )}
