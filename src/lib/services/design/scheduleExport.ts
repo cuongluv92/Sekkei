@@ -40,7 +40,7 @@ const LABEL_COL_A_WIDTH = 15;
 // 件名／盤名称は実際の案件名が長いことが多いため、月グリッド側より広め
 // に確保する — 全体はA3の印刷幅に収まるようオートフィットで縮小される
 // ので、ここを広げても他の帳票のようにはみ出すことはない。
-const LABEL_COL_B_WIDTH = 100;
+const LABEL_COL_B_WIDTH = 110;
 // 5ヶ月分だと日単位で約150列になる — 幅を欲張ると合計の列幅が広くなり
 // すぎて、A3の印刷可能幅に収めるためのオートフィット倍率が大きく下がり、
 // 文字が小さくなりすぎる(前回の値2だと合計幅が旧・旬レイアウトの1.6倍
@@ -51,6 +51,9 @@ const DAY_COL_WIDTH = 1;
 // 高さは要らない — この3行だけ低くしてヘッダー部分をコンパクトにする
 // (データ行はガントバーのラベルが収まる余裕を保つため20のまま)。
 const HEADER_ROW_HEIGHT = 10;
+// タイトル文字だけ16pt(太字)と他の見出しより大きく、HEADER_ROW_HEIGHT(10)
+// のままだと行の高さが足りず窮屈に見えるため専用の高さを確保する。
+const TITLE_ROW_HEIGHT = 20;
 const ROW_HEIGHT = 24;
 const TITLE_ROW = 1;
 const LEGEND_ROW = 2;
@@ -163,7 +166,7 @@ function buildHeader(
   titleCell.value = "納入工程";
   titleCell.font = { size: 16, bold: true };
   titleCell.alignment = { horizontal: "left", vertical: "middle" };
-  ws.getRow(TITLE_ROW).height = HEADER_ROW_HEIGHT;
+  ws.getRow(TITLE_ROW).height = TITLE_ROW_HEIGHT;
 
   // 凡例 — 色見本(1列)+ラベル(文字数に応じて複数列を結合)を、間隔を空けず
   // コンパクトにまとめて月グリッドの右端に寄せる(layoutLegend参照)。
@@ -207,9 +210,9 @@ function buildHeader(
     monthCell.value = `${m.year}/${String(m.month).padStart(2, "0")}`;
     monthCell.font = { size: 10, bold: true };
     monthCell.alignment = { horizontal: "center", vertical: "middle" };
-    monthCell.border = { top: THIN, left: THICK, right: THIN, bottom: THIN };
+    monthCell.border = { top: THICK, left: THICK, right: THICK, bottom: THICK };
 
-    JUN_RANGES.forEach(({ label, startDay, endDay }, i) => {
+    JUN_RANGES.forEach(({ label, startDay, endDay }) => {
       const colStart = m.colStart + startDay - 1;
       const colEnd = m.colStart + endDay - 1;
       ws.mergeCells(JUN_HEADER_ROW, colStart, JUN_HEADER_ROW, colEnd);
@@ -217,7 +220,7 @@ function buildHeader(
       cell.value = label;
       cell.font = { size: 10 };
       cell.alignment = { horizontal: "center", vertical: "middle" };
-      cell.border = { top: THIN, left: i === 0 ? THICK : THIN, right: THIN, bottom: THIN };
+      cell.border = { top: THICK, left: THICK, right: THICK, bottom: THICK };
     });
   }
   ws.getRow(MONTH_HEADER_ROW).height = HEADER_ROW_HEIGHT;
@@ -326,7 +329,7 @@ function buildScheduleWorkbook(
             // 区切る。
             bottom: rowIndex === ROW_SPAN - 1 ? THICK : THIN,
             left: drawLeft,
-            right: col === lastCol ? THIN : undefined,
+            right: col === lastCol ? THICK : undefined,
           };
           if (hex) {
             // 空欄埋め(paddingBridgeColor)の場合は key が無い(実日付でない)
