@@ -23,7 +23,8 @@ import type {
 } from "@/lib/types/design";
 
 /**
- * 工程表(簡易) — 実日カレンダー(表示月の1日を起点に約1.5ヶ月分並べる)で、
+ * 工程表(簡易) — 実日カレンダー(通常は今日を起点に約1.5ヶ月分・日付が
+ * 進めば自動でずれる。過去/未来の月へ移動した場合はその月の1日が起点)で、
  * 色分けの代わりに各マイルストーン当日のセルにカテゴリ名を直接文字で書く
  * 軽量版。行構成は既存のSCREEN_PROCESS_ROWS(鈑金・BOX納入/アクセサリー納入/
  * 製作・検査/立会・出荷)をそのまま使うが、表示する値は板金納入/BOX納入/
@@ -60,9 +61,16 @@ function toIso(year: number, month: number, day: number): string {
   return `${year}-${pad(month)}-${pad(day)}`;
 }
 
-/** focus年月の1日を起点にDAYS_SPAN日分(約1.5ヶ月)の実日を並べる。 */
+/**
+ * focus年月からDAYS_SPAN日分(約1.5ヶ月)の実日を並べる。表示中がまさに
+ * 今月(=ナビゲーションしていない通常状態)なら起点は今日 — 日付が進めば
+ * 自動でウィンドウも今日基準にずれていく。過去/未来の月に移動した場合は
+ * その月の1日を起点にする(1日より前は表示しようがないため)。
+ */
 function buildDayList(focus: { year: number; month: number }): DayInfo[] {
-  const start = new Date(focus.year, focus.month - 1, 1);
+  const now = new Date();
+  const isCurrentMonth = focus.year === now.getFullYear() && focus.month === now.getMonth() + 1;
+  const start = isCurrentMonth ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : new Date(focus.year, focus.month - 1, 1);
   const days: DayInfo[] = [];
   const cursor = new Date(start);
   for (let i = 0; i < DAYS_SPAN; i++) {
@@ -286,6 +294,13 @@ export function ScheduleQuickOverview() {
         ) : (
           <div className="overflow-x-auto">
             <table className="border-collapse text-[12px]" style={{ tableLayout: "fixed" }}>
+              <colgroup>
+                <col style={{ width: DRAWING_COL_WIDTH }} />
+                <col style={{ width: LABEL_COL_WIDTH }} />
+                {days.map((_, i) => (
+                  <col key={i} style={{ width: DAY_WIDTH }} />
+                ))}
+              </colgroup>
               <thead>
                 <tr>
                   <th
@@ -384,8 +399,8 @@ export function ScheduleQuickOverview() {
                         return (
                           <td
                             key={`c-${c.id}-${rowIndex}-${i}`}
-                            className={`border-b border-l border-border py-1 text-center text-[10px] font-bold text-foreground ${d.day === 1 ? "border-l-border-strong" : ""} ${rowIndex === SCREEN_PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
-                            style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
+                            className={`overflow-hidden border-b border-l border-border py-1 text-center text-[10px] font-bold text-ellipsis whitespace-nowrap text-foreground ${d.day === 1 ? "border-l-border-strong" : ""} ${rowIndex === SCREEN_PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
+                            style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH, maxWidth: DAY_WIDTH }}
                           >
                             {label}
                           </td>
@@ -481,6 +496,13 @@ export function ScheduleQuickOverview() {
         ) : (
           <div className="overflow-x-auto">
             <table className="border-collapse text-[12px]" style={{ tableLayout: "fixed" }}>
+              <colgroup>
+                <col style={{ width: DRAWING_COL_WIDTH }} />
+                <col style={{ width: LABEL_COL_WIDTH }} />
+                {days.map((_, i) => (
+                  <col key={i} style={{ width: DAY_WIDTH }} />
+                ))}
+              </colgroup>
               <thead>
                 <tr>
                   <th
