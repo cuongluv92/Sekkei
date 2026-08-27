@@ -4,12 +4,12 @@ import { scheduleColorService } from "./scheduleColorService";
 import { printWorksheet } from "./excelPrintView";
 import {
   addMonths,
-  buildJunColorLookupByScreenRow,
-  buildMilestoneLabelsByJunRow,
-  computeColoredSegments,
+  buildDayColorLookupByRow,
+  buildMilestoneLabelsByRow,
+  computeColoredDays,
   computeMilestones,
-  JUN_BUCKETS,
-  junCellKeyRow,
+  dayCellKeyRow,
+  daysInMonth,
   SCREEN_MONTHS_AFTER,
   SCREEN_MONTHS_BEFORE,
   SCREEN_PROCESS_ROWS,
@@ -25,24 +25,25 @@ import type { CaseSchedule, DesignCaseWithPanels, ScheduleCategoryKey } from "@/
  * ため、Excel側もテンプレートファイルに縛られず画面と同じ構成・同じ表示
  * 月数(SCREEN_MONTHS_BEFORE/AFTER)で出力するように作り直した。
  *
- * 実際の日単位の精度(画面は1日ごとに正確に色が変わる)はExcelの印刷幅の
- * 都合上そのまま持ち込めない — 列数が多すぎて1日あたりが読めない幅に
- * なってしまうため、Excel側は旬(初/中/下・3列/月)単位に丸めている
- * (buildJunColorLookupByScreenRow — 行構成だけ画面と共通のSCREEN_PROCESS_
- * ROWSを使う)。日付ラベルは旬セルの中に小さく表示する。
+ * 列は画面と同じ実日単位(1日=1列)。以前は旬(初/中/下・3列/月)に丸めて
+ * いたが、同じ行・同じ旬内に2つの区分(例: 製作の残り日数と検査の開始
+ * 直後)が両方収まる場合、後から処理する側が「同じセルは上書きしない」
+ * ルールで完全に見えなくなる(色もラベルも消える)問題があった — 画面は
+ * 1日ごとに別セルなので絶対に起きない。実日単位にすることで画面と全く
+ * 同じ計算(computeColoredDays/buildDayColorLookupByRow)を使い、この
+ * 種の情報欠落を構造的になくす。
  */
 
 // 列幅・行の高さは全て5刻みの整数(端数なし)に揃える — Excel/印刷どちらも
 // 同じワークシートの値をそのまま使うため、ここを整数にすれば両方に効く。
 const LABEL_COL_A_WIDTH = 15;
 const LABEL_COL_B_WIDTH = 40;
-const JUN_COL_WIDTH = 10;
+const DAY_COL_WIDTH = 2;
 const ROW_HEIGHT = 20;
 const TITLE_ROW = 1;
 const LEGEND_ROW = 2;
 const MONTH_HEADER_ROW = 4;
-const JUN_HEADER_ROW = 5;
-const DATA_START_ROW = 6;
+const DATA_START_ROW = 5;
 const ROW_SPAN = SCREEN_PROCESS_ROWS.length; // 1案件あたりの行数(画面と共通)
 
 // 実テンプレートの凡例と同じ並び(box は sheetMetal の色見本に統合されるため単独では出さない)。
@@ -101,7 +102,8 @@ function layoutLegend(endCol: number): LegendEntry[] {
 interface MonthColumn {
   year: number;
   month: number;
-  colStart: number; // 初列の絶対列番号
+  colStart: number; // 1日の絶対列番号
+  days: number; // その月の日数(列数)
 }
 
 /** 今日を中心に、画面のタイムラインと同じ月数(SCREEN_MONTHS_BEFORE〜AFTER)分の月を並べる。 */
@@ -111,8 +113,9 @@ function computeMonths(): MonthColumn[] {
   let col = 3; // A/Bの次から
   for (let i = -SCREEN_MONTHS_BEFORE; i <= SCREEN_MONTHS_AFTER; i++) {
     const m = addMonths(now.getFullYear(), now.getMonth() + 1, i);
-    months.push({ year: m.year, month: m.month, colStart: col });
-    col += JUN_BUCKETS.length;
+    const days = daysInMonth(m.year, m.month);
+    months.push({ year: m.year, month: m.month, colStart: col, days });
+    col += days;
   }
   return months;
 }
@@ -133,8 +136,6 @@ function buildHeader(
 
   // 凡例 — 色見本(1列)+ラベル(文字数に応じて複数列を結合)を、間隔を空けず
   // コンパクトにまとめて月グリッドの右端に寄せる(layoutLegend参照)。
-  // 単一の狭い列にラベルを置くと、データ列(旬=約10幅)の境目でラベルが
-  // 隣の色見本に重なって見えてしまうため、必ずラベル分の幅を結合で確保する。
   for (const { key, label, swatchCol, labelColStart, labelColEnd } of legendEntries) {
     const swatch = ws.getCell(LEGEND_ROW, swatchCol);
     const color = colorByCategory.get(key);
@@ -148,10 +149,8 @@ function buildHeader(
   }
   ws.getRow(LEGEND_ROW).height = ROW_HEIGHT;
 
-  ws.mergeCells(MONTH_HEADER_ROW, 1, JUN_HEADER_ROW, 1);
   const colACaption = ws.getCell(MONTH_HEADER_ROW, 1);
   colACaption.value = "図面番号\n管理番号";
-  ws.mergeCells(MONTH_HEADER_ROW, 2, JUN_HEADER_ROW, 2);
   const colBCaption = ws.getCell(MONTH_HEADER_ROW, 2);
   colBCaption.value = "件名／盤名称";
   for (const cell of [colACaption, colBCaption]) {
@@ -161,23 +160,14 @@ function buildHeader(
   }
 
   for (const m of months) {
-    ws.mergeCells(MONTH_HEADER_ROW, m.colStart, MONTH_HEADER_ROW, m.colStart + JUN_BUCKETS.length - 1);
+    ws.mergeCells(MONTH_HEADER_ROW, m.colStart, MONTH_HEADER_ROW, m.colStart + m.days - 1);
     const monthCell = ws.getCell(MONTH_HEADER_ROW, m.colStart);
     monthCell.value = `${m.year}/${String(m.month).padStart(2, "0")}`;
     monthCell.font = { size: 10, bold: true };
     monthCell.alignment = { horizontal: "center", vertical: "middle" };
     monthCell.border = { top: THIN, left: THICK, right: THIN, bottom: THIN };
-
-    JUN_BUCKETS.forEach((bucket, i) => {
-      const cell = ws.getCell(JUN_HEADER_ROW, m.colStart + i);
-      cell.value = bucket;
-      cell.font = { size: 10 };
-      cell.alignment = { horizontal: "center", vertical: "middle" };
-      cell.border = { top: THIN, left: i === 0 ? THICK : THIN, right: THIN, bottom: THIN };
-    });
   }
   ws.getRow(MONTH_HEADER_ROW).height = ROW_HEIGHT;
-  ws.getRow(JUN_HEADER_ROW).height = ROW_HEIGHT;
 }
 
 function buildScheduleWorkbook(
@@ -186,7 +176,7 @@ function buildScheduleWorkbook(
   colorConfigs: { category: ScheduleCategoryKey; color: string }[],
 ): ExcelJS.Worksheet {
   const months = computeMonths();
-  const lastCol = 2 + months.length * JUN_BUCKETS.length; // データ(月/旬)グリッドの最終列
+  const lastCol = 2 + months.reduce((sum, m) => sum + m.days, 0); // データ(月/日)グリッドの最終列
   const legendEntries = layoutLegend(lastCol); // 月グリッドの右端に右詰め
   const legendLastCol = Math.max(...legendEntries.map((e) => e.labelColEnd));
   const printLastCol = Math.max(lastCol, legendLastCol); // 凡例がそれでもはみ出す場合はそちらに合わせる
@@ -204,13 +194,13 @@ function buildScheduleWorkbook(
       fitToHeight: 0,
       margins: { top: 0.3, bottom: 0.3, left: 0.3, right: 0.3, header: 0, footer: 0 },
     },
-    views: [{ state: "frozen", xSplit: 2, ySplit: JUN_HEADER_ROW }],
+    views: [{ state: "frozen", xSplit: 2, ySplit: MONTH_HEADER_ROW }],
   });
 
   ws.columns = [
     { width: LABEL_COL_A_WIDTH },
     { width: LABEL_COL_B_WIDTH },
-    ...Array.from({ length: printLastCol - 2 }, () => ({ width: JUN_COL_WIDTH })),
+    ...Array.from({ length: printLastCol - 2 }, () => ({ width: DAY_COL_WIDTH })),
   ];
 
   buildHeader(ws, months, colorByCategory, printLastCol, legendEntries);
@@ -234,25 +224,33 @@ function buildScheduleWorkbook(
     colA.note = buildCaseDisplayLabel(c, panels);
 
     const schedule = schedules[c.id];
-    const lookup = schedule
-      ? buildJunColorLookupByScreenRow(computeColoredSegments(schedule), colorConfigs)
-      : new Map<string, string>();
-    const labels = schedule ? buildMilestoneLabelsByJunRow(computeMilestones(schedule)) : new Map<string, string>();
+    const lookup = schedule ? buildDayColorLookupByRow(computeColoredDays(schedule), colorConfigs) : new Map<string, string>();
+    const labels = schedule ? buildMilestoneLabelsByRow(computeMilestones(schedule)) : new Map<string, string>();
 
-    // 画面(ScheduleTimeline.tsx)と同じ考え方 — 旬セルの左境界線は、直前の旬
-    // セルと同じ色(=同じ期間が続いている)なら消し、色が変わる/途切れる所
-    // だけに引く。そうしないと同じ色の帯が旬ごとに線で分断されて見える。
+    // 画面(ScheduleTimeline.tsx)と全く同じ考え方 — 月/旬の変わり目(1日・
+    // 11日・21日)にだけ区切り線を検討し、直前の日と同じ色(=同じ期間が
+    // 続いている)なら線を消す。それ以外の日の間には元々線を引かない
+    // (画面もそう)。実日単位なので、同じ行・同じ日に2つの区分が重なる
+    // ことは構造的に起こらない — 起きるのは「先勝ち」が必要な本当の重複
+    // (例: 鈑金納入日とBOX納入日が同日)だけで、その場合も見た目は1色の
+    // ままで正しい。
     for (let rowIndex = 0; rowIndex < ROW_SPAN; rowIndex++) {
       const row = ws.getRow(blockStart + rowIndex);
       row.height = ROW_HEIGHT;
-      let prevColor: string | undefined;
-      let col = 3;
       for (const monthEntry of months) {
-        for (const bucket of JUN_BUCKETS) {
-          const key = junCellKeyRow(monthEntry.year, monthEntry.month, bucket, rowIndex);
+        for (let day = 1; day <= monthEntry.days; day++) {
+          const key = dayCellKeyRow(monthEntry.year, monthEntry.month, day, rowIndex);
           const hex = lookup.get(key);
-          const isMonthStart = (col - 3) % JUN_BUCKETS.length === 0;
-          const continuesColor = !!hex && hex === prevColor;
+          const isMonthStart = day === 1;
+          const isJunStart = day === 11 || day === 21;
+          const col = monthEntry.colStart + day - 1;
+          let drawLeft: Partial<ExcelJS.Border> | undefined;
+          if (isMonthStart || isJunStart) {
+            const prevMonth = isMonthStart ? addMonths(monthEntry.year, monthEntry.month, -1) : monthEntry;
+            const prevDay = isMonthStart ? daysInMonth(prevMonth.year, prevMonth.month) : day - 1;
+            const prevColor = lookup.get(dayCellKeyRow(prevMonth.year, prevMonth.month, prevDay, rowIndex));
+            if (!hex || hex !== prevColor) drawLeft = isMonthStart ? THICK : THIN;
+          }
           const cell = row.getCell(col);
           cell.border = {
             top: rowIndex === 0 ? THICK : undefined,
@@ -263,7 +261,7 @@ function buildScheduleWorkbook(
             // 最終行だけ太い線(案件ブロックの下端)、それ以外は細い線で行を
             // 区切る。
             bottom: rowIndex === ROW_SPAN - 1 ? THICK : THIN,
-            left: continuesColor ? undefined : isMonthStart ? THICK : THIN,
+            left: drawLeft,
             right: col === lastCol ? THIN : undefined,
           };
           if (hex) {
@@ -275,20 +273,18 @@ function buildScheduleWorkbook(
               cell.alignment = { horizontal: "right", vertical: "bottom" };
             }
           }
-          prevColor = hex;
-          col += 1;
         }
       }
     }
   });
 
   const lastRow = DATA_START_ROW + cases.length * ROW_SPAN - 1;
-  ws.pageSetup.printArea = `A1:${ws.getColumn(printLastCol).letter}${Math.max(lastRow, JUN_HEADER_ROW)}`;
-  // 案件が1ページに収まらない数まで増えた場合、タイトル/凡例/月・旬見出し
-  // を各ページの先頭に繰り返し、1案件分の4行ブロックがページの境目で
-  // 分断されないようにする(印刷ビュー側でthead/1グループ=1tbodyとして
-  // 解釈する — excelPrintView.tsのrenderWorksheetHtml参照)。
-  ws.pageSetup.printTitlesRow = `${TITLE_ROW}:${JUN_HEADER_ROW}`;
+  ws.pageSetup.printArea = `A1:${ws.getColumn(printLastCol).letter}${Math.max(lastRow, MONTH_HEADER_ROW)}`;
+  // 案件が1ページに収まらない数まで増えた場合、タイトル/凡例/月見出しを
+  // 各ページの先頭に繰り返し、1案件分の4行ブロックがページの境目で分断
+  // されないようにする(印刷ビュー側でthead/1グループ=1tbodyとして解釈
+  // する — excelPrintView.tsのrenderWorksheetHtml参照)。
+  ws.pageSetup.printTitlesRow = `${TITLE_ROW}:${MONTH_HEADER_ROW}`;
 
   return ws;
 }

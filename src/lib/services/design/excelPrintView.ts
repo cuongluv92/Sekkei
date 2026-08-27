@@ -282,6 +282,14 @@ export function renderWorksheetHtml(ws: Worksheet): string {
       const fill = cell.fill;
       const border = cell.border ?? {};
 
+      const rawText = cellText(cell);
+      // Real Excel lets a cell's text spill into an adjacent EMPTY cell
+      // instead of clipping — this matters a lot for the narrow per-day
+      // columns in 納入工程, where an end-of-range label ("15", "済") is
+      // wider than its own 1-day column. Reproduce that here (only for
+      // cells that actually hold text — an empty cell has nothing to spill,
+      // and clipping wrapped/normal table text is still correct elsewhere).
+      const overflowStyle = rawText && !align?.wrapText ? "overflow:visible;position:relative;z-index:1" : "overflow:hidden";
       const styles: string[] = [
         `border-top:${borderSideCss(border.top)}`,
         `border-left:${borderSideCss(border.left)}`,
@@ -292,7 +300,7 @@ export function renderWorksheetHtml(ws: Worksheet): string {
         `vertical-align:${align?.vertical === "middle" ? "middle" : align?.vertical === "bottom" ? "bottom" : "top"}`,
         `white-space:${align?.wrapText ? "pre-wrap" : "nowrap"}`,
         `padding:${Math.max(0.5, 1 * scale)}px ${Math.max(1, 3 * scale)}px`,
-        "overflow:hidden",
+        overflowStyle,
       ];
       if (fill?.type === "pattern" && fill.fgColor?.argb) {
         const bg = argbToCss(fill.fgColor.argb);
@@ -304,7 +312,7 @@ export function renderWorksheetHtml(ws: Worksheet): string {
       if (color) styles.push(`color:${color}`);
 
       const spanAttr = span ? ` rowspan="${span.rowSpan}" colspan="${span.colSpan}"` : "";
-      const text = escapeHtml(cellText(cell)).replace(/\n/g, "<br/>");
+      const text = escapeHtml(rawText).replace(/\n/g, "<br/>");
       cellsHtml.push(`<td${spanAttr} style="${styles.join(";")}">${text}</td>`);
     }
     return `<tr style="height:${heightPt}pt">${cellsHtml.join("")}</tr>`;
