@@ -10,14 +10,17 @@ const RANGE_FIELDS: {
   /** 完了日欄(endKey)が自由記入テキストで実日付として解釈できない場合の
    * 色分け専用フォールバック — 常に実日付のみを持つ補助欄。 */
   endRefKey?: keyof CaseSchedule;
+  /** 「済」チェック欄 — オンの間はマイルストーンラベルを実日付の日番号
+   * ではなく「済」の文字にする(色分け・バーの範囲自体は実日付のまま)。 */
+  doneKey: keyof CaseSchedule;
 }[] = [
-  { category: "sheetMetal", startKey: "sheetMetalOrderDate", endKey: "sheetMetalDeliveryDate" },
-  { category: "box", startKey: "boxOrderDate", endKey: "boxDeliveryDate" },
-  { category: "accessory", startKey: "accessoryOrderDate", endKey: "accessoryDeliveryDate" },
-  { category: "production", startKey: "productionStartDate", endKey: "productionEndDate", endRefKey: "productionEndRefDate" },
-  { category: "inspection", startKey: "inspectionStartDate", endKey: "inspectionEndDate", endRefKey: "inspectionEndRefDate" },
-  { category: "witness", startKey: "witnessStartDate", endKey: "witnessEndDate", endRefKey: "witnessEndRefDate" },
-  { category: "shipping", startKey: "shippingStartDate", endKey: "shippingEndDate", endRefKey: "shippingEndRefDate" },
+  { category: "sheetMetal", startKey: "sheetMetalOrderDate", endKey: "sheetMetalDeliveryDate", doneKey: "sheetMetalDeliveryDone" },
+  { category: "box", startKey: "boxOrderDate", endKey: "boxDeliveryDate", doneKey: "boxDeliveryDone" },
+  { category: "accessory", startKey: "accessoryOrderDate", endKey: "accessoryDeliveryDate", doneKey: "accessoryDeliveryDone" },
+  { category: "production", startKey: "productionStartDate", endKey: "productionEndDate", endRefKey: "productionEndRefDate", doneKey: "productionEndDone" },
+  { category: "inspection", startKey: "inspectionStartDate", endKey: "inspectionEndDate", endRefKey: "inspectionEndRefDate", doneKey: "inspectionEndDone" },
+  { category: "witness", startKey: "witnessStartDate", endKey: "witnessEndDate", endRefKey: "witnessEndRefDate", doneKey: "witnessEndDone" },
+  { category: "shipping", startKey: "shippingStartDate", endKey: "shippingEndDate", endRefKey: "shippingEndRefDate", doneKey: "shippingEndDone" },
 ];
 
 function parseDate(value: string | null | undefined): Date | null {
@@ -243,33 +246,49 @@ export interface ScheduleMilestone {
   month: number; // 1-12
   day: number;
   category: ScheduleCategoryKey;
+  /** 「済」チェック欄がオンかどうか — オンならラベルは日番号でなく「済」。 */
+  done: boolean;
 }
 
 /**
  * 各カテゴリの「代表日」(納入日/完了日 = RANGE_FIELDS の endKey、自由記入
  * テキストの場合は endRefKey) だけを取り出す — タイムライン上にその日の
- * 日付を数字ラベルとして表示するために使う。
+ * 日付を数字ラベルとして表示するために使う。バーの範囲(色分け)は常に
+ * 実日付のまま — 「済」チェックは表示するラベル文字だけを差し替える。
  */
 export function computeMilestones(schedule: CaseSchedule): ScheduleMilestone[] {
   const out: ScheduleMilestone[] = [];
-  for (const { category, endKey, endRefKey } of RANGE_FIELDS) {
+  for (const { category, endKey, endRefKey, doneKey } of RANGE_FIELDS) {
     const end =
       parseDate(schedule[endKey] as string | null) ??
       (endRefKey ? parseDate(schedule[endRefKey] as string | null) : null);
     if (!end) continue;
-    out.push({ year: end.getFullYear(), month: end.getMonth() + 1, day: end.getDate(), category });
+    out.push({
+      year: end.getFullYear(),
+      month: end.getMonth() + 1,
+      day: end.getDate(),
+      category,
+      done: !!schedule[doneKey],
+    });
   }
   const delivery = parseDate(schedule.deliveryDate);
   if (delivery) {
-    out.push({ year: delivery.getFullYear(), month: delivery.getMonth() + 1, day: delivery.getDate(), category: "shipping" });
+    out.push({
+      year: delivery.getFullYear(),
+      month: delivery.getMonth() + 1,
+      day: delivery.getDate(),
+      category: "shipping",
+      done: !!schedule.deliveryDone,
+    });
   }
   return out;
 }
 
 /**
- * SCREEN_PROCESS_ROWS の行ごとに折りたたんだ日付ラベル (日のみの文字列) —
- * 同じ行・同じ日に複数カテゴリの代表日が重なる場合は1つだけ表示する
- * (例: 鈑金納入日とBOX納入日が同日なら「10」を1つだけ出す)。
+ * SCREEN_PROCESS_ROWS の行ごとに折りたたんだ日付ラベル (日のみの文字列、
+ * 「済」チェックがオンなら「済」) — 同じ行・同じ日に複数カテゴリの代表日
+ * が重なる場合は1つだけ表示する (例: 鈑金納入日とBOX納入日が同日なら
+ * 「10」を1つだけ出す)。
  */
 export function buildMilestoneLabelsByRow(milestones: ScheduleMilestone[]): Map<string, string> {
   const map = new Map<string, string>();
@@ -277,7 +296,7 @@ export function buildMilestoneLabelsByRow(milestones: ScheduleMilestone[]): Map<
     const rowIndex = rowIndexForCategoryScreen(m.category);
     if (rowIndex < 0) continue;
     const key = dayCellKeyRow(m.year, m.month, m.day, rowIndex);
-    if (!map.has(key)) map.set(key, String(m.day));
+    if (!map.has(key)) map.set(key, m.done ? "済" : String(m.day));
   }
   return map;
 }
@@ -321,7 +340,7 @@ export function buildMilestoneLabelsByJunRow(milestones: ScheduleMilestone[]): M
     const rowIndex = rowIndexForCategoryScreen(m.category);
     if (rowIndex < 0) continue;
     const key = junCellKeyRow(m.year, m.month, bucketFromDay(m.day), rowIndex);
-    if (!map.has(key)) map.set(key, String(m.day));
+    if (!map.has(key)) map.set(key, m.done ? "済" : String(m.day));
   }
   return map;
 }

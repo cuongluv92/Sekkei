@@ -44,10 +44,11 @@ const ORDER_DELIVERY_PAIRS: {
   orderLabelKey: string;
   deliveryKey: keyof CaseSchedule;
   deliveryLabelKey: string;
+  doneKey: keyof CaseSchedule;
 }[] = [
-  { orderKey: "sheetMetalOrderDate", orderLabelKey: "sheetMetalOrder", deliveryKey: "sheetMetalDeliveryDate", deliveryLabelKey: "sheetMetalDelivery" },
-  { orderKey: "boxOrderDate", orderLabelKey: "boxOrder", deliveryKey: "boxDeliveryDate", deliveryLabelKey: "boxDelivery" },
-  { orderKey: "accessoryOrderDate", orderLabelKey: "accessoryOrder", deliveryKey: "accessoryDeliveryDate", deliveryLabelKey: "accessoryDelivery" },
+  { orderKey: "sheetMetalOrderDate", orderLabelKey: "sheetMetalOrder", deliveryKey: "sheetMetalDeliveryDate", deliveryLabelKey: "sheetMetalDelivery", doneKey: "sheetMetalDeliveryDone" },
+  { orderKey: "boxOrderDate", orderLabelKey: "boxOrder", deliveryKey: "boxDeliveryDate", deliveryLabelKey: "boxDelivery", doneKey: "boxDeliveryDone" },
+  { orderKey: "accessoryOrderDate", orderLabelKey: "accessoryOrder", deliveryKey: "accessoryDeliveryDate", deliveryLabelKey: "accessoryDelivery", doneKey: "accessoryDeliveryDone" },
 ];
 
 /**
@@ -64,14 +65,41 @@ const AUTO_START_PHASES: {
   endLabelKey: string;
   endRefKey: keyof CaseSchedule;
   endRefLabelKey: string;
+  doneKey: keyof CaseSchedule;
 }[] = [
-  { startKey: "productionStartDate", startLabelKey: "productionStart", endKey: "productionEndDate", endLabelKey: "productionEnd", endRefKey: "productionEndRefDate", endRefLabelKey: "productionEndRef" },
-  { startKey: "inspectionStartDate", startLabelKey: "inspectionStart", endKey: "inspectionEndDate", endLabelKey: "inspectionEnd", endRefKey: "inspectionEndRefDate", endRefLabelKey: "inspectionEndRef" },
-  { startKey: "witnessStartDate", startLabelKey: "witnessStart", endKey: "witnessEndDate", endLabelKey: "witnessEnd", endRefKey: "witnessEndRefDate", endRefLabelKey: "witnessEndRef" },
-  { startKey: "shippingStartDate", startLabelKey: "shippingStart", endKey: "shippingEndDate", endLabelKey: "shippingEnd", endRefKey: "shippingEndRefDate", endRefLabelKey: "shippingEndRef" },
+  { startKey: "productionStartDate", startLabelKey: "productionStart", endKey: "productionEndDate", endLabelKey: "productionEnd", endRefKey: "productionEndRefDate", endRefLabelKey: "productionEndRef", doneKey: "productionEndDone" },
+  { startKey: "inspectionStartDate", startLabelKey: "inspectionStart", endKey: "inspectionEndDate", endLabelKey: "inspectionEnd", endRefKey: "inspectionEndRefDate", endRefLabelKey: "inspectionEndRef", doneKey: "inspectionEndDone" },
+  { startKey: "witnessStartDate", startLabelKey: "witnessStart", endKey: "witnessEndDate", endLabelKey: "witnessEnd", endRefKey: "witnessEndRefDate", endRefLabelKey: "witnessEndRef", doneKey: "witnessEndDone" },
+  { startKey: "shippingStartDate", startLabelKey: "shippingStart", endKey: "shippingEndDate", endLabelKey: "shippingEnd", endRefKey: "shippingEndRefDate", endRefLabelKey: "shippingEndRef", doneKey: "shippingEndDone" },
 ];
 
-const FINAL_FIELD = { key: "deliveryDate" as const, labelKey: "delivery" };
+const FINAL_FIELD = { key: "deliveryDate" as const, labelKey: "delivery", doneKey: "deliveryDone" as const };
+
+/**
+ * 各納入日/完了日欄の横に置く「済」チェック — オンにすると実日付欄の
+ * 代わりに「済」の文字を表示する(実日付そのものは変更・削除しない。
+ * 色分け・バーの範囲は常に保持している実日付から計算されるので、チェック
+ * を外せば元の日付表示に戻る)。
+ */
+function DoneToggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="inline-flex shrink-0 items-center gap-0.5 text-[10.5px] font-normal text-muted-2">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-3 w-3"
+      />
+      済
+    </label>
+  );
+}
 
 // "box"(BOX納入) は実テンプレートの凡例上「鈑金・BOX納入」の1色見本に含まれる
 // ため、凡例には独立した見本を出さない (色設定自体はsheetMetal/box別々のまま — 表示だけ統合)。
@@ -208,6 +236,11 @@ export function ScheduleTimeline() {
     });
   }
 
+  /** 「済」チェック — 実日付・バーの範囲はそのまま、ラベル表示だけを切り替える。 */
+  function updateEditingDone(key: keyof CaseSchedule, checked: boolean) {
+    setEditingSchedule((prev) => (prev ? { ...prev, [key]: checked } : prev));
+  }
+
   function toggleStart(key: keyof CaseSchedule) {
     setExpandedStarts((prev) => {
       const next = new Set(prev);
@@ -314,19 +347,28 @@ export function ScheduleTimeline() {
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-                  {ORDER_DELIVERY_PAIRS.map(({ orderKey, orderLabelKey, deliveryKey, deliveryLabelKey }) => {
+                  {ORDER_DELIVERY_PAIRS.map(({ orderKey, orderLabelKey, deliveryKey, deliveryLabelKey, doneKey }) => {
                     const orderValue = editingSchedule[orderKey] as string | null;
                     const expanded = expandedStarts.has(orderKey);
+                    const done = !!editingSchedule[doneKey];
                     return (
                       <div key={deliveryKey}>
-                        <label className="field-label">
-                          {t(`design.schedule.milestones.${deliveryLabelKey}`)}
+                        <label className="field-label flex items-center justify-between gap-1">
+                          <span>{t(`design.schedule.milestones.${deliveryLabelKey}`)}</span>
+                          <DoneToggle
+                            checked={done}
+                            onChange={(v) => updateEditingDone(doneKey, v)}
+                          />
                         </label>
-                        <DateInput
-                          value={editingSchedule[deliveryKey] as string | null}
-                          onChange={(v) => updateEditingField(deliveryKey, v ?? "")}
-                          className="field-input"
-                        />
+                        {done ? (
+                          <div className="field-input flex items-center text-muted-2">済</div>
+                        ) : (
+                          <DateInput
+                            value={editingSchedule[deliveryKey] as string | null}
+                            onChange={(v) => updateEditingField(deliveryKey, v ?? "")}
+                            className="field-input"
+                          />
+                        )}
                         <button
                           type="button"
                           onClick={() => toggleStart(orderKey)}
@@ -352,23 +394,32 @@ export function ScheduleTimeline() {
                       </div>
                     );
                   })}
-                  {AUTO_START_PHASES.map(({ startKey, startLabelKey, endKey, endLabelKey, endRefKey, endRefLabelKey }) => {
+                  {AUTO_START_PHASES.map(({ startKey, startLabelKey, endKey, endLabelKey, endRefKey, endRefLabelKey, doneKey }) => {
                     const startValue = editingSchedule[startKey] as string | null;
                     const expanded = expandedStarts.has(startKey);
                     const endValue = editingSchedule[endKey] as string | null;
                     const endIsFreeText = !!endValue && !isIsoDate(endValue);
                     const refValue = editingSchedule[endRefKey] as string | null;
                     const refExpanded = expandedStarts.has(endRefKey);
+                    const done = !!editingSchedule[doneKey];
                     return (
                       <div key={endKey}>
-                        <label className="field-label">
-                          {t(`design.schedule.milestones.${endLabelKey}`)}
+                        <label className="field-label flex items-center justify-between gap-1">
+                          <span>{t(`design.schedule.milestones.${endLabelKey}`)}</span>
+                          <DoneToggle
+                            checked={done}
+                            onChange={(v) => updateEditingDone(doneKey, v)}
+                          />
                         </label>
-                        <DateInput
-                          value={endValue}
-                          onChange={(v) => updateEditingField(endKey, v ?? "")}
-                          className="field-input"
-                        />
+                        {done ? (
+                          <div className="field-input flex items-center text-muted-2">済</div>
+                        ) : (
+                          <DateInput
+                            value={endValue}
+                            onChange={(v) => updateEditingField(endKey, v ?? "")}
+                            className="field-input"
+                          />
+                        )}
                         <button
                           type="button"
                           onClick={() => toggleStart(startKey)}
@@ -426,14 +477,22 @@ export function ScheduleTimeline() {
                     );
                   })}
                   <div>
-                    <label className="field-label">
-                      {t(`design.schedule.milestones.${FINAL_FIELD.labelKey}`)}
+                    <label className="field-label flex items-center justify-between gap-1">
+                      <span>{t(`design.schedule.milestones.${FINAL_FIELD.labelKey}`)}</span>
+                      <DoneToggle
+                        checked={!!editingSchedule[FINAL_FIELD.doneKey]}
+                        onChange={(v) => updateEditingDone(FINAL_FIELD.doneKey, v)}
+                      />
                     </label>
-                    <DateInput
-                      value={editingSchedule[FINAL_FIELD.key] as string | null}
-                      onChange={(v) => updateEditingField(FINAL_FIELD.key, v ?? "")}
-                      className="field-input"
-                    />
+                    {editingSchedule[FINAL_FIELD.doneKey] ? (
+                      <div className="field-input flex items-center text-muted-2">済</div>
+                    ) : (
+                      <DateInput
+                        value={editingSchedule[FINAL_FIELD.key] as string | null}
+                        onChange={(v) => updateEditingField(FINAL_FIELD.key, v ?? "")}
+                        className="field-input"
+                      />
+                    )}
                   </div>
                 </div>
                 {saveError && (

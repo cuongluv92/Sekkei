@@ -177,25 +177,33 @@ export interface CaseSchedule {
   caseId: string;
   sheetMetalOrderDate: string | null;
   sheetMetalDeliveryDate: string | null;
+  sheetMetalDeliveryDone: boolean;
   sheetMetalManufacturer: string;
   boxOrderDate: string | null;
   boxDeliveryDate: string | null;
+  boxDeliveryDone: boolean;
   boxManufacturer: string;
   accessoryOrderDate: string | null;
   accessoryDeliveryDate: string | null;
+  accessoryDeliveryDone: boolean;
   productionStartDate: string | null;
   productionEndDate: string | null;
   productionEndRefDate: string | null;
+  productionEndDone: boolean;
   inspectionStartDate: string | null;
   inspectionEndDate: string | null;
   inspectionEndRefDate: string | null;
+  inspectionEndDone: boolean;
   witnessStartDate: string | null;
   witnessEndDate: string | null;
   witnessEndRefDate: string | null;
+  witnessEndDone: boolean;
   shippingStartDate: string | null;
   shippingEndDate: string | null;
   shippingEndRefDate: string | null;
+  shippingEndDone: boolean;
   deliveryDate: string | null;
+  deliveryDone: boolean;
 }
 
 export type ScheduleCategoryKey =

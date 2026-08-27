@@ -19,23 +19,31 @@ function blankSchedule(caseId: string): CaseSchedule {
     caseId,
     sheetMetalOrderDate: null,
     sheetMetalDeliveryDate: null,
+    sheetMetalDeliveryDone: false,
     boxOrderDate: null,
     boxDeliveryDate: null,
+    boxDeliveryDone: false,
     accessoryOrderDate: null,
     accessoryDeliveryDate: null,
+    accessoryDeliveryDone: false,
     productionStartDate: null,
     productionEndDate: null,
     productionEndRefDate: null,
+    productionEndDone: false,
     inspectionStartDate: null,
     inspectionEndDate: null,
     inspectionEndRefDate: null,
+    inspectionEndDone: false,
     witnessStartDate: null,
     witnessEndDate: null,
     witnessEndRefDate: null,
+    witnessEndDone: false,
     shippingStartDate: null,
     shippingEndDate: null,
     shippingEndRefDate: null,
+    shippingEndDone: false,
     deliveryDate: null,
+    deliveryDone: false,
     boxManufacturer: "",
     sheetMetalManufacturer: "",
   };
@@ -270,6 +278,24 @@ describe("computeMilestones + buildMilestoneLabelsByRow — タイムライン�
   it("日付が何もなければ空になる", () => {
     const labels = buildMilestoneLabelsByRow(computeMilestones(blankSchedule("c1")));
     expect(labels.size).toBe(0);
+  });
+
+  it("「済」チェックがオンなら、実日付はそのままでラベルだけ「済」になる", () => {
+    const schedule = blankSchedule("c1");
+    schedule.productionEndDate = "2026-09-10";
+    schedule.productionEndDone = true;
+
+    const labels = buildMilestoneLabelsByRow(computeMilestones(schedule));
+    expect(labels.get(dayCellKeyRow(2026, 9, 10, 2))).toBe("済");
+  });
+
+  it("納入日(deliveryDate)も deliveryDone で「済」ラベルになる", () => {
+    const schedule = blankSchedule("c1");
+    schedule.deliveryDate = "2026-10-12";
+    schedule.deliveryDone = true;
+
+    const labels = buildMilestoneLabelsByRow(computeMilestones(schedule));
+    expect(labels.get(dayCellKeyRow(2026, 10, 12, 3))).toBe("済");
   });
 });
 

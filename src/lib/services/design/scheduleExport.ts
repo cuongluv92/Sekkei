@@ -55,8 +55,13 @@ const LEGEND_CATEGORIES: { key: ScheduleCategoryKey; label: string }[] = [
   { key: "shipping", label: "出荷" },
 ];
 
-const THIN: Partial<ExcelJS.Border> = { style: "thin", color: { argb: "FFB6BEC9" } };
-const THICK: Partial<ExcelJS.Border> = { style: "medium", color: { argb: "FF4B5563" } };
+// 既存の実テンプレート帳票と同じ、均一に細い罫線(style: "thin")にして、
+// 太さではなく色の濃さだけで主要な区切り(案件ブロックの上下端・月の
+// 変わり目)を強調する — 以前は THICK に"medium"(実質2倍近い太さ)を
+// 使っていたが、印刷すると他の帳票と質感が違って見えるうえ太く滲んで
+// 見えたため。
+const THIN: Partial<ExcelJS.Border> = { style: "thin", color: { argb: "FF6B7280" } };
+const THICK: Partial<ExcelJS.Border> = { style: "thin", color: { argb: "FF1F2937" } };
 
 function toArgb(hex: string): string {
   return `FF${hex.replace("#", "").toUpperCase()}`;
