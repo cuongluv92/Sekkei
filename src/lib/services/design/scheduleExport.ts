@@ -65,8 +65,11 @@ const LEGEND_CATEGORIES: { key: ScheduleCategoryKey; label: string }[] = [
 // 太さではなく色の濃さだけで主要な区切り(案件ブロックの上下端・月の
 // 変わり目)を強調する — 以前は THICK に"medium"(実質2倍近い太さ)を
 // 使っていたが、印刷すると他の帳票と質感が違って見えるうえ太く滲んで
-// 見えたため。
-const THIN: Partial<ExcelJS.Border> = { style: "thin", color: { argb: "FF6B7280" } };
+// 見えたため。THIN(日/旬・行の区切りなどの補助線)はできるだけ主張しない
+// よう薄いグレーにし、THICK(案件ブロックの上下端・月の変わり目)との
+// 濃淡差で「主要な区切り」と「補助的な区切り」を分ける — 幅は両方とも
+// 1pxのまま(端数pxにすると印刷時ににじむため、これ以上は細くしない)。
+const THIN: Partial<ExcelJS.Border> = { style: "thin", color: { argb: "FFD1D5DB" } };
 const THICK: Partial<ExcelJS.Border> = { style: "thin", color: { argb: "FF1F2937" } };
 
 function toArgb(hex: string): string {
