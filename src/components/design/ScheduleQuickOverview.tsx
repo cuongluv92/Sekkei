@@ -228,6 +228,16 @@ export function ScheduleQuickOverview() {
   // 時にその時点の値を出すための履歴(design_case_identity_snapshots)を
   // 表示中の案件分まとめて取得する。
   const [identitySnapshots, setIdentitySnapshots] = useState<Map<string, CaseIdentitySnapshot[]>>(new Map());
+  // 件名/管理番号の履歴を引く基準日 — 表示中の年月(focus)そのものを基準に
+  // する(マイルストーンの有無に依存しない)。今月を見ている時は今日、
+  // それ以外の月を見ている時はその月の末日を基準にする(未来月の場合は
+  // まだ将来のスナップショットは存在しないため自然に現在値が選ばれる)。
+  const identityCutoff = useMemo(() => {
+    const today = new Date();
+    const isCurrentMonth = focus.year === today.getFullYear() && focus.month === today.getMonth() + 1;
+    const ref = isCurrentMonth ? today : new Date(focus.year, focus.month, 0);
+    return { year: ref.getFullYear(), month: ref.getMonth() + 1, day: ref.getDate() };
+  }, [focus]);
   const quickTableCaseIdsKey = quickTableCases.map(({ case: c }) => c.id).join(",");
   useEffect(() => {
     let active = true;
@@ -429,19 +439,12 @@ export function ScheduleQuickOverview() {
                       return [[dayKey(year, month, day, rowIndex), label] as const];
                     }),
                   );
-                  // この画面に表示中の期間で最も早い(=このブロックが最初に見え始める)
-                  // マイルストーンの日付を、件名/図面番号/管理番号の「その時点の値」を
-                  // 引くための基準日にする。
-                  let asOfDate: { year: number; month: number; day: number } | undefined;
-                  for (const m of milestones) {
-                    if (!QUICK_CATEGORY_LABEL[m.category] || !dayIndexByKey.has(`${m.year}-${m.month}-${m.day}`)) continue;
-                    if (!asOfDate || new Date(m.year, m.month - 1, m.day) < new Date(asOfDate.year, asOfDate.month - 1, asOfDate.day)) {
-                      asOfDate = { year: m.year, month: m.month, day: m.day };
-                    }
-                  }
-                  const snapshot = asOfDate
-                    ? pickIdentityAsOf(identitySnapshots.get(c.id), asOfDate.year, asOfDate.month, asOfDate.day)
-                    : undefined;
+                  const snapshot = pickIdentityAsOf(
+                    identitySnapshots.get(c.id),
+                    identityCutoff.year,
+                    identityCutoff.month,
+                    identityCutoff.day,
+                  );
                   const { projectName, panelNames } = snapshot ? projectPanelLinesFromSnapshot(snapshot) : buildProjectPanelLines(c, panels);
                   const drawingNumber = snapshot?.drawingNumber ?? c.drawingNumber;
                   const managementNumber = snapshot?.managementNumber ?? c.managementNumber;
