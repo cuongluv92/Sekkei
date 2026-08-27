@@ -27,3 +27,5 @@ export {
 export { designTemplateService } from "./designTemplateService";
 export { exportCostLaborExcel, printCostLabor } from "./costLaborExport";
 export { exportScheduleExcel, printSchedule } from "./scheduleExport";
+export { exportQuickScheduleExcel, printQuickSchedule, QUICK_CATEGORY_LABEL } from "./quickScheduleExport";
+export type { QuickDayInfo } from "./quickScheduleExport";

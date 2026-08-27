@@ -6,8 +6,9 @@ import { useTranslation } from "@/lib/i18n";
 import {
   constructionScheduleService,
   designCaseService,
-  exportScheduleExcel,
-  printSchedule,
+  exportQuickScheduleExcel,
+  printQuickSchedule,
+  QUICK_CATEGORY_LABEL,
   scheduleService,
   type ConstructionScheduleEntryInput,
 } from "@/lib/services/design";
@@ -19,7 +20,6 @@ import type {
   CaseSchedule,
   ConstructionScheduleEntry,
   DesignCaseWithPanels,
-  ScheduleCategoryKey,
 } from "@/lib/types/design";
 
 /**
@@ -35,14 +35,6 @@ import type {
  * そのまま確認できる。案件・工程データ自体は既存の納入工程(旧⑤工程表)と
  * 共通。
  */
-const QUICK_CATEGORY_LABEL: Partial<Record<ScheduleCategoryKey, string>> = {
-  sheetMetal: "板入",
-  box: "BOX入",
-  production: "完成",
-  witness: "立会",
-  shipping: "出荷",
-};
-
 const WEEKDAY_KANJI = ["日", "月", "火", "水", "木", "金", "土"];
 const DAYS_SPAN = 45; // 約1.5ヶ月分
 const DAY_WIDTH = 34;
@@ -164,27 +156,8 @@ export function ScheduleQuickOverview() {
     };
   }, []);
 
-  const visibleCases = useMemo(
-    () =>
-      cases
-        .filter(({ case: c }) => c.caseStatus === "production_requested" && !c.manufacturingComplete)
-        .slice()
-        .sort((a, b) => {
-          const da = schedules[a.case.id]?.deliveryDate;
-          const db = schedules[b.case.id]?.deliveryDate;
-          if (!da && !db) return 0;
-          if (!da) return 1;
-          if (!db) return -1;
-          return da.localeCompare(db);
-        }),
-    [cases, schedules],
-  );
-
-  // 簡易カレンダーの表(下記テーブル)専用の絞り込み — Excel出力/印刷は
-  // 表示期間に関係なく「製作依頼済みかつ製造未完了」の全案件を対象にする
-  // ため、そちらはvisibleCasesをそのまま使う。
-  //
-  // この画面は「製作依頼済み」の全案件が母集団:
+  // この画面(Excel出力/印刷も含め、この画面が今表示している内容がそのまま
+  // 対象)は「製作依頼済み」の全案件が母集団:
   // - 製造未完了(まだ進行中)の案件は、今表示中の期間にマイルストーンが
   //   無くても常に表示する(空欄行のまま出す) — 進行中の案件を期間で
   //   絞り込むと、次のマイルストーンがまだ先の案件などが消えてしまい
@@ -195,15 +168,25 @@ export function ScheduleQuickOverview() {
   //   月に戻れば(履歴として)再表示される。
   const quickTableCases = useMemo(
     () =>
-      cases.filter(({ case: c }) => {
-        if (c.caseStatus !== "production_requested") return false;
-        if (!c.manufacturingComplete) return true;
-        const schedule = schedules[c.id];
-        if (!schedule) return false;
-        return computeMilestones(schedule).some(
-          ({ year, month, day, category }) => QUICK_CATEGORY_LABEL[category] && dayIndexByKey.has(`${year}-${month}-${day}`),
-        );
-      }),
+      cases
+        .filter(({ case: c }) => {
+          if (c.caseStatus !== "production_requested") return false;
+          if (!c.manufacturingComplete) return true;
+          const schedule = schedules[c.id];
+          if (!schedule) return false;
+          return computeMilestones(schedule).some(
+            ({ year, month, day, category }) => QUICK_CATEGORY_LABEL[category] && dayIndexByKey.has(`${year}-${month}-${day}`),
+          );
+        })
+        .slice()
+        .sort((a, b) => {
+          const da = schedules[a.case.id]?.deliveryDate;
+          const db = schedules[b.case.id]?.deliveryDate;
+          if (!da && !db) return 0;
+          if (!da) return 1;
+          if (!db) return -1;
+          return da.localeCompare(db);
+        }),
     [cases, schedules, dayIndexByKey],
   );
 
@@ -215,7 +198,7 @@ export function ScheduleQuickOverview() {
   async function handleExportExcel() {
     setExportingExcel(true);
     try {
-      const { fileName } = await exportScheduleExcel(visibleCases, schedules);
+      const { fileName } = await exportQuickScheduleExcel(quickTableCases, schedules, days);
       show(t("design.exportedMessage", { fileName }));
     } catch {
       show(t("design.exportError"));
@@ -227,7 +210,7 @@ export function ScheduleQuickOverview() {
   async function handlePrint() {
     setPrinting(true);
     try {
-      await printSchedule(visibleCases, schedules);
+      await printQuickSchedule(quickTableCases, schedules, days);
     } catch {
       show(t("design.exportError"));
     } finally {
