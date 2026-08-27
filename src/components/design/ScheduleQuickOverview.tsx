@@ -1,7 +1,7 @@
 "use client";
 
 import { FileSpreadsheet, Loader2, Plus, Printer } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useTranslation } from "@/lib/i18n";
 import {
   constructionScheduleService,
@@ -95,6 +95,16 @@ function buildMonthSpans(days: DayInfo[]): { year: number; month: number; span: 
 
 function dayKey(year: number, month: number, day: number, rowIndex: number) {
   return `${year}-${month}-${day}-${rowIndex}`;
+}
+
+/**
+ * 月の1日目だけ左境界線を濃い色にする — Tailwindのclassだと
+ * `border-border`(4辺一括)と`border-l-border-strong`(左だけ)を同じ要素に
+ * 付けた場合、生成後CSSの並び順次第で一括指定の方が勝ってしまい左だけ
+ * 薄いままになることがあるため、常に勝つinline styleで上書きする。
+ */
+function monthStartBorderStyle(day: number): CSSProperties {
+  return day === 1 ? { borderLeftColor: "var(--border-strong)" } : {};
 }
 
 /** "YYYY-MM-DD" -> "YYYY-M-D" 形式(buildDayList/dayIndexByKeyのキーと同じ、ゼロ埋めなし)。 */
@@ -397,7 +407,7 @@ export function ScheduleQuickOverview() {
                     <th
                       key={`m-${m.year}-${m.month}`}
                       colSpan={m.span}
-                      className="border-b border-l-2 border-border-strong bg-surface-2 px-1 py-1 text-center text-[11px] font-semibold whitespace-nowrap text-muted"
+                      className="border-b border-l border-border-strong bg-surface-2 px-1 py-1 text-center text-[11px] font-semibold whitespace-nowrap text-muted"
                     >
                       {m.year}/{String(m.month).padStart(2, "0")}
                     </th>
@@ -407,8 +417,8 @@ export function ScheduleQuickOverview() {
                   {days.map((d, i) => (
                     <th
                       key={`wd-${i}`}
-                      className={`border-b border-l border-border bg-surface-2 py-0.5 text-center text-[10px] text-muted-2 ${d.day === 1 ? "border-l-2 border-l-border-strong" : ""}`}
-                      style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
+                      className="border-b border-l border-border bg-surface-2 py-0.5 text-center text-[10px] text-muted-2"
+                      style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH, ...monthStartBorderStyle(d.day) }}
                     >
                       {WEEKDAY_KANJI[d.weekday]}
                     </th>
@@ -418,8 +428,8 @@ export function ScheduleQuickOverview() {
                   {days.map((d, i) => (
                     <th
                       key={`d-${i}`}
-                      className={`border-b border-l border-border border-b-border-strong bg-surface-2 py-0.5 text-center text-[10px] font-semibold tabular-nums ${d.day === 1 ? "border-l-2 border-l-border-strong" : ""} ${d.weekday === 0 ? "text-danger" : d.weekday === 6 ? "text-accent" : "text-muted"}`}
-                      style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
+                      className={`border-b border-l border-border border-b-border-strong bg-surface-2 py-0.5 text-center text-[10px] font-semibold tabular-nums ${d.weekday === 0 ? "text-danger" : d.weekday === 6 ? "text-accent" : "text-muted"}`}
+                      style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH, ...monthStartBorderStyle(d.day) }}
                     >
                       {d.day}
                     </th>
@@ -491,8 +501,18 @@ export function ScheduleQuickOverview() {
                         return (
                           <td
                             key={`c-${c.id}-${rowIndex}-${i}`}
-                            className={`overflow-hidden border-b border-l border-border px-0.5 py-1 text-center text-[9px] leading-tight font-bold text-ellipsis whitespace-nowrap text-foreground ${d.day === 1 ? "border-l-2 border-l-border-strong" : ""} ${rowIndex === SCREEN_PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
-                            style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH, maxWidth: DAY_WIDTH, height: ROW_HEIGHT, maxHeight: ROW_HEIGHT }}
+                            className="overflow-hidden border-b border-l border-border px-0.5 py-1 text-center text-[9px] leading-tight font-bold text-ellipsis whitespace-nowrap text-foreground"
+                            style={{
+                              width: DAY_WIDTH,
+                              minWidth: DAY_WIDTH,
+                              maxWidth: DAY_WIDTH,
+                              height: ROW_HEIGHT,
+                              maxHeight: ROW_HEIGHT,
+                              ...monthStartBorderStyle(d.day),
+                              ...(rowIndex === SCREEN_PROCESS_ROWS.length - 1
+                                ? { borderBottomWidth: 2, borderBottomColor: "var(--border-strong)" }
+                                : {}),
+                            }}
                           >
                             {label}
                           </td>
@@ -617,7 +637,7 @@ export function ScheduleQuickOverview() {
                     <th
                       key={`m2-${m.year}-${m.month}`}
                       colSpan={m.span}
-                      className="border-b border-l-2 border-border-strong bg-surface-2 px-1 py-1 text-center text-[11px] font-semibold whitespace-nowrap text-muted"
+                      className="border-b border-l border-border-strong bg-surface-2 px-1 py-1 text-center text-[11px] font-semibold whitespace-nowrap text-muted"
                     >
                       {m.year}/{String(m.month).padStart(2, "0")}
                     </th>
@@ -627,8 +647,8 @@ export function ScheduleQuickOverview() {
                   {days.map((d, i) => (
                     <th
                       key={`wd2-${i}`}
-                      className={`border-b border-l border-border bg-surface-2 py-0.5 text-center text-[10px] text-muted-2 ${d.day === 1 ? "border-l-2 border-l-border-strong" : ""}`}
-                      style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
+                      className="border-b border-l border-border bg-surface-2 py-0.5 text-center text-[10px] text-muted-2"
+                      style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH, ...monthStartBorderStyle(d.day) }}
                     >
                       {WEEKDAY_KANJI[d.weekday]}
                     </th>
@@ -638,8 +658,8 @@ export function ScheduleQuickOverview() {
                   {days.map((d, i) => (
                     <th
                       key={`d2-${i}`}
-                      className={`border-b border-l border-border border-b-border-strong bg-surface-2 py-0.5 text-center text-[10px] font-semibold tabular-nums ${d.day === 1 ? "border-l-2 border-l-border-strong" : ""} ${d.weekday === 0 ? "text-danger" : d.weekday === 6 ? "text-accent" : "text-muted"}`}
-                      style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
+                      className={`border-b border-l border-border border-b-border-strong bg-surface-2 py-0.5 text-center text-[10px] font-semibold tabular-nums ${d.weekday === 0 ? "text-danger" : d.weekday === 6 ? "text-accent" : "text-muted"}`}
+                      style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH, ...monthStartBorderStyle(d.day) }}
                     >
                       {d.day}
                     </th>
@@ -674,7 +694,7 @@ export function ScheduleQuickOverview() {
                         <td
                           key={`e-${entry.id}-${i}`}
                           colSpan={span}
-                          className={`overflow-hidden border border-border-strong px-1 py-1 text-center text-[10px] font-bold text-ellipsis whitespace-nowrap text-foreground ${d.day === 1 ? "border-l-2" : ""}`}
+                          className="overflow-hidden border border-border-strong px-1 py-1 text-center text-[10px] font-bold text-ellipsis whitespace-nowrap text-foreground"
                           style={{ width: DAY_WIDTH * span, minWidth: DAY_WIDTH * span, height: ROW_HEIGHT * 2, maxHeight: ROW_HEIGHT * 2 }}
                           title={entry.workContent}
                         >
@@ -687,8 +707,8 @@ export function ScheduleQuickOverview() {
                     cells.push(
                       <td
                         key={`e-${entry.id}-${i}`}
-                        className={`border-b border-l border-border py-1 ${d.day === 1 ? "border-l-2 border-l-border-strong" : ""}`}
-                        style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
+                        className="border-b border-l border-border py-1"
+                        style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH, ...monthStartBorderStyle(d.day) }}
                       />,
                     );
                     i++;
