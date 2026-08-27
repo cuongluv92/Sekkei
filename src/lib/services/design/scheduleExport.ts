@@ -88,6 +88,12 @@ interface LegendEntry {
   labelColEnd: number;
 }
 
+// 色見本の幅(列数) — データ列(DAY_COL_WIDTH=1)を実日単位に細分化して
+// からは、色見本を「1列」のままにすると米粒のように小さくなってしまう
+// (以前の旬グリッドはDAY_COL_WIDTHの実質10倍幅だったため気付かなかった)。
+// データ列の細さとは関係なく、色見本自体は複数列分をまとめて確保する。
+const LEGEND_SWATCH_SPAN = 6;
+
 /**
  * 凡例(色見本+ラベル)の列配置を1箇所で計算する — 実際に描画する buildHeader
  * と、必要な最終列数を知りたい buildScheduleWorkbook (印刷範囲・列幅設定)
@@ -99,12 +105,12 @@ interface LegendEntry {
  */
 function layoutLegend(endCol: number): LegendEntry[] {
   const spans = LEGEND_CATEGORIES.map(({ label }) => (label.length > 4 ? 2 : 1));
-  const totalWidth = spans.reduce((sum, span) => sum + 1 + span, 0); // 色見本(1列)+ラベル(span列) の合計
+  const totalWidth = spans.reduce((sum, span) => sum + LEGEND_SWATCH_SPAN + span, 0); // 色見本(LEGEND_SWATCH_SPAN列)+ラベル(span列) の合計
   // 右詰めの開始列 — シート左端(1列目)より前にはみ出さないようクランプする。
   let col = Math.max(1, endCol - totalWidth + 1);
   return LEGEND_CATEGORIES.map(({ key, label }, i) => {
     const swatchCol = col;
-    const labelColStart = swatchCol + 1;
+    const labelColStart = swatchCol + LEGEND_SWATCH_SPAN;
     const labelColEnd = labelColStart + spans[i] - 1;
     col = labelColEnd + 1; // 次のエントリはすぐ隣(色見本の枠線で区切りが分かるため間隔は空けない)
     return { key, label, swatchCol, labelColStart, labelColEnd };
@@ -155,6 +161,7 @@ function buildHeader(
   // 凡例 — 色見本(1列)+ラベル(文字数に応じて複数列を結合)を、間隔を空けず
   // コンパクトにまとめて月グリッドの右端に寄せる(layoutLegend参照)。
   for (const { key, label, swatchCol, labelColStart, labelColEnd } of legendEntries) {
+    ws.mergeCells(LEGEND_ROW, swatchCol, LEGEND_ROW, swatchCol + LEGEND_SWATCH_SPAN - 1);
     const swatch = ws.getCell(LEGEND_ROW, swatchCol);
     const color = colorByCategory.get(key);
     if (color) swatch.fill = { type: "pattern", pattern: "solid", fgColor: { argb: toArgb(color) } };
@@ -256,12 +263,19 @@ function buildScheduleWorkbook(
       const row = ws.getRow(blockStart + rowIndex);
       row.height = ROW_HEIGHT;
       for (const monthEntry of months) {
-        // その月の実日数を超えた分は空欄の列として残す(MONTH_SLOT_DAYS参照) —
-        // 実日付が無いのでルックアップは常に外れ、色もラベルも付かない。
+        // その月の実日数を超えた分(MONTH_SLOT_DAYS参照)は実日付が無いので
+        // 本来は空欄だが、月末の実日と翌月1日が同じ色(=同じ期間が続いた
+        // まま月をまたぐ)場合はその色で埋めて、空欄列のせいで帯が途切れて
+        // 見えないようにする(例: 立会が9/28〜10/3のように月をまたぐ場合)。
+        const lastRealColor = lookup.get(dayCellKeyRow(monthEntry.year, monthEntry.month, monthEntry.days, rowIndex));
+        const nextMonth = addMonths(monthEntry.year, monthEntry.month, 1);
+        const nextFirstColor = lookup.get(dayCellKeyRow(nextMonth.year, nextMonth.month, 1, rowIndex));
+        const paddingBridgeColor = lastRealColor && lastRealColor === nextFirstColor ? lastRealColor : undefined;
+
         for (let day = 1; day <= MONTH_SLOT_DAYS; day++) {
           const isRealDay = day <= monthEntry.days;
           const key = isRealDay ? dayCellKeyRow(monthEntry.year, monthEntry.month, day, rowIndex) : null;
-          const hex = key ? lookup.get(key) : undefined;
+          const hex = key ? lookup.get(key) : paddingBridgeColor;
           const isMonthStart = day === 1;
           const isJunStart = day === 11 || day === 21;
           const col = monthEntry.colStart + day - 1;
@@ -285,9 +299,11 @@ function buildScheduleWorkbook(
             left: drawLeft,
             right: col === lastCol ? THIN : undefined,
           };
-          if (hex && key) {
+          if (hex) {
+            // 空欄埋め(paddingBridgeColor)の場合は key が無い(実日付でない)
+            // ため、ラベルは実日付のセルにしか付けない。
             cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: toArgb(hex) } };
-            const label = labels.get(key);
+            const label = key ? labels.get(key) : undefined;
             if (label) {
               cell.value = label;
               cell.font = { size: 8, bold: true, color: { argb: "FFFFFFFF" } };
