@@ -50,12 +50,6 @@ const ROW_SPAN = SCREEN_PROCESS_ROWS.length;
 
 const THIN: Partial<ExcelJS.Border> = { style: "thin", color: { argb: "FFD1D5DB" } };
 const THICK: Partial<ExcelJS.Border> = { style: "thin", color: { argb: "FF000000" } };
-// 月の変わり目の縦線だけは色でなく太さそのものを変える(style: "medium")。
-// 既存の納入工程(scheduleExport.ts)はDAY_COL_WIDTH=1という極端に狭い列幅
-// だったため太線が滲んで見え、あえて色差(THICK)のみに留めた経緯がある。
-// この簡易カレンダーはDAY_COL_WIDTH=4と列幅に余裕があるため、画面側の
-// border-l-2と同じ考え方で太さでも強調して問題ない。
-const MONTH_BORDER: Partial<ExcelJS.Border> = { style: "medium", color: { argb: "FF000000" } };
 
 function dayKey(year: number, month: number, day: number, rowIndex: number) {
   return `${year}-${month}-${day}-${rowIndex}`;
@@ -133,7 +127,7 @@ function buildQuickScheduleWorkbook(
     cell.value = `${m.year}/${String(m.month).padStart(2, "0")}`;
     cell.font = { size: 10, bold: true };
     cell.alignment = { horizontal: "center", vertical: "middle" };
-    cell.border = { top: THICK, left: MONTH_BORDER, right: THIN, bottom: THIN };
+    cell.border = { top: THICK, left: THICK, right: THIN, bottom: THIN };
   }
   ws.getRow(MONTH_HEADER_ROW).height = HEADER_ROW_HEIGHT;
 
@@ -146,13 +140,13 @@ function buildQuickScheduleWorkbook(
     wdCell.value = WEEKDAY_KANJI[d.weekday];
     wdCell.font = { size: 8, color: { argb: d.weekday === 0 ? "FFDC2626" : d.weekday === 6 ? "FF2563EB" : "FF6B7280" } };
     wdCell.alignment = { horizontal: "center", vertical: "middle" };
-    wdCell.border = { top: THIN, left: isMonthStart ? MONTH_BORDER : THIN, right: THIN, bottom: THIN };
+    wdCell.border = { top: THIN, left: isMonthStart ? THICK : THIN, right: THIN, bottom: THIN };
 
     const dayCell = ws.getCell(DAY_HEADER_ROW, col);
     dayCell.value = d.day;
     dayCell.font = { size: 8, bold: true, color: isWeekend ? { argb: d.weekday === 0 ? "FFDC2626" : "FF2563EB" } : undefined };
     dayCell.alignment = { horizontal: "center", vertical: "middle" };
-    dayCell.border = { top: THIN, left: isMonthStart ? MONTH_BORDER : THIN, right: THIN, bottom: THICK };
+    dayCell.border = { top: THIN, left: isMonthStart ? THICK : THIN, right: THIN, bottom: THICK };
   });
   ws.getRow(WEEKDAY_ROW).height = HEADER_ROW_HEIGHT;
   ws.getRow(DAY_HEADER_ROW).height = HEADER_ROW_HEIGHT;
@@ -197,7 +191,7 @@ function buildQuickScheduleWorkbook(
         cell.border = {
           top: rowIndex === 0 ? THICK : undefined,
           bottom: rowIndex === ROW_SPAN - 1 ? THICK : THIN,
-          left: isMonthStart ? MONTH_BORDER : THIN,
+          left: isMonthStart ? THICK : THIN,
           right: col === lastCol ? THICK : undefined,
         };
         const label = labels.get(dayKey(d.year, d.month, d.day, rowIndex));
