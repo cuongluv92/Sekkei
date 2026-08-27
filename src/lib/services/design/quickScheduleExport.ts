@@ -50,12 +50,6 @@ const ROW_SPAN = SCREEN_PROCESS_ROWS.length;
 
 const THIN: Partial<ExcelJS.Border> = { style: "thin", color: { argb: "FFD1D5DB" } };
 const THICK: Partial<ExcelJS.Border> = { style: "thin", color: { argb: "FF000000" } };
-// 月の変わり目の縦線だけは他のTHICK(案件ブロックの上下端など)よりさらに
-// 太くする — style:"thin"(実質1px)は画面上は問題ないが、実際にプリンター
-// ドライバ経由で印刷/PDF化すると解像度変換の丸め誤差で細すぎて霞んで見える
-// ことがあったため、月の変わり目の縦線だけ確実に濃く出るstyle:"medium"に
-// する(THIN/他のTHICK使用箇所は変更しない)。
-const MONTH_BORDER: Partial<ExcelJS.Border> = { style: "medium", color: { argb: "FF000000" } };
 
 function dayKey(year: number, month: number, day: number, rowIndex: number) {
   return `${year}-${month}-${day}-${rowIndex}`;
@@ -133,26 +127,30 @@ function buildQuickScheduleWorkbook(
     cell.value = `${m.year}/${String(m.month).padStart(2, "0")}`;
     cell.font = { size: 10, bold: true };
     cell.alignment = { horizontal: "center", vertical: "middle" };
-    cell.border = { top: THICK, left: MONTH_BORDER, right: THIN, bottom: THIN };
+    cell.border = { top: THICK, left: THICK, right: THIN, bottom: THIN };
   }
   ws.getRow(MONTH_HEADER_ROW).height = HEADER_ROW_HEIGHT;
 
   days.forEach((d, i) => {
     const col = 3 + i;
-    const isMonthStart = d.day === 1;
+    // 月の変わり目に加えて、表示期間の最初/最後の列(月の途中から始まる/
+    // 終わることが多い)も表全体の外枠として太くする — でないと表示期間が
+    // たまたま月初/月末で始まらない時、左右の外枠だけ薄いまま浮いて見える。
+    const isLeftEdge = d.day === 1 || i === 0;
+    const isRightEdge = col === lastCol;
     const isWeekend = d.weekday === 0 || d.weekday === 6;
 
     const wdCell = ws.getCell(WEEKDAY_ROW, col);
     wdCell.value = WEEKDAY_KANJI[d.weekday];
     wdCell.font = { size: 8, color: { argb: d.weekday === 0 ? "FFDC2626" : d.weekday === 6 ? "FF2563EB" : "FF6B7280" } };
     wdCell.alignment = { horizontal: "center", vertical: "middle" };
-    wdCell.border = { top: THIN, left: isMonthStart ? MONTH_BORDER : THIN, right: THIN, bottom: THIN };
+    wdCell.border = { top: THIN, left: isLeftEdge ? THICK : THIN, right: isRightEdge ? THICK : THIN, bottom: THIN };
 
     const dayCell = ws.getCell(DAY_HEADER_ROW, col);
     dayCell.value = d.day;
     dayCell.font = { size: 8, bold: true, color: isWeekend ? { argb: d.weekday === 0 ? "FFDC2626" : "FF2563EB" } : undefined };
     dayCell.alignment = { horizontal: "center", vertical: "middle" };
-    dayCell.border = { top: THIN, left: isMonthStart ? MONTH_BORDER : THIN, right: THIN, bottom: THICK };
+    dayCell.border = { top: THIN, left: isLeftEdge ? THICK : THIN, right: isRightEdge ? THICK : THIN, bottom: THICK };
   });
   ws.getRow(WEEKDAY_ROW).height = HEADER_ROW_HEIGHT;
   ws.getRow(DAY_HEADER_ROW).height = HEADER_ROW_HEIGHT;
@@ -192,12 +190,12 @@ function buildQuickScheduleWorkbook(
       row.height = ROW_HEIGHT;
       days.forEach((d, i) => {
         const col = 3 + i;
-        const isMonthStart = d.day === 1;
+        const isLeftEdge = d.day === 1 || i === 0;
         const cell = row.getCell(col);
         cell.border = {
           top: rowIndex === 0 ? THICK : undefined,
           bottom: rowIndex === ROW_SPAN - 1 ? THICK : THIN,
-          left: isMonthStart ? MONTH_BORDER : THIN,
+          left: isLeftEdge ? THICK : THIN,
           right: col === lastCol ? THICK : undefined,
         };
         const label = labels.get(dayKey(d.year, d.month, d.day, rowIndex));
