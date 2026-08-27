@@ -176,20 +176,29 @@ export function ScheduleQuickOverview() {
     [cases, schedules],
   );
 
-  // 簡易カレンダーの表(下記テーブル)には、今表示中の期間(days)に該当する
-  // マイルストーンが1つも無い案件は出さない — Excel出力/印刷は表示期間に
-  // 関係なく全案件を対象にするため、そちらはvisibleCasesをそのまま使う
-  // (ここで絞り込むのは画面表示専用)。
+  // 簡易カレンダーの表(下記テーブル)専用の絞り込み — Excel出力/印刷は
+  // 表示期間に関係なく「製作依頼済みかつ製造未完了」の全案件を対象にする
+  // ため、そちらはvisibleCasesをそのまま使う。
+  //
+  // 一方この画面は、製造完了(manufacturingComplete)チェックの有無に関係なく
+  // 「製作依頼済み」の全案件を母集団にし、今表示中の期間(days)に該当する
+  // マイルストーンが1つも無い案件だけを除外する。製造完了済みの案件は
+  // 通常(今日以降)の表示ではマイルストーンが未来に残っていないため自然と
+  // 出てこなくなるが、その案件が実際に動いていた過去の月に戻れば
+  // (履歴として)再び表示される — manufacturingCompleteで一律に隠して
+  // しまうと、過去を振り返りたい時にも出てこなくなってしまうため。
   const quickTableCases = useMemo(
     () =>
-      visibleCases.filter(({ case: c }) => {
-        const schedule = schedules[c.id];
-        if (!schedule) return false;
-        return computeMilestones(schedule).some(
-          ({ year, month, day, category }) => QUICK_CATEGORY_LABEL[category] && dayIndexByKey.has(`${year}-${month}-${day}`),
-        );
-      }),
-    [visibleCases, schedules, dayIndexByKey],
+      cases
+        .filter(({ case: c }) => c.caseStatus === "production_requested")
+        .filter(({ case: c }) => {
+          const schedule = schedules[c.id];
+          if (!schedule) return false;
+          return computeMilestones(schedule).some(
+            ({ year, month, day, category }) => QUICK_CATEGORY_LABEL[category] && dayIndexByKey.has(`${year}-${month}-${day}`),
+          );
+        }),
+    [cases, schedules, dayIndexByKey],
   );
 
   function goToCurrentMonth() {
