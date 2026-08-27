@@ -397,7 +397,7 @@ export function ScheduleQuickOverview() {
                     <th
                       key={`m-${m.year}-${m.month}`}
                       colSpan={m.span}
-                      className="border-b border-l border-border-strong bg-surface-2 px-1 py-1 text-center text-[11px] font-semibold whitespace-nowrap text-muted"
+                      className="border-b border-l-2 border-border-strong bg-surface-2 px-1 py-1 text-center text-[11px] font-semibold whitespace-nowrap text-muted"
                     >
                       {m.year}/{String(m.month).padStart(2, "0")}
                     </th>
@@ -407,7 +407,7 @@ export function ScheduleQuickOverview() {
                   {days.map((d, i) => (
                     <th
                       key={`wd-${i}`}
-                      className={`border-b border-l border-border bg-surface-2 py-0.5 text-center text-[10px] text-muted-2 ${d.day === 1 ? "border-l-border-strong" : ""}`}
+                      className={`border-b border-l border-border bg-surface-2 py-0.5 text-center text-[10px] text-muted-2 ${d.day === 1 ? "border-l-2 border-l-border-strong" : ""}`}
                       style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
                     >
                       {WEEKDAY_KANJI[d.weekday]}
@@ -418,7 +418,7 @@ export function ScheduleQuickOverview() {
                   {days.map((d, i) => (
                     <th
                       key={`d-${i}`}
-                      className={`border-b border-l border-border border-b-border-strong bg-surface-2 py-0.5 text-center text-[10px] font-semibold tabular-nums ${d.day === 1 ? "border-l-border-strong" : ""} ${d.weekday === 0 ? "text-danger" : d.weekday === 6 ? "text-accent" : "text-muted"}`}
+                      className={`border-b border-l border-border border-b-border-strong bg-surface-2 py-0.5 text-center text-[10px] font-semibold tabular-nums ${d.day === 1 ? "border-l-2 border-l-border-strong" : ""} ${d.weekday === 0 ? "text-danger" : d.weekday === 6 ? "text-accent" : "text-muted"}`}
                       style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
                     >
                       {d.day}
@@ -491,7 +491,7 @@ export function ScheduleQuickOverview() {
                         return (
                           <td
                             key={`c-${c.id}-${rowIndex}-${i}`}
-                            className={`overflow-hidden border-b border-l border-border px-0.5 py-1 text-center text-[9px] leading-tight font-bold text-ellipsis whitespace-nowrap text-foreground ${d.day === 1 ? "border-l-border-strong" : ""} ${rowIndex === SCREEN_PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
+                            className={`overflow-hidden border-b border-l border-border px-0.5 py-1 text-center text-[9px] leading-tight font-bold text-ellipsis whitespace-nowrap text-foreground ${d.day === 1 ? "border-l-2 border-l-border-strong" : ""} ${rowIndex === SCREEN_PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
                             style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH, maxWidth: DAY_WIDTH, height: ROW_HEIGHT, maxHeight: ROW_HEIGHT }}
                           >
                             {label}
@@ -617,7 +617,7 @@ export function ScheduleQuickOverview() {
                     <th
                       key={`m2-${m.year}-${m.month}`}
                       colSpan={m.span}
-                      className="border-b border-l border-border-strong bg-surface-2 px-1 py-1 text-center text-[11px] font-semibold whitespace-nowrap text-muted"
+                      className="border-b border-l-2 border-border-strong bg-surface-2 px-1 py-1 text-center text-[11px] font-semibold whitespace-nowrap text-muted"
                     >
                       {m.year}/{String(m.month).padStart(2, "0")}
                     </th>
@@ -627,7 +627,7 @@ export function ScheduleQuickOverview() {
                   {days.map((d, i) => (
                     <th
                       key={`wd2-${i}`}
-                      className={`border-b border-l border-border bg-surface-2 py-0.5 text-center text-[10px] text-muted-2 ${d.day === 1 ? "border-l-border-strong" : ""}`}
+                      className={`border-b border-l border-border bg-surface-2 py-0.5 text-center text-[10px] text-muted-2 ${d.day === 1 ? "border-l-2 border-l-border-strong" : ""}`}
                       style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
                     >
                       {WEEKDAY_KANJI[d.weekday]}
@@ -638,7 +638,7 @@ export function ScheduleQuickOverview() {
                   {days.map((d, i) => (
                     <th
                       key={`d2-${i}`}
-                      className={`border-b border-l border-border border-b-border-strong bg-surface-2 py-0.5 text-center text-[10px] font-semibold tabular-nums ${d.day === 1 ? "border-l-border-strong" : ""} ${d.weekday === 0 ? "text-danger" : d.weekday === 6 ? "text-accent" : "text-muted"}`}
+                      className={`border-b border-l border-border border-b-border-strong bg-surface-2 py-0.5 text-center text-[10px] font-semibold tabular-nums ${d.day === 1 ? "border-l-2 border-l-border-strong" : ""} ${d.weekday === 0 ? "text-danger" : d.weekday === 6 ? "text-accent" : "text-muted"}`}
                       style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
                     >
                       {d.day}
@@ -687,7 +687,7 @@ export function ScheduleQuickOverview() {
                     cells.push(
                       <td
                         key={`e-${entry.id}-${i}`}
-                        className={`border-b border-l border-border py-1 ${d.day === 1 ? "border-l-border-strong" : ""}`}
+                        className={`border-b border-l border-border py-1 ${d.day === 1 ? "border-l-2 border-l-border-strong" : ""}`}
                         style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
                       />,
                     );
