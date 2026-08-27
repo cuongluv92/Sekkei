@@ -213,7 +213,14 @@ function computeAutoFitScale(
   return 1;
 }
 
-export function renderWorksheetHtml(ws: Worksheet): string {
+/**
+ * @param extraScale Extra multiplier applied on top of the page-fit scale
+ * (default 1 = no change). >1 intentionally prints larger than "fit to
+ * page" would — the caller is trading some right-edge/bottom overflow
+ * (this renderer has no horizontal pagination) for bigger, easier-to-read
+ * text/cells on a template with room to spare.
+ */
+export function renderWorksheetHtml(ws: Worksheet, extraScale = 1): string {
   const sheetColCount = ws.columnCount || ws.actualColumnCount || 1;
   const sheetRowCount = ws.rowCount || ws.actualRowCount || 1;
 
@@ -250,7 +257,7 @@ export function renderWorksheetHtml(ws: Worksheet): string {
   const orientation = ws.pageSetup?.orientation === "portrait" ? "portrait" : "landscape";
   const tableWidthPx = colWidthsPx.reduce((a, b) => a + b, 0);
   const tableHeightPx = rowHeightsPt.reduce((a, b) => a + b * PX_PER_PT, 0);
-  const scale = computeAutoFitScale(ws, orientation, tableWidthPx, tableHeightPx);
+  const scale = computeAutoFitScale(ws, orientation, tableWidthPx, tableHeightPx) * extraScale;
 
   // Rows repeated on every printed page (e.g. the title/legend/month header)
   // — ExcelJS's own pageSetup.printTitlesRow, honored the same way a real
@@ -366,8 +373,12 @@ export function renderWorksheetHtml(ws: Worksheet): string {
   );
 }
 
-/** Renders `ws` into a hidden print-only container and opens the browser print dialog on it. */
-export function printWorksheet(ws: Worksheet): void {
+/**
+ * Renders `ws` into a hidden print-only container and opens the browser
+ * print dialog on it.
+ * @param extraScale See {@link renderWorksheetHtml}.
+ */
+export function printWorksheet(ws: Worksheet, extraScale = 1): void {
   document.getElementById(PRINT_ROOT_ID)?.remove();
   document.getElementById(PRINT_STYLE_ID)?.remove();
 
@@ -377,7 +388,7 @@ export function printWorksheet(ws: Worksheet): void {
   const root = document.createElement("div");
   root.id = PRINT_ROOT_ID;
   root.style.cssText = "background:#ffffff;color:#000000;color-scheme:light";
-  root.innerHTML = renderWorksheetHtml(ws);
+  root.innerHTML = renderWorksheetHtml(ws, extraScale);
   document.body.appendChild(root);
 
   const style = document.createElement("style");

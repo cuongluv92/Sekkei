@@ -55,7 +55,11 @@ const ROW_HEIGHT = 20;
 const TITLE_ROW = 1;
 const LEGEND_ROW = 2;
 const MONTH_HEADER_ROW = 4;
-const DATA_START_ROW = 5;
+// 実日単位の列だけだと月のどのあたりかが掴みにくいため、月見出しの下に
+// 初(1〜10日)/中(11〜20日)/下(21日〜)の目安見出しを復活させる — 色分け・
+// データ列自体は実日単位のまま、あくまで見出しラベルとして重ねるだけ。
+const JUN_HEADER_ROW = 5;
+const DATA_START_ROW = 6;
 const ROW_SPAN = SCREEN_PROCESS_ROWS.length; // 1案件あたりの行数(画面と共通)
 
 // 実テンプレートの凡例と同じ並び(box は sheetMetal の色見本に統合されるため単独では出さない)。
@@ -177,8 +181,10 @@ function buildHeader(
   }
   ws.getRow(LEGEND_ROW).height = HEADER_ROW_HEIGHT;
 
+  ws.mergeCells(MONTH_HEADER_ROW, 1, JUN_HEADER_ROW, 1);
   const colACaption = ws.getCell(MONTH_HEADER_ROW, 1);
   colACaption.value = "図面番号\n管理番号";
+  ws.mergeCells(MONTH_HEADER_ROW, 2, JUN_HEADER_ROW, 2);
   const colBCaption = ws.getCell(MONTH_HEADER_ROW, 2);
   colBCaption.value = "件名／盤名称";
   for (const cell of [colACaption, colBCaption]) {
@@ -187,6 +193,14 @@ function buildHeader(
     cell.border = { top: THIN, left: THIN, right: THIN, bottom: THIN };
   }
 
+  // 初(1〜10日)/中(11〜20日)/下(21日〜月末)の目安見出し — 実日単位の列は
+  // 細すぎて月内のどのあたりか掴みにくいため、月見出しの下に付ける。
+  const JUN_RANGES: { label: string; startDay: number; endDay: number }[] = [
+    { label: "初", startDay: 1, endDay: 10 },
+    { label: "中", startDay: 11, endDay: 20 },
+    { label: "下", startDay: 21, endDay: MONTH_SLOT_DAYS },
+  ];
+
   for (const m of months) {
     ws.mergeCells(MONTH_HEADER_ROW, m.colStart, MONTH_HEADER_ROW, m.colStart + MONTH_SLOT_DAYS - 1);
     const monthCell = ws.getCell(MONTH_HEADER_ROW, m.colStart);
@@ -194,8 +208,20 @@ function buildHeader(
     monthCell.font = { size: 10, bold: true };
     monthCell.alignment = { horizontal: "center", vertical: "middle" };
     monthCell.border = { top: THIN, left: THICK, right: THIN, bottom: THIN };
+
+    JUN_RANGES.forEach(({ label, startDay, endDay }, i) => {
+      const colStart = m.colStart + startDay - 1;
+      const colEnd = m.colStart + endDay - 1;
+      ws.mergeCells(JUN_HEADER_ROW, colStart, JUN_HEADER_ROW, colEnd);
+      const cell = ws.getCell(JUN_HEADER_ROW, colStart);
+      cell.value = label;
+      cell.font = { size: 10 };
+      cell.alignment = { horizontal: "center", vertical: "middle" };
+      cell.border = { top: THIN, left: i === 0 ? THICK : THIN, right: THIN, bottom: THIN };
+    });
   }
   ws.getRow(MONTH_HEADER_ROW).height = HEADER_ROW_HEIGHT;
+  ws.getRow(JUN_HEADER_ROW).height = HEADER_ROW_HEIGHT;
 }
 
 function buildScheduleWorkbook(
@@ -222,7 +248,7 @@ function buildScheduleWorkbook(
       fitToHeight: 0,
       margins: { top: 0.3, bottom: 0.3, left: 0.3, right: 0.3, header: 0, footer: 0 },
     },
-    views: [{ state: "frozen", xSplit: 2, ySplit: MONTH_HEADER_ROW }],
+    views: [{ state: "frozen", xSplit: 2, ySplit: JUN_HEADER_ROW }],
   });
 
   ws.columns = [
@@ -319,12 +345,12 @@ function buildScheduleWorkbook(
   });
 
   const lastRow = DATA_START_ROW + cases.length * ROW_SPAN - 1;
-  ws.pageSetup.printArea = `A1:${ws.getColumn(printLastCol).letter}${Math.max(lastRow, MONTH_HEADER_ROW)}`;
+  ws.pageSetup.printArea = `A1:${ws.getColumn(printLastCol).letter}${Math.max(lastRow, JUN_HEADER_ROW)}`;
   // 案件が1ページに収まらない数まで増えた場合、タイトル/凡例/月見出しを
   // 各ページの先頭に繰り返し、1案件分の4行ブロックがページの境目で分断
   // されないようにする(印刷ビュー側でthead/1グループ=1tbodyとして解釈
   // する — excelPrintView.tsのrenderWorksheetHtml参照)。
-  ws.pageSetup.printTitlesRow = `${TITLE_ROW}:${MONTH_HEADER_ROW}`;
+  ws.pageSetup.printTitlesRow = `${TITLE_ROW}:${JUN_HEADER_ROW}`;
 
   return ws;
 }
@@ -340,6 +366,11 @@ export async function exportScheduleExcel(
   return { fileName };
 }
 
+// 実日単位の列は幅に余裕があり、そのままだと文字が小さめに収まってしまう
+// ため、印刷時だけオートフィット後にさらに1.2倍拡大する(ダウンロードする
+// .xlsx自体はそのまま — 実Excelで開いた時の見た目は変えない)。
+const PRINT_EXTRA_SCALE = 1.2;
+
 /** Prints 納入工程 in the exact layout the Excel download produces (same colored Gantt). */
 export async function printSchedule(
   cases: DesignCaseWithPanels[],
@@ -347,5 +378,5 @@ export async function printSchedule(
 ): Promise<void> {
   const colorConfigs = await scheduleColorService.list();
   const ws = buildScheduleWorkbook(cases, schedules, colorConfigs);
-  printWorksheet(ws);
+  printWorksheet(ws, PRINT_EXTRA_SCALE);
 }
