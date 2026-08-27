@@ -20,25 +20,25 @@ import type {
 } from "@/lib/types/design";
 
 /**
- * 工程表(簡易) — 実日カレンダー(今日から2ヶ月分、月に縛られず今日を起点に
- * 並べる)で、色分けの代わりに各マイルストーン当日のセルにカテゴリ名
- * (完成/納入/検査/立会/出荷)を直接文字で書く軽量版。行構成は既存の
- * SCREEN_PROCESS_ROWS(鈑金・BOX納入/アクセサリー納入/製作・検査/立会・出荷)
- * をそのまま使う — 案件・工程データ自体は既存の納入工程(旧⑤工程表)と共通。
+ * 工程表(簡易) — 実日カレンダー(今日から約1.5ヶ月分、月に縛られず今日を
+ * 起点に並べる)で、色分けの代わりに各マイルストーン当日のセルにカテゴリ名
+ * を直接文字で書く軽量版。行構成は既存のSCREEN_PROCESS_ROWS(鈑金・BOX納入/
+ * アクセサリー納入/製作・検査/立会・出荷)をそのまま使うが、表示する値は
+ * 板金納入/BOX納入/作業完了/出荷/立会の5種類のみに絞る(アクセサリー納入・
+ * 検査はこの簡易表では出さない) — 案件・工程データ自体は既存の納入工程
+ * (旧⑤工程表)と共通。
  */
-const CATEGORY_LABEL: Record<ScheduleCategoryKey, string> = {
-  sheetMetal: "納入",
-  box: "納入",
-  accessory: "納入",
-  production: "完成",
-  inspection: "検査",
+const QUICK_CATEGORY_LABEL: Partial<Record<ScheduleCategoryKey, string>> = {
+  sheetMetal: "板入",
+  box: "BOX入",
+  production: "作業完了",
   witness: "立会",
   shipping: "出荷",
 };
 
 const WEEKDAY_KANJI = ["日", "月", "火", "水", "木", "金", "土"];
-const MONTHS_SPAN = 2;
-const DAY_WIDTH = 30;
+const DAYS_SPAN = 45; // 約1.5ヶ月分
+const DAY_WIDTH = 34;
 const DRAWING_COL_WIDTH = 130;
 const LABEL_COL_WIDTH = 200;
 
@@ -54,16 +54,13 @@ function toIso(year: number, month: number, day: number): string {
   return `${year}-${pad(month)}-${pad(day)}`;
 }
 
-/** 今日を起点に(月初にそろえず)ちょうど2ヶ月分の実日を並べる。 */
+/** 今日を起点に(月初にそろえず)DAYS_SPAN日分(約1.5ヶ月)の実日を並べる。 */
 function buildDayList(): DayInfo[] {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end = new Date(start);
-  end.setMonth(end.getMonth() + MONTHS_SPAN);
-  end.setDate(end.getDate() - 1);
   const days: DayInfo[] = [];
   const cursor = new Date(start);
-  while (cursor <= end) {
+  for (let i = 0; i < DAYS_SPAN; i++) {
     days.push({
       year: cursor.getFullYear(),
       month: cursor.getMonth() + 1,
@@ -247,7 +244,7 @@ export function ScheduleQuickOverview() {
                   {days.map((d, i) => (
                     <th
                       key={`wd-${i}`}
-                      className={`border-b border-border bg-surface-2 py-0.5 text-center text-[10px] text-muted-2 ${d.day === 1 ? "border-l border-border-strong" : ""}`}
+                      className={`border-b border-l border-border bg-surface-2 py-0.5 text-center text-[10px] text-muted-2 ${d.day === 1 ? "border-l-border-strong" : ""}`}
                       style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
                     >
                       {WEEKDAY_KANJI[d.weekday]}
@@ -258,7 +255,7 @@ export function ScheduleQuickOverview() {
                   {days.map((d, i) => (
                     <th
                       key={`d-${i}`}
-                      className={`border-b border-border-strong bg-surface-2 py-0.5 text-center text-[10px] font-semibold tabular-nums ${d.day === 1 ? "border-l border-border-strong" : ""} ${d.weekday === 0 ? "text-danger" : d.weekday === 6 ? "text-accent" : "text-muted"}`}
+                      className={`border-b border-l border-border border-b-border-strong bg-surface-2 py-0.5 text-center text-[10px] font-semibold tabular-nums ${d.day === 1 ? "border-l-border-strong" : ""} ${d.weekday === 0 ? "text-danger" : d.weekday === 6 ? "text-accent" : "text-muted"}`}
                       style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
                     >
                       {d.day}
@@ -272,9 +269,11 @@ export function ScheduleQuickOverview() {
                   const labels = schedule
                     ? new Map(
                         computeMilestones(schedule).flatMap(({ year, month, day, category }) => {
+                          const label = QUICK_CATEGORY_LABEL[category];
+                          if (!label) return [];
                           const rowIndex = SCREEN_PROCESS_ROWS.findIndex((cats) => cats.includes(category));
                           if (rowIndex < 0) return [];
-                          return [[dayKey(year, month, day, rowIndex), CATEGORY_LABEL[category]] as const];
+                          return [[dayKey(year, month, day, rowIndex), label] as const];
                         }),
                       )
                     : new Map<string, string>();
@@ -311,7 +310,7 @@ export function ScheduleQuickOverview() {
                         return (
                           <td
                             key={`c-${c.id}-${rowIndex}-${i}`}
-                            className={`border-b border-border py-1 text-center text-[10px] font-bold text-foreground ${d.day === 1 ? "border-l border-border-strong" : ""} ${rowIndex === SCREEN_PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
+                            className={`border-b border-l border-border py-1 text-center text-[10px] font-bold text-foreground ${d.day === 1 ? "border-l-border-strong" : ""} ${rowIndex === SCREEN_PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
                             style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
                           >
                             {label}
@@ -440,7 +439,7 @@ export function ScheduleQuickOverview() {
                   {days.map((d, i) => (
                     <th
                       key={`wd2-${i}`}
-                      className={`border-b border-border bg-surface-2 py-0.5 text-center text-[10px] text-muted-2 ${d.day === 1 ? "border-l border-border-strong" : ""}`}
+                      className={`border-b border-l border-border bg-surface-2 py-0.5 text-center text-[10px] text-muted-2 ${d.day === 1 ? "border-l-border-strong" : ""}`}
                       style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
                     >
                       {WEEKDAY_KANJI[d.weekday]}
@@ -451,7 +450,7 @@ export function ScheduleQuickOverview() {
                   {days.map((d, i) => (
                     <th
                       key={`d2-${i}`}
-                      className={`border-b border-border-strong bg-surface-2 py-0.5 text-center text-[10px] font-semibold tabular-nums ${d.day === 1 ? "border-l border-border-strong" : ""} ${d.weekday === 0 ? "text-danger" : d.weekday === 6 ? "text-accent" : "text-muted"}`}
+                      className={`border-b border-l border-border border-b-border-strong bg-surface-2 py-0.5 text-center text-[10px] font-semibold tabular-nums ${d.day === 1 ? "border-l-border-strong" : ""} ${d.weekday === 0 ? "text-danger" : d.weekday === 6 ? "text-accent" : "text-muted"}`}
                       style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
                     >
                       {d.day}
@@ -500,7 +499,7 @@ export function ScheduleQuickOverview() {
                     cells.push(
                       <td
                         key={`e-${entry.id}-${i}`}
-                        className={`border-b border-border py-1 ${d.day === 1 ? "border-l border-border-strong" : ""}`}
+                        className={`border-b border-l border-border py-1 ${d.day === 1 ? "border-l-border-strong" : ""}`}
                         style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH }}
                       />,
                     );
