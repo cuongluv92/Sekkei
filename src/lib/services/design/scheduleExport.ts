@@ -273,6 +273,11 @@ function buildScheduleWorkbook(
 
   const lastRow = DATA_START_ROW + cases.length * ROW_SPAN - 1;
   ws.pageSetup.printArea = `A1:${ws.getColumn(printLastCol).letter}${Math.max(lastRow, JUN_HEADER_ROW)}`;
+  // 案件が1ページに収まらない数まで増えた場合、タイトル/凡例/月・旬見出し
+  // を各ページの先頭に繰り返し、1案件分の4行ブロックがページの境目で
+  // 分断されないようにする(印刷ビュー側でthead/1グループ=1tbodyとして
+  // 解釈する — excelPrintView.tsのrenderWorksheetHtml参照)。
+  ws.pageSetup.printTitlesRow = `${TITLE_ROW}:${JUN_HEADER_ROW}`;
 
   return ws;
 }

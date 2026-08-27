@@ -76,6 +76,17 @@ function parseCellRef(ref: string): CellRef {
   return { col: colLettersToNumber(m[1]), row: Number(m[2]) };
 }
 
+/** Parses pageSetup.printTitlesRow ("1:5" or "$1:$5") into an inclusive row range. */
+function parseRowRange(value: string | undefined): { r1: number; r2: number } | null {
+  if (!value) return null;
+  const cleaned = value.replace(/\$/g, "");
+  const [a, b] = cleaned.split(":");
+  const r1 = Number(a);
+  const r2 = Number(b ?? a);
+  if (!Number.isFinite(r1) || !Number.isFinite(r2)) return null;
+  return { r1: Math.min(r1, r2), r2: Math.max(r1, r2) };
+}
+
 function parseRange(range: string): CellRange {
   // A printArea like "Sheet1!$A$1:$P$36" carries a sheet-name prefix and $ anchors — strip both.
   const cleaned = range.includes("!") ? range.split("!").pop()! : range;
@@ -236,8 +247,29 @@ export function renderWorksheetHtml(ws: Worksheet): string {
   const tableHeightPx = rowHeightsPt.reduce((a, b) => a + b * PX_PER_PT, 0);
   const scale = computeAutoFitScale(ws, orientation, tableWidthPx, tableHeightPx);
 
-  const rowsHtml: string[] = [];
-  for (let r = rowStart; r <= rowEnd; r++) {
+  // Rows repeated on every printed page (e.g. the title/legend/month header)
+  // — ExcelJS's own pageSetup.printTitlesRow, honored the same way a real
+  // Excel print would. Left out of the scrolling body below so it isn't
+  // duplicated, and rendered inside <thead>, which browsers natively repeat
+  // on each page when a <table> spans more than one.
+  const titleRows = parseRowRange(ws.pageSetup?.printTitlesRow);
+
+  // Rows that came from the same vertical cell merge (e.g. one 案件's whole
+  // multi-row block) must land on the same page together — otherwise a
+  // page break can fall in the middle of a block, splitting its label/color
+  // band across two sheets. Rows outside any vertical merge are their own
+  // single-row group. min() picks a merge's own r1 as the whole group's
+  // anchor so nested/adjacent merges never fight over cells that belong to
+  // more than one merge.
+  const groupRootByRow = new Map<number, number>();
+  for (const m of merges) {
+    if (m.r2 <= m.r1) continue;
+    for (let r = m.r1; r <= m.r2; r++) {
+      groupRootByRow.set(r, Math.min(groupRootByRow.get(r) ?? m.r1, m.r1));
+    }
+  }
+
+  function renderRow(r: number): string {
     const rowModel = ws.getRow(r);
     const heightPt = (rowModel.height ?? DEFAULT_ROW_HEIGHT_PT) * scale;
     const cellsHtml: string[] = [];
@@ -275,16 +307,42 @@ export function renderWorksheetHtml(ws: Worksheet): string {
       const text = escapeHtml(cellText(cell)).replace(/\n/g, "<br/>");
       cellsHtml.push(`<td${spanAttr} style="${styles.join(";")}">${text}</td>`);
     }
-    rowsHtml.push(`<tr style="height:${heightPt}pt">${cellsHtml.join("")}</tr>`);
+    return `<tr style="height:${heightPt}pt">${cellsHtml.join("")}</tr>`;
   }
+
+  const theadRowsHtml: string[] = [];
+  const bodyGroupsHtml: string[] = [];
+  let currentGroupRoot: number | null = null;
+  let currentGroupRows: string[] = [];
+  const flushGroup = () => {
+    if (currentGroupRows.length === 0) return;
+    bodyGroupsHtml.push(
+      `<tbody style="break-inside:avoid;page-break-inside:avoid">${currentGroupRows.join("")}</tbody>`,
+    );
+    currentGroupRows = [];
+  };
+  for (let r = rowStart; r <= rowEnd; r++) {
+    if (titleRows && r >= titleRows.r1 && r <= titleRows.r2) {
+      theadRowsHtml.push(renderRow(r));
+      continue;
+    }
+    const groupRoot = groupRootByRow.get(r) ?? r;
+    if (groupRoot !== currentGroupRoot) {
+      flushGroup();
+      currentGroupRoot = groupRoot;
+    }
+    currentGroupRows.push(renderRow(r));
+  }
+  flushGroup();
 
   // Rounded to whole pixels — a fractional column width leaves cell edges
   // (and the borders drawn on them) off the pixel grid, which is the other
   // half of the same blurriness the border-width fix above addresses.
   const colgroup = colWidthsPx.map((w) => `<col style="width:${Math.round(w * scale)}px" />`).join("");
+  const thead = theadRowsHtml.length > 0 ? `<thead>${theadRowsHtml.join("")}</thead>` : "";
   return (
     `<table style="border-collapse:collapse;table-layout:fixed;font-family:'Yu Gothic','Meiryo',sans-serif;background:#ffffff;color:#000000">` +
-    `<colgroup>${colgroup}</colgroup><tbody>${rowsHtml.join("")}</tbody></table>`
+    `<colgroup>${colgroup}</colgroup>${thead}${bodyGroupsHtml.join("")}</table>`
   );
 }
 
