@@ -216,7 +216,11 @@ function buildHeader(
     monthCell.alignment = { horizontal: "center", vertical: "middle" };
     monthCell.border = { top: THICK, left: THICK, right: THICK, bottom: THICK };
 
-    JUN_RANGES.forEach(({ label, startDay, endDay }) => {
+    // 初(月の変わり目と同じ位置)だけ左端を太くし、中/下の左端(=旬の
+    // 変わり目)は下のデータ行と同じくTHINにする — 以前は全セル4辺とも
+    // THICKだったため、旬の区切りまで月の変わり目と同じ濃さになってしまい
+    // 印刷すると区別がつかなくなっていた。
+    JUN_RANGES.forEach(({ label, startDay, endDay }, idx) => {
       const colStart = m.colStart + startDay - 1;
       const colEnd = m.colStart + endDay - 1;
       ws.mergeCells(JUN_HEADER_ROW, colStart, JUN_HEADER_ROW, colEnd);
@@ -224,7 +228,9 @@ function buildHeader(
       cell.value = label;
       cell.font = { size: 10 };
       cell.alignment = { horizontal: "center", vertical: "middle" };
-      cell.border = { top: THICK, left: THICK, right: THICK, bottom: THICK };
+      const isFirst = idx === 0;
+      const isLast = idx === JUN_RANGES.length - 1;
+      cell.border = { top: THICK, left: isFirst ? THICK : THIN, right: isLast ? THICK : THIN, bottom: THICK };
     });
   }
   ws.getRow(MONTH_HEADER_ROW).height = HEADER_ROW_HEIGHT;
