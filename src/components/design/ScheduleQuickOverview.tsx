@@ -426,7 +426,7 @@ export function ScheduleQuickOverview() {
                         return (
                           <td
                             key={`c-${c.id}-${rowIndex}-${i}`}
-                            className={`overflow-hidden border-b border-l border-border py-1 text-center text-[10px] font-bold text-ellipsis whitespace-nowrap text-foreground ${d.day === 1 ? "border-l-border-strong" : ""} ${rowIndex === SCREEN_PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
+                            className={`overflow-hidden border-b border-l border-border px-0.5 py-1 text-center text-[9px] leading-tight font-bold text-ellipsis whitespace-nowrap text-foreground ${d.day === 1 ? "border-l-border-strong" : ""} ${rowIndex === SCREEN_PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
                             style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH, maxWidth: DAY_WIDTH }}
                           >
                             {label}

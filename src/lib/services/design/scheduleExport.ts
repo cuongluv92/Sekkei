@@ -114,7 +114,11 @@ const LEGEND_SWATCH_SPAN = 6;
  * 並べると、行の左端から右端まで間延びして見えてしまうため。
  */
 function layoutLegend(endCol: number): LegendEntry[] {
-  const spans = LEGEND_CATEGORIES.map(({ label }) => (label.length > 4 ? 2 : 1));
+  // ラベル列の幅(列数) — 「4文字超なら一律2列」だと「鈑金・BOX納入」(8文字)
+  // のような長いラベルで列数が全く足りず、隣の色見本に文字がはみ出して
+  // 重なって見えていた。1文字あたり約0.9列を確保する比例計算に変える
+  // ことで、文字数に応じて必要な幅を毎回きちんと取る。
+  const spans = LEGEND_CATEGORIES.map(({ label }) => Math.max(1, Math.ceil(label.length * 0.9)));
   const totalWidth = spans.reduce((sum, span) => sum + LEGEND_SWATCH_SPAN + span, 0); // 色見本(LEGEND_SWATCH_SPAN列)+ラベル(span列) の合計
   // 右詰めの開始列 — シート左端(1列目)より前にはみ出さないようクランプする。
   let col = Math.max(1, endCol - totalWidth + 1);
