@@ -1,17 +1,20 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { FileSpreadsheet, Loader2, Plus, Printer } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import {
   constructionScheduleService,
   designCaseService,
+  exportScheduleExcel,
+  printSchedule,
   scheduleService,
   type ConstructionScheduleEntryInput,
 } from "@/lib/services/design";
 import { buildProjectPanelLines } from "@/lib/utils/designNumbering";
 import { computeMilestones, SCREEN_PROCESS_ROWS } from "@/lib/utils/scheduleColoring";
 import { DateInput } from "@/components/common/DateInput";
+import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type {
   CaseSchedule,
   ConstructionScheduleEntry,
@@ -20,13 +23,16 @@ import type {
 } from "@/lib/types/design";
 
 /**
- * 工程表(簡易) — 実日カレンダー(今日から約1.5ヶ月分、月に縛られず今日を
- * 起点に並べる)で、色分けの代わりに各マイルストーン当日のセルにカテゴリ名
- * を直接文字で書く軽量版。行構成は既存のSCREEN_PROCESS_ROWS(鈑金・BOX納入/
- * アクセサリー納入/製作・検査/立会・出荷)をそのまま使うが、表示する値は
- * 板金納入/BOX納入/作業完了/出荷/立会の5種類のみに絞る(アクセサリー納入・
- * 検査はこの簡易表では出さない) — 案件・工程データ自体は既存の納入工程
- * (旧⑤工程表)と共通。
+ * 工程表(簡易) — 実日カレンダー(表示月の1日を起点に約1.5ヶ月分並べる)で、
+ * 色分けの代わりに各マイルストーン当日のセルにカテゴリ名を直接文字で書く
+ * 軽量版。行構成は既存のSCREEN_PROCESS_ROWS(鈑金・BOX納入/アクセサリー納入/
+ * 製作・検査/立会・出荷)をそのまま使うが、表示する値は板金納入/BOX納入/
+ * 完成/出荷/立会の5種類のみに絞る(アクセサリー納入・検査はこの簡易表では
+ * 出さない)。年月選択・Excel出力・印刷は既存の工程表(ScheduleTimeline)と
+ * 同じ操作感にする — 表示月を過去に戻しても、日付データ自体は消えずに
+ * 保持されている実日付から毎回再計算されるので、過去のマイルストーンも
+ * そのまま確認できる。案件・工程データ自体は既存の納入工程(旧⑤工程表)と
+ * 共通。
  */
 const QUICK_CATEGORY_LABEL: Partial<Record<ScheduleCategoryKey, string>> = {
   sheetMetal: "板入",
@@ -54,10 +60,9 @@ function toIso(year: number, month: number, day: number): string {
   return `${year}-${pad(month)}-${pad(day)}`;
 }
 
-/** 今日を起点に(月初にそろえず)DAYS_SPAN日分(約1.5ヶ月)の実日を並べる。 */
-function buildDayList(): DayInfo[] {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+/** focus年月の1日を起点にDAYS_SPAN日分(約1.5ヶ月)の実日を並べる。 */
+function buildDayList(focus: { year: number; month: number }): DayInfo[] {
+  const start = new Date(focus.year, focus.month - 1, 1);
   const days: DayInfo[] = [];
   const cursor = new Date(start);
   for (let i = 0; i < DAYS_SPAN; i++) {
@@ -109,7 +114,12 @@ function emptyEntryForm(): ConstructionScheduleEntryInput {
 
 export function ScheduleQuickOverview() {
   const { t } = useTranslation();
-  const days = useMemo(() => buildDayList(), []);
+  const { message, show } = useMockFeedback();
+  const now = new Date();
+  const [focus, setFocus] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 });
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  const days = useMemo(() => buildDayList(focus), [focus]);
   const monthSpans = useMemo(() => buildMonthSpans(days), [days]);
   const dayIndexByKey = useMemo(() => {
     const map = new Map<string, number>();
@@ -158,6 +168,34 @@ export function ScheduleQuickOverview() {
     [cases, schedules],
   );
 
+  function goToCurrentMonth() {
+    const n = new Date();
+    setFocus({ year: n.getFullYear(), month: n.getMonth() + 1 });
+  }
+
+  async function handleExportExcel() {
+    setExportingExcel(true);
+    try {
+      const { fileName } = await exportScheduleExcel(visibleCases, schedules);
+      show(t("design.exportedMessage", { fileName }));
+    } catch {
+      show(t("design.exportError"));
+    } finally {
+      setExportingExcel(false);
+    }
+  }
+
+  async function handlePrint() {
+    setPrinting(true);
+    try {
+      await printSchedule(visibleCases, schedules);
+    } catch {
+      show(t("design.exportError"));
+    } finally {
+      setPrinting(false);
+    }
+  }
+
   // 工事工程(手入力ログ) — 案件・工程データとは完全に独立。
   const [entries, setEntries] = useState<ConstructionScheduleEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(true);
@@ -202,9 +240,45 @@ export function ScheduleQuickOverview() {
     <div className="flex flex-col gap-3">
       {/* 上段: 案件工程(実日・色なし・マイルストーンは文字で表示) */}
       <div className="panel">
-        <div className="panel-header-compact">
+        <div className="panel-header-compact flex-wrap gap-2">
           <span className="panel-title">{t("design.scheduleQuick.title")}</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <select
+              value={focus.year}
+              onChange={(e) => setFocus((f) => ({ ...f, year: Number(e.target.value) }))}
+              className="field-input w-auto py-1.5"
+            >
+              {Array.from({ length: 7 }, (_, i) => now.getFullYear() - 3 + i).map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+            <select
+              value={focus.month}
+              onChange={(e) => setFocus((f) => ({ ...f, month: Number(e.target.value) }))}
+              className="field-input w-auto py-1.5"
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+            <button onClick={goToCurrentMonth} className="btn-secondary">
+              {t("design.schedule.goToCurrentMonth")}
+            </button>
+            <button onClick={handleExportExcel} disabled={exportingExcel} className="btn-ghost">
+              {exportingExcel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
+              {t("design.exportExcelButton")}
+            </button>
+            <button onClick={handlePrint} disabled={printing} className="btn-ghost">
+              {printing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
+              {t("design.printButton")}
+            </button>
+          </div>
         </div>
+        {message && <div className="border-b border-border px-3.5 py-1.5 text-[12px] text-success">{message}</div>}
         {loading ? (
           <p className="p-6 text-center text-[13px] text-muted">{t("common.loading")}</p>
         ) : visibleCases.length === 0 ? (
