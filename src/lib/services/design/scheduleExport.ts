@@ -44,6 +44,10 @@ const LABEL_COL_B_WIDTH = 40;
 // 近くになっていた)。1にすると旧レイアウトとほぼ同じ合計幅になり、
 // 追加の縮小がほぼ要らなくなる。
 const DAY_COL_WIDTH = 1;
+// タイトル/凡例/月見出し行は文字が1行分収まればよく、案件データ行ほどの
+// 高さは要らない — この3行だけ低くしてヘッダー部分をコンパクトにする
+// (データ行はガントバーのラベルが収まる余裕を保つため20のまま)。
+const HEADER_ROW_HEIGHT = 10;
 const ROW_HEIGHT = 20;
 const TITLE_ROW = 1;
 const LEGEND_ROW = 2;
@@ -140,7 +144,7 @@ function buildHeader(
   titleCell.value = "納入工程";
   titleCell.font = { size: 16, bold: true };
   titleCell.alignment = { horizontal: "left", vertical: "middle" };
-  ws.getRow(TITLE_ROW).height = ROW_HEIGHT;
+  ws.getRow(TITLE_ROW).height = HEADER_ROW_HEIGHT;
 
   // 凡例 — 色見本(1列)+ラベル(文字数に応じて複数列を結合)を、間隔を空けず
   // コンパクトにまとめて月グリッドの右端に寄せる(layoutLegend参照)。
@@ -155,7 +159,7 @@ function buildHeader(
     labelCell.font = { size: 10 };
     labelCell.alignment = { horizontal: "left", vertical: "middle" };
   }
-  ws.getRow(LEGEND_ROW).height = ROW_HEIGHT;
+  ws.getRow(LEGEND_ROW).height = HEADER_ROW_HEIGHT;
 
   const colACaption = ws.getCell(MONTH_HEADER_ROW, 1);
   colACaption.value = "図面番号\n管理番号";
@@ -175,7 +179,7 @@ function buildHeader(
     monthCell.alignment = { horizontal: "center", vertical: "middle" };
     monthCell.border = { top: THIN, left: THICK, right: THIN, bottom: THIN };
   }
-  ws.getRow(MONTH_HEADER_ROW).height = ROW_HEIGHT;
+  ws.getRow(MONTH_HEADER_ROW).height = HEADER_ROW_HEIGHT;
 }
 
 function buildScheduleWorkbook(
