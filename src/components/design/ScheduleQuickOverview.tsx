@@ -31,7 +31,7 @@ import type {
 const QUICK_CATEGORY_LABEL: Partial<Record<ScheduleCategoryKey, string>> = {
   sheetMetal: "板入",
   box: "BOX入",
-  production: "作業完了",
+  production: "完成",
   witness: "立会",
   shipping: "出荷",
 };
