@@ -289,6 +289,25 @@ export interface DesignCaseWithPanels {
 }
 
 /**
+ * 図面番号/管理番号/件名/盤名称一覧の変更履歴の1バージョン(type 2 slowly
+ * changing dimension) — design_case_identity_snapshots。ある案件が識別情報を
+ * 変更するたびに、その時点の全識別情報をまとめて1件追加する。ある日付
+ * 時点の値は、その日付以前でvalidFromが最も新しい行を1件引けば求まる
+ * (工程表(簡易カレンダー)で過去の月に戻った時に、当時の件名/管理番号を
+ * 表示するために使う)。
+ */
+export interface CaseIdentitySnapshot {
+  id: string;
+  caseId: string;
+  validFrom: string; // ISO timestamp
+  drawingNumber: string;
+  managementNumber: string;
+  constructionNumber: string;
+  projectName: string;
+  panelNames: { panelNo: number; panelName: string }[];
+}
+
+/**
  * ②～⑧ Excel templates, plus 耐震計算/換気計算 report templates. Phase 5 —
  * schema only (settings UI/versioning not built yet).
  *

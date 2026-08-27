@@ -4,6 +4,7 @@ import {
   getNextSequenceForYear,
 } from "@/lib/utils/designNumbering";
 import type {
+  CaseIdentitySnapshot,
   CasePanel,
   CaseStatus,
   DesignCase,
@@ -33,6 +34,30 @@ interface DesignCaseRow {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+}
+
+interface IdentitySnapshotRow {
+  id: string;
+  case_id: string;
+  valid_from: string;
+  drawing_number: string;
+  management_number: string;
+  construction_number: string;
+  project_name: string;
+  panel_names: { panelNo: number; panelName: string }[];
+}
+
+function identitySnapshotFromRow(row: IdentitySnapshotRow): CaseIdentitySnapshot {
+  return {
+    id: row.id,
+    caseId: row.case_id,
+    validFrom: row.valid_from,
+    drawingNumber: row.drawing_number,
+    managementNumber: row.management_number,
+    constructionNumber: row.construction_number,
+    projectName: row.project_name,
+    panelNames: row.panel_names ?? [],
+  };
 }
 
 interface CasePanelRow {
@@ -133,6 +158,35 @@ async function panelsForCase(caseId: string): Promise<CasePanel[]> {
     .order("panel_no", { ascending: true });
   if (error) throw error;
   return (data ?? []).map(panelFromRow);
+}
+
+/**
+ * 図面番号/管理番号/件名/盤名称一覧のスナップショットを1件追加する
+ * (design_case_identity_snapshots) — 案件のupdate()/savePanels()で識別
+ * 情報が変わるたびに呼ぶ。過去の月を振り返った時にその時点の値を出す
+ * ための履歴なので、常にその時点の"現在値"をまるごと1行として積む
+ * (差分ではなく全体スナップショット)。
+ */
+async function snapshotIdentity(caseId: string): Promise<void> {
+  const client = requireSupabase();
+  const [{ data: caseRow, error: caseError }, panels] = await Promise.all([
+    client
+      .from("design_cases")
+      .select("drawing_number,management_number,construction_number,project_name")
+      .eq("id", caseId)
+      .single(),
+    panelsForCase(caseId),
+  ]);
+  if (caseError) throw caseError;
+  const { error } = await client.from("design_case_identity_snapshots").insert({
+    case_id: caseId,
+    drawing_number: caseRow.drawing_number,
+    management_number: caseRow.management_number,
+    construction_number: caseRow.construction_number,
+    project_name: caseRow.project_name,
+    panel_names: panels.map((p) => ({ panelNo: p.panelNo, panelName: p.panelName })),
+  });
+  if (error) throw error;
 }
 
 async function panelsForCases(
@@ -344,6 +398,16 @@ export const designCaseService = {
       .select()
       .single();
     if (error) throw error;
+    // 図面番号は作成後不変(row化されない)だが、管理番号/工事番号/件名は
+    // 変わり得るため、いずれかが変わった時だけ識別情報のスナップショットを
+    // 積む(無関係な更新のたびに履歴が増え続けるのを防ぐ)。
+    if (
+      patch.managementNumber !== undefined ||
+      patch.constructionNumber !== undefined ||
+      patch.projectName !== undefined
+    ) {
+      await snapshotIdentity(caseId);
+    }
     return caseFromRow(data as DesignCaseRow);
   },
 
@@ -376,7 +440,34 @@ export const designCaseService = {
         ? await deleteQuery.not("panel_no", "in", `(${keepNos.join(",")})`)
         : await deleteQuery;
     if (deleteError) throw deleteError;
+    await snapshotIdentity(caseId);
     return panelsForCase(caseId);
+  },
+
+  /**
+   * 複数案件分の識別情報スナップショットをまとめて取得する(validFrom昇順)
+   * — 工程表(簡易カレンダー)が過去の月を表示する時に、その時点の件名/
+   * 管理番号/盤名称を求めるために使う(呼び出し側でcase毎にvalidFrom<=
+   * 対象日の最後の1件を選ぶ)。
+   */
+  async listIdentitySnapshots(
+    caseIds: string[],
+  ): Promise<Map<string, CaseIdentitySnapshot[]>> {
+    const map = new Map<string, CaseIdentitySnapshot[]>();
+    if (caseIds.length === 0) return map;
+    const { data, error } = await requireSupabase()
+      .from("design_case_identity_snapshots")
+      .select("*")
+      .in("case_id", caseIds)
+      .order("valid_from", { ascending: true });
+    if (error) throw error;
+    for (const row of (data ?? []) as IdentitySnapshotRow[]) {
+      const snapshot = identitySnapshotFromRow(row);
+      const list = map.get(snapshot.caseId) ?? [];
+      list.push(snapshot);
+      map.set(snapshot.caseId, list);
+    }
+    return map;
   },
 
   async search(query: DesignCaseSearchQuery): Promise<DesignCaseWithPanels[]> {

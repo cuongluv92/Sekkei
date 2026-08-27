@@ -17,6 +17,7 @@ import { computeMilestones, SCREEN_PROCESS_ROWS } from "@/lib/utils/scheduleColo
 import { DateInput } from "@/components/common/DateInput";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type {
+  CaseIdentitySnapshot,
   CaseSchedule,
   ConstructionScheduleEntry,
   DesignCaseWithPanels,
@@ -100,6 +101,39 @@ function dayKey(year: number, month: number, day: number, rowIndex: number) {
 function isoToDayIndexKey(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   return `${y}-${m}-${d}`;
+}
+
+/**
+ * snapshots(validFrom昇順)の中から、指定日(YYYY-M-D、ゼロ埋めなし)時点で
+ * 有効だった最新バージョンを1件選ぶ — 該当が無ければ(その日付より後に
+ * 案件が作られた等)undefinedを返し、呼び出し側は現在値にフォールバック
+ * する。
+ */
+function pickIdentityAsOf(
+  snapshots: CaseIdentitySnapshot[] | undefined,
+  year: number,
+  month: number,
+  day: number,
+): CaseIdentitySnapshot | undefined {
+  if (!snapshots || snapshots.length === 0) return undefined;
+  const cutoff = new Date(year, month - 1, day, 23, 59, 59).getTime();
+  let result: CaseIdentitySnapshot | undefined;
+  for (const s of snapshots) {
+    if (new Date(s.validFrom).getTime() <= cutoff) result = s;
+    else break;
+  }
+  return result;
+}
+
+/** pickIdentityAsOfで選んだスナップショットから、buildProjectPanelLinesと同じ形式で件名／盤名称を組み立てる。 */
+function projectPanelLinesFromSnapshot(snapshot: CaseIdentitySnapshot): { projectName: string; panelNames: string } {
+  const panelNames = snapshot.panelNames
+    .slice()
+    .sort((a, b) => a.panelNo - b.panelNo)
+    .map((p) => p.panelName.trim())
+    .filter(Boolean)
+    .join("・");
+  return { projectName: snapshot.projectName.trim(), panelNames };
 }
 
 function emptyEntryForm(): ConstructionScheduleEntryInput {
@@ -189,6 +223,22 @@ export function ScheduleQuickOverview() {
         }),
     [cases, schedules, dayIndexByKey],
   );
+
+  // 件名/管理番号/盤名称は現在値しか持たないため、過去の月を表示している
+  // 時にその時点の値を出すための履歴(design_case_identity_snapshots)を
+  // 表示中の案件分まとめて取得する。
+  const [identitySnapshots, setIdentitySnapshots] = useState<Map<string, CaseIdentitySnapshot[]>>(new Map());
+  const quickTableCaseIdsKey = quickTableCases.map(({ case: c }) => c.id).join(",");
+  useEffect(() => {
+    let active = true;
+    const caseIds = quickTableCaseIdsKey ? quickTableCaseIdsKey.split(",") : [];
+    designCaseService.listIdentitySnapshots(caseIds).then((map) => {
+      if (active) setIdentitySnapshots(map);
+    });
+    return () => {
+      active = false;
+    };
+  }, [quickTableCaseIdsKey]);
 
   function goToCurrentMonth() {
     const n = new Date();
@@ -369,18 +419,32 @@ export function ScheduleQuickOverview() {
               <tbody>
                 {quickTableCases.map(({ case: c, panels }) => {
                   const schedule = schedules[c.id];
-                  const labels = schedule
-                    ? new Map(
-                        computeMilestones(schedule).flatMap(({ year, month, day, category }) => {
-                          const label = QUICK_CATEGORY_LABEL[category];
-                          if (!label) return [];
-                          const rowIndex = SCREEN_PROCESS_ROWS.findIndex((cats) => cats.includes(category));
-                          if (rowIndex < 0) return [];
-                          return [[dayKey(year, month, day, rowIndex), label] as const];
-                        }),
-                      )
-                    : new Map<string, string>();
-                  const { projectName, panelNames } = buildProjectPanelLines(c, panels);
+                  const milestones = schedule ? computeMilestones(schedule) : [];
+                  const labels = new Map(
+                    milestones.flatMap(({ year, month, day, category }) => {
+                      const label = QUICK_CATEGORY_LABEL[category];
+                      if (!label) return [];
+                      const rowIndex = SCREEN_PROCESS_ROWS.findIndex((cats) => cats.includes(category));
+                      if (rowIndex < 0) return [];
+                      return [[dayKey(year, month, day, rowIndex), label] as const];
+                    }),
+                  );
+                  // この画面に表示中の期間で最も早い(=このブロックが最初に見え始める)
+                  // マイルストーンの日付を、件名/図面番号/管理番号の「その時点の値」を
+                  // 引くための基準日にする。
+                  let asOfDate: { year: number; month: number; day: number } | undefined;
+                  for (const m of milestones) {
+                    if (!QUICK_CATEGORY_LABEL[m.category] || !dayIndexByKey.has(`${m.year}-${m.month}-${m.day}`)) continue;
+                    if (!asOfDate || new Date(m.year, m.month - 1, m.day) < new Date(asOfDate.year, asOfDate.month - 1, asOfDate.day)) {
+                      asOfDate = { year: m.year, month: m.month, day: m.day };
+                    }
+                  }
+                  const snapshot = asOfDate
+                    ? pickIdentityAsOf(identitySnapshots.get(c.id), asOfDate.year, asOfDate.month, asOfDate.day)
+                    : undefined;
+                  const { projectName, panelNames } = snapshot ? projectPanelLinesFromSnapshot(snapshot) : buildProjectPanelLines(c, panels);
+                  const drawingNumber = snapshot?.drawingNumber ?? c.drawingNumber;
+                  const managementNumber = snapshot?.managementNumber ?? c.managementNumber;
                   const faceCount = panels[0]?.faceCount;
                   return SCREEN_PROCESS_ROWS.map((_, rowIndex) => (
                     <tr key={`${c.id}-${rowIndex}`} style={{ height: ROW_HEIGHT }}>
@@ -396,9 +460,9 @@ export function ScheduleQuickOverview() {
                               maxHeight: ROW_HEIGHT * SCREEN_PROCESS_ROWS.length,
                             }}
                           >
-                            {c.drawingNumber}
+                            {drawingNumber}
                             {"\n"}
-                            {c.managementNumber}
+                            {managementNumber}
                           </td>
                           <td
                             rowSpan={SCREEN_PROCESS_ROWS.length}
