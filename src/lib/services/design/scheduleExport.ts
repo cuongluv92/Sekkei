@@ -256,7 +256,13 @@ function buildScheduleWorkbook(
           const cell = row.getCell(col);
           cell.border = {
             top: rowIndex === 0 ? THICK : undefined,
-            bottom: rowIndex === ROW_SPAN - 1 ? THICK : undefined,
+            // 案件ブロック内の行(鈑金・BOX/アクセサリー/製作・検査/立会・出荷)
+            // 同士の間には元々どんな線も引いていなかった — 色が途切れている
+            // 所(空欄の行など)では色の境目だけでは行の変わり目が分かりに
+            // くく、隣の行の帯とつながって/重なって見える原因になっていた。
+            // 最終行だけ太い線(案件ブロックの下端)、それ以外は細い線で行を
+            // 区切る。
+            bottom: rowIndex === ROW_SPAN - 1 ? THICK : THIN,
             left: continuesColor ? undefined : isMonthStart ? THICK : THIN,
             right: col === lastCol ? THIN : undefined,
           };
