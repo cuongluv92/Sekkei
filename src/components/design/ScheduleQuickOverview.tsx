@@ -46,6 +46,10 @@ const QUICK_CATEGORY_LABEL: Partial<Record<ScheduleCategoryKey, string>> = {
 const WEEKDAY_KANJI = ["日", "月", "火", "水", "木", "金", "土"];
 const DAYS_SPAN = 45; // 約1.5ヶ月分
 const DAY_WIDTH = 34;
+// データ行の高さ(px) — 案件ごとに件名/盤名称の文字数が違うため、高さを
+// 内容に任せると案件ブロックごとに行の高さがバラバラになってしまう。
+// 全ての行を同じ高さに固定して揃える(列幅をcolgroupで揃えたのと同じ考え方)。
+const ROW_HEIGHT = 22;
 const DRAWING_COL_WIDTH = 130;
 const LABEL_COL_WIDTH = 200;
 
@@ -396,13 +400,18 @@ export function ScheduleQuickOverview() {
                   const { projectName, panelNames } = buildProjectPanelLines(c, panels);
                   const faceCount = panels[0]?.faceCount;
                   return SCREEN_PROCESS_ROWS.map((_, rowIndex) => (
-                    <tr key={`${c.id}-${rowIndex}`}>
+                    <tr key={`${c.id}-${rowIndex}`} style={{ height: ROW_HEIGHT }}>
                       {rowIndex === 0 && (
                         <>
                           <td
                             rowSpan={SCREEN_PROCESS_ROWS.length}
-                            className="sticky left-0 z-10 border-b border-border bg-surface px-3 py-1.5 text-[12px] whitespace-pre-line align-top"
-                            style={{ width: DRAWING_COL_WIDTH, minWidth: DRAWING_COL_WIDTH }}
+                            className="sticky left-0 z-10 overflow-hidden border-b border-border bg-surface px-3 py-1.5 text-[12px] whitespace-pre-line align-top"
+                            style={{
+                              width: DRAWING_COL_WIDTH,
+                              minWidth: DRAWING_COL_WIDTH,
+                              height: ROW_HEIGHT * SCREEN_PROCESS_ROWS.length,
+                              maxHeight: ROW_HEIGHT * SCREEN_PROCESS_ROWS.length,
+                            }}
                           >
                             {c.drawingNumber}
                             {"\n"}
@@ -410,8 +419,14 @@ export function ScheduleQuickOverview() {
                           </td>
                           <td
                             rowSpan={SCREEN_PROCESS_ROWS.length}
-                            className="sticky z-10 border-b border-border bg-surface px-3 py-1.5 text-[12px] whitespace-pre-line align-top"
-                            style={{ left: DRAWING_COL_WIDTH, width: LABEL_COL_WIDTH, minWidth: LABEL_COL_WIDTH }}
+                            className="sticky z-10 overflow-hidden border-b border-border bg-surface px-3 py-1.5 text-[12px] whitespace-pre-line align-top"
+                            style={{
+                              left: DRAWING_COL_WIDTH,
+                              width: LABEL_COL_WIDTH,
+                              minWidth: LABEL_COL_WIDTH,
+                              height: ROW_HEIGHT * SCREEN_PROCESS_ROWS.length,
+                              maxHeight: ROW_HEIGHT * SCREEN_PROCESS_ROWS.length,
+                            }}
                           >
                             {projectName}
                             {"\n"}
@@ -427,7 +442,7 @@ export function ScheduleQuickOverview() {
                           <td
                             key={`c-${c.id}-${rowIndex}-${i}`}
                             className={`overflow-hidden border-b border-l border-border px-0.5 py-1 text-center text-[9px] leading-tight font-bold text-ellipsis whitespace-nowrap text-foreground ${d.day === 1 ? "border-l-border-strong" : ""} ${rowIndex === SCREEN_PROCESS_ROWS.length - 1 ? "border-b-2 border-b-border-strong" : ""}`}
-                            style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH, maxWidth: DAY_WIDTH }}
+                            style={{ width: DAY_WIDTH, minWidth: DAY_WIDTH, maxWidth: DAY_WIDTH, height: ROW_HEIGHT, maxHeight: ROW_HEIGHT }}
                           >
                             {label}
                           </td>
@@ -609,8 +624,8 @@ export function ScheduleQuickOverview() {
                         <td
                           key={`e-${entry.id}-${i}`}
                           colSpan={span}
-                          className={`border border-border-strong px-1 py-1 text-center text-[10px] font-bold text-foreground ${d.day === 1 ? "border-l-2" : ""}`}
-                          style={{ width: DAY_WIDTH * span, minWidth: DAY_WIDTH * span }}
+                          className={`overflow-hidden border border-border-strong px-1 py-1 text-center text-[10px] font-bold text-ellipsis whitespace-nowrap text-foreground ${d.day === 1 ? "border-l-2" : ""}`}
+                          style={{ width: DAY_WIDTH * span, minWidth: DAY_WIDTH * span, height: ROW_HEIGHT * 2, maxHeight: ROW_HEIGHT * 2 }}
                           title={entry.workContent}
                         >
                           {entry.workContent}
@@ -629,18 +644,18 @@ export function ScheduleQuickOverview() {
                     i++;
                   }
                   return (
-                    <tr key={entry.id} className="group">
+                    <tr key={entry.id} className="group" style={{ height: ROW_HEIGHT * 2 }}>
                       <td
-                        className="sticky left-0 z-10 border-b border-border-strong bg-surface px-3 py-1.5 text-[12px] whitespace-pre-line align-top"
-                        style={{ width: DRAWING_COL_WIDTH, minWidth: DRAWING_COL_WIDTH }}
+                        className="sticky left-0 z-10 overflow-hidden border-b border-border-strong bg-surface px-3 py-1.5 text-[12px] whitespace-pre-line align-top"
+                        style={{ width: DRAWING_COL_WIDTH, minWidth: DRAWING_COL_WIDTH, height: ROW_HEIGHT * 2, maxHeight: ROW_HEIGHT * 2 }}
                       >
                         {entry.managementNumber}
                         {"\n"}
                         {entry.constructionNumber}
                       </td>
                       <td
-                        className="sticky z-10 border-b border-border-strong bg-surface px-3 py-1.5 text-[12px] whitespace-pre-line align-top"
-                        style={{ left: DRAWING_COL_WIDTH, width: LABEL_COL_WIDTH, minWidth: LABEL_COL_WIDTH }}
+                        className="sticky z-10 overflow-hidden border-b border-border-strong bg-surface px-3 py-1.5 text-[12px] whitespace-pre-line align-top"
+                        style={{ left: DRAWING_COL_WIDTH, width: LABEL_COL_WIDTH, minWidth: LABEL_COL_WIDTH, height: ROW_HEIGHT * 2, maxHeight: ROW_HEIGHT * 2 }}
                       >
                         <div className="flex items-start justify-between gap-1">
                           <span>
