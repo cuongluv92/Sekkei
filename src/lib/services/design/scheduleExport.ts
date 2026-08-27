@@ -40,7 +40,7 @@ const LABEL_COL_A_WIDTH = 15;
 // 件名／盤名称は実際の案件名が長いことが多いため、月グリッド側より広め
 // に確保する — 全体はA3の印刷幅に収まるようオートフィットで縮小される
 // ので、ここを広げても他の帳票のようにはみ出すことはない。
-const LABEL_COL_B_WIDTH = 90;
+const LABEL_COL_B_WIDTH = 100;
 // 5ヶ月分だと日単位で約150列になる — 幅を欲張ると合計の列幅が広くなり
 // すぎて、A3の印刷可能幅に収めるためのオートフィット倍率が大きく下がり、
 // 文字が小さくなりすぎる(前回の値2だと合計幅が旧・旬レイアウトの1.6倍
@@ -51,7 +51,7 @@ const DAY_COL_WIDTH = 1;
 // 高さは要らない — この3行だけ低くしてヘッダー部分をコンパクトにする
 // (データ行はガントバーのラベルが収まる余裕を保つため20のまま)。
 const HEADER_ROW_HEIGHT = 10;
-const ROW_HEIGHT = 20;
+const ROW_HEIGHT = 24;
 const TITLE_ROW = 1;
 const LEGEND_ROW = 2;
 const MONTH_HEADER_ROW = 4;
@@ -81,7 +81,7 @@ const LEGEND_CATEGORIES: { key: ScheduleCategoryKey; label: string }[] = [
 // 濃淡差で「主要な区切り」と「補助的な区切り」を分ける — 幅は両方とも
 // 1pxのまま(端数pxにすると印刷時ににじむため、これ以上は細くしない)。
 const THIN: Partial<ExcelJS.Border> = { style: "thin", color: { argb: "FFD1D5DB" } };
-const THICK: Partial<ExcelJS.Border> = { style: "thin", color: { argb: "FF1F2937" } };
+const THICK: Partial<ExcelJS.Border> = { style: "thin", color: { argb: "FF000000" } };
 
 function toArgb(hex: string): string {
   return `FF${hex.replace("#", "").toUpperCase()}`;
@@ -190,7 +190,7 @@ function buildHeader(
   for (const cell of [colACaption, colBCaption]) {
     cell.font = { size: 10, bold: true };
     cell.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
-    cell.border = { top: THIN, left: THIN, right: THIN, bottom: THIN };
+    cell.border = { top: THICK, left: THICK, right: THICK, bottom: THICK };
   }
 
   // 初(1〜10日)/中(11〜20日)/下(21日〜月末)の目安見出し — 実日単位の列は
@@ -273,7 +273,7 @@ function buildScheduleWorkbook(
     for (const cell of [colA, colB]) {
       cell.font = { size: 10 };
       cell.alignment = { horizontal: "left", vertical: "top", wrapText: true };
-      cell.border = { top: THICK, left: THIN, right: THIN, bottom: THICK };
+      cell.border = { top: THICK, left: THICK, right: THICK, bottom: THICK };
     }
     colA.note = buildCaseDisplayLabel(c, panels);
 
