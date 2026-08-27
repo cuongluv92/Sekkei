@@ -115,8 +115,14 @@ interface MonthColumn {
   year: number;
   month: number;
   colStart: number; // 1日の絶対列番号
-  days: number; // その月の日数(列数)
+  days: number; // その月の実日数(色付け・ラベル用)
 }
+
+// 月ごとの列数(=見出しセルの幅)を固定して全ての月見出しを同じ幅に揃える
+// — 実日数(28〜31)のまま可変にすると、日数が少ない月(2月・4月・6月・
+// 9月・11月)の見出しだけ狭く見えて不揃いになるため。31より短い月は、
+// その月の最終日より後ろの列を空欄のまま残す(データは書き込まない)。
+const MONTH_SLOT_DAYS = 31;
 
 /** 今日を中心に、画面のタイムラインと同じ月数(SCREEN_MONTHS_BEFORE〜AFTER)分の月を並べる。 */
 function computeMonths(): MonthColumn[] {
@@ -127,7 +133,7 @@ function computeMonths(): MonthColumn[] {
     const m = addMonths(now.getFullYear(), now.getMonth() + 1, i);
     const days = daysInMonth(m.year, m.month);
     months.push({ year: m.year, month: m.month, colStart: col, days });
-    col += days;
+    col += MONTH_SLOT_DAYS;
   }
   return months;
 }
@@ -172,7 +178,7 @@ function buildHeader(
   }
 
   for (const m of months) {
-    ws.mergeCells(MONTH_HEADER_ROW, m.colStart, MONTH_HEADER_ROW, m.colStart + m.days - 1);
+    ws.mergeCells(MONTH_HEADER_ROW, m.colStart, MONTH_HEADER_ROW, m.colStart + MONTH_SLOT_DAYS - 1);
     const monthCell = ws.getCell(MONTH_HEADER_ROW, m.colStart);
     monthCell.value = `${m.year}/${String(m.month).padStart(2, "0")}`;
     monthCell.font = { size: 10, bold: true };
@@ -188,7 +194,7 @@ function buildScheduleWorkbook(
   colorConfigs: { category: ScheduleCategoryKey; color: string }[],
 ): ExcelJS.Worksheet {
   const months = computeMonths();
-  const lastCol = 2 + months.reduce((sum, m) => sum + m.days, 0); // データ(月/日)グリッドの最終列
+  const lastCol = 2 + months.length * MONTH_SLOT_DAYS; // データ(月/日)グリッドの最終列
   const legendEntries = layoutLegend(lastCol); // 月グリッドの右端に右詰め
   const legendLastCol = Math.max(...legendEntries.map((e) => e.labelColEnd));
   const printLastCol = Math.max(lastCol, legendLastCol); // 凡例がそれでもはみ出す場合はそちらに合わせる
@@ -250,9 +256,12 @@ function buildScheduleWorkbook(
       const row = ws.getRow(blockStart + rowIndex);
       row.height = ROW_HEIGHT;
       for (const monthEntry of months) {
-        for (let day = 1; day <= monthEntry.days; day++) {
-          const key = dayCellKeyRow(monthEntry.year, monthEntry.month, day, rowIndex);
-          const hex = lookup.get(key);
+        // その月の実日数を超えた分は空欄の列として残す(MONTH_SLOT_DAYS参照) —
+        // 実日付が無いのでルックアップは常に外れ、色もラベルも付かない。
+        for (let day = 1; day <= MONTH_SLOT_DAYS; day++) {
+          const isRealDay = day <= monthEntry.days;
+          const key = isRealDay ? dayCellKeyRow(monthEntry.year, monthEntry.month, day, rowIndex) : null;
+          const hex = key ? lookup.get(key) : undefined;
           const isMonthStart = day === 1;
           const isJunStart = day === 11 || day === 21;
           const col = monthEntry.colStart + day - 1;
@@ -276,7 +285,7 @@ function buildScheduleWorkbook(
             left: drawLeft,
             right: col === lastCol ? THIN : undefined,
           };
-          if (hex) {
+          if (hex && key) {
             cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: toArgb(hex) } };
             const label = labels.get(key);
             if (label) {
