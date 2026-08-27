@@ -176,6 +176,22 @@ export function ScheduleQuickOverview() {
     [cases, schedules],
   );
 
+  // 簡易カレンダーの表(下記テーブル)には、今表示中の期間(days)に該当する
+  // マイルストーンが1つも無い案件は出さない — Excel出力/印刷は表示期間に
+  // 関係なく全案件を対象にするため、そちらはvisibleCasesをそのまま使う
+  // (ここで絞り込むのは画面表示専用)。
+  const quickTableCases = useMemo(
+    () =>
+      visibleCases.filter(({ case: c }) => {
+        const schedule = schedules[c.id];
+        if (!schedule) return false;
+        return computeMilestones(schedule).some(
+          ({ year, month, day, category }) => QUICK_CATEGORY_LABEL[category] && dayIndexByKey.has(`${year}-${month}-${day}`),
+        );
+      }),
+    [visibleCases, schedules, dayIndexByKey],
+  );
+
   function goToCurrentMonth() {
     const n = new Date();
     setFocus({ year: n.getFullYear(), month: n.getMonth() + 1 });
@@ -289,7 +305,7 @@ export function ScheduleQuickOverview() {
         {message && <div className="border-b border-border px-3.5 py-1.5 text-[12px] text-success">{message}</div>}
         {loading ? (
           <p className="p-6 text-center text-[13px] text-muted">{t("common.loading")}</p>
-        ) : visibleCases.length === 0 ? (
+        ) : quickTableCases.length === 0 ? (
           <p className="p-8 text-center text-[13px] text-muted-2">{t("design.ledger.empty")}</p>
         ) : (
           <div className="overflow-x-auto">
@@ -353,7 +369,7 @@ export function ScheduleQuickOverview() {
                 </tr>
               </thead>
               <tbody>
-                {visibleCases.map(({ case: c, panels }) => {
+                {quickTableCases.map(({ case: c, panels }) => {
                   const schedule = schedules[c.id];
                   const labels = schedule
                     ? new Map(
