@@ -38,7 +38,12 @@ import type { CaseSchedule, DesignCaseWithPanels, ScheduleCategoryKey } from "@/
 // 同じワークシートの値をそのまま使うため、ここを整数にすれば両方に効く。
 const LABEL_COL_A_WIDTH = 15;
 const LABEL_COL_B_WIDTH = 40;
-const DAY_COL_WIDTH = 2;
+// 5ヶ月分だと日単位で約150列になる — 幅を欲張ると合計の列幅が広くなり
+// すぎて、A3の印刷可能幅に収めるためのオートフィット倍率が大きく下がり、
+// 文字が小さくなりすぎる(前回の値2だと合計幅が旧・旬レイアウトの1.6倍
+// 近くになっていた)。1にすると旧レイアウトとほぼ同じ合計幅になり、
+// 追加の縮小がほぼ要らなくなる。
+const DAY_COL_WIDTH = 1;
 const ROW_HEIGHT = 20;
 const TITLE_ROW = 1;
 const LEGEND_ROW = 2;

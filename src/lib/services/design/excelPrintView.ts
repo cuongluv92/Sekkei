@@ -39,6 +39,11 @@ const DEFAULT_COL_WIDTH = 8.43;
 const DEFAULT_MARGIN_MM = 8;
 const PX_PER_MM = 96 / 25.4;
 const PX_PER_PT = 96 / 72;
+/** Never render text smaller than this, no matter how much the page-fit scale shrinks — a table with
+ * many narrow columns (e.g. a full day-by-day calendar) can need a small width scale, but that scale
+ * still shouldn't make the text itself illegible; the (already-supported) cell-text overflow lets a
+ * label spill into an empty neighboring cell instead. */
+const MIN_FONT_PT = 6;
 
 /** ws.pageSetup.paperSize codes actually used in this codebase (ECMA-376 ST_PaperSize). */
 const PAGE_SIZES_MM: Record<number, { name: string; width: number; height: number }> = {
@@ -290,12 +295,19 @@ export function renderWorksheetHtml(ws: Worksheet): string {
       // cells that actually hold text — an empty cell has nothing to spill,
       // and clipping wrapped/normal table text is still correct elsewhere).
       const overflowStyle = rawText && !align?.wrapText ? "overflow:visible;position:relative;z-index:1" : "overflow:hidden";
+      // Font size uses its own floor instead of the raw page-fit scale — a
+      // table with many columns (narrow day cells) can need a small width
+      // scale to fit the page, but that shouldn't shrink the text itself
+      // past MIN_FONT_PT; it just overflows its (still-narrow) cell instead,
+      // same as the cell-text overflow handled above.
+      const declaredFontPt = font?.size ?? 10;
+      const fontScale = Math.max(scale, MIN_FONT_PT / declaredFontPt);
       const styles: string[] = [
         `border-top:${borderSideCss(border.top)}`,
         `border-left:${borderSideCss(border.left)}`,
         `border-right:${borderSideCss(border.right)}`,
         `border-bottom:${borderSideCss(border.bottom)}`,
-        `font-size:${(font?.size ?? 10) * scale}pt`,
+        `font-size:${declaredFontPt * fontScale}pt`,
         `text-align:${align?.horizontal ?? "left"}`,
         `vertical-align:${align?.vertical === "middle" ? "middle" : align?.vertical === "bottom" ? "bottom" : "top"}`,
         `white-space:${align?.wrapText ? "pre-wrap" : "nowrap"}`,
