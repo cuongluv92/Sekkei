@@ -12,6 +12,7 @@ const VOLTAGE_CLASSES: SelectionVoltageClass[] = ["100V", "200V", "400V"];
 
 interface Props {
   caseId: string;
+  compact?: boolean;
 }
 
 /**
@@ -19,7 +20,7 @@ interface Props {
  * 電流を自動集計し (または手入力の総電流で上書きし)、主幹選定マスタ
  * (mainBreakerSelectionService) から主幹ブレーカーを選定する。
  */
-export function MainBreakerSelectionView({ caseId }: Props) {
+export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
   const { t, locale } = useTranslation();
   const [master, setMaster] = useState<MainBreakerSelection[]>([]);
   const [, forceRerender] = useState(0);
@@ -27,30 +28,55 @@ export function MainBreakerSelectionView({ caseId }: Props) {
   const [manufacturerId, setManufacturerId] = useState("");
   const [voltageClass, setVoltageClass] = useState<SelectionVoltageClass>("200V");
   const [totalCurrentRaw, setTotalCurrentRaw] = useState("");
+  const [additionalCurrentRaw, setAdditionalCurrentRaw] = useState("");
   const [result, setResult] = useState<MainBreakerSelection | null | undefined>(undefined);
 
   useEffect(() => {
-    preloadManufacturers().then(() => forceRerender((v) => v + 1));
+    preloadManufacturers().then(() => {
+      forceRerender((v) => v + 1);
+      const preferred = listManufacturers().find((maker) => maker.name === "三菱電機");
+      if (preferred) setManufacturerId((current) => current || preferred.id);
+    });
     mainBreakerSelectionService.list().then(setMaster);
   }, []);
 
   useEffect(() => {
-    setBranchTotal(null);
-    if (!caseId) return;
     let cancelled = false;
-    calculationRecordService.get(caseId, MOTOR_SELECTION_BRANCH_CALCULATION_TYPE).then((record) => {
-      if (cancelled) return;
-      const items = (record?.result.items as MotorSelectionBranchItem[] | undefined) ?? [];
-      const sum = items.reduce((s, item) => {
-        const current = branchItemCurrentA(item);
-        return current != null ? s + current : s;
-      }, 0);
-      setBranchTotal(sum);
-    });
+    const loadBranchTotal = () => {
+      setBranchTotal(null);
+      if (!caseId) return;
+      calculationRecordService.get(caseId, MOTOR_SELECTION_BRANCH_CALCULATION_TYPE).then((record) => {
+        if (cancelled) return;
+        const items = (record?.result.items as MotorSelectionBranchItem[] | undefined) ?? [];
+        const sum = items.reduce((s, item) => {
+          const current = branchItemCurrentA(item);
+          return current != null ? s + current : s;
+        }, 0);
+        setBranchTotal(sum);
+      });
+    };
+    const handleUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<{ caseId?: string }>).detail;
+      if (!detail?.caseId || detail.caseId === caseId) loadBranchTotal();
+    };
+    loadBranchTotal();
+    window.addEventListener("motor-branches-updated", handleUpdate);
     return () => {
       cancelled = true;
+      window.removeEventListener("motor-branches-updated", handleUpdate);
     };
   }, [caseId]);
+
+  const additionalCurrent = Number(additionalCurrentRaw);
+  const compactTotal = (branchTotal ?? 0) + (Number.isFinite(additionalCurrent) && additionalCurrent > 0 ? additionalCurrent : 0);
+
+  useEffect(() => {
+    if (!compact || !manufacturerId || compactTotal <= 0) {
+      if (compact) setResult(undefined);
+      return;
+    }
+    setResult(matchMainBreakerSelection({ manufacturerId, voltageClass, totalCurrent: compactTotal }, master));
+  }, [compact, manufacturerId, voltageClass, compactTotal, master]);
 
   const manufacturers = listManufacturers();
 
@@ -63,23 +89,34 @@ export function MainBreakerSelectionView({ caseId }: Props) {
   const canCalculate = manufacturerId !== "" && totalCurrentRaw.trim() !== "" && Number(totalCurrentRaw) > 0;
 
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-[12px] text-muted">{t("motorSelection.main.description")}</p>
+    <div className={compact ? "flex flex-col gap-3" : "flex flex-col gap-4"}>
+      {!compact && <p className="text-[12px] text-muted">{t("motorSelection.main.description")}</p>}
 
       {caseId && branchTotal !== null && (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2 rounded-md border border-border bg-muted/10 px-3 py-2 text-[12px]">
             <span className="text-muted">{t("motorSelection.main.autoSumLabel")}</span>
             <span className="font-mono font-semibold">{branchTotal.toFixed(1)} A</span>
-            <button onClick={() => setTotalCurrentRaw(String(branchTotal))} className="btn-ghost ml-auto">
-              {t("motorSelection.main.useAutoSumButton")}
-            </button>
+            {!compact && <button onClick={() => setTotalCurrentRaw(String(branchTotal))} className="btn-ghost ml-auto">{t("motorSelection.main.useAutoSumButton")}</button>}
           </div>
           <p className="text-[11px] text-muted-2">{t("motorSelection.main.autoSumHint")}</p>
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:items-end">
+      {compact && (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(170px,240px)_1fr] sm:items-end">
+          <label>
+            <span className="field-label">追加回路・制御回路 合計 (A)</span>
+            <input className="field-input font-mono" type="number" min={0} step="any" value={additionalCurrentRaw} onChange={(e) => setAdditionalCurrentRaw(e.target.value)} placeholder="例）12.5" />
+          </label>
+          <div className="rounded-md border border-border bg-background/60 px-3 py-2 text-[11px]">
+            <span className="text-muted">主幹選定電流：</span>
+            <span className="font-mono font-bold">{(branchTotal ?? 0).toFixed(1)} + {(Number.isFinite(additionalCurrent) && additionalCurrent > 0 ? additionalCurrent : 0).toFixed(1)} = {compactTotal.toFixed(1)} A</span>
+          </div>
+        </div>
+      )}
+
+      <div className={`grid grid-cols-2 gap-2.5 lg:items-end ${compact ? "sm:grid-cols-2" : "sm:grid-cols-4"}`}>
         <div>
           <label className="field-label">{t("motorSelection.manufacturerLabel")}</label>
           <select value={manufacturerId} onChange={(e) => setManufacturerId(e.target.value)} className="field-input">
@@ -105,7 +142,7 @@ export function MainBreakerSelectionView({ caseId }: Props) {
             ))}
           </select>
         </div>
-        <div>
+        {!compact && <div>
           <label className="field-label">{t("motorSelection.main.totalCurrentLabel")}</label>
           <input
             type="number"
@@ -116,10 +153,10 @@ export function MainBreakerSelectionView({ caseId }: Props) {
             placeholder={t("motorSelection.main.totalCurrentPlaceholder")}
             className="field-input"
           />
-        </div>
-        <button onClick={handleCalculate} disabled={!canCalculate} className="btn-primary">
+        </div>}
+        {!compact && <button onClick={handleCalculate} disabled={!canCalculate} className="btn-primary">
           {t("motorSelection.main.calculateButton")}
-        </button>
+        </button>}
       </div>
 
       <div>
