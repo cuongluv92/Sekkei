@@ -7,11 +7,12 @@ import {
   terminalBlockSelectionService,
   type TerminalBlockSelectionDraft,
   type TerminalBlockSelectionRow,
+  type TerminalBlockSeries,
 } from "@/lib/services";
 
 const EMPTY: TerminalBlockSelectionDraft = {
   manufacturer: "東洋技研",
-  series: "AT",
+  series: "CT",
   model: "",
   ratedCurrentA: 0,
   maxWireMm2: 0,
@@ -29,7 +30,7 @@ export function TerminalBlockSelectionSettings() {
   const copy = locale === "vi"
     ? {
         title: "Cài đặt TB",
-        description: "Dữ liệu Toyogiken AT bên trái là dữ liệu tham khảo chính thức. Bảng dưới đây chỉ quản lý tiêu chuẩn công ty, có thể thêm/sửa/xóa tự do.",
+        description: "TB chỉ quản lý CT / PT của Toyogiken. Dữ liệu tham khảo là trang sản phẩm chính thức của hãng; tại đây chỉ nhập tiêu chuẩn công ty.",
         maker: "Hãng",
         series: "Series",
         model: "Model",
@@ -41,28 +42,33 @@ export function TerminalBlockSelectionSettings() {
         add: "Thêm",
         update: "Cập nhật",
         cancel: "Hủy sửa",
-        empty: "Chưa có tiêu chuẩn TB nội bộ.",
+        empty: "Chưa có tiêu chuẩn TB CT/PT nội bộ.",
       }
     : {
         title: "TB選定設定",
-        description: "東洋技研 ATシリーズの公式参考値は固定保持し、ここでは会社が実際に採用する社内基準だけを追加・編集・削除します。",
+        description: "TBは東洋技研CT/PTシリーズだけを対象とします。基準・参考値は東洋技研の国内公式製品情報を使用し、ここでは社内採用値だけを追加・編集します。",
         maker: "メーカー",
         series: "シリーズ",
         model: "型式",
-        current: "定格電流 A",
+        current: "定格通電電流 A",
         wire: "適合電線 MAX mm²",
         screw: "端子ねじ",
-        voltage: "定格電圧",
+        voltage: "定格絶縁電圧",
         remarks: "備考",
         add: "追加",
         update: "更新",
         cancel: "編集解除",
-        empty: "社内TB基準は未登録です。",
+        empty: "社内TB基準（CT/PT）は未登録です。",
       };
 
   async function reload() {
     const all = await terminalBlockSelectionService.list();
-    setRows(all.filter((row) => row.basisKind === "company"));
+    setRows(
+      all.filter(
+        (row) =>
+          row.basisKind === "company" && (row.series === "CT" || row.series === "PT"),
+      ),
+    );
   }
 
   useEffect(() => {
@@ -83,6 +89,7 @@ export function TerminalBlockSelectionSettings() {
   }
 
   function edit(row: TerminalBlockSelectionRow) {
+    if (row.series !== "CT" && row.series !== "PT") return;
     setEditingId(row.id);
     setDraft({
       manufacturer: row.manufacturer,
@@ -111,7 +118,17 @@ export function TerminalBlockSelectionSettings() {
 
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <label><span className="field-label">{copy.maker}</span><input className="field-input" value={draft.manufacturer ?? ""} onChange={(e) => setDraft({ ...draft, manufacturer: e.target.value })} /></label>
-        <label><span className="field-label">{copy.series}</span><input className="field-input" value={draft.series ?? ""} onChange={(e) => setDraft({ ...draft, series: e.target.value })} /></label>
+        <label>
+          <span className="field-label">{copy.series}</span>
+          <select
+            className="field-input"
+            value={draft.series ?? "CT"}
+            onChange={(e) => setDraft({ ...draft, series: e.target.value as TerminalBlockSeries })}
+          >
+            <option value="CT">CT</option>
+            <option value="PT">PT</option>
+          </select>
+        </label>
         <label><span className="field-label">{copy.model}</span><input className="field-input" value={draft.model} onChange={(e) => setDraft({ ...draft, model: e.target.value })} /></label>
         <label><span className="field-label">{copy.voltage}</span><input className="field-input" value={draft.voltageLabel ?? ""} onChange={(e) => setDraft({ ...draft, voltageLabel: e.target.value })} /></label>
         <label><span className="field-label">{copy.current}</span><input className="field-input" type="number" min={0} step="any" value={draft.ratedCurrentA || ""} onChange={(e) => setDraft({ ...draft, ratedCurrentA: Number(e.target.value) })} /></label>
@@ -137,7 +154,7 @@ export function TerminalBlockSelectionSettings() {
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.manufacturer}</td><td>{row.series}</td><td className="font-mono font-semibold">{row.model}</td><td>{row.ratedCurrentA} A</td><td>{row.maxWireMm2} mm²</td><td>{row.screwSize}</td>
+                  <td>{row.manufacturer}</td><td className="font-bold">{row.series}</td><td className="font-mono font-semibold">{row.model}</td><td>{row.ratedCurrentA} A</td><td>{row.maxWireMm2} mm²</td><td>{row.screwSize}</td>
                   <td><div className="flex justify-end gap-1"><button type="button" className="btn-ghost" onClick={() => edit(row)}><Pencil className="h-3.5 w-3.5" /></button><button type="button" className="btn-ghost text-danger" onClick={() => void remove(row.id)}><Trash2 className="h-3.5 w-3.5" /></button></div></td>
                 </tr>
               ))}
