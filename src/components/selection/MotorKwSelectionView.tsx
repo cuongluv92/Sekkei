@@ -19,7 +19,7 @@ import type {
   SelectionVoltageClass,
 } from "@/lib/types";
 import { MOTOR_SELECTION_BRANCH_CALCULATION_TYPE } from "./MotorBranchSelectionView";
-import { breakerCandidate, nextBreakerRating } from "@/lib/calc/motorSelection/breakerCatalog";
+import { breakerCandidate, mitsubishiMotorBranchRating } from "@/lib/calc/motorSelection/breakerCatalog";
 
 interface Props { caseId: string; }
 
@@ -193,8 +193,8 @@ export function MotorKwSelectionView({ caseId }: Props) {
   }), [matchedRows]);
   const naisen = selectedKw != null && voltage === "200V" ? NAISEN_200V[selectedKw] : undefined;
   const naisenBreakerA = method === "starDelta" ? naisen?.starDeltaBreakerA : method === "direct" ? naisen?.directBreakerA : undefined;
-  const tableBreakerA = rowByBasis.mitsubishi?.breakerRatedA ?? naisenBreakerA;
-  const tableRatedA = tableBreakerA != null ? nextBreakerRating(tableBreakerA) : null;
+  const tableRatedA = selectedKw != null && (voltage === "200V" || voltage === "400V")
+    ? mitsubishiMotorBranchRating(voltage, selectedKw) : null;
   const mitsuMccb = tableRatedA ? breakerCandidate(tableRatedA, "mitsubishi", "mccb") : null;
   const mitsuElcb = tableRatedA ? breakerCandidate(tableRatedA, "mitsubishi", "elcb") : null;
   const fujiMccb = tableRatedA ? breakerCandidate(tableRatedA, "fuji", "mccb") : null;
