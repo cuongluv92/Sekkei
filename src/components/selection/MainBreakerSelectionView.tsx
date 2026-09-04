@@ -15,6 +15,21 @@ function nextBreakerRating(currentA: number): number | null {
   return STANDARD_BREAKER_RATINGS.find((rating) => rating >= currentA) ?? null;
 }
 
+function breakerCandidate(ratedA: number, isFuji: boolean, elcb: boolean) {
+  if (isFuji) {
+    if (ratedA <= 50) return { model: `${elcb ? "EW" : "BW"}50SAG`, icu: 10 };
+    if (ratedA <= 125) return { model: `${elcb ? "EW" : "BW"}125JAG`, icu: 36 };
+    if (ratedA <= 250) return { model: `${elcb ? "EW" : "BW"}250JAG`, icu: 36 };
+    if (ratedA <= 400) return { model: `${elcb ? "EW" : "BW"}400RAG`, icu: 50 };
+    return { model: `${elcb ? "EW" : "BW"} G-TWIN`, icu: null };
+  }
+  if (ratedA <= 60) return { model: `${elcb ? "NV" : "NF"}63-CV`, icu: 7.5 };
+  if (ratedA <= 125) return { model: `${elcb ? "NV" : "NF"}125-CV`, icu: 30 };
+  if (ratedA <= 250) return { model: `${elcb ? "NV" : "NF"}250-CV`, icu: 36 };
+  if (ratedA <= 400) return { model: `${elcb ? "NV" : "NF"}400-CW`, icu: 50 };
+  return { model: `${elcb ? "NV" : "NF"}-CW`, icu: null };
+}
+
 interface Props {
   caseId: string;
   compact?: boolean;
@@ -49,7 +64,7 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
     let cancelled = false;
     const loadBranchTotal = () => {
       setBranchTotal(null);
-      if (!caseId) return;
+      if (!caseId) { setBranchTotal(0); return; }
       calculationRecordService.get(caseId, MOTOR_SELECTION_BRANCH_CALCULATION_TYPE).then((record) => {
         if (cancelled) return;
         const items = (record?.result.items as MotorSelectionBranchItem[] | undefined) ?? [];
@@ -61,8 +76,10 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
       });
     };
     const handleUpdate = (event: Event) => {
-      const detail = (event as CustomEvent<{ caseId?: string }>).detail;
-      if (!detail?.caseId || detail.caseId === caseId) loadBranchTotal();
+      const detail = (event as CustomEvent<{ caseId?: string; items?: MotorSelectionBranchItem[] }>).detail;
+      if (detail?.items && (detail.caseId ?? "") === caseId) {
+        setBranchTotal(detail.items.reduce((sum, item) => sum + (branchItemCurrentA(item) ?? 0), 0));
+      } else if (!detail?.caseId || detail.caseId === caseId) loadBranchTotal();
     };
     loadBranchTotal();
     window.addEventListener("motor-branches-updated", handleUpdate);
@@ -87,6 +104,8 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
   const manufacturers = listManufacturers();
   const selectedMaker = manufacturers.find((maker) => maker.id === manufacturerId);
   const isFuji = selectedMaker?.name === "富士電機";
+  const mccbCandidate = fallbackRating ? breakerCandidate(fallbackRating, isFuji, false) : null;
+  const elcbCandidate = fallbackRating ? breakerCandidate(fallbackRating, isFuji, true) : null;
 
   function handleCalculate() {
     const totalCurrent = Number(totalCurrentRaw);
@@ -173,13 +192,13 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
           <div className="mt-2 grid gap-2 text-[11px] sm:grid-cols-2">
             <div className="rounded-md border border-border bg-background/60 px-3 py-2">
               <span className="text-muted">MCCB</span>
-              <div className="font-mono font-semibold">{result?.breakerModel || (isFuji ? "BW G-TWIN" : "NF-CV")} / {result ? `${result.ratedCurrent} A` : fallbackRating ? `${fallbackRating} A` : "800 A超・個別選定"}</div>
-              {!result && fallbackRating && <div className="mt-1 text-[10px] text-warning">型番は必要Icu選択後に確定</div>}
+              <div className="font-mono font-semibold">{result?.breakerModel || mccbCandidate?.model || (isFuji ? "BW G-TWIN" : "NF-CV")} / {result ? `${result.ratedCurrent} A` : fallbackRating ? `${fallbackRating} A` : "800 A超・個別選定"}</div>
+              {!result && mccbCandidate?.icu && <div className="mt-1 text-[10px] text-muted">Icu {mccbCandidate.icu} kA（AC200/230V）</div>}
             </div>
             <div className="rounded-md border border-border bg-background/60 px-3 py-2">
               <span className="text-muted">ELCB</span>
-              <div className="font-mono font-semibold">{isFuji ? "EW G-TWIN" : "NV-CV"} / {result ? `${result.ratedCurrent} A` : fallbackRating ? `${fallbackRating} A` : "800 A超・個別選定"}</div>
-              {!result && fallbackRating && <div className="mt-1 text-[10px] text-warning">型番・感度電流はIcu/接地条件選択後に確定</div>}
+              <div className="font-mono font-semibold">{elcbCandidate?.model || (isFuji ? "EW G-TWIN" : "NV-CV")} / {result ? `${result.ratedCurrent} A` : fallbackRating ? `${fallbackRating} A` : "800 A超・個別選定"}</div>
+              {!result && elcbCandidate?.icu && <div className="mt-1 text-[10px] text-muted">Icu {elcbCandidate.icu} kA（AC200/230V）・感度電流は別選択</div>}
             </div>
           </div>
         ) : result === undefined ? (
