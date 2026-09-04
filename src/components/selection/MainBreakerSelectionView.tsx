@@ -79,6 +79,8 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
   }, [compact, manufacturerId, voltageClass, compactTotal, master]);
 
   const manufacturers = listManufacturers();
+  const selectedMaker = manufacturers.find((maker) => maker.id === manufacturerId);
+  const isFuji = selectedMaker?.name === "富士電機";
 
   function handleCalculate() {
     const totalCurrent = Number(totalCurrentRaw);
@@ -161,7 +163,18 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
 
       <div>
         <span className="panel-title">{t("motorSelection.main.resultTitle")}</span>
-        {result === undefined ? (
+        {compact && compactTotal > 0 ? (
+          <div className="mt-2 grid gap-2 text-[11px] sm:grid-cols-2">
+            <div className="rounded-md border border-border bg-background/60 px-3 py-2">
+              <span className="text-muted">MCCB</span>
+              <div className="font-mono font-semibold">{result?.breakerModel || (isFuji ? "BW G-TWIN" : "NF-CV")} / {result ? `${result.ratedCurrent} A` : `選定電流 ${compactTotal.toFixed(1)} A・定格/型番要確認`}</div>
+            </div>
+            <div className="rounded-md border border-border bg-background/60 px-3 py-2">
+              <span className="text-muted">ELCB</span>
+              <div className="font-mono font-semibold">{isFuji ? "EW G-TWIN" : "NV-CV"} / {result ? `${result.ratedCurrent} A` : `選定電流 ${compactTotal.toFixed(1)} A・定格/型番要確認`}</div>
+            </div>
+          </div>
+        ) : result === undefined ? (
           <p className="mt-2 text-[12px] text-muted-2">{t("motorSelection.main.resultEmpty")}</p>
         ) : result === null ? (
           <p className="mt-2 text-[12px] text-warning">{t("motorSelection.main.notMatched")}</p>
