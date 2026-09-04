@@ -9,6 +9,11 @@ import { branchItemCurrentA, MOTOR_SELECTION_BRANCH_CALCULATION_TYPE } from "./M
 import type { MainBreakerSelection, MotorSelectionBranchItem, SelectionVoltageClass } from "@/lib/types";
 
 const VOLTAGE_CLASSES: SelectionVoltageClass[] = ["100V", "200V", "400V"];
+const STANDARD_BREAKER_RATINGS = [3, 5, 10, 15, 20, 30, 40, 50, 60, 75, 100, 125, 150, 175, 200, 225, 250, 300, 350, 400, 500, 600, 800] as const;
+
+function nextBreakerRating(currentA: number): number | null {
+  return STANDARD_BREAKER_RATINGS.find((rating) => rating >= currentA) ?? null;
+}
 
 interface Props {
   caseId: string;
@@ -69,6 +74,7 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
 
   const additionalCurrent = Number(additionalCurrentRaw);
   const compactTotal = (branchTotal ?? 0) + (Number.isFinite(additionalCurrent) && additionalCurrent > 0 ? additionalCurrent : 0);
+  const fallbackRating = nextBreakerRating(compactTotal);
 
   useEffect(() => {
     if (!compact || !manufacturerId || compactTotal <= 0) {
@@ -167,11 +173,13 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
           <div className="mt-2 grid gap-2 text-[11px] sm:grid-cols-2">
             <div className="rounded-md border border-border bg-background/60 px-3 py-2">
               <span className="text-muted">MCCB</span>
-              <div className="font-mono font-semibold">{result?.breakerModel || (isFuji ? "BW G-TWIN" : "NF-CV")} / {result ? `${result.ratedCurrent} A` : `選定電流 ${compactTotal.toFixed(1)} A・定格/型番要確認`}</div>
+              <div className="font-mono font-semibold">{result?.breakerModel || (isFuji ? "BW G-TWIN" : "NF-CV")} / {result ? `${result.ratedCurrent} A` : fallbackRating ? `${fallbackRating} A` : "800 A超・個別選定"}</div>
+              {!result && fallbackRating && <div className="mt-1 text-[10px] text-warning">型番は必要Icu選択後に確定</div>}
             </div>
             <div className="rounded-md border border-border bg-background/60 px-3 py-2">
               <span className="text-muted">ELCB</span>
-              <div className="font-mono font-semibold">{isFuji ? "EW G-TWIN" : "NV-CV"} / {result ? `${result.ratedCurrent} A` : `選定電流 ${compactTotal.toFixed(1)} A・定格/型番要確認`}</div>
+              <div className="font-mono font-semibold">{isFuji ? "EW G-TWIN" : "NV-CV"} / {result ? `${result.ratedCurrent} A` : fallbackRating ? `${fallbackRating} A` : "800 A超・個別選定"}</div>
+              {!result && fallbackRating && <div className="mt-1 text-[10px] text-warning">型番・感度電流はIcu/接地条件選択後に確定</div>}
             </div>
           </div>
         ) : result === undefined ? (
