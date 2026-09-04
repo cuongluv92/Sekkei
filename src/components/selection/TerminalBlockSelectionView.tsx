@@ -26,7 +26,7 @@ export function TerminalBlockSelectionView({ currentA, hideInput = false }: Prop
 
   const copy = locale === "vi"
     ? {
-        description: "TB chỉ chọn hai dòng CT và PT của Toyogiken. Dùng chung dòng A ở đầu tab.",
+        description: "TB chỉ chọn CT và PT của Toyogiken. Dòng định mức, dây JIS tối đa và vít lấy từ thông tin sản phẩm chính thức Nhật Bản.",
         current: "Dòng điện (A)",
         choose: "Chọn TB",
         result: "Kết quả TB CT / PT",
@@ -34,15 +34,16 @@ export function TerminalBlockSelectionView({ currentA, hideInput = false }: Prop
         reference: "Tiêu chuẩn / tham khảo",
         company: "Tiêu chuẩn công ty",
         rated: "Dòng định mức",
-        maxWire: "Dây tối đa",
+        maxWire: "Dây JIS MAX",
         screw: "Cỡ vít",
+        voltage: "Điện áp cách điện",
         basis: "Nguồn",
         none: "Không có model phù hợp.",
         noCompany: "Chưa nhập tiêu chuẩn công ty",
         prompt: "Nhập A ở đầu tab để xem CT và PT cùng lúc.",
       }
     : {
-        description: "TBは東洋技研のCTシリーズ・PTシリーズだけを対象とし、タブ上部の共通選定電流(A)から両方を同時に選定します。",
+        description: "TBは東洋技研CT・PTシリーズのみを対象とし、国内公式製品ページの一般仕様（JIS電線サイズ側）から選定します。",
         current: "選定電流 (A)",
         choose: "TBを選定",
         result: "TB CT / PT 選定結果",
@@ -50,8 +51,9 @@ export function TerminalBlockSelectionView({ currentA, hideInput = false }: Prop
         reference: "基準・参考選定",
         company: "社内基準",
         rated: "定格通電電流",
-        maxWire: "適合電線 MAX",
+        maxWire: "適合電線(JIS) MAX",
         screw: "端子ねじ",
+        voltage: "定格絶縁電圧",
         basis: "根拠",
         none: "対応する型式がありません。",
         noCompany: "社内基準未登録",
@@ -140,15 +142,16 @@ export function TerminalBlockSelectionView({ currentA, hideInput = false }: Prop
         <p className="text-[11px] text-muted-2">{copy.prompt}</p>
       ) : (
         <div className="data-table-wrap">
-          <table className="data-table" style={{ minWidth: 980 }}>
+          <table className="data-table" style={{ minWidth: 1080 }}>
             <thead>
               <tr>
                 <th style={{ width: 80 }}>{copy.series}</th>
-                <th style={{ width: 190 }}>{copy.reference}</th>
+                <th style={{ width: 185 }}>{copy.reference}</th>
                 <th style={{ width: 120 }}>{copy.rated}</th>
-                <th style={{ width: 120 }}>{copy.maxWire}</th>
-                <th style={{ width: 100 }}>{copy.screw}</th>
-                <th style={{ width: 190 }}>{copy.company}</th>
+                <th style={{ width: 145 }}>{copy.maxWire}</th>
+                <th style={{ width: 95 }}>{copy.screw}</th>
+                <th style={{ width: 120 }}>{copy.voltage}</th>
+                <th style={{ width: 185 }}>{copy.company}</th>
                 <th>{copy.basis}</th>
               </tr>
             </thead>
@@ -158,8 +161,11 @@ export function TerminalBlockSelectionView({ currentA, hideInput = false }: Prop
                   <td className="font-bold">{series}</td>
                   <td>{resultSummary(reference)}</td>
                   <td className="font-mono">{reference ? `${reference.ratedCurrentA} A` : "—"}</td>
-                  <td className="font-mono font-semibold">{reference ? `${reference.maxWireMm2} mm²` : "—"}</td>
+                  <td className="font-mono font-semibold">
+                    {reference ? (reference.maxWireLabel ?? `${reference.maxWireMm2} mm²`) : "—"}
+                  </td>
                   <td className="font-mono font-semibold">{reference?.screwSize ?? "—"}</td>
+                  <td className="font-mono">{reference?.voltageLabel ?? "—"}</td>
                   <td>{resultSummary(company, true)}</td>
                   <td className="text-[11px]">
                     {reference?.sourceUrl ? (
@@ -175,6 +181,7 @@ export function TerminalBlockSelectionView({ currentA, hideInput = false }: Prop
                     ) : (
                       <span className="text-muted-2">—</span>
                     )}
+                    {reference?.remarks && <div className="mt-0.5 text-muted">{reference.remarks}</div>}
                   </td>
                 </tr>
               ))}
