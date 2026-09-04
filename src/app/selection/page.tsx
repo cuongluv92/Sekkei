@@ -10,11 +10,11 @@ import { Modal } from "@/components/common/Modal";
 import { PageHeader } from "@/components/common/PageHeader";
 import { LegacySelectionView } from "@/components/selection/LegacySelectionView";
 import { WireConductorSelectionView } from "@/components/selection/WireConductorSelectionView";
-import { FlexibleMotorBranchSelectionView } from "@/components/selection/FlexibleMotorBranchSelectionView";
+import { MotorKwSelectionView } from "@/components/selection/MotorKwSelectionView";
 import { GroundingSelectionView } from "@/components/selection/GroundingSelectionView";
 import { TerminalBlockSelectionView } from "@/components/selection/TerminalBlockSelectionView";
 import { WireConductorSelectionSettings } from "@/components/settings/WireConductorSelectionSettings";
-import { FlexibleMotorSelectionSettings } from "@/components/settings/FlexibleMotorSelectionSettings";
+import { MotorKwSelectionSettings } from "@/components/settings/MotorKwSelectionSettings";
 import { BusbarSizeSettings } from "@/components/settings/BusbarSizeSettings";
 import { EarthWireSizeSettings } from "@/components/settings/EarthWireSizeSettings";
 import { EarthBarSizeSettings } from "@/components/settings/EarthBarSizeSettings";
@@ -45,7 +45,7 @@ function SelectionPageView() {
   const labels = locale === "vi"
     ? {
         main: "Dây dẫn・Thanh đồng・TB",
-        branchSettings: "Cài đặt chọn kW/A",
+        branchSettings: "Tiêu chuẩn công ty chọn theo kW",
         mainSettings: "Cài đặt dây dẫn・thanh đồng・tiếp địa・TB",
         wire: "Dây dẫn・Thanh đồng",
         earth: "Tiếp địa",
@@ -55,7 +55,7 @@ function SelectionPageView() {
       }
     : {
         main: "電線・銅帯・TB",
-        branchSettings: "kW/A選定設定",
+        branchSettings: "kW選定 社内基準",
         mainSettings: "電線・銅帯・接地・TB 選定設定",
         wire: "電線・銅帯",
         earth: "接地線・アースバー",
@@ -121,7 +121,7 @@ function SelectionPageView() {
             </>
           )}
 
-          {activeTab === "branch" && <FlexibleMotorBranchSelectionView caseId={caseId} />}
+          {activeTab === "branch" && <MotorKwSelectionView caseId={caseId} />}
           {activeTab === "main" && (
             <div className="flex flex-col gap-5">
               <section className="rounded-xl border border-accent/30 bg-accent/5 p-4">
@@ -167,7 +167,7 @@ function SelectionPageView() {
 
       {settingsOpen && hasSettings && (
         <Modal title={settingsTitle()} onClose={() => setSettingsOpen(false)} widthClassName="max-w-7xl">
-          {activeTab === "branch" && <FlexibleMotorSelectionSettings />}
+          {activeTab === "branch" && <MotorKwSelectionSettings />}
           {activeTab === "main" && (
             <div className="flex flex-col gap-7">
               <section>
