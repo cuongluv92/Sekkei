@@ -4,17 +4,19 @@ import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import {
-  busbarSizeService,
   calculationRecordService,
   pickWireConductorSelection,
   wireConductorSelectionService,
   type WireConductorSelectionRow,
   type WireConductorWireType,
 } from "@/lib/services";
-import type { BusbarSize, MotorSelectionBranchItem } from "@/lib/types";
+import type { MotorSelectionBranchItem } from "@/lib/types";
 import { branchItemCurrentA, MOTOR_SELECTION_BRANCH_CALCULATION_TYPE } from "./MotorBranchSelectionView";
-import { requiredCrossSectionArea } from "@/lib/calc/busbar/currentDensityRule";
-import { findBusbarCandidates } from "@/lib/calc/busbar/candidateSearch";
+import {
+  JSIA_210_BUS_BAR_SOURCE,
+  JSIA_210_BUS_BAR_URL,
+  pickJsia210SingleBusbar,
+} from "@/lib/calc/busbar/jsia210Reference";
 
 interface Props {
   caseId: string;
@@ -38,7 +40,6 @@ const TARGETS: ResultTarget[] = [
 export function WireConductorSelectionView({ caseId, currentA, hideInput = false }: Props) {
   const { locale } = useTranslation();
   const [rows, setRows] = useState<WireConductorSelectionRow[]>([]);
-  const [busbarSizes, setBusbarSizes] = useState<BusbarSize[]>([]);
   const [loading, setLoading] = useState(true);
   const [branchTotal, setBranchTotal] = useState<number | null>(null);
   const [currentRaw, setCurrentRaw] = useState("");
@@ -46,7 +47,7 @@ export function WireConductorSelectionView({ caseId, currentA, hideInput = false
 
   const copy = locale === "vi"
     ? {
-        description: "Dòng điện chung được dùng để chọn IV, WL1 và thanh đồng ngay tại đây.",
+        description: "Dòng điện chung được dùng để chọn IV, WL1 và thanh đồng. Nguồn tham khảo chỉ dùng tài liệu chính thức Nhật Bản.",
         autoSum: "Tổng dòng từ danh sách nhánh",
         autoHint: "Có thể dùng trực tiếp tổng dòng đã lưu ở tab Nhánh.",
         use: "Dùng giá trị này",
@@ -62,13 +63,11 @@ export function WireConductorSelectionView({ caseId, currentA, hideInput = false
         noCompany: "Chưa nhập tiêu chuẩn công ty",
         maxCurrent: "đến {value} A",
         prompt: "Nhập A ở đầu tab để xem kết quả.",
-        requiredArea: "Tiết diện yêu cầu",
-        outOfRange: "Ngoài phạm vi bảng tham khảo hiện tại (>630A), không tự ngoại suy.",
-        noBusbarSize: "Đã tính được tiết diện yêu cầu nhưng chưa có kích thước thanh đồng trong master.",
+        busbarScope: "Tham khảo JSIA 210:2020 cho thiết bị nhận điện cao áp kiểu hở; không hiển thị như giá trị JIS chung cho mọi tủ.",
         note: "IV/WL1 phụ thuộc điều kiện lắp đặt và sản phẩm. Dữ liệu nguồn và tiêu chuẩn công ty được quản lý tách biệt.",
       }
     : {
-        description: "上部の共通選定電流(A)からIV・WL1・銅帯を同時に選定します。",
+        description: "上部の共通選定電流(A)からIV・WL1・銅帯を同時に選定します。基準・参考には国内公式資料だけを使用します。",
         autoSum: "分岐リストからの合計電流",
         autoHint: "分岐（電動機回路）に保存した電流合計をそのまま利用できます。",
         use: "この値を使う",
@@ -84,9 +83,7 @@ export function WireConductorSelectionView({ caseId, currentA, hideInput = false
         noCompany: "社内基準未登録",
         maxCurrent: "{value} Aまで",
         prompt: "タブ上部の選定電流(A)を入力してください。",
-        requiredArea: "必要断面積",
-        outOfRange: "現在の参考計算範囲外（630A超）です。延長推定は行いません。",
-        noBusbarSize: "必要断面積は計算済みですが、実サイズを選ぶための銅帯サイズマスタが未登録です。",
+        busbarScope: "JSIA 210:2020「開放形高圧受電設備」表B.2の参考値です。一般の低圧盤に対するJIS値としては扱いません。",
         note: "IV/WL1の許容電流は布設条件・周囲温度・製品メーカー等で変わります。公開参考値と社内採用値は分離して管理します。",
       };
 
@@ -96,11 +93,10 @@ export function WireConductorSelectionView({ caseId, currentA, hideInput = false
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([wireConductorSelectionService.list(), busbarSizeService.list()])
-      .then(([list, sizes]) => {
-        if (cancelled) return;
-        setRows(list);
-        setBusbarSizes(sizes);
+    wireConductorSelectionService
+      .list()
+      .then((list) => {
+        if (!cancelled) setRows(list);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -149,20 +145,10 @@ export function WireConductorSelectionView({ caseId, currentA, hideInput = false
     }));
   }, [rows, effectiveCurrent]);
 
-  const busbarRequired = useMemo(
-    () => (effectiveCurrent == null ? null : requiredCrossSectionArea(effectiveCurrent)),
+  const busbarReference = useMemo(
+    () => (effectiveCurrent == null ? null : pickJsia210SingleBusbar(effectiveCurrent)),
     [effectiveCurrent],
   );
-
-  const busbarCandidate = useMemo(() => {
-    if (!busbarRequired || !busbarRequired.inRange || effectiveCurrent == null) return null;
-    return findBusbarCandidates(
-      busbarSizes,
-      busbarRequired.requiredAreaMm2,
-      effectiveCurrent,
-      1,
-    )[0] ?? null;
-  }, [busbarRequired, busbarSizes, effectiveCurrent]);
 
   function choose() {
     const value = Number(currentRaw);
@@ -257,18 +243,15 @@ export function WireConductorSelectionView({ caseId, currentA, hideInput = false
                       <td className="font-semibold">{row.label}</td>
                       <td>
                         {isBusbar ? (
-                          busbarRequired?.inRange ? (
+                          busbarReference ? (
                             <div className="flex flex-col gap-0.5">
                               <span className="font-mono font-semibold">
-                                {busbarCandidate
-                                  ? `${busbarCandidate.thicknessMm} × ${busbarCandidate.widthMm} mm × ${busbarCandidate.barsPerPhase}`
-                                  : `${copy.requiredArea}: ${busbarRequired.requiredAreaMm2.toFixed(2)} mm²`}
+                                {busbarReference.thicknessMm} × {busbarReference.widthMm} mm
                               </span>
-                              {!busbarCandidate && <span className="text-[10.5px] text-warning">{copy.noBusbarSize}</span>}
-                              <span className="text-[10.5px] text-muted">{copy.requiredArea}: {busbarRequired.requiredAreaMm2.toFixed(2)} mm²</span>
+                              <span className="text-[10.5px] text-muted">許容電流 {busbarReference.allowableCurrentA} A</span>
                             </div>
                           ) : (
-                            <span className="text-warning">{copy.outOfRange}</span>
+                            <span className="text-muted-2">{copy.noReference}</span>
                           )
                         ) : row.reference ? (
                           <div className="flex flex-col gap-0.5">
@@ -290,11 +273,19 @@ export function WireConductorSelectionView({ caseId, currentA, hideInput = false
                         )}
                       </td>
                       <td className="text-[11px]">
-                        {isBusbar && busbarRequired?.inRange ? (
+                        {isBusbar && busbarReference ? (
                           <div className="flex flex-col gap-1">
-                            <span className="font-semibold">{busbarRequired.source.standard} {busbarRequired.source.edition}</span>
-                            <span className="text-muted">{busbarRequired.source.reference}</span>
-                            {!busbarRequired.source.verified && <span className="text-warning">要確認 / 参考値</span>}
+                            <a
+                              href={JSIA_210_BUS_BAR_URL}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 font-semibold text-accent hover:underline"
+                            >
+                              {JSIA_210_BUS_BAR_SOURCE.standard} {JSIA_210_BUS_BAR_SOURCE.reference}
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                            <span className="text-muted">{JSIA_210_BUS_BAR_SOURCE.condition}</span>
+                            <span className="text-warning">{copy.busbarScope}</span>
                           </div>
                         ) : row.reference ? (
                           <div className="flex flex-col gap-1">
