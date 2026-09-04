@@ -23,6 +23,7 @@ import { MOTOR_SELECTION_BRANCH_CALCULATION_TYPE } from "./MotorBranchSelectionV
 interface Props { caseId: string; }
 
 interface SavedMotorKwItem extends MotorSelectionBranchItem {
+  circuitKind?: "motor" | "control" | "other";
   basisKind?: MotorKwBasisKind;
   sourceTitle?: string;
   sourceUrl?: string;
@@ -35,7 +36,7 @@ interface SavedMotorKwItem extends MotorSelectionBranchItem {
 
 const VOLTAGES: SelectionVoltageClass[] = ["100V", "200V", "400V"];
 const METHODS: SelectionCircuitType[] = ["direct", "starDelta", "inverter"];
-const BASIS: MotorKwBasisKind[] = ["mitsubishi", "fuji", "company"];
+const BASIS: MotorKwBasisKind[] = ["company", "mitsubishi", "fuji"];
 
 const STANDARD_LINKS = [
   { label: "内線規程 第14版 JEAC8001-2022", url: "https://store.denki.or.jp/products/%E5%86%85%E7%B7%9A%E8%A6%8F%E7%A8%8B-%E7%AC%AC14%E7%89%88" },
@@ -61,6 +62,9 @@ export function MotorKwSelectionView({ caseId }: Props) {
   const [method, setMethod] = useState<SelectionCircuitType>("direct");
   const [kwRaw, setKwRaw] = useState("");
   const [selectedKw, setSelectedKw] = useState<number | null>(null);
+  const [otherKind, setOtherKind] = useState<"control" | "other">("control");
+  const [otherLabel, setOtherLabel] = useState("");
+  const [otherCurrentRaw, setOtherCurrentRaw] = useState("");
 
   const copy = locale === "vi"
     ? {
@@ -89,7 +93,7 @@ export function MotorKwSelectionView({ caseId }: Props) {
         jis: "JIS",
         association: "JSIA / JEMA",
         source: "Nguồn・ghi chú",
-        adopt: "Dùng dòng này",
+        adopt: "＋ Thêm phân nhánh",
         noData: "Chưa có dữ liệu chính thức đúng tổ hợp này — không tự suy đoán.",
         companyMissing: "Chưa có tiêu chuẩn công ty cho tổ hợp này.",
         result: "So sánh kết quả kW",
@@ -101,6 +105,12 @@ export function MotorKwSelectionView({ caseId }: Props) {
         mitsubishi: "Mitsubishi (ưu tiên)",
         fuji: "Fuji",
         company: "Công ty",
+        otherTitle: "Mạch điều khiển・phân nhánh khác",
+        otherHint: "Nhập trực tiếp dòng thiết kế A. Dòng này được cộng vào 主幹; breaker chỉ tự chọn khi có bảng breaker riêng đã xác minh.",
+        control: "Mạch điều khiển",
+        other: "Phân nhánh khác",
+        currentA: "Dòng thiết kế (A)",
+        addCircuit: "＋ Thêm mạch",
       }
     : {
         description: "電動機kWから三菱 → 富士 → 社内基準を比較します。通常使用の多い三菱を先頭に表示します。公開一次資料で直接確認できない欄は推定せず空欄にします。",
@@ -128,7 +138,7 @@ export function MotorKwSelectionView({ caseId }: Props) {
         jis: "JIS",
         association: "JSIA / JEMA",
         source: "根拠・備考",
-        adopt: "この行を採用",
+        adopt: "＋ 分岐回路を追加",
         noData: "この組合せの確認済み公式データは未登録です。推定値は表示しません。",
         companyMissing: "この組合せの社内基準は未登録です。",
         result: "kW選定 比較結果",
@@ -140,6 +150,12 @@ export function MotorKwSelectionView({ caseId }: Props) {
         mitsubishi: "三菱（優先）",
         fuji: "富士",
         company: "社内基準",
+        otherTitle: "制御回路・その他分岐",
+        otherHint: "設計電流(A)を直接入力します。この電流は主幹合計に加算され、ブレーカは確認済みの専用選定表がある場合だけ自動選定します。",
+        control: "制御回路",
+        other: "その他分岐",
+        currentA: "設計電流 (A)",
+        addCircuit: "＋ 回路を追加",
       };
 
   const manufacturers = listManufacturers();
@@ -203,6 +219,7 @@ export function MotorKwSelectionView({ caseId }: Props) {
     setSaving(true);
     try {
       await calculationRecordService.save(caseId, MOTOR_SELECTION_BRANCH_CALCULATION_TYPE, {}, { items: next });
+      window.dispatchEvent(new CustomEvent("motor-branches-updated", { detail: { caseId } }));
     } finally {
       setSaving(false);
     }
@@ -243,6 +260,7 @@ export function MotorKwSelectionView({ caseId }: Props) {
       inputValue: row.motorKw,
       matched: true,
       matchedRow,
+      circuitKind: "motor",
       basisKind: row.basisKind,
       sourceTitle: row.source?.title,
       sourceUrl: row.source?.url,
@@ -254,6 +272,26 @@ export function MotorKwSelectionView({ caseId }: Props) {
     };
     void persist([...items, item]);
     setLabel("");
+  }
+
+  function addOtherCircuit() {
+    const current = Number(otherCurrentRaw);
+    if (!Number.isFinite(current) || current <= 0) return;
+    const item: SavedMotorKwItem = {
+      id: crypto.randomUUID(),
+      label: otherLabel.trim() || (otherKind === "control" ? copy.control : copy.other),
+      manufacturerId: "",
+      voltageClass: voltage,
+      circuitType: "direct",
+      inputUnit: "A",
+      inputValue: current,
+      matched: false,
+      circuitKind: otherKind,
+      sourceRemarks: locale === "vi" ? "Chưa tự chọn breaker: cần bảng riêng đã xác minh." : "ブレーカ未自動選定：確認済み専用表が必要。",
+    };
+    void persist([...items, item]);
+    setOtherLabel("");
+    setOtherCurrentRaw("");
   }
 
   return (
@@ -269,62 +307,87 @@ export function MotorKwSelectionView({ caseId }: Props) {
         <button type="button" className="btn-primary" onClick={choose} disabled={Number(kwRaw) <= 0}>{copy.choose}</button>
       </div>
 
+      <section className="rounded-lg border border-border bg-muted/5 p-3">
+        <div className="text-[12px] font-bold">{copy.otherTitle}</div>
+        <p className="mt-1 text-[10.5px] text-muted">{copy.otherHint}</p>
+        <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:items-end">
+          <label><span className="field-label">{copy.name}</span><input className="field-input" value={otherLabel} onChange={(e) => setOtherLabel(e.target.value)} /></label>
+          <label><span className="field-label">{copy.basis}</span><select className="field-input" value={otherKind} onChange={(e) => setOtherKind(e.target.value as "control" | "other")}><option value="control">{copy.control}</option><option value="other">{copy.other}</option></select></label>
+          <label><span className="field-label">{copy.currentA}</span><input className="field-input font-mono" type="number" min={0} step="any" value={otherCurrentRaw} onChange={(e) => setOtherCurrentRaw(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addOtherCircuit()} /></label>
+          <button type="button" className="btn-secondary" onClick={addOtherCircuit} disabled={Number(otherCurrentRaw) <= 0}>{copy.addCircuit}</button>
+        </div>
+      </section>
+
       <section>
         <div className="flex items-center gap-2"><span className="panel-title">{copy.result}</span>{loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-2" />}{selectedKw != null && <span className="rounded bg-accent/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-accent">{selectedKw} kW</span>}</div>
         {selectedKw == null ? (
           <p className="mt-2 text-[11px] text-muted-2">{locale === "vi" ? "Nhập kW và nhấn Tra chọn." : "kWを入力して「選定する」を押してください。"}</p>
         ) : (
-          <div className="data-table-wrap mt-2">
-            <table className="data-table" style={{ minWidth: 2700 }}>
-              <thead><tr>
-                <th style={{ width: 115 }}>{copy.basis}</th><th style={{ width: 120 }}>{copy.maker}</th><th style={{ width: 110 }}>{copy.rated}</th><th style={{ width: 105 }}>{copy.starting}</th><th style={{ width: 150 }}>{copy.breaker}</th><th style={{ width: 105 }}>{copy.breakerA}</th><th style={{ width: 230 }}>{copy.shortCircuit}</th><th style={{ width: 160 }}>{copy.contactor}</th><th style={{ width: 130 }}>{copy.thermal}</th><th style={{ width: 90 }}>{copy.heater}</th><th style={{ width: 180 }}>{copy.inverter}</th><th style={{ width: 120 }}>{copy.wire}</th><th style={{ width: 110 }}>{copy.ct}</th><th style={{ width: 110 }}>{copy.am}</th><th style={{ width: 260 }}>{copy.naisen}</th><th style={{ width: 270 }}>{copy.jis}</th><th style={{ width: 260 }}>{copy.association}</th><th>{copy.source}</th><th style={{ width: 120 }} /></tr></thead>
-              <tbody>
-                {displayRows.map(({ basis, row, key }) => (
-                  <tr key={key} className={basis === "mitsubishi" && row ? "bg-accent/5" : undefined}>
-                    <td><span className={basis === "mitsubishi" ? "font-bold text-accent" : "font-semibold"}>{basisLabel(basis)}</span></td>
-                    {!row ? (
-                      <td colSpan={17} className={basis === "company" ? "text-warning" : "text-muted-2"}>{basis === "company" ? copy.companyMissing : copy.noData}</td>
-                    ) : (
-                      <>
-                        <td>{makerName(row.manufacturerId)}</td>
-                        <td className="font-mono font-semibold">{row.ratedCurrentA != null ? `${row.ratedCurrentA} A` : "—"}</td>
-                        <td className="font-mono">{row.startingCurrentA != null ? `${row.startingCurrentA} A` : "—"}</td>
-                        <td className="font-mono text-[11px]">{row.breakerModel ?? "—"}</td>
-                        <td className="font-mono">{row.breakerRatedA != null ? `${row.breakerRatedA} A` : "—"}</td>
-                        <td className="text-[10.5px]">{row.breakerCondition ?? "—"}</td>
-                        <td className="font-mono text-[11px]">{row.contactorModel ?? "—"}</td>
-                        <td className="font-mono text-[11px]">{row.thermalModel ?? "—"}</td>
-                        <td className="font-mono">{row.thermalSettingA != null ? `${row.thermalSettingA} A` : "—"}</td>
-                        <td className="font-mono text-[11px]">{row.inverterModel ?? "—"}</td>
-                        <td className="font-mono text-[11px]">{row.wireSize ?? "—"}</td>
-                        <td className="font-mono text-[11px]">{row.ctModel ?? "—"}</td>
-                        <td className="font-mono text-[11px]">{row.amRange ?? "—"}</td>
-                        <td className="text-[10.5px]">{row.naisenBasis ?? "—"}</td>
-                        <td className="text-[10.5px]">{row.jisBasis ?? "—"}</td>
-                        <td className="text-[10.5px]">{row.associationBasis ?? "—"}</td>
-                        <td className="text-[10.5px]">
+          <div className="mt-3 flex flex-col gap-3">
+            <article className="rounded-lg border border-border bg-muted/5 p-3">
+              <div className="border-b border-border pb-2 font-semibold">内線規程・JIS・JSIA/JEMA</div>
+              <div className="mt-3 flex flex-col items-start gap-2">
+                {STANDARD_LINKS.map((item) => <a key={item.label} href={item.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent hover:underline">{item.label}<ExternalLink className="h-3 w-3" /></a>)}
+              </div>
+              <p className="mt-3 text-[10.5px] leading-relaxed text-muted">{copy.standardsNote}</p>
+            </article>
+            {displayRows.map(({ basis, row, key }) => (
+              <article key={key} className={`rounded-lg border p-3 ${basis === "mitsubishi" && row ? "border-accent/40 bg-accent/5" : "border-border bg-muted/5"}`}>
+                <div className="flex items-start justify-between gap-3 border-b border-border pb-2">
+                  <div>
+                    <div className={basis === "mitsubishi" ? "font-bold text-accent" : "font-semibold"}>{basisLabel(basis)}</div>
+                    {row && <div className="mt-0.5 text-[11px] text-muted">{makerName(row.manufacturerId)}</div>}
+                  </div>
+                  {row && <button type="button" className="btn-secondary shrink-0 whitespace-nowrap" onClick={() => adopt(row)} disabled={!row.manufacturerId}><Plus className="h-3.5 w-3.5" />{copy.adopt}</button>}
+                </div>
+                {!row ? (
+                  <p className={`py-3 text-[11px] ${basis === "company" ? "text-warning" : "text-muted-2"}`}>{basis === "company" ? copy.companyMissing : copy.noData}</p>
+                ) : (
+                  <div className="mt-3 flex flex-col gap-3">
+                    <dl className="grid grid-cols-1 gap-x-5 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {[
+                        [copy.rated, row.ratedCurrentA != null ? `${row.ratedCurrentA} A` : "—"],
+                        [copy.starting, row.startingCurrentA != null ? `${row.startingCurrentA} A` : "—"],
+                        [copy.breaker, row.breakerModel ?? "—"],
+                        [copy.breakerA, row.breakerRatedA != null ? `${row.breakerRatedA} A` : "—"],
+                        [copy.shortCircuit, row.breakerCondition ?? "—"],
+                        [copy.contactor, row.contactorModel ?? "—"],
+                        [copy.thermal, row.thermalModel ?? "—"],
+                        [copy.heater, row.thermalSettingA != null ? `${row.thermalSettingA} A` : "—"],
+                        [copy.inverter, row.inverterModel ?? "—"],
+                        [copy.wire, row.wireSize ?? "—"],
+                        [copy.ct, row.ctModel ?? "—"],
+                        [copy.am, row.amRange ?? "—"],
+                      ].map(([title, value]) => (
+                        <div key={title} className="min-w-0 rounded-md border border-border/70 bg-background/60 px-2.5 py-2">
+                          <dt className="text-[10px] font-semibold text-muted">{title}</dt>
+                          <dd className="mt-0.5 break-words font-mono text-[11.5px]">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    <dl className="flex flex-col divide-y divide-border overflow-hidden rounded-md border border-border">
+                      {[[copy.naisen, row.naisenBasis], [copy.jis, row.jisBasis], [copy.association, row.associationBasis]].map(([title, value]) => (
+                        <div key={title} className="grid gap-1 px-3 py-2.5 sm:grid-cols-[150px_1fr]">
+                          <dt className="text-[10.5px] font-semibold text-muted">{title}</dt>
+                          <dd className="text-[11px] leading-relaxed">{value ?? "—"}</dd>
+                        </div>
+                      ))}
+                      <div className="grid gap-1 px-3 py-2.5 sm:grid-cols-[150px_1fr]">
+                        <dt className="text-[10.5px] font-semibold text-muted">{copy.source}</dt>
+                        <dd className="text-[11px] leading-relaxed">
                           {row.source?.url ? <a href={row.source.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-accent hover:underline">{row.source.title}<ExternalLink className="h-3 w-3" /></a> : <span>{row.source?.title ?? "—"}</span>}
                           {row.source?.documentNo && <div className="text-muted">{row.source.documentNo}{row.source.publishedLabel ? ` / ${row.source.publishedLabel}` : ""}</div>}
                           {row.remarks && <div className="mt-1 text-muted">{row.remarks}</div>}
                           {row.source?.remarks && <div className="mt-1 text-warning">{row.source.remarks}</div>}
-                        </td>
-                        <td><button type="button" className="btn-secondary whitespace-nowrap" onClick={() => adopt(row)} disabled={!row.manufacturerId}><Plus className="h-3.5 w-3.5" />{copy.adopt}</button></td>
-                      </>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+                )}
+              </article>
+            ))}
           </div>
         )}
-      </section>
-
-      <section className="rounded-lg border border-border bg-muted/5 p-3">
-        <div className="panel-title">{copy.standards}</div>
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
-          {STANDARD_LINKS.map((item) => <a key={item.label} href={item.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent hover:underline">{item.label}<ExternalLink className="h-3 w-3" /></a>)}
-        </div>
-        <p className="mt-2 text-[10.5px] text-muted">{copy.standardsNote}</p>
       </section>
 
       <section className="border-t border-border pt-4">
@@ -336,7 +399,7 @@ export function MotorKwSelectionView({ caseId }: Props) {
             <tbody>
               {!itemsLoaded ? <tr><td colSpan={12} className="py-6 text-center text-muted">...</td></tr> : items.length === 0 ? <tr><td colSpan={12} className="py-6 text-center text-muted-2">{copy.empty}</td></tr> : items.map((item) => (
                 <tr key={item.id}>
-                  <td>{item.label || "—"}</td><td>{item.basisKind ? basisLabel(item.basisKind) : "—"}</td><td>{makerName(item.manufacturerId)}</td><td>{item.voltageClass}</td><td>{methodLabel(item.circuitType)}</td><td className="font-mono">{item.inputValue} kW</td><td className="font-mono">{item.matchedRow?.ratedCurrent ? `${item.matchedRow.ratedCurrent} A` : "—"}</td><td>{item.matchedRow?.breakerModel ?? "—"}</td><td>{item.matchedRow?.contactorModel ?? "—"}</td><td>{item.matchedRow?.inverterModel ?? "—"}</td><td className="text-[10.5px]">{item.sourceUrl ? <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="text-accent hover:underline">{item.sourceTitle ?? "source"}</a> : item.sourceTitle ?? "—"}</td><td><button type="button" className="btn-ghost btn-icon text-danger" onClick={() => void persist(items.filter((row) => row.id !== item.id))}><Trash2 className="h-3.5 w-3.5" /></button></td>
+                  <td>{item.label || "—"}</td><td>{item.basisKind ? basisLabel(item.basisKind) : item.circuitKind === "control" ? copy.control : copy.other}</td><td>{makerName(item.manufacturerId)}</td><td>{item.voltageClass}</td><td>{item.inputUnit === "A" ? "—" : methodLabel(item.circuitType)}</td><td className="font-mono">{item.inputValue} {item.inputUnit}</td><td className="font-mono">{item.matchedRow?.ratedCurrent ? `${item.matchedRow.ratedCurrent} A` : item.inputUnit === "A" ? `${item.inputValue} A` : "—"}</td><td>{item.matchedRow?.breakerModel ?? "要確認"}</td><td>{item.matchedRow?.contactorModel ?? "—"}</td><td>{item.matchedRow?.inverterModel ?? "—"}</td><td className="text-[10.5px]">{item.sourceUrl ? <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="text-accent hover:underline">{item.sourceTitle ?? "source"}</a> : item.sourceRemarks ?? "—"}</td><td><button type="button" className="btn-ghost btn-icon text-danger" onClick={() => void persist(items.filter((row) => row.id !== item.id))}><Trash2 className="h-3.5 w-3.5" /></button></td>
                 </tr>
               ))}
             </tbody>
