@@ -10,9 +10,9 @@ import { Modal } from "@/components/common/Modal";
 import { PageHeader } from "@/components/common/PageHeader";
 import { LegacySelectionView } from "@/components/selection/LegacySelectionView";
 import { WireConductorSelectionView } from "@/components/selection/WireConductorSelectionView";
-import { MotorBranchSelectionView } from "@/components/selection/MotorBranchSelectionView";
+import { FlexibleMotorBranchSelectionView } from "@/components/selection/FlexibleMotorBranchSelectionView";
 import { WireConductorSelectionSettings } from "@/components/settings/WireConductorSelectionSettings";
-import { MotorStarterSelectionSettings } from "@/components/settings/MotorStarterSelectionSettings";
+import { FlexibleMotorSelectionSettings } from "@/components/settings/FlexibleMotorSelectionSettings";
 
 type SelectionTab = "branch" | "main" | "highVoltage" | "legacy";
 const TABS: SelectionTab[] = ["branch", "main", "highVoltage", "legacy"];
@@ -20,17 +20,15 @@ const TABS: SelectionTab[] = ["branch", "main", "highVoltage", "legacy"];
 function SelectionPageView() {
   const { t, locale } = useTranslation();
   const searchParams = useSearchParams();
-  // 部品製作 と同じパターン: ?case= の明示的なディープリンクがアプリ全体の
-  // アクティブ案件より優先される。
   const effectiveActiveCaseId = useEffectiveCaseId(false);
   const caseIdParam = searchParams.get("case") ?? "";
   const caseId = caseIdParam || effectiveActiveCaseId;
   const [activeTab, setActiveTab] = useState<SelectionTab>("branch");
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // 電線・銅帯はAを直接入力して単独でも使える。案件がある場合だけ分岐合計を補助表示する。
   const needsCase = activeTab === "branch";
   const wireTabLabel = locale === "vi" ? "Dây dẫn & thanh đồng" : "電線・銅帯選定";
+  const motorSettingsLabel = locale === "vi" ? "Thiết kế chọn kW/A dạng xương cá" : "kW/A xương cá選定デザイナー";
 
   return (
     <div className="flex flex-col gap-4">
@@ -73,7 +71,7 @@ function SelectionPageView() {
             </>
           )}
 
-          {activeTab === "branch" && <MotorBranchSelectionView caseId={caseId} />}
+          {activeTab === "branch" && <FlexibleMotorBranchSelectionView caseId={caseId} />}
           {activeTab === "main" && <WireConductorSelectionView caseId={caseId} />}
           {activeTab === "highVoltage" && (
             <div className="py-12 text-center text-[13px] text-muted-2">{t("motorSelection.highVoltagePlaceholder")}</div>
@@ -83,11 +81,11 @@ function SelectionPageView() {
       </div>
 
       {settingsOpen && (
-        <Modal title={t("common.settings")} onClose={() => setSettingsOpen(false)} widthClassName="max-w-6xl">
-          <div className="flex flex-col gap-6">
+        <Modal title={t("common.settings")} onClose={() => setSettingsOpen(false)} widthClassName="max-w-7xl">
+          <div className="flex flex-col gap-7">
             <div className="flex flex-col gap-2">
-              <span className="panel-title">{t("motorStarterSelectionSettings.title")}</span>
-              <MotorStarterSelectionSettings />
+              <span className="panel-title">{motorSettingsLabel}</span>
+              <FlexibleMotorSelectionSettings />
             </div>
             <div className="flex flex-col gap-2 border-t border-border pt-6">
               <span className="panel-title">{wireTabLabel}</span>
