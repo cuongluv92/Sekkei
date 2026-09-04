@@ -18,6 +18,8 @@ import { findBusbarCandidates } from "@/lib/calc/busbar/candidateSearch";
 
 interface Props {
   caseId: string;
+  currentA?: number | null;
+  hideInput?: boolean;
 }
 
 interface ResultTarget {
@@ -33,7 +35,7 @@ const TARGETS: ResultTarget[] = [
   { key: "busbar", label: "銅帯", itemKind: "busbar" },
 ];
 
-export function WireConductorSelectionView({ caseId }: Props) {
+export function WireConductorSelectionView({ caseId, currentA, hideInput = false }: Props) {
   const { locale } = useTranslation();
   const [rows, setRows] = useState<WireConductorSelectionRow[]>([]);
   const [busbarSizes, setBusbarSizes] = useState<BusbarSize[]>([]);
@@ -44,12 +46,11 @@ export function WireConductorSelectionView({ caseId }: Props) {
 
   const copy = locale === "vi"
     ? {
-        description:
-          "Nhập dòng điện A để chọn dây và thanh đồng. IV/WL1 dùng bảng tham khảo có nguồn; thanh đồng dùng trực tiếp logic tính ở mục Tính toán rồi trả kết quả ngay tại đây. Cột công ty là dữ liệu nội bộ tự nhập.",
+        description: "Dòng điện chung được dùng để chọn IV, WL1 và thanh đồng ngay tại đây.",
         autoSum: "Tổng dòng từ danh sách nhánh",
-        autoHint: "Có thể dùng trực tiếp tổng dòng đã lưu ở tab Nhánh (mạch động cơ).",
+        autoHint: "Có thể dùng trực tiếp tổng dòng đã lưu ở tab Nhánh.",
         use: "Dùng giá trị này",
-        current: "Dòng điện cần chọn (A)",
+        current: "Dòng điện chọn (A)",
         placeholder: "Ví dụ: 150",
         calculate: "Chọn",
         result: "Kết quả chọn dây / thanh đồng",
@@ -60,16 +61,14 @@ export function WireConductorSelectionView({ caseId }: Props) {
         noReference: "Chưa có dữ liệu tham khảo",
         noCompany: "Chưa nhập tiêu chuẩn công ty",
         maxCurrent: "đến {value} A",
-        prompt: "Nhập A để xem kết quả.",
+        prompt: "Nhập A ở đầu tab để xem kết quả.",
         requiredArea: "Tiết diện yêu cầu",
         outOfRange: "Ngoài phạm vi bảng tham khảo hiện tại (>630A), không tự ngoại suy.",
-        noBusbarSize: "Đã tính được tiết diện yêu cầu nhưng chưa có kích thước thanh đồng trong master để chọn kích thước thực.",
-        note:
-          "IV/WL1 phụ thuộc điều kiện lắp đặt và sản phẩm. Với thanh đồng, phần tính kỹ thuật được dùng chung từ mục Tính toán; master kích thước chỉ dùng ở bước chọn kích thước thực tế, không thay thế công thức kỹ thuật.",
+        noBusbarSize: "Đã tính được tiết diện yêu cầu nhưng chưa có kích thước thanh đồng trong master.",
+        note: "IV/WL1 phụ thuộc điều kiện lắp đặt và sản phẩm. Dữ liệu nguồn và tiêu chuẩn công ty được quản lý tách biệt.",
       }
     : {
-        description:
-          "電流(A)から電線・銅帯を選定します。IV/WL1は出典付き参考表、銅帯は「計算」側の技術ロジックをそのまま共用し、この画面内で自動結果を返します。社内基準は会社登録値です。",
+        description: "上部の共通選定電流(A)からIV・WL1・銅帯を同時に選定します。",
         autoSum: "分岐リストからの合計電流",
         autoHint: "分岐（電動機回路）に保存した電流合計をそのまま利用できます。",
         use: "この値を使う",
@@ -84,13 +83,16 @@ export function WireConductorSelectionView({ caseId }: Props) {
         noReference: "参考基準データ未登録",
         noCompany: "社内基準未登録",
         maxCurrent: "{value} Aまで",
-        prompt: "電流(A)を入力して選定してください。",
+        prompt: "タブ上部の選定電流(A)を入力してください。",
         requiredArea: "必要断面積",
         outOfRange: "現在の参考計算範囲外（630A超）です。延長推定は行いません。",
         noBusbarSize: "必要断面積は計算済みですが、実サイズを選ぶための銅帯サイズマスタが未登録です。",
-        note:
-          "IV/WL1の許容電流は布設条件・周囲温度・製品メーカー等で変わります。銅帯は「計算」側の技術ロジックを共用し、サイズマスタは技術条件を満たした後の実サイズ選定にだけ使います。",
+        note: "IV/WL1の許容電流は布設条件・周囲温度・製品メーカー等で変わります。公開参考値と社内採用値は分離して管理します。",
       };
+
+  const externalCurrent =
+    currentA != null && Number.isFinite(currentA) && currentA > 0 ? currentA : null;
+  const effectiveCurrent = externalCurrent ?? selectedCurrent;
 
   useEffect(() => {
     let cancelled = false;
@@ -127,40 +129,40 @@ export function WireConductorSelectionView({ caseId }: Props) {
   }, [caseId]);
 
   const results = useMemo(() => {
-    if (selectedCurrent == null) return [];
+    if (effectiveCurrent == null) return [];
     return TARGETS.map((target) => ({
       ...target,
       reference: pickWireConductorSelection(
         rows,
-        selectedCurrent,
+        effectiveCurrent,
         "reference",
         target.itemKind,
         target.wireType,
       ),
       company: pickWireConductorSelection(
         rows,
-        selectedCurrent,
+        effectiveCurrent,
         "company",
         target.itemKind,
         target.wireType,
       ),
     }));
-  }, [rows, selectedCurrent]);
+  }, [rows, effectiveCurrent]);
 
   const busbarRequired = useMemo(
-    () => (selectedCurrent == null ? null : requiredCrossSectionArea(selectedCurrent)),
-    [selectedCurrent],
+    () => (effectiveCurrent == null ? null : requiredCrossSectionArea(effectiveCurrent)),
+    [effectiveCurrent],
   );
 
   const busbarCandidate = useMemo(() => {
-    if (!busbarRequired || !busbarRequired.inRange || selectedCurrent == null) return null;
+    if (!busbarRequired || !busbarRequired.inRange || effectiveCurrent == null) return null;
     return findBusbarCandidates(
       busbarSizes,
       busbarRequired.requiredAreaMm2,
-      selectedCurrent,
+      effectiveCurrent,
       1,
     )[0] ?? null;
-  }, [busbarRequired, busbarSizes, selectedCurrent]);
+  }, [busbarRequired, busbarSizes, effectiveCurrent]);
 
   function choose() {
     const value = Number(currentRaw);
@@ -182,7 +184,7 @@ export function WireConductorSelectionView({ caseId }: Props) {
     <div className="flex flex-col gap-4">
       <p className="text-[12px] text-muted">{copy.description}</p>
 
-      {caseId && branchTotal !== null && (
+      {!hideInput && caseId && branchTotal !== null && (
         <div className="flex flex-col gap-1 rounded-md border border-border bg-muted/10 px-3 py-2">
           <div className="flex items-center gap-2 text-[12px]">
             <span className="text-muted">{copy.autoSum}</span>
@@ -195,44 +197,46 @@ export function WireConductorSelectionView({ caseId }: Props) {
         </div>
       )}
 
-      <div className="grid grid-cols-[minmax(180px,320px)_auto] items-end gap-2.5">
-        <div>
-          <label className="field-label">{copy.current}</label>
-          <input
-            type="number"
-            min={0}
-            step="any"
-            value={currentRaw}
-            onChange={(e) => setCurrentRaw(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") choose();
-            }}
-            placeholder={copy.placeholder}
-            className="field-input"
-          />
+      {!hideInput && (
+        <div className="grid grid-cols-[minmax(180px,320px)_auto] items-end gap-2.5">
+          <div>
+            <label className="field-label">{copy.current}</label>
+            <input
+              type="number"
+              min={0}
+              step="any"
+              value={currentRaw}
+              onChange={(e) => setCurrentRaw(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") choose();
+              }}
+              placeholder={copy.placeholder}
+              className="field-input"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={choose}
+            disabled={!currentRaw.trim() || Number(currentRaw) <= 0}
+            className="btn-primary"
+          >
+            {copy.calculate}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={choose}
-          disabled={!currentRaw.trim() || Number(currentRaw) <= 0}
-          className="btn-primary"
-        >
-          {copy.calculate}
-        </button>
-      </div>
+      )}
 
       <div>
         <div className="flex items-center gap-2">
           <span className="panel-title">{copy.result}</span>
           {loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-2" />}
-          {selectedCurrent != null && (
+          {effectiveCurrent != null && (
             <span className="rounded bg-accent/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-accent">
-              {selectedCurrent} A
+              {effectiveCurrent} A
             </span>
           )}
         </div>
 
-        {selectedCurrent == null ? (
+        {effectiveCurrent == null ? (
           <p className="mt-2 text-[12px] text-muted-2">{copy.prompt}</p>
         ) : (
           <div className="data-table-wrap mt-2">
@@ -307,9 +311,7 @@ export function WireConductorSelectionView({ caseId }: Props) {
                             ) : (
                               <span className="font-semibold">{row.reference.source?.title ?? "—"}</span>
                             )}
-                            {row.reference.conditionLabel && (
-                              <span className="text-muted">{row.reference.conditionLabel}</span>
-                            )}
+                            {row.reference.conditionLabel && <span className="text-muted">{row.reference.conditionLabel}</span>}
                           </div>
                         ) : (
                           <span className="text-muted-2">—</span>
