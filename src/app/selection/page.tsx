@@ -20,8 +20,8 @@ import { EarthWireSizeSettings } from "@/components/settings/EarthWireSizeSettin
 import { EarthBarSizeSettings } from "@/components/settings/EarthBarSizeSettings";
 import { TerminalBlockSelectionSettings } from "@/components/settings/TerminalBlockSelectionSettings";
 
-type SelectionTab = "branch" | "main" | "earth" | "terminal" | "highVoltage" | "legacy";
-const TABS: SelectionTab[] = ["branch", "main", "earth", "terminal", "highVoltage", "legacy"];
+type SelectionTab = "branch" | "main" | "highVoltage" | "legacy";
+const TABS: SelectionTab[] = ["branch", "main", "highVoltage", "legacy"];
 
 function SelectionPageView() {
   const { t, locale } = useTranslation();
@@ -33,40 +33,34 @@ function SelectionPageView() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const needsCase = activeTab === "branch";
-  const hasSettings = activeTab === "branch" || activeTab === "main" || activeTab === "earth" || activeTab === "terminal";
+  const hasSettings = activeTab === "branch" || activeTab === "main";
 
   const labels = locale === "vi"
     ? {
-        wire: "Dây dẫn & thanh đồng",
+        main: "Dây dẫn・Thanh đồng・TB",
+        branchSettings: "Cài đặt chọn kW/A",
+        mainSettings: "Cài đặt dây dẫn・thanh đồng・tiếp địa・TB",
+        wire: "Dây dẫn・Thanh đồng",
         earth: "Tiếp địa",
         terminal: "TB",
-        branchSettings: "Cài đặt chọn kW/A",
-        wireSettings: "Cài đặt dây dẫn & thanh đồng",
-        earthSettings: "Cài đặt tiếp địa",
-        terminalSettings: "Cài đặt TB",
       }
     : {
+        main: "電線・銅帯・TB",
+        branchSettings: "kW/A選定設定",
+        mainSettings: "電線・銅帯・接地・TB 選定設定",
         wire: "電線・銅帯",
         earth: "接地線・アースバー",
         terminal: "TB",
-        branchSettings: "kW/A選定設定",
-        wireSettings: "電線・銅帯選定設定",
-        earthSettings: "接地線・アースバー選定設定",
-        terminalSettings: "TB選定設定",
       };
 
   function tabLabel(tab: SelectionTab): string {
-    if (tab === "main") return labels.wire;
-    if (tab === "earth") return labels.earth;
-    if (tab === "terminal") return labels.terminal;
+    if (tab === "main") return labels.main;
     return t(`motorSelection.tabs.${tab}`);
   }
 
   function settingsTitle(): string {
     if (activeTab === "branch") return labels.branchSettings;
-    if (activeTab === "main") return labels.wireSettings;
-    if (activeTab === "earth") return labels.earthSettings;
-    if (activeTab === "terminal") return labels.terminalSettings;
+    if (activeTab === "main") return labels.mainSettings;
     return t("common.settings");
   }
 
@@ -117,9 +111,24 @@ function SelectionPageView() {
           )}
 
           {activeTab === "branch" && <FlexibleMotorBranchSelectionView caseId={caseId} />}
-          {activeTab === "main" && <WireConductorSelectionView caseId={caseId} />}
-          {activeTab === "earth" && <GroundingSelectionView />}
-          {activeTab === "terminal" && <TerminalBlockSelectionView />}
+          {activeTab === "main" && (
+            <div className="flex flex-col gap-6">
+              <section className="rounded-xl border border-border bg-background/40 p-4">
+                <div className="mb-3 text-[13px] font-bold text-foreground">{labels.wire}</div>
+                <WireConductorSelectionView caseId={caseId} />
+              </section>
+
+              <section className="rounded-xl border border-border bg-background/40 p-4">
+                <div className="mb-3 text-[13px] font-bold text-foreground">{labels.earth}</div>
+                <GroundingSelectionView />
+              </section>
+
+              <section className="rounded-xl border border-border bg-background/40 p-4">
+                <div className="mb-3 text-[13px] font-bold text-foreground">{labels.terminal}</div>
+                <TerminalBlockSelectionView />
+              </section>
+            </div>
+          )}
           {activeTab === "highVoltage" && (
             <div className="py-12 text-center text-[13px] text-muted-2">{t("motorSelection.highVoltagePlaceholder")}</div>
           )}
@@ -132,17 +141,28 @@ function SelectionPageView() {
           {activeTab === "branch" && <FlexibleMotorSelectionSettings />}
           {activeTab === "main" && (
             <div className="flex flex-col gap-7">
-              <WireConductorSelectionSettings />
-              <div className="border-t border-border pt-6"><BusbarSizeSettings /></div>
+              <section>
+                <div className="mb-3 panel-title">{labels.wire}</div>
+                <div className="flex flex-col gap-6">
+                  <WireConductorSelectionSettings />
+                  <div className="border-t border-border pt-5"><BusbarSizeSettings /></div>
+                </div>
+              </section>
+
+              <section className="border-t border-border pt-6">
+                <div className="mb-3 panel-title">{labels.earth}</div>
+                <div className="flex flex-col gap-6">
+                  <EarthWireSizeSettings />
+                  <div className="border-t border-border pt-5"><EarthBarSizeSettings /></div>
+                </div>
+              </section>
+
+              <section className="border-t border-border pt-6">
+                <div className="mb-3 panel-title">{labels.terminal}</div>
+                <TerminalBlockSelectionSettings />
+              </section>
             </div>
           )}
-          {activeTab === "earth" && (
-            <div className="flex flex-col gap-7">
-              <EarthWireSizeSettings />
-              <div className="border-t border-border pt-6"><EarthBarSizeSettings /></div>
-            </div>
-          )}
-          {activeTab === "terminal" && <TerminalBlockSelectionSettings />}
         </Modal>
       )}
     </div>
