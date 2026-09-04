@@ -67,7 +67,7 @@ export function FlexibleMotorBranchSelectionView({ caseId }: Props) {
 
   const copy = locale === "vi"
     ? {
-        description: "Chọn cấu hình theo hãng → pha → điện áp → kiểu khởi động, sau đó nhập kW hoặc A. Kết quả được dựng theo cấu trúc xương cá đã tự thiết kế trong Cài đặt.",
+        description: "Chọn theo hãng → pha → điện áp → kiểu khởi động, sau đó nhập kW hoặc A. Kết quả hiển thị theo cây hệ thống đã cấu hình.",
         maker: "Hãng",
         phase: "Pha",
         voltage: "Điện áp",
@@ -77,7 +77,7 @@ export function FlexibleMotorBranchSelectionView({ caseId }: Props) {
         calculate: "Chọn",
         add: "Thêm vào danh sách nhánh",
         display: "Mục hiển thị",
-        result: "Kết quả xương cá",
+        result: "Kết quả cây hệ thống",
         list: "Danh sách nhánh",
         noTemplates: "Chưa có cấu hình kW/A. Mở Cài đặt để tạo cấu hình và nhập dữ liệu chọn.",
         noCombination: "Không có template đúng tổ hợp đang chọn.",
@@ -94,7 +94,7 @@ export function FlexibleMotorBranchSelectionView({ caseId }: Props) {
         allHidden: "Bạn đang bỏ chọn toàn bộ mục hiển thị.",
       }
     : {
-        description: "メーカー → 相数 → 電圧 → 始動方式を選び、kWまたはAを入力します。結果は設定で自由に作成したxương cá（系統樹）構造で表示します。",
+        description: "メーカー → 相数 → 電圧 → 始動方式を選び、kWまたはAを入力します。結果は設定で自由に作成した系統ツリー構造で表示します。",
         maker: "メーカー",
         phase: "相数",
         voltage: "電圧",
@@ -104,7 +104,7 @@ export function FlexibleMotorBranchSelectionView({ caseId }: Props) {
         calculate: "選定する",
         add: "分岐リストへ追加",
         display: "表示項目",
-        result: "xương cá選定結果",
+        result: "系統ツリー選定結果",
         list: "分岐リスト",
         noTemplates: "kW/A選定テンプレートがありません。設定から回路テンプレートと選定データを登録してください。",
         noCombination: "選択した条件に一致するテンプレートがありません。",
@@ -317,8 +317,8 @@ export function FlexibleMotorBranchSelectionView({ caseId }: Props) {
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-7 lg:items-end">
             <div><label className="field-label">{copy.circuitName}</label><input value={label} onChange={(e) => setLabel(e.target.value)} className="field-input" /></div>
             <div><label className="field-label">{copy.maker}</label><select value={manufacturerId} onChange={(e) => setManufacturerId(e.target.value)} className="field-input">{makerOptions.map((id) => <option key={id} value={id}>{manufacturerName(id)}</option>)}</select></div>
-            <div><label className="field-label">{copy.phase}</label><select value={phase} onChange={(e) => setPhase(e.target.value)} className="field-input">{phaseOptions.map((value) => <option key={value}>{phaseLabel(value)}</option>)}</select></div>
-            <div><label className="field-label">{copy.voltage}</label><select value={voltageClass} onChange={(e) => setVoltageClass(e.target.value)} className="field-input">{voltageOptions.map((value) => <option key={value}>{value}</option>)}</select></div>
+            <div><label className="field-label">{copy.phase}</label><select value={phase} onChange={(e) => setPhase(e.target.value)} className="field-input">{phaseOptions.map((value) => <option key={value} value={value}>{phaseLabel(value)}</option>)}</select></div>
+            <div><label className="field-label">{copy.voltage}</label><select value={voltageClass} onChange={(e) => setVoltageClass(e.target.value)} className="field-input">{voltageOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></div>
             <div><label className="field-label">{copy.start}</label><select value={startMethod} onChange={(e) => setStartMethod(e.target.value)} className="field-input">{startOptions.map((value) => <option key={value} value={value}>{startLabel(value)}</option>)}</select></div>
             <div><label className="field-label">{copy.input}</label><div className="flex gap-1"><input type="number" min={0} step="any" value={inputRaw} onChange={(e) => setInputRaw(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") calculate(); }} className="field-input" /><select value={inputUnit} onChange={(e) => { setInputUnit(e.target.value as "kW" | "A"); setMatchedRule(undefined); }} className="field-input w-20"><option value="kW">kW</option><option value="A">A</option></select></div></div>
             <button type="button" onClick={calculate} disabled={!canCalculate} className="btn-primary">{copy.calculate}</button>
