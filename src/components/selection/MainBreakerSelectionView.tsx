@@ -137,7 +137,7 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
             <input className="field-input font-mono" type="number" min={0} step="any" value={additionalCurrentRaw} onChange={(e) => setAdditionalCurrentRaw(e.target.value)} placeholder="例）12.5" />
           </label>
           <div className="rounded-md border border-border bg-background/60 px-3 py-2 text-[11px]">
-            <span className="text-muted">主幹選定電流：</span>
+            <span className="text-muted">分岐合計：</span>
             <span className="font-mono font-bold">{(branchTotal ?? 0).toFixed(1)} + {(Number.isFinite(additionalCurrent) && additionalCurrent > 0 ? additionalCurrent : 0).toFixed(1)} = {compactTotal.toFixed(1)} A</span>
           </div>
         </div>
@@ -187,9 +187,14 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
       </div>
 
       <div>
-        <span className="panel-title">{t("motorSelection.main.resultTitle")}</span>
+        {!compact && <span className="panel-title">{t("motorSelection.main.resultTitle")}</span>}
         {compact && compactTotal > 0 ? (
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border-2 border-accent bg-accent/10 px-5 py-4 text-center">
+              <span className="text-[12px] font-bold text-muted">主幹選定電流</span>
+              <div className="mt-1 font-mono text-[28px] font-black text-accent">{fallbackRating ? `${fallbackRating} A` : "800 A超"}</div>
+              <div className="mt-1 text-[10px] text-muted">合計 {compactTotal.toFixed(1)} A → 定格切上げ</div>
+            </div>
             <div className="rounded-lg border-2 border-accent/40 bg-background px-5 py-4">
               <span className="text-[12px] font-bold text-muted">主幹 MCCB</span>
               <div className="mt-1 font-mono text-[20px] font-extrabold text-accent">{result?.breakerModel || mccbCandidate?.model || (isFuji ? "BW G-TWIN" : "NF-CV")} / {result ? `${result.ratedCurrent} A` : fallbackRating ? `${fallbackRating} A` : "800 A超・個別選定"}</div>
