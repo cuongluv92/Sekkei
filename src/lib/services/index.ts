@@ -34,6 +34,7 @@ export {
 } from "./terminalBlockSelectionService";
 export type {
   TerminalBlockBasisKind,
+  TerminalBlockSeries,
   TerminalBlockSelectionRow,
   TerminalBlockSelectionDraft,
 } from "./terminalBlockSelectionService";
