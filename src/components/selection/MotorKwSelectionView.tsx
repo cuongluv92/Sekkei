@@ -36,8 +36,6 @@ interface SavedMotorKwItem extends MotorSelectionBranchItem {
 
 const VOLTAGES: SelectionVoltageClass[] = ["100V", "200V", "400V"];
 const METHODS: SelectionCircuitType[] = ["direct", "starDelta", "inverter"];
-const BASIS: MotorKwBasisKind[] = ["company", "mitsubishi", "fuji"];
-
 const STANDARD_LINKS = [
   { label: "内線規程 第14版 JEAC8001-2022", url: "https://store.denki.or.jp/products/%E5%86%85%E7%B7%9A%E8%A6%8F%E7%A8%8B-%E7%AC%AC14%E7%89%88" },
   { label: "JIS C 8201-1:2024", url: "https://webdesk.jsa.or.jp/books/W11M0090/index/?bunsyo_id=JIS+C+8201-1%3A2024" },
@@ -47,6 +45,23 @@ const STANDARD_LINKS = [
   { label: "JEM 1195:2018", url: "https://www.jema-net.or.jp/engineering/JEM_JEM-TR/JEM1195.html" },
   { label: "富士 MSスケール SC-NEXT V20250331", url: "https://f-net.fujielectric.co.jp/Catalog/FCS_appli/MSScale_SC-NEXT/MSScale_SC-NEXT.html" },
 ];
+
+const NAISEN_200V: Record<number, { conventionalA: number; directBreakerA: number; starDeltaBreakerA?: number }> = {
+  0.2: { conventionalA: 1.8, directBreakerA: 15 },
+  0.4: { conventionalA: 3.2, directBreakerA: 15 },
+  0.75: { conventionalA: 4.8, directBreakerA: 15 },
+  1.5: { conventionalA: 8, directBreakerA: 30 },
+  2.2: { conventionalA: 11.1, directBreakerA: 40 },
+  3.7: { conventionalA: 17.4, directBreakerA: 60 },
+  5.5: { conventionalA: 26, directBreakerA: 100, starDeltaBreakerA: 60 },
+  7.5: { conventionalA: 34, directBreakerA: 125, starDeltaBreakerA: 75 },
+  11: { conventionalA: 48, directBreakerA: 125, starDeltaBreakerA: 125 },
+  15: { conventionalA: 65, directBreakerA: 125, starDeltaBreakerA: 150 },
+  18.5: { conventionalA: 79, directBreakerA: 150, starDeltaBreakerA: 175 },
+  22: { conventionalA: 93, directBreakerA: 175, starDeltaBreakerA: 200 },
+  30: { conventionalA: 124, directBreakerA: 225, starDeltaBreakerA: 300 },
+  37: { conventionalA: 152, directBreakerA: 300, starDeltaBreakerA: 350 },
+};
 
 export function MotorKwSelectionView({ caseId }: Props) {
   const { locale } = useTranslation();
@@ -62,6 +77,7 @@ export function MotorKwSelectionView({ caseId }: Props) {
   const [method, setMethod] = useState<SelectionCircuitType>("direct");
   const [kwRaw, setKwRaw] = useState("");
   const [selectedKw, setSelectedKw] = useState<number | null>(null);
+  const [circuitCountRaw, setCircuitCountRaw] = useState("1");
   const [otherKind, setOtherKind] = useState<"control" | "other">("control");
   const [otherLabel, setOtherLabel] = useState("");
   const [otherCurrentRaw, setOtherCurrentRaw] = useState("");
@@ -111,6 +127,8 @@ export function MotorKwSelectionView({ caseId }: Props) {
         other: "Phân nhánh khác",
         currentA: "Dòng thiết kế (A)",
         addCircuit: "＋ Thêm mạch",
+        circuitCount: "Số mạch",
+        naisenColumn: "Tiêu chuẩn nội tuyến",
       }
     : {
         description: "電動機kWから三菱 → 富士 → 社内基準を比較します。通常使用の多い三菱を先頭に表示します。公開一次資料で直接確認できない欄は推定せず空欄にします。",
@@ -156,6 +174,8 @@ export function MotorKwSelectionView({ caseId }: Props) {
         other: "その他分岐",
         currentA: "設計電流 (A)",
         addCircuit: "＋ 回路を追加",
+        circuitCount: "回路数",
+        naisenColumn: "内線基準",
       };
 
   const manufacturers = listManufacturers();
@@ -165,15 +185,13 @@ export function MotorKwSelectionView({ caseId }: Props) {
     [rows, phase, voltage, method, kw],
   );
 
-  const displayRows = useMemo(() => {
-    const result: Array<{ basis: MotorKwBasisKind; row: MotorKwSelectionRow | null; key: string }> = [];
-    for (const basis of BASIS) {
-      const same = matchedRows.filter((row) => row.basisKind === basis);
-      if (same.length === 0) result.push({ basis, row: null, key: basis });
-      else same.forEach((row) => result.push({ basis, row, key: row.id }));
-    }
-    return result;
-  }, [matchedRows]);
+  const rowByBasis = useMemo(() => ({
+    company: matchedRows.find((row) => row.basisKind === "company") ?? null,
+    mitsubishi: matchedRows.find((row) => row.basisKind === "mitsubishi") ?? null,
+    fuji: matchedRows.find((row) => row.basisKind === "fuji") ?? null,
+  }), [matchedRows]);
+  const naisen = selectedKw != null && voltage === "200V" ? NAISEN_200V[selectedKw] : undefined;
+  const naisenBreakerA = method === "starDelta" ? naisen?.starDeltaBreakerA : method === "direct" ? naisen?.directBreakerA : undefined;
 
   function makerName(id?: string) {
     if (!id) return "—";
@@ -250,17 +268,19 @@ export function MotorKwSelectionView({ caseId }: Props) {
       remarks: row.remarks,
       order: row.sortOrder,
     };
-    const item: SavedMotorKwItem = {
+    const count = Math.max(1, Math.min(100, Math.floor(Number(circuitCountRaw) || 1)));
+    const baseLabel = label.trim();
+    const additions: SavedMotorKwItem[] = Array.from({ length: count }, (_, index) => ({
       id: crypto.randomUUID(),
-      label: label.trim(),
-      manufacturerId: row.manufacturerId,
+      label: count > 1 && baseLabel ? `${baseLabel} #${index + 1}` : baseLabel,
+      manufacturerId: row.manufacturerId!,
       voltageClass: row.voltageClass,
       circuitType: row.startMethod,
-      inputUnit: "kW",
+      inputUnit: "kW" as const,
       inputValue: row.motorKw,
       matched: true,
       matchedRow,
-      circuitKind: "motor",
+      circuitKind: "motor" as const,
       basisKind: row.basisKind,
       sourceTitle: row.source?.title,
       sourceUrl: row.source?.url,
@@ -269,9 +289,10 @@ export function MotorKwSelectionView({ caseId }: Props) {
       jisBasis: row.jisBasis,
       associationBasis: row.associationBasis,
       sourceRemarks: row.source?.remarks,
-    };
-    void persist([...items, item]);
+    }));
+    void persist([...items, ...additions]);
     setLabel("");
+    setCircuitCountRaw("1");
   }
 
   function addOtherCircuit() {
@@ -298,8 +319,9 @@ export function MotorKwSelectionView({ caseId }: Props) {
     <div className="flex flex-col gap-5">
       <p className="text-[12px] text-muted">{copy.description}</p>
 
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-[1.2fr_.65fr_.75fr_1fr_.8fr_auto] lg:items-end">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-[1.2fr_.55fr_.65fr_.75fr_1fr_.8fr_auto] lg:items-end">
         <label><span className="field-label">{copy.name}</span><input className="field-input" value={label} onChange={(e) => setLabel(e.target.value)} /></label>
+        <label><span className="field-label">{copy.circuitCount}</span><input className="field-input font-mono" type="number" min={1} max={100} step={1} value={circuitCountRaw} onChange={(e) => setCircuitCountRaw(e.target.value)} /></label>
         <label><span className="field-label">{copy.phase}</span><select className="field-input" value={phase} onChange={(e) => { setPhase(e.target.value as MotorKwPhase); setSelectedKw(null); }}><option value="three">{locale === "vi" ? "3 pha" : "三相"}</option><option value="single">{locale === "vi" ? "1 pha" : "単相"}</option></select></label>
         <label><span className="field-label">{copy.voltage}</span><select className="field-input" value={voltage} onChange={(e) => { setVoltage(e.target.value as SelectionVoltageClass); setSelectedKw(null); }}>{VOLTAGES.map((v) => <option key={v} value={v}>{v}</option>)}</select></label>
         <label><span className="field-label">{copy.method}</span><select className="field-input" value={method} onChange={(e) => { setMethod(e.target.value as SelectionCircuitType); setSelectedKw(null); }}>{METHODS.map((m) => <option key={m} value={m}>{methodLabel(m)}</option>)}</select></label>
@@ -323,69 +345,27 @@ export function MotorKwSelectionView({ caseId }: Props) {
         {selectedKw == null ? (
           <p className="mt-2 text-[11px] text-muted-2">{locale === "vi" ? "Nhập kW và nhấn Tra chọn." : "kWを入力して「選定する」を押してください。"}</p>
         ) : (
-          <div className="mt-3 flex flex-col gap-3">
-            <article className="rounded-lg border border-border bg-muted/5 p-3">
-              <div className="border-b border-border pb-2 font-semibold">内線規程・JIS・JSIA/JEMA</div>
-              <div className="mt-3 flex flex-col items-start gap-2">
-                {STANDARD_LINKS.map((item) => <a key={item.label} href={item.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent hover:underline">{item.label}<ExternalLink className="h-3 w-3" /></a>)}
-              </div>
-              <p className="mt-3 text-[10.5px] leading-relaxed text-muted">{copy.standardsNote}</p>
-            </article>
-            {displayRows.map(({ basis, row, key }) => (
-              <article key={key} className={`rounded-lg border p-3 ${basis === "mitsubishi" && row ? "border-accent/40 bg-accent/5" : "border-border bg-muted/5"}`}>
-                <div className="flex items-start justify-between gap-3 border-b border-border pb-2">
-                  <div>
-                    <div className={basis === "mitsubishi" ? "font-bold text-accent" : "font-semibold"}>{basisLabel(basis)}</div>
-                    {row && <div className="mt-0.5 text-[11px] text-muted">{makerName(row.manufacturerId)}</div>}
-                  </div>
-                  {row && <button type="button" className="btn-secondary shrink-0 whitespace-nowrap" onClick={() => adopt(row)} disabled={!row.manufacturerId}><Plus className="h-3.5 w-3.5" />{copy.adopt}</button>}
-                </div>
-                {!row ? (
-                  <p className={`py-3 text-[11px] ${basis === "company" ? "text-warning" : "text-muted-2"}`}>{basis === "company" ? copy.companyMissing : copy.noData}</p>
-                ) : (
-                  <div className="mt-3 flex flex-col gap-3">
-                    <dl className="grid grid-cols-1 gap-x-5 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
-                      {[
-                        [copy.rated, row.ratedCurrentA != null ? `${row.ratedCurrentA} A` : "—"],
-                        [copy.starting, row.startingCurrentA != null ? `${row.startingCurrentA} A` : "—"],
-                        [copy.breaker, row.breakerModel ?? "—"],
-                        [copy.breakerA, row.breakerRatedA != null ? `${row.breakerRatedA} A` : "—"],
-                        [copy.shortCircuit, row.breakerCondition ?? "—"],
-                        [copy.contactor, row.contactorModel ?? "—"],
-                        [copy.thermal, row.thermalModel ?? "—"],
-                        [copy.heater, row.thermalSettingA != null ? `${row.thermalSettingA} A` : "—"],
-                        [copy.inverter, row.inverterModel ?? "—"],
-                        [copy.wire, row.wireSize ?? "—"],
-                        [copy.ct, row.ctModel ?? "—"],
-                        [copy.am, row.amRange ?? "—"],
-                      ].map(([title, value]) => (
-                        <div key={title} className="min-w-0 rounded-md border border-border/70 bg-background/60 px-2.5 py-2">
-                          <dt className="text-[10px] font-semibold text-muted">{title}</dt>
-                          <dd className="mt-0.5 break-words font-mono text-[11.5px]">{value}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                    <dl className="flex flex-col divide-y divide-border overflow-hidden rounded-md border border-border">
-                      {[[copy.naisen, row.naisenBasis], [copy.jis, row.jisBasis], [copy.association, row.associationBasis]].map(([title, value]) => (
-                        <div key={title} className="grid gap-1 px-3 py-2.5 sm:grid-cols-[150px_1fr]">
-                          <dt className="text-[10.5px] font-semibold text-muted">{title}</dt>
-                          <dd className="text-[11px] leading-relaxed">{value ?? "—"}</dd>
-                        </div>
-                      ))}
-                      <div className="grid gap-1 px-3 py-2.5 sm:grid-cols-[150px_1fr]">
-                        <dt className="text-[10.5px] font-semibold text-muted">{copy.source}</dt>
-                        <dd className="text-[11px] leading-relaxed">
-                          {row.source?.url ? <a href={row.source.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-accent hover:underline">{row.source.title}<ExternalLink className="h-3 w-3" /></a> : <span>{row.source?.title ?? "—"}</span>}
-                          {row.source?.documentNo && <div className="text-muted">{row.source.documentNo}{row.source.publishedLabel ? ` / ${row.source.publishedLabel}` : ""}</div>}
-                          {row.remarks && <div className="mt-1 text-muted">{row.remarks}</div>}
-                          {row.source?.remarks && <div className="mt-1 text-warning">{row.source.remarks}</div>}
-                        </dd>
-                      </div>
-                    </dl>
-                  </div>
-                )}
-              </article>
-            ))}
+          <div className="data-table-wrap mt-3">
+            <table className="data-table table-fixed" style={{ minWidth: 900 }}>
+              <thead><tr><th className="w-32" /><th>{copy.naisenColumn}</th><th>{copy.company}</th><th className="text-accent">三菱電機</th><th>富士電機</th></tr></thead>
+              <tbody>
+                {[
+                  [copy.rated, naisen ? `${naisen.conventionalA} A（規約電流）` : "—", rowByBasis.company?.ratedCurrentA != null ? `${rowByBasis.company.ratedCurrentA} A` : "—", rowByBasis.mitsubishi?.ratedCurrentA != null ? `${rowByBasis.mitsubishi.ratedCurrentA} A` : "—", rowByBasis.fuji?.ratedCurrentA != null ? `${rowByBasis.fuji.ratedCurrentA} A` : "—"],
+                  [copy.starting, "始動条件確認", rowByBasis.company?.startingCurrentA != null ? `${rowByBasis.company.startingCurrentA} A` : "—", rowByBasis.mitsubishi?.startingCurrentA != null ? `${rowByBasis.mitsubishi.startingCurrentA} A` : "—", rowByBasis.fuji?.startingCurrentA != null ? `${rowByBasis.fuji.startingCurrentA} A` : "—"],
+                  ["MCCB", naisenBreakerA != null ? `${naisenBreakerA} A` : "—", rowByBasis.company?.breakerModel ?? "型番要確認", rowByBasis.mitsubishi?.breakerModel ?? `NF-CV\n定格・Icu要確認`, rowByBasis.fuji?.breakerModel ?? `BW G-TWIN\n定格・Icu要確認`],
+                  ["ELCB", naisenBreakerA != null ? `${naisenBreakerA} A` : "—", "型番要確認", `NV-CV\n定格・Icu・感度要確認`, `EW G-TWIN\n定格・Icu・感度要確認`],
+                  [copy.breakerA, naisenBreakerA != null ? `${naisenBreakerA} A` : "—", rowByBasis.company?.breakerRatedA != null ? `${rowByBasis.company.breakerRatedA} A` : "—", rowByBasis.mitsubishi?.breakerRatedA != null ? `${rowByBasis.mitsubishi.breakerRatedA} A` : "型番表から選択", rowByBasis.fuji?.breakerRatedA != null ? `${rowByBasis.fuji.breakerRatedA} A` : "型番表から選択"],
+                  [copy.contactor, "JIS C 8201-4-1", rowByBasis.company?.contactorModel ?? "—", rowByBasis.mitsubishi?.contactorModel ?? "型番要確認", rowByBasis.fuji?.contactorModel ?? "型番要確認"],
+                  [copy.thermal, "JIS C 8201-4-1", rowByBasis.company?.thermalModel ?? "—", rowByBasis.mitsubishi?.thermalModel ?? (rowByBasis.mitsubishi?.thermalSettingA != null ? `${rowByBasis.mitsubishi.thermalSettingA} A` : "型番要確認"), rowByBasis.fuji?.thermalModel ?? (rowByBasis.fuji?.thermalSettingA != null ? `${rowByBasis.fuji.thermalSettingA} A` : "型番要確認")],
+                  [copy.wire, "JEAC8001-2022", rowByBasis.company?.wireSize ?? "—", rowByBasis.mitsubishi?.wireSize ?? "要確認", rowByBasis.fuji?.wireSize ?? "要確認"],
+                  [copy.source, "JEAC8001-2022 表3705-1 / 資料3-7-3（原本照合要）", rowByBasis.company?.remarks ?? copy.companyMissing, rowByBasis.mitsubishi?.source?.title ?? copy.noData, rowByBasis.fuji?.source?.title ?? copy.noData],
+                ].map(([title, ...values]) => <tr key={title}><th className="whitespace-normal text-left">{title}</th>{values.map((value, index) => <td key={index} className="whitespace-pre-line align-top text-[11px] leading-relaxed">{value}</td>)}</tr>)}
+                <tr><th /><td>{copy.standardsNote}</td>{(["company", "mitsubishi", "fuji"] as const).map((basis) => <td key={basis}>{rowByBasis[basis] ? <button type="button" className="btn-secondary w-full justify-center" onClick={() => adopt(rowByBasis[basis]!)} disabled={!rowByBasis[basis]?.manufacturerId}><Plus className="h-3.5 w-3.5" />{copy.adopt}</button> : <span className="text-warning">{basis === "company" ? copy.companyMissing : copy.noData}</span>}</td>)}</tr>
+              </tbody>
+            </table>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 px-1">
+              {STANDARD_LINKS.map((item) => <a key={item.label} href={item.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-accent hover:underline">{item.label}<ExternalLink className="h-3 w-3" /></a>)}
+            </div>
           </div>
         )}
       </section>
