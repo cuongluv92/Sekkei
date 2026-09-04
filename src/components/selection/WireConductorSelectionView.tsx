@@ -147,18 +147,20 @@ export function WireConductorSelectionView({ caseId }: Props) {
     }));
   }, [rows, selectedCurrent]);
 
-  const autoBusbar = useMemo(() => {
-    if (selectedCurrent == null) return null;
-    const required = requiredCrossSectionArea(selectedCurrent);
-    if (!required.inRange) return { inRange: false as const };
-    const candidate = findBusbarCandidates(
+  const busbarRequired = useMemo(
+    () => (selectedCurrent == null ? null : requiredCrossSectionArea(selectedCurrent)),
+    [selectedCurrent],
+  );
+
+  const busbarCandidate = useMemo(() => {
+    if (!busbarRequired || !busbarRequired.inRange || selectedCurrent == null) return null;
+    return findBusbarCandidates(
       busbarSizes,
-      required.requiredAreaMm2,
+      busbarRequired.requiredAreaMm2,
       selectedCurrent,
       1,
     )[0] ?? null;
-    return { inRange: true as const, required, candidate };
-  }, [selectedCurrent, busbarSizes]);
+  }, [busbarRequired, busbarSizes, selectedCurrent]);
 
   function choose() {
     const value = Number(currentRaw);
@@ -251,15 +253,15 @@ export function WireConductorSelectionView({ caseId }: Props) {
                       <td className="font-semibold">{row.label}</td>
                       <td>
                         {isBusbar ? (
-                          autoBusbar?.inRange ? (
+                          busbarRequired?.inRange ? (
                             <div className="flex flex-col gap-0.5">
                               <span className="font-mono font-semibold">
-                                {autoBusbar.candidate
-                                  ? `${autoBusbar.candidate.thicknessMm} × ${autoBusbar.candidate.widthMm} mm × ${autoBusbar.candidate.barsPerPhase}`
-                                  : `${copy.requiredArea}: ${autoBusbar.required.requiredAreaMm2.toFixed(2)} mm²`}
+                                {busbarCandidate
+                                  ? `${busbarCandidate.thicknessMm} × ${busbarCandidate.widthMm} mm × ${busbarCandidate.barsPerPhase}`
+                                  : `${copy.requiredArea}: ${busbarRequired.requiredAreaMm2.toFixed(2)} mm²`}
                               </span>
-                              {!autoBusbar.candidate && <span className="text-[10.5px] text-warning">{copy.noBusbarSize}</span>}
-                              <span className="text-[10.5px] text-muted">{copy.requiredArea}: {autoBusbar.required.requiredAreaMm2.toFixed(2)} mm²</span>
+                              {!busbarCandidate && <span className="text-[10.5px] text-warning">{copy.noBusbarSize}</span>}
+                              <span className="text-[10.5px] text-muted">{copy.requiredArea}: {busbarRequired.requiredAreaMm2.toFixed(2)} mm²</span>
                             </div>
                           ) : (
                             <span className="text-warning">{copy.outOfRange}</span>
@@ -284,11 +286,11 @@ export function WireConductorSelectionView({ caseId }: Props) {
                         )}
                       </td>
                       <td className="text-[11px]">
-                        {isBusbar && autoBusbar?.inRange ? (
+                        {isBusbar && busbarRequired?.inRange ? (
                           <div className="flex flex-col gap-1">
-                            <span className="font-semibold">{autoBusbar.required.source.standard} {autoBusbar.required.source.edition}</span>
-                            <span className="text-muted">{autoBusbar.required.source.reference}</span>
-                            {!autoBusbar.required.source.verified && <span className="text-warning">要確認 / 参考値</span>}
+                            <span className="font-semibold">{busbarRequired.source.standard} {busbarRequired.source.edition}</span>
+                            <span className="text-muted">{busbarRequired.source.reference}</span>
+                            {!busbarRequired.source.verified && <span className="text-warning">要確認 / 参考値</span>}
                           </div>
                         ) : row.reference ? (
                           <div className="flex flex-col gap-1">
