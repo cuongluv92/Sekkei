@@ -30,4 +30,14 @@ describe("findFujiScNext", () => {
       }
     }
   });
+
+  it("falls back to the official MS scale for loads outside SC-NEXT", () => {
+    expect(findFujiScNext("direct", "200V", 18.5)).toMatchObject({
+      ratedCurrentA: 68,
+      startingCurrentA: 548,
+      heatRange: "53～80 A",
+      switchModel: "SW-N4 ｼｭｶｲﾛ AC200V 18.5kW",
+      catalog: "MSスケール",
+    });
+  });
 });
