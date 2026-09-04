@@ -19,6 +19,7 @@ import type {
   SelectionVoltageClass,
 } from "@/lib/types";
 import { MOTOR_SELECTION_BRANCH_CALCULATION_TYPE } from "./MotorBranchSelectionView";
+import { breakerCandidate, nextBreakerRating } from "@/lib/calc/motorSelection/breakerCatalog";
 
 interface Props { caseId: string; }
 
@@ -192,6 +193,12 @@ export function MotorKwSelectionView({ caseId }: Props) {
   }), [matchedRows]);
   const naisen = selectedKw != null && voltage === "200V" ? NAISEN_200V[selectedKw] : undefined;
   const naisenBreakerA = method === "starDelta" ? naisen?.starDeltaBreakerA : method === "direct" ? naisen?.directBreakerA : undefined;
+  const tableBreakerA = rowByBasis.mitsubishi?.breakerRatedA ?? naisenBreakerA;
+  const tableRatedA = tableBreakerA != null ? nextBreakerRating(tableBreakerA) : null;
+  const mitsuMccb = tableRatedA ? breakerCandidate(tableRatedA, "mitsubishi", "mccb") : null;
+  const mitsuElcb = tableRatedA ? breakerCandidate(tableRatedA, "mitsubishi", "elcb") : null;
+  const fujiMccb = tableRatedA ? breakerCandidate(tableRatedA, "fuji", "mccb") : null;
+  const fujiElcb = tableRatedA ? breakerCandidate(tableRatedA, "fuji", "elcb") : null;
 
   function makerName(id?: string) {
     if (!id) return "—";
@@ -353,9 +360,9 @@ export function MotorKwSelectionView({ caseId }: Props) {
                 {[
                   [copy.rated, naisen ? `${naisen.conventionalA} A（規約電流）` : "—", rowByBasis.company?.ratedCurrentA != null ? `${rowByBasis.company.ratedCurrentA} A` : "—", rowByBasis.mitsubishi?.ratedCurrentA != null ? `${rowByBasis.mitsubishi.ratedCurrentA} A` : "—", rowByBasis.fuji?.ratedCurrentA != null ? `${rowByBasis.fuji.ratedCurrentA} A` : "—"],
                   [copy.starting, "始動条件確認", rowByBasis.company?.startingCurrentA != null ? `${rowByBasis.company.startingCurrentA} A` : "—", rowByBasis.mitsubishi?.startingCurrentA != null ? `${rowByBasis.mitsubishi.startingCurrentA} A` : "—", rowByBasis.fuji?.startingCurrentA != null ? `${rowByBasis.fuji.startingCurrentA} A` : "—"],
-                  ["MCCB", naisenBreakerA != null ? `${naisenBreakerA} A` : "—", rowByBasis.company?.breakerModel ?? "型番要確認", rowByBasis.mitsubishi?.breakerModel ?? `NF-CV\n定格・Icu要確認`, rowByBasis.fuji?.breakerModel ?? `BW G-TWIN\n定格・Icu要確認`],
-                  ["ELCB", naisenBreakerA != null ? `${naisenBreakerA} A` : "—", "型番要確認", `NV-CV\n定格・Icu・感度要確認`, `EW G-TWIN\n定格・Icu・感度要確認`],
-                  [copy.breakerA, naisenBreakerA != null ? `${naisenBreakerA} A` : "—", rowByBasis.company?.breakerRatedA != null ? `${rowByBasis.company.breakerRatedA} A` : "—", rowByBasis.mitsubishi?.breakerRatedA != null ? `${rowByBasis.mitsubishi.breakerRatedA} A` : "型番表から選択", rowByBasis.fuji?.breakerRatedA != null ? `${rowByBasis.fuji.breakerRatedA} A` : "型番表から選択"],
+                  ["MCCB", naisenBreakerA != null ? `${naisenBreakerA} A` : "—", rowByBasis.company?.breakerModel ?? "型番要確認", mitsuMccb && tableRatedA ? `${mitsuMccb.model}\n${tableRatedA} A / Icu ${mitsuMccb.icu} kA` : "—", fujiMccb && tableRatedA ? `${fujiMccb.model}\n${tableRatedA} A / Icu ${fujiMccb.icu} kA` : "—"],
+                  ["ELCB", naisenBreakerA != null ? `${naisenBreakerA} A` : "—", "型番要確認", mitsuElcb && tableRatedA ? `${mitsuElcb.model}\n${tableRatedA} A / Icu ${mitsuElcb.icu} kA` : "—", fujiElcb && tableRatedA ? `${fujiElcb.model}\n${tableRatedA} A / Icu ${fujiElcb.icu} kA` : "—"],
+                  [copy.breakerA, naisenBreakerA != null ? `${naisenBreakerA} A` : "—", rowByBasis.company?.breakerRatedA != null ? `${rowByBasis.company.breakerRatedA} A` : "—", tableRatedA ? `${tableRatedA} A` : "—", tableRatedA ? `${tableRatedA} A` : "—"],
                   [copy.contactor, "JIS C 8201-4-1", rowByBasis.company?.contactorModel ?? "—", rowByBasis.mitsubishi?.contactorModel ?? "型番要確認", rowByBasis.fuji?.contactorModel ?? "型番要確認"],
                   [copy.thermal, "JIS C 8201-4-1", rowByBasis.company?.thermalModel ?? "—", rowByBasis.mitsubishi?.thermalModel ?? (rowByBasis.mitsubishi?.thermalSettingA != null ? `${rowByBasis.mitsubishi.thermalSettingA} A` : "型番要確認"), rowByBasis.fuji?.thermalModel ?? (rowByBasis.fuji?.thermalSettingA != null ? `${rowByBasis.fuji.thermalSettingA} A` : "型番要確認")],
                   [copy.wire, "JEAC8001-2022", rowByBasis.company?.wireSize ?? "—", rowByBasis.mitsubishi?.wireSize ?? "要確認", rowByBasis.fuji?.wireSize ?? "要確認"],
