@@ -6,15 +6,10 @@ import { listManufacturers, preloadManufacturers } from "@/lib/mock/manufacturer
 import { calculationRecordService, mainBreakerSelectionService } from "@/lib/services";
 import { matchMainBreakerSelection } from "@/lib/calc/motorSelection/matching";
 import { branchItemCurrentA, MOTOR_SELECTION_BRANCH_CALCULATION_TYPE } from "./MotorBranchSelectionView";
+import { mitsubishiMainMotorRating } from "@/lib/calc/motorSelection/breakerCatalog";
 import type { MainBreakerSelection, MotorSelectionBranchItem, SelectionVoltageClass } from "@/lib/types";
 
 const VOLTAGE_CLASSES: SelectionVoltageClass[] = ["100V", "200V", "400V"];
-const STANDARD_BREAKER_RATINGS = [3, 5, 10, 15, 20, 30, 40, 50, 60, 75, 100, 125, 150, 175, 200, 225, 250, 300, 350, 400, 500, 600, 800] as const;
-
-function nextBreakerRating(currentA: number): number | null {
-  return STANDARD_BREAKER_RATINGS.find((rating) => rating >= currentA) ?? null;
-}
-
 function breakerCandidate(ratedA: number, isFuji: boolean, elcb: boolean) {
   if (isFuji) {
     if (ratedA <= 50) return { model: `${elcb ? "EW" : "BW"}50SAG`, icu: 10 };
@@ -45,6 +40,7 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
   const [master, setMaster] = useState<MainBreakerSelection[]>([]);
   const [, forceRerender] = useState(0);
   const [branchTotal, setBranchTotal] = useState<number | null>(null);
+  const [branchItems, setBranchItems] = useState<MotorSelectionBranchItem[]>([]);
   const [manufacturerId, setManufacturerId] = useState("");
   const [voltageClass, setVoltageClass] = useState<SelectionVoltageClass>("200V");
   const [totalCurrentRaw, setTotalCurrentRaw] = useState("");
@@ -64,10 +60,11 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
     let cancelled = false;
     const loadBranchTotal = () => {
       setBranchTotal(null);
-      if (!caseId) { setBranchTotal(0); return; }
+      if (!caseId) { setBranchTotal(0); setBranchItems([]); return; }
       calculationRecordService.get(caseId, MOTOR_SELECTION_BRANCH_CALCULATION_TYPE).then((record) => {
         if (cancelled) return;
         const items = (record?.result.items as MotorSelectionBranchItem[] | undefined) ?? [];
+        setBranchItems(items);
         const sum = items.reduce((s, item) => {
           const current = branchItemCurrentA(item);
           return current != null ? s + current : s;
@@ -78,6 +75,7 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
     const handleUpdate = (event: Event) => {
       const detail = (event as CustomEvent<{ caseId?: string; items?: MotorSelectionBranchItem[] }>).detail;
       if (detail?.items && (detail.caseId ?? "") === caseId) {
+        setBranchItems(detail.items);
         setBranchTotal(detail.items.reduce((sum, item) => sum + (branchItemCurrentA(item) ?? 0), 0));
       } else if (!detail?.caseId || detail.caseId === caseId) loadBranchTotal();
     };
@@ -91,7 +89,12 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
 
   const additionalCurrent = Number(additionalCurrentRaw);
   const compactTotal = (branchTotal ?? 0) + (Number.isFinite(additionalCurrent) && additionalCurrent > 0 ? additionalCurrent : 0);
-  const fallbackRating = nextBreakerRating(compactTotal);
+  const motorKwItems = branchItems.filter((item) => item.inputUnit === "kW" && item.inputValue > 0);
+  const totalMotorKw = motorKwItems.reduce((sum, item) => sum + item.inputValue, 0);
+  const largestMotorKw = motorKwItems.reduce((max, item) => Math.max(max, item.inputValue), 0);
+  const catalogMainRating = (voltageClass === "200V" || voltageClass === "400V") && totalMotorKw > 0
+    ? mitsubishiMainMotorRating(voltageClass, totalMotorKw, largestMotorKw) : null;
+  const fallbackRating = catalogMainRating;
 
   useEffect(() => {
     if (!compact || !manufacturerId || compactTotal <= 0) {
@@ -193,7 +196,8 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
             <div className="rounded-lg border-2 border-accent bg-accent/10 px-5 py-4 text-center">
               <span className="text-[12px] font-bold text-muted">主幹選定電流</span>
               <div className="mt-1 font-mono text-[28px] font-black text-accent">{fallbackRating ? `${fallbackRating} A` : "800 A超"}</div>
-              <div className="mt-1 text-[10px] text-muted">合計 {compactTotal.toFixed(1)} A → 定格切上げ</div>
+              <div className="mt-1 text-[10px] text-muted">三菱 表4-9/4-10：合計 {totalMotorKw} kW・最大 {largestMotorKw} kW</div>
+              {additionalCurrent > 0 && <div className="mt-1 text-[10px] text-warning">追加負荷 {additionalCurrent} A は混在負荷条件の確認が必要</div>}
             </div>
             <div className="rounded-lg border-2 border-accent/40 bg-background px-5 py-4">
               <span className="text-[12px] font-bold text-muted">主幹 MCCB</span>
