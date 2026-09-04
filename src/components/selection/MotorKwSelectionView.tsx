@@ -233,11 +233,12 @@ export function MotorKwSelectionView({ caseId }: Props) {
 
   async function persist(next: SavedMotorKwItem[]) {
     setItems(next);
+    window.dispatchEvent(new CustomEvent("motor-branches-updated", { detail: { caseId, items: next } }));
     if (!caseId) return;
     setSaving(true);
     try {
       await calculationRecordService.save(caseId, MOTOR_SELECTION_BRANCH_CALCULATION_TYPE, {}, { items: next });
-      window.dispatchEvent(new CustomEvent("motor-branches-updated", { detail: { caseId } }));
+      window.dispatchEvent(new CustomEvent("motor-branches-updated", { detail: { caseId, items: next } }));
     } finally {
       setSaving(false);
     }
