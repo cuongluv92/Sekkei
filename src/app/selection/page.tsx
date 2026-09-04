@@ -124,8 +124,8 @@ function SelectionPageView() {
 
           {activeTab === "branch" && (
             <div className="flex flex-col gap-4">
-              <section className="rounded-lg border border-accent/30 bg-accent/5 p-3">
-                <div className="mb-2 text-[12px] font-bold">主幹ブレーカ（分岐合計から自動選定）</div>
+              <section className="rounded-xl border-2 border-accent/50 bg-accent/10 p-5 shadow-sm">
+                <div className="mb-3 text-[18px] font-extrabold text-accent">主幹ブレーカ（分岐合計から自動選定）</div>
                 <MainBreakerSelectionView caseId={caseId} compact />
               </section>
               <MotorKwSelectionView caseId={caseId} />
