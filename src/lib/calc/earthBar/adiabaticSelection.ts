@@ -2,14 +2,13 @@ import type { TechnicalSource } from "@/lib/calc/technicalSource";
 import type { EarthBarSize } from "@/lib/types";
 
 /**
- * Reference k-values used only for a clearly-labelled 参考自動計算.
- * JIS C 60364-5-54:2023 is IDT with IEC 60364-5-54:2011+A1:2021 (JSA).
- * Schneider Electric's Electrical Installation Guide reproduces the IEC
- * 60364-5-54 Annex A common LV PE-conductor k values. We still keep the
- * source as `secondary_reference` because the paid JIS table itself has not
- * been read directly in this project.
+ * アースバー断熱法の補助ロジック。
+ * 出典ポリシーにより、公開されている国内一次情報だけを表示根拠にする。
+ * JSA公開ページでは JIS C 60364-5-54:2023 の規格概要・有効性は確認できるが、
+ * k値の数表そのものは公開プレビューから直接確認できないため、k値をここに
+ * ハードコードしない。JIS原本で条件と数値を確認した後にのみ設定して使う。
  */
-export type EarthBarKKey = "cu_pvc_external" | "cu_xlpe_external";
+export type EarthBarKKey = string;
 
 export interface EarthBarKOption {
   key: EarthBarKKey;
@@ -18,39 +17,26 @@ export interface EarthBarKOption {
   conditionJa: string;
 }
 
-export const EARTH_BAR_K_OPTIONS: EarthBarKOption[] = [
-  {
-    key: "cu_pvc_external",
-    k: 143,
-    labelJa: "銅・PVC系 k=143",
-    conditionJa:
-      "ケーブルに組み込まれていない絶縁導体、またはケーブルシースに接する裸導体。初期30℃・最終160℃の参考条件。",
-  },
-  {
-    key: "cu_xlpe_external",
-    k: 176,
-    labelJa: "銅・XLPE/EPR系 k=176",
-    conditionJa:
-      "ケーブルに組み込まれていない絶縁導体、またはケーブルシースに接する裸導体。初期30℃・最終250℃の参考条件。",
-  },
-];
+/** JIS原本確認済みのk値がまだないため空。推測・海外二次資料からの転記は禁止。 */
+export const EARTH_BAR_K_OPTIONS: EarthBarKOption[] = [];
 
 export const EARTH_BAR_ADIABATIC_REFERENCE_SOURCE: TechnicalSource = {
-  standard: "JIS C 60364-5-54 / IEC 60364-5-54",
-  edition: "JIS 2023 / IEC 2011+A1:2021",
-  reference: "543.1 最小断面積・附属書A（k係数）／Schneider Electrical Installation Guide Fig. G59-G60",
+  standard: "JIS C 60364-5-54",
+  edition: "2023",
+  reference: "保護導体の最小断面積・附属書A（k係数）",
   applicability:
-    "保護導体の断熱法 S = I√t / k の参考計算。kは導体材料、絶縁/裸の状態、初期・最終温度などの条件に一致する値を選ぶ必要がある。",
-  sourceType: "secondary_reference",
+    "低圧電気設備の接地設備及び保護導体。断熱法を使う場合は、事故電流・遮断時間に加え、導体材料・絶縁状態・初期/最終温度等に対応したk値をJIS原本で確認する必要がある。",
+  sourceType: "standard",
   verified: false,
   verificationNote:
-    "JSA公開情報でJIS C 60364-5-54:2023がIEC 60364-5-54:2011+A1:2021とIDTであること、附属書Aがk係数の算出法であることは確認済み。k=143/176はSchneider Electric Electrical Installation GuideがIEC 60364-5-54 Annex A準拠値として公開している。JIS原本の該当k値表自体は未確認のため、本機能は『参考自動計算』として表示する。",
+    "日本規格協会の公開情報でJIS C 60364-5-54:2023が有効な規格であることは確認済み。ただし公開プレビューではk値数表を直接確認できないため、数値は未登録。原本確認前に自動選定値として使用しない。",
 };
 
 export const EARTH_BAR_JSA_URL =
   "https://webdesk.jsa.or.jp/books/W11M0090/index/?bunsyo_id=JIS+C+60364-5-54%3A2023";
-export const EARTH_BAR_SCHNEIDER_URL =
-  "https://www.electrical-installation.org/enwiki/Sizing_of_protective_earthing_conductor";
+
+/** 後方互換用。海外資料は使用せず、国内JSAページへ統一する。 */
+export const EARTH_BAR_SCHNEIDER_URL = EARTH_BAR_JSA_URL;
 
 export interface EarthBarAdiabaticResult {
   faultCurrentKA: number;
@@ -65,7 +51,7 @@ export interface EarthBarAutoCandidate {
   marginPercent: number;
 }
 
-/** S = I√t/k. I is converted from kA to A; t is seconds; result is mm². */
+/** S = I√t/k。kはJIS原本確認済み値を呼出側から与えた場合のみ計算する。 */
 export function calculateEarthBarAdiabaticArea(
   faultCurrentKA: number,
   clearingTimeS: number,
@@ -85,10 +71,6 @@ export function calculateEarthBarAdiabaticArea(
   return { faultCurrentKA, clearingTimeS, k, requiredAreaMm2 };
 }
 
-/**
- * Selects registered single-bar company sizes whose real section t×W meets
- * the reference required area. The smallest adequate section is first.
- */
 export function findEarthBarAutoCandidates(
   sizes: EarthBarSize[],
   requiredAreaMm2: number,
