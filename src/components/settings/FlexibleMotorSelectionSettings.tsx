@@ -73,7 +73,7 @@ export function FlexibleMotorSelectionSettings() {
 
   const copy = locale === "vi"
     ? {
-        description: "Thiết kế bảng chọn kW/A theo dạng xương cá. Có thể tạo riêng theo hãng, pha, điện áp, kiểu khởi động; thêm/đổi tên nhánh và tự chọn mục mặc định hiển thị.",
+        description: "Thiết kế bảng chọn kW/A theo cấu trúc nhánh. Có thể tạo riêng theo hãng, pha, điện áp, kiểu khởi động; thêm/đổi tên nhánh và tự chọn mục mặc định hiển thị.",
         templates: "1. Cấu hình mạch",
         templateName: "Tên cấu hình",
         maker: "Hãng",
@@ -83,7 +83,7 @@ export function FlexibleMotorSelectionSettings() {
         addTemplate: "Thêm cấu hình",
         update: "Cập nhật",
         cancel: "Hủy sửa",
-        nodes: "2. Cấu trúc xương cá / hạng mục kết quả",
+        nodes: "2. Cấu trúc nhánh / hạng mục kết quả",
         parent: "Nhánh cha",
         root: "Gốc",
         label: "Tên mục",
@@ -99,7 +99,7 @@ export function FlexibleMotorSelectionSettings() {
         remarks: "Ghi chú",
         addRule: "Thêm dòng dữ liệu",
         emptyTemplate: "Chưa có cấu hình. Tạo cấu hình đầu tiên ở trên.",
-        selectTemplate: "Chọn một cấu hình để thiết kế xương cá và nhập dữ liệu.",
+        selectTemplate: "Chọn một cấu hình để thiết kế cấu trúc nhánh và nhập dữ liệu.",
         phaseSingle: "1 pha",
         phaseThree: "3 pha",
         direct: "Trực tiếp",
@@ -112,7 +112,7 @@ export function FlexibleMotorSelectionSettings() {
         hint: "node_key được giữ cố định khi đổi tên, nên đổi tên mục không làm mất dữ liệu đã nhập.",
       }
     : {
-        description: "kW/A選定をxương cá（系統樹）として設計します。メーカー・相数・電圧・始動方式ごとに分け、枝の追加/名称変更/既定表示を自由に設定できます。",
+        description: "kW/A選定を系統ツリーとして設計します。メーカー・相数・電圧・始動方式ごとに分け、枝の追加・名称変更・既定表示を自由に設定できます。",
         templates: "1. 回路テンプレート",
         templateName: "テンプレート名",
         maker: "メーカー",
@@ -122,7 +122,7 @@ export function FlexibleMotorSelectionSettings() {
         addTemplate: "テンプレート追加",
         update: "更新",
         cancel: "編集解除",
-        nodes: "2. xương cá構造 / 出力項目",
+        nodes: "2. 系統ツリー / 出力項目",
         parent: "親ノード",
         root: "ルート",
         label: "項目名",
@@ -138,7 +138,7 @@ export function FlexibleMotorSelectionSettings() {
         remarks: "備考",
         addRule: "データ行追加",
         emptyTemplate: "テンプレートがありません。上で最初のテンプレートを作成してください。",
-        selectTemplate: "テンプレートを選択するとxương cá構造と選定データを編集できます。",
+        selectTemplate: "テンプレートを選択すると系統ツリーと選定データを編集できます。",
         phaseSingle: "単相",
         phaseThree: "三相",
         direct: "直入れ",
