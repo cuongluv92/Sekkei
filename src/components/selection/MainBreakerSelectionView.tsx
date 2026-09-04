@@ -189,15 +189,15 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
       <div>
         <span className="panel-title">{t("motorSelection.main.resultTitle")}</span>
         {compact && compactTotal > 0 ? (
-          <div className="mt-2 grid gap-2 text-[11px] sm:grid-cols-2">
-            <div className="rounded-md border border-border bg-background/60 px-3 py-2">
-              <span className="text-muted">MCCB</span>
-              <div className="font-mono font-semibold">{result?.breakerModel || mccbCandidate?.model || (isFuji ? "BW G-TWIN" : "NF-CV")} / {result ? `${result.ratedCurrent} A` : fallbackRating ? `${fallbackRating} A` : "800 A超・個別選定"}</div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border-2 border-accent/40 bg-background px-5 py-4">
+              <span className="text-[12px] font-bold text-muted">主幹 MCCB</span>
+              <div className="mt-1 font-mono text-[20px] font-extrabold text-accent">{result?.breakerModel || mccbCandidate?.model || (isFuji ? "BW G-TWIN" : "NF-CV")} / {result ? `${result.ratedCurrent} A` : fallbackRating ? `${fallbackRating} A` : "800 A超・個別選定"}</div>
               {!result && mccbCandidate?.icu && <div className="mt-1 text-[10px] text-muted">Icu {mccbCandidate.icu} kA（AC200/230V）</div>}
             </div>
-            <div className="rounded-md border border-border bg-background/60 px-3 py-2">
-              <span className="text-muted">ELCB</span>
-              <div className="font-mono font-semibold">{elcbCandidate?.model || (isFuji ? "EW G-TWIN" : "NV-CV")} / {result ? `${result.ratedCurrent} A` : fallbackRating ? `${fallbackRating} A` : "800 A超・個別選定"}</div>
+            <div className="rounded-lg border-2 border-accent/40 bg-background px-5 py-4">
+              <span className="text-[12px] font-bold text-muted">主幹 ELCB</span>
+              <div className="mt-1 font-mono text-[20px] font-extrabold text-accent">{elcbCandidate?.model || (isFuji ? "EW G-TWIN" : "NV-CV")} / {result ? `${result.ratedCurrent} A` : fallbackRating ? `${fallbackRating} A` : "800 A超・個別選定"}</div>
               {!result && elcbCandidate?.icu && <div className="mt-1 text-[10px] text-muted">Icu {elcbCandidate.icu} kA（AC200/230V）・感度電流は別選択</div>}
             </div>
           </div>
