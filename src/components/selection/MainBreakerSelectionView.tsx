@@ -94,8 +94,8 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
   const totalMotorKw = motorKwItems.reduce((sum, item) => sum + item.inputValue, 0);
   const largestMotorKw = motorKwItems.reduce((max, item) => Math.max(max, item.inputValue), 0);
   const catalogMainRating = (voltageClass === "200V" || voltageClass === "400V") && totalMotorKw > 0
-    ? mitsubishiMainMotorRating(voltageClass, totalMotorKw, largestMotorKw) : null;
-  const fallbackRating = mixedLoadCurrent > 0 ? null : catalogMainRating;
+    ? mitsubishiMainMotorRating(voltageClass, totalMotorKw, largestMotorKw, compactTotal) : null;
+  const fallbackRating = catalogMainRating;
 
   useEffect(() => {
     if (!compact || !manufacturerId || compactTotal <= 0) {
@@ -128,7 +128,7 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
           <div className="rounded-md border border-border bg-background/60 px-3 py-2 text-[11px]"><span className="text-muted">全分岐電流合計：</span><span className="font-mono font-bold">{compactTotal.toFixed(1)} A</span>{mixedLoadCurrent > 0 && <div className="mt-1 text-warning">うち制御・その他 {mixedLoadCurrent.toFixed(1)} A</div>}</div>
         </div>
         <div className="flex min-h-36 items-center justify-center rounded-xl border-2 border-accent bg-accent/10 px-6 py-5 text-center">
-          <div><div className="text-[15px] font-extrabold text-muted">主幹選定電流</div><div className="mt-2 font-mono text-[38px] font-black text-accent">{fallbackRating ? `${fallbackRating} A` : "—"}</div>{fallbackRating ? <div className="mt-2 text-[11px] text-muted">三菱 表4-9/4-10：合計 {totalMotorKw} kW・最大 {largestMotorKw} kW</div> : mixedLoadCurrent > 0 ? <div className="mt-2 text-[11px] font-semibold text-warning">混在負荷のため自動選定停止：制御・その他負荷を含む確認済み選定基準が必要</div> : <div className="mt-2 text-[11px] text-warning">分岐回路を追加してください</div>}</div>
+          <div><div className="text-[15px] font-extrabold text-muted">主幹選定電流</div><div className="mt-2 font-mono text-[38px] font-black text-accent">{fallbackRating ? `${fallbackRating} A` : "—"}</div>{fallbackRating ? <div className="mt-2 text-[11px] text-muted">三菱 表4-9/4-10：合計 {totalMotorKw} kW・最大 {largestMotorKw} kW・最大使用電流 {compactTotal.toFixed(1)} A</div> : <div className="mt-2 text-[11px] text-warning">表4-9/4-10の登録範囲外です</div>}</div>
         </div>
       </div>
     );
