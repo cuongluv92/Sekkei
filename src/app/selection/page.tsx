@@ -31,6 +31,13 @@ function SelectionPageView() {
   const caseId = caseIdParam || effectiveActiveCaseId;
   const [activeTab, setActiveTab] = useState<SelectionTab>("branch");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [mainCurrentRaw, setMainCurrentRaw] = useState("");
+
+  const mainCurrentNumber = Number(mainCurrentRaw);
+  const mainCurrent =
+    mainCurrentRaw.trim() !== "" && Number.isFinite(mainCurrentNumber) && mainCurrentNumber > 0
+      ? mainCurrentNumber
+      : null;
 
   const needsCase = activeTab === "branch";
   const hasSettings = activeTab === "branch" || activeTab === "main";
@@ -42,7 +49,9 @@ function SelectionPageView() {
         mainSettings: "Cài đặt dây dẫn・thanh đồng・tiếp địa・TB",
         wire: "Dây dẫn・Thanh đồng",
         earth: "Tiếp địa",
-        terminal: "TB",
+        terminal: "TB (CT / PT)",
+        commonCurrent: "Dòng điện chọn chung (A)",
+        commonHint: "Chỉ nhập A một lần. IV, WL1, thanh đồng, dây tiếp địa và TB CT/PT sẽ cập nhật đồng thời.",
       }
     : {
         main: "電線・銅帯・TB",
@@ -50,7 +59,9 @@ function SelectionPageView() {
         mainSettings: "電線・銅帯・接地・TB 選定設定",
         wire: "電線・銅帯",
         earth: "接地線・アースバー",
-        terminal: "TB",
+        terminal: "TB（CT / PT）",
+        commonCurrent: "共通選定電流 (A)",
+        commonHint: "Aはここに1回入力するだけです。IV・WL1・銅帯・接地線・TB（CT/PT）が同時に更新されます。",
       };
 
   function tabLabel(tab: SelectionTab): string {
@@ -112,20 +123,38 @@ function SelectionPageView() {
 
           {activeTab === "branch" && <FlexibleMotorBranchSelectionView caseId={caseId} />}
           {activeTab === "main" && (
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-5">
+              <section className="rounded-xl border border-accent/30 bg-accent/5 p-4">
+                <div className="grid gap-2 md:grid-cols-[minmax(220px,360px)_1fr] md:items-end">
+                  <label>
+                    <span className="field-label">{labels.commonCurrent}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="any"
+                      value={mainCurrentRaw}
+                      onChange={(e) => setMainCurrentRaw(e.target.value)}
+                      placeholder="例）150"
+                      className="field-input text-[16px] font-mono font-semibold"
+                    />
+                  </label>
+                  <p className="pb-2 text-[11px] text-muted">{labels.commonHint}</p>
+                </div>
+              </section>
+
               <section className="rounded-xl border border-border bg-background/40 p-4">
                 <div className="mb-3 text-[13px] font-bold text-foreground">{labels.wire}</div>
-                <WireConductorSelectionView caseId={caseId} />
+                <WireConductorSelectionView caseId={caseId} currentA={mainCurrent} hideInput />
               </section>
 
               <section className="rounded-xl border border-border bg-background/40 p-4">
                 <div className="mb-3 text-[13px] font-bold text-foreground">{labels.earth}</div>
-                <GroundingSelectionView />
+                <GroundingSelectionView currentA={mainCurrent} hideCurrentInput />
               </section>
 
               <section className="rounded-xl border border-border bg-background/40 p-4">
                 <div className="mb-3 text-[13px] font-bold text-foreground">{labels.terminal}</div>
-                <TerminalBlockSelectionView />
+                <TerminalBlockSelectionView currentA={mainCurrent} hideInput />
               </section>
             </div>
           )}
