@@ -1,4 +1,5 @@
 import raw from "@/data/fuji-sc-next.json";
+import legacyRaw from "@/data/fuji-msscale.json";
 
 type Voltage = "200V" | "400V";
 type Method = "direct" | "starDelta";
@@ -39,12 +40,17 @@ export interface FujiScNextResult {
   deltaContactor?: string;
   olrModel?: string;
   loadWire?: string;
+  catalog: "SC-NEXT" | "MSスケール";
 }
 
 export function findFujiScNext(method: Method, voltage: Voltage, kw: number): FujiScNextResult | null {
-  const data = raw[method][voltage] as any;
+  const currentData = raw[method][voltage] as any;
+  const currentIndex = currentData["電動機"]["出力"].findIndex((value: string) => numberOf(value) === kw);
+  const legacyKey = `${method === "direct" ? "DI" : "SD"}${voltage}` as keyof typeof legacyRaw;
+  const data = currentIndex >= 0 ? currentData : legacyRaw[legacyKey] as any;
   const index = data["電動機"]["出力"].findIndex((value: string) => numberOf(value) === kw);
   if (index < 0) return null;
+  const catalog = currentIndex >= 0 ? "SC-NEXT" as const : "MSスケール" as const;
   const ratedCurrentA = numberOf(data["電動機"]["全負荷電流"][index]);
   const common = {
     ratedCurrentA,
@@ -52,10 +58,12 @@ export function findFujiScNext(method: Method, voltage: Voltage, kw: number): Fu
     motorModel: data["電動機"]["形式"][index],
     mccb: pickBreaker(data["配線用遮断器_MCCB"]["形式"], index, ratedCurrentA),
     elcb: pickBreaker(data["漏電遮断器_ELCB"]["形式"], index, ratedCurrentA),
+    catalog,
   };
   if (method === "direct") {
-    const switchModel = data["電磁開閉器_MS"]["形式"][0][index];
+    const switchModel = [data["電磁開閉器_MS"]["形式"][0][index], data["電磁開閉器_MS"]["形式"][1]?.[index]].filter(Boolean).join(" / ");
     return { ...common, switchModel, contactorCurrentA: contactorCurrent(switchModel), heatRange: heatRange(data["電磁開閉器_MS"]["ヒートエレメント定格"][index]), wire: data["接続電線サイズ"][index] };
   }
-  return { ...common, mainContactor: data["電源用電磁接触器_MCm"][index], starContactor: data["スター用電磁接触器_MCs"][0][index], deltaContactor: data["デルタ用電磁接触器_MCd"][index], olrModel: data["サーマルリレー_OLR"]["形式"][0][index], heatRange: heatRange(data["サーマルリレー_OLR"]["ヒートエレメント定格"][index]), wire: data["接続電線サイズ"]["電源側_OLR"][index], loadWire: data["接続電線サイズ"]["負荷側_MCmMCd"][index] };
+  const option = (value: any) => Array.isArray(value) ? value.filter(Boolean).join(" / ") : value;
+  return { ...common, mainContactor: option(data["電源用電磁接触器_MCm"][index]), starContactor: option(data["スター用電磁接触器_MCs"][0][index]), deltaContactor: option(data["デルタ用電磁接触器_MCd"][index]), olrModel: option(data["サーマルリレー_OLR"]["形式"][0][index]), heatRange: heatRange(data["サーマルリレー_OLR"]["ヒートエレメント定格"][index]), wire: data["接続電線サイズ"]["電源側_OLR"][index], loadWire: data["接続電線サイズ"]["負荷側_MCmMCd"][index] };
 }
