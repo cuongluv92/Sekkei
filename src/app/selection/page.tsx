@@ -9,9 +9,9 @@ import { CaseSelector } from "@/components/common/CaseSelector";
 import { Modal } from "@/components/common/Modal";
 import { PageHeader } from "@/components/common/PageHeader";
 import { LegacySelectionView } from "@/components/selection/LegacySelectionView";
-import { MainBreakerSelectionView } from "@/components/selection/MainBreakerSelectionView";
+import { WireConductorSelectionView } from "@/components/selection/WireConductorSelectionView";
 import { MotorBranchSelectionView } from "@/components/selection/MotorBranchSelectionView";
-import { MainBreakerSelectionSettings } from "@/components/settings/MainBreakerSelectionSettings";
+import { WireConductorSelectionSettings } from "@/components/settings/WireConductorSelectionSettings";
 import { MotorStarterSelectionSettings } from "@/components/settings/MotorStarterSelectionSettings";
 
 type SelectionTab = "branch" | "main" | "highVoltage" | "legacy";
@@ -28,7 +28,8 @@ function SelectionPageView() {
   const [activeTab, setActiveTab] = useState<SelectionTab>("branch");
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const needsCase = activeTab === "branch" || activeTab === "main";
+  // 電線・銅帯はAを直接入力して単独でも使える。案件がある場合だけ分岐合計を補助表示する。
+  const needsCase = activeTab === "branch";
 
   return (
     <div className="flex flex-col gap-4">
@@ -72,7 +73,7 @@ function SelectionPageView() {
           )}
 
           {activeTab === "branch" && <MotorBranchSelectionView caseId={caseId} />}
-          {activeTab === "main" && <MainBreakerSelectionView caseId={caseId} />}
+          {activeTab === "main" && <WireConductorSelectionView caseId={caseId} />}
           {activeTab === "highVoltage" && (
             <div className="py-12 text-center text-[13px] text-muted-2">{t("motorSelection.highVoltagePlaceholder")}</div>
           )}
@@ -81,15 +82,15 @@ function SelectionPageView() {
       </div>
 
       {settingsOpen && (
-        <Modal title={t("common.settings")} onClose={() => setSettingsOpen(false)} widthClassName="max-w-5xl">
+        <Modal title={t("common.settings")} onClose={() => setSettingsOpen(false)} widthClassName="max-w-6xl">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
               <span className="panel-title">{t("motorStarterSelectionSettings.title")}</span>
               <MotorStarterSelectionSettings />
             </div>
             <div className="flex flex-col gap-2 border-t border-border pt-6">
-              <span className="panel-title">{t("mainBreakerSelectionSettings.title")}</span>
-              <MainBreakerSelectionSettings />
+              <span className="panel-title">{t("motorSelection.main.title")}</span>
+              <WireConductorSelectionSettings />
             </div>
           </div>
         </Modal>
