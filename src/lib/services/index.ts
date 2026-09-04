@@ -28,6 +28,21 @@ export type {
   WireConductorSelectionRow,
   WireConductorSelectionDraft,
 } from "./wireConductorSelectionService";
+export {
+  flexibleSelectionService,
+  matchFlexibleSelectionRule,
+} from "./flexibleSelectionService";
+export type {
+  FlexibleSelectionScope,
+  FlexibleSelectionNodeRole,
+  FlexibleSelectionValueType,
+  FlexibleSelectionTemplate,
+  FlexibleSelectionNode,
+  FlexibleSelectionRuleRow,
+  FlexibleSelectionTemplateDraft,
+  FlexibleSelectionNodeDraft,
+  FlexibleSelectionRuleDraft,
+} from "./flexibleSelectionService";
 export { seismicAnchorBoltService } from "./seismicAnchorBoltService";
 export type { SeismicAnchorAllowableDraft } from "./seismicAnchorBoltService";
 export { ventilationClimateProfileService } from "./ventilationClimateProfileService";
