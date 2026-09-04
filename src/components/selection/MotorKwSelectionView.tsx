@@ -193,13 +193,14 @@ export function MotorKwSelectionView({ caseId }: Props) {
   }), [matchedRows]);
   const naisen = selectedKw != null && voltage === "200V" ? NAISEN_200V[selectedKw] : undefined;
   const naisenBreakerA = method === "starDelta" ? naisen?.starDeltaBreakerA : method === "direct" ? naisen?.directBreakerA : undefined;
-  const tableRatedA = selectedKw != null && (voltage === "200V" || voltage === "400V")
+  const tableRatedA = method === "direct" && selectedKw != null && (voltage === "200V" || voltage === "400V")
     ? mitsubishiMotorBranchRating(voltage, selectedKw) : null;
   const mitsuMccb = tableRatedA ? breakerCandidate(tableRatedA, "mitsubishi", "mccb") : null;
   const mitsuElcb = tableRatedA ? breakerCandidate(tableRatedA, "mitsubishi", "elcb") : null;
   const fujiMccb = tableRatedA ? breakerCandidate(tableRatedA, "fuji", "mccb") : null;
   const fujiElcb = tableRatedA ? breakerCandidate(tableRatedA, "fuji", "elcb") : null;
   const isDirect200FiveFive = voltage === "200V" && method === "direct" && selectedKw === 5.5;
+  const isStar200FiveFive = voltage === "200V" && method === "starDelta" && selectedKw === 5.5;
 
   function makerName(id?: string) {
     if (!id) return "—";
@@ -372,10 +373,11 @@ export function MotorKwSelectionView({ caseId }: Props) {
                 {[
                   [copy.rated, "JEAC原本確認待ち", rowByBasis.company?.ratedCurrentA != null ? `${rowByBasis.company.ratedCurrentA} A` : "—", rowByBasis.mitsubishi?.ratedCurrentA != null ? `${rowByBasis.mitsubishi.ratedCurrentA} A` : "—", rowByBasis.fuji?.ratedCurrentA != null ? `${rowByBasis.fuji.ratedCurrentA} A` : "—"],
                   [copy.starting, "JEAC原本確認待ち", rowByBasis.company?.startingCurrentA != null ? `${rowByBasis.company.startingCurrentA} A` : "—", rowByBasis.mitsubishi?.startingCurrentA != null ? `${rowByBasis.mitsubishi.startingCurrentA} A` : "—", rowByBasis.fuji?.startingCurrentA != null ? `${rowByBasis.fuji.startingCurrentA} A` : "—"],
-                  ["定格電流", "JEAC原本確認待ち", rowByBasis.company?.breakerRatedA != null ? `${rowByBasis.company.breakerRatedA} A\nMCCB: ${rowByBasis.company.breakerModel ?? "型番未登録"}\nELCB: 型番未登録` : "未登録", mitsuMccb && mitsuElcb && tableRatedA ? `${tableRatedA} A\nMCCB: ${mitsuMccb.model}\nELCB: ${mitsuElcb.model}` : "—", isDirect200FiveFive ? "60 A\nMCCB: BW63SAG-3P 060\nELCB: EW63SAG-3P 060" : "SC-NEXT公式表を確認"],
-                  ["電磁接触器", "JIS C 8201-4-1", "—", isDirect200FiveFive ? "26 A\nS-T25" : (rowByBasis.mitsubishi?.contactorModel ?? "要確認"), isDirect200FiveFive ? "26 A\nSC-NEXT（SW26XA構成）" : "SC-NEXT公式表を確認"],
-                  ["電磁開閉器", "JIS C 8201-4-1", rowByBasis.company?.contactorModel ?? "—", isDirect200FiveFive ? "22 A（18～26 A）\nMSO-T25" : (rowByBasis.mitsubishi?.contactorModel ?? "要確認"), isDirect200FiveFive ? "18～24 A\nSW26XA-□◇T018" : "SC-NEXT公式表を確認"],
-                  [copy.thermal, "JIS C 8201-4-1", rowByBasis.company?.thermalModel ?? "—", isDirect200FiveFive ? "22 A（18～26 A）\nTH-T25" : (rowByBasis.mitsubishi?.thermalModel ?? (rowByBasis.mitsubishi?.thermalSettingA != null ? `${rowByBasis.mitsubishi.thermalSettingA} A` : "要確認")), isDirect200FiveFive ? "21 A（18～24 A）\nSW26XA内蔵ヒートエレメント T018" : "SC-NEXT公式表を確認"],
+                  ["定格電流", "JEAC原本確認待ち", rowByBasis.company?.breakerRatedA != null ? `${rowByBasis.company.breakerRatedA} A\nMCCB: ${rowByBasis.company.breakerModel ?? "型番未登録"}\nELCB: 型番未登録` : "未登録", method === "inverter" ? "インバータ入力側機器表を参照" : mitsuMccb && mitsuElcb && tableRatedA ? `${tableRatedA} A\nMCCB: ${mitsuMccb.model}\nELCB: ${mitsuElcb.model}` : rowByBasis.mitsubishi?.breakerModel ?? "メーカー表を確認", method === "inverter" ? "インバータ入力側機器表を参照" : isDirect200FiveFive ? "60 A\nMCCB: BW63SAG-3P 060\nELCB: EW63SAG-3P 060" : isStar200FiveFive ? "50 A\nMCCB: BW50SAG-3P 050\nELCB: EW50SAG-3P 050" : "SC-NEXT公式表を確認"],
+                  [method === "starDelta" ? "電磁接触器 MC-M / MC-S / MC-Δ" : "電磁接触器", "JIS C 8201-4-1", "—", method === "inverter" ? "—（入力側MCは運用条件による）" : isDirect200FiveFive ? "26 A\nS-T25" : (rowByBasis.mitsubishi?.contactorModel ?? "要確認"), method === "inverter" ? "—（入力側MCは運用条件による）" : isDirect200FiveFive ? "26 A\nSC-NEXT（SW26XA構成）" : isStar200FiveFive ? "MC-M: SC18XA\nMC-S: SC09XA / SC12XA\nMC-Δ: SC18XA" : "SC-NEXT公式表を確認"],
+                  ["電磁開閉器", "JIS C 8201-4-1", rowByBasis.company?.contactorModel ?? "—", method === "starDelta" ? "—（3接触器＋OLR構成）" : method === "inverter" ? "—" : isDirect200FiveFive ? "22 A（18～26 A）\nMSO-T25" : (rowByBasis.mitsubishi?.contactorModel ?? "要確認"), method === "starDelta" ? "—（3接触器＋OLR構成）" : method === "inverter" ? "—" : isDirect200FiveFive ? "18～24 A\nSW26XA-□◇T018" : "SC-NEXT公式表を確認"],
+                  [copy.thermal, "JIS C 8201-4-1", rowByBasis.company?.thermalModel ?? "—", method === "inverter" ? "—（電子サーマル設定）" : isDirect200FiveFive ? "22 A（18～26 A）\nTH-T25" : (rowByBasis.mitsubishi?.thermalModel ?? (rowByBasis.mitsubishi?.thermalSettingA != null ? `${rowByBasis.mitsubishi.thermalSettingA} A` : "要確認")), method === "inverter" ? "—（電子サーマル設定）" : isDirect200FiveFive ? "21 A（18～24 A）\nSW26XA内蔵ヒートエレメント T018" : isStar200FiveFive ? "21 A（18～24 A）\nTR38X2H-018" : "SC-NEXT公式表を確認"],
+                  ...(method === "inverter" ? [[copy.inverter, "—", rowByBasis.company?.inverterModel ?? "—", rowByBasis.mitsubishi?.inverterModel ?? "未登録", rowByBasis.fuji?.inverterModel ?? "未登録"]] : []),
                   [copy.wire, "JEAC8001-2022", rowByBasis.company?.wireSize ?? "—", rowByBasis.mitsubishi?.wireSize ?? "要確認", rowByBasis.fuji?.wireSize ?? "要確認"],
                   [copy.source, "JEAC8001-2022 表3705-1 / 資料3-7-3（原本照合要）", rowByBasis.company?.remarks ?? copy.companyMissing, rowByBasis.mitsubishi?.source?.title ?? copy.noData, rowByBasis.fuji?.source?.title ?? copy.noData],
                 ].map(([title, ...values]) => <tr key={title}><th className="whitespace-normal text-left">{title}</th>{values.map((value, index) => <td key={index} className="whitespace-pre-line align-top text-[11px] leading-relaxed">{emphasizedAmps(value)}</td>)}</tr>)}
