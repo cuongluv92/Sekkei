@@ -16,6 +16,7 @@ const EMPTY: TerminalBlockSelectionDraft = {
   model: "",
   ratedCurrentA: 0,
   maxWireMm2: 0,
+  maxWireLabel: "",
   screwSize: "",
   voltageLabel: "600V",
   remarks: "",
@@ -30,12 +31,13 @@ export function TerminalBlockSelectionSettings() {
   const copy = locale === "vi"
     ? {
         title: "Cài đặt TB",
-        description: "TB chỉ quản lý CT / PT của Toyogiken. Dữ liệu tham khảo là trang sản phẩm chính thức của hãng; tại đây chỉ nhập tiêu chuẩn công ty.",
+        description: "TB chỉ quản lý CT / PT của Toyogiken. Dữ liệu tham khảo dùng trang sản phẩm chính thức; phần này chỉ nhập tiêu chuẩn công ty.",
         maker: "Hãng",
         series: "Series",
         model: "Model",
         current: "Dòng định mức A",
         wire: "Dây tối đa mm²",
+        wireLabel: "Hiển thị dây",
         screw: "Cỡ vít",
         voltage: "Điện áp",
         remarks: "Ghi chú",
@@ -46,12 +48,13 @@ export function TerminalBlockSelectionSettings() {
       }
     : {
         title: "TB選定設定",
-        description: "TBは東洋技研CT/PTシリーズだけを対象とします。基準・参考値は東洋技研の国内公式製品情報を使用し、ここでは社内採用値だけを追加・編集します。",
+        description: "TBは東洋技研CT/PTシリーズだけを対象とします。基準・参考値は国内公式製品情報を使用し、ここでは社内採用値だけを追加・編集します。",
         maker: "メーカー",
         series: "シリーズ",
         model: "型式",
         current: "定格通電電流 A",
         wire: "適合電線 MAX mm²",
+        wireLabel: "電線表示（任意）",
         screw: "端子ねじ",
         voltage: "定格絶縁電圧",
         remarks: "備考",
@@ -97,6 +100,7 @@ export function TerminalBlockSelectionSettings() {
       model: row.model,
       ratedCurrentA: row.ratedCurrentA,
       maxWireMm2: row.maxWireMm2,
+      maxWireLabel: row.maxWireLabel,
       screwSize: row.screwSize,
       voltageLabel: row.voltageLabel,
       remarks: row.remarks,
@@ -133,6 +137,7 @@ export function TerminalBlockSelectionSettings() {
         <label><span className="field-label">{copy.voltage}</span><input className="field-input" value={draft.voltageLabel ?? ""} onChange={(e) => setDraft({ ...draft, voltageLabel: e.target.value })} /></label>
         <label><span className="field-label">{copy.current}</span><input className="field-input" type="number" min={0} step="any" value={draft.ratedCurrentA || ""} onChange={(e) => setDraft({ ...draft, ratedCurrentA: Number(e.target.value) })} /></label>
         <label><span className="field-label">{copy.wire}</span><input className="field-input" type="number" min={0} step="any" value={draft.maxWireMm2 || ""} onChange={(e) => setDraft({ ...draft, maxWireMm2: Number(e.target.value) })} /></label>
+        <label><span className="field-label">{copy.wireLabel}</span><input className="field-input" value={draft.maxWireLabel ?? ""} onChange={(e) => setDraft({ ...draft, maxWireLabel: e.target.value })} placeholder="例）200 mm² × 2" /></label>
         <label><span className="field-label">{copy.screw}</span><input className="field-input" value={draft.screwSize} onChange={(e) => setDraft({ ...draft, screwSize: e.target.value })} /></label>
         <label><span className="field-label">{copy.remarks}</span><input className="field-input" value={draft.remarks ?? ""} onChange={(e) => setDraft({ ...draft, remarks: e.target.value })} /></label>
       </div>
@@ -149,12 +154,12 @@ export function TerminalBlockSelectionSettings() {
         <p className="text-[11px] text-muted-2">{copy.empty}</p>
       ) : (
         <div className="data-table-wrap">
-          <table className="data-table" style={{ minWidth: 760 }}>
+          <table className="data-table" style={{ minWidth: 820 }}>
             <thead><tr><th>{copy.maker}</th><th>{copy.series}</th><th>{copy.model}</th><th>{copy.current}</th><th>{copy.wire}</th><th>{copy.screw}</th><th /></tr></thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.manufacturer}</td><td className="font-bold">{row.series}</td><td className="font-mono font-semibold">{row.model}</td><td>{row.ratedCurrentA} A</td><td>{row.maxWireMm2} mm²</td><td>{row.screwSize}</td>
+                  <td>{row.manufacturer}</td><td className="font-bold">{row.series}</td><td className="font-mono font-semibold">{row.model}</td><td>{row.ratedCurrentA} A</td><td>{row.maxWireLabel ?? `${row.maxWireMm2} mm²`}</td><td>{row.screwSize}</td>
                   <td><div className="flex justify-end gap-1"><button type="button" className="btn-ghost" onClick={() => edit(row)}><Pencil className="h-3.5 w-3.5" /></button><button type="button" className="btn-ghost text-danger" onClick={() => void remove(row.id)}><Trash2 className="h-3.5 w-3.5" /></button></div></td>
                 </tr>
               ))}
