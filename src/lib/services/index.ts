@@ -29,6 +29,15 @@ export type {
   WireConductorSelectionDraft,
 } from "./wireConductorSelectionService";
 export {
+  terminalBlockSelectionService,
+  pickTerminalBlock,
+} from "./terminalBlockSelectionService";
+export type {
+  TerminalBlockBasisKind,
+  TerminalBlockSelectionRow,
+  TerminalBlockSelectionDraft,
+} from "./terminalBlockSelectionService";
+export {
   flexibleSelectionService,
   matchFlexibleSelectionRule,
 } from "./flexibleSelectionService";
