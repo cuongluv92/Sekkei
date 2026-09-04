@@ -18,7 +18,7 @@ type SelectionTab = "branch" | "main" | "highVoltage" | "legacy";
 const TABS: SelectionTab[] = ["branch", "main", "highVoltage", "legacy"];
 
 function SelectionPageView() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const searchParams = useSearchParams();
   // 部品製作 と同じパターン: ?case= の明示的なディープリンクがアプリ全体の
   // アクティブ案件より優先される。
@@ -30,6 +30,7 @@ function SelectionPageView() {
 
   // 電線・銅帯はAを直接入力して単独でも使える。案件がある場合だけ分岐合計を補助表示する。
   const needsCase = activeTab === "branch";
+  const wireTabLabel = locale === "vi" ? "Dây dẫn & thanh đồng" : "電線・銅帯選定";
 
   return (
     <div className="flex flex-col gap-4">
@@ -58,7 +59,7 @@ function SelectionPageView() {
                     : "rounded-md px-3 py-1.5 text-[12.5px] font-semibold text-muted hover:text-foreground"
                 }
               >
-                {t(`motorSelection.tabs.${tab}`)}
+                {tab === "main" ? wireTabLabel : t(`motorSelection.tabs.${tab}`)}
               </button>
             ))}
           </div>
@@ -89,7 +90,7 @@ function SelectionPageView() {
               <MotorStarterSelectionSettings />
             </div>
             <div className="flex flex-col gap-2 border-t border-border pt-6">
-              <span className="panel-title">{t("motorSelection.main.title")}</span>
+              <span className="panel-title">{wireTabLabel}</span>
               <WireConductorSelectionSettings />
             </div>
           </div>
