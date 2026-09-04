@@ -7,6 +7,39 @@ interface MotorRow {
   contactorFrame?: string;
 }
 
+const HEATER_RANGE: Record<number, string> = {
+  1.7: "1.4～2", 3.6: "2.8～4.4", 5: "4～6", 6.6: "5.2～8", 9: "7～11", 11: "9～13",
+  15: "12～18", 22: "18～26", 29: "24～34", 35: "30～40", 42: "34～50", 54: "43～65",
+  67: "54～80", 82: "65～100", 105: "85～125", 125: "100～150", 150: "120～180", 180: "140～220",
+};
+
+const STAR_MODELS: Record<Voltage, Record<number, { main: string; star: string; delta: string; thermal: string }>> = {
+  "200V": {
+    5.5: { main: "S-T20", star: "S-T10", delta: "S-T20", thermal: "TH-T25" },
+    7.5: { main: "S-T21", star: "S-T12", delta: "S-T21", thermal: "TH-T65" },
+    11: { main: "S-T35", star: "S-T20", delta: "S-T35", thermal: "TH-T65" },
+    15: { main: "S-T50", star: "S-T25", delta: "S-T50", thermal: "TH-T65" },
+    18.5: { main: "S-T50", star: "S-T35", delta: "S-T50", thermal: "TH-N120" },
+    22: { main: "S-T65", star: "S-T35", delta: "S-T65", thermal: "TH-N120" },
+    30: { main: "S-T80", star: "S-T50", delta: "S-T80", thermal: "TH-N120TAHZ" },
+    37: { main: "S-T100", star: "S-T65", delta: "S-T100", thermal: "TH-N120TAHZ" },
+    45: { main: "S-N125", star: "S-T65", delta: "S-N125", thermal: "TH-N220HZ" },
+    55: { main: "S-N150", star: "S-T80", delta: "S-N150", thermal: "TH-N220HZ" },
+  },
+  "400V": {
+    5.5: { main: "S-T12", star: "S-T10", delta: "S-T12", thermal: "TH-T25" },
+    7.5: { main: "S-T20", star: "S-T10", delta: "S-T20", thermal: "TH-T25" },
+    11: { main: "S-T20", star: "S-T12", delta: "S-T20", thermal: "TH-T25" },
+    15: { main: "S-T21", star: "S-T20", delta: "S-T21", thermal: "TH-T65" },
+    18.5: { main: "S-T25", star: "S-T20", delta: "S-T25", thermal: "TH-T65" },
+    22: { main: "S-T35", star: "S-T20", delta: "S-T35", thermal: "TH-T65" },
+    30: { main: "S-T50", star: "S-T25", delta: "S-T50", thermal: "TH-T65" },
+    37: { main: "S-T50", star: "S-T35", delta: "S-T50", thermal: "TH-N120" },
+    45: { main: "S-T65", star: "S-T35", delta: "S-T65", thermal: "TH-N120" },
+    55: { main: "S-T65", star: "S-T50", delta: "S-T65", thermal: "TH-N120TAHZ" },
+  },
+};
+
 const ROWS: Record<Voltage, Record<number, MotorRow>> = {
   "200V": {
     0.75: { ratedCurrentA: 3.6, heaterA: 3.6, contactorFrame: "T10～T21" },
@@ -45,11 +78,33 @@ const ROWS: Record<Voltage, Record<number, MotorRow>> = {
 export interface MitsubishiWsvResult extends MotorRow {
   startingConditionA: number;
   startingMultiplier: number;
+  heaterRange: string;
+  starterModel?: string;
+  contactorModel?: string;
+  thermalModel: string;
+  mainContactor?: string;
+  starContactor?: string;
+  deltaContactor?: string;
 }
 
 export function findMitsubishiWsv(method: Method, voltage: Voltage, kw: number): MitsubishiWsvResult | null {
   const row = ROWS[voltage][kw];
   if (!row || (method === "starDelta" && kw < 5.5)) return null;
   const startingMultiplier = method === "direct" ? 12 : kw <= 7.5 ? 16 : kw <= 45 ? 17 : 18;
-  return { ...row, contactorFrame: method === "direct" ? row.contactorFrame : undefined, startingMultiplier, startingConditionA: Number((row.ratedCurrentA * startingMultiplier).toFixed(1)) };
+  const firstFrame = row.contactorFrame?.split(/[～・]/)[0];
+  const star = method === "starDelta" ? STAR_MODELS[voltage][kw] : undefined;
+  const thermalModel = star?.thermal ?? (row.heaterA <= 15 ? "TH-T18" : row.heaterA <= 22 ? "TH-T25" : row.heaterA <= 42 ? "TH-T50" : row.heaterA <= 54 ? "TH-T65" : row.heaterA <= 82 ? "TH-T100" : row.heaterA <= 125 ? "TH-N120TA" : "TH-N220RH");
+  return {
+    ...row,
+    contactorFrame: method === "direct" ? row.contactorFrame : undefined,
+    startingMultiplier,
+    startingConditionA: Number((row.ratedCurrentA * startingMultiplier).toFixed(1)),
+    heaterRange: HEATER_RANGE[row.heaterA],
+    starterModel: firstFrame ? `MSO-${firstFrame}` : undefined,
+    contactorModel: firstFrame ? `S-${firstFrame}` : undefined,
+    thermalModel,
+    mainContactor: star?.main,
+    starContactor: star?.star,
+    deltaContactor: star?.delta,
+  };
 }
