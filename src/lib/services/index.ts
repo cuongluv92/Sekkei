@@ -16,6 +16,18 @@ export { motorStarterSelectionService } from "./motorStarterSelectionService";
 export type { MotorStarterSelectionDraft } from "./motorStarterSelectionService";
 export { mainBreakerSelectionService } from "./mainBreakerSelectionService";
 export type { MainBreakerSelectionDraft } from "./mainBreakerSelectionService";
+export {
+  wireConductorSelectionService,
+  pickWireConductorSelection,
+} from "./wireConductorSelectionService";
+export type {
+  WireConductorBasisKind,
+  WireConductorItemKind,
+  WireConductorWireType,
+  WireConductorSource,
+  WireConductorSelectionRow,
+  WireConductorSelectionDraft,
+} from "./wireConductorSelectionService";
 export { seismicAnchorBoltService } from "./seismicAnchorBoltService";
 export type { SeismicAnchorAllowableDraft } from "./seismicAnchorBoltService";
 export { ventilationClimateProfileService } from "./ventilationClimateProfileService";
