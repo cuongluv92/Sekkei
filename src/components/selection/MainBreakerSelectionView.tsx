@@ -88,13 +88,14 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
   }, [caseId]);
 
   const additionalCurrent = Number(additionalCurrentRaw);
-  const compactTotal = (branchTotal ?? 0) + (Number.isFinite(additionalCurrent) && additionalCurrent > 0 ? additionalCurrent : 0);
+  const compactTotal = branchTotal ?? 0;
   const motorKwItems = branchItems.filter((item) => item.inputUnit === "kW" && item.inputValue > 0);
+  const mixedLoadCurrent = branchItems.filter((item) => item.inputUnit === "A").reduce((sum, item) => sum + item.inputValue, 0);
   const totalMotorKw = motorKwItems.reduce((sum, item) => sum + item.inputValue, 0);
   const largestMotorKw = motorKwItems.reduce((max, item) => Math.max(max, item.inputValue), 0);
   const catalogMainRating = (voltageClass === "200V" || voltageClass === "400V") && totalMotorKw > 0
     ? mitsubishiMainMotorRating(voltageClass, totalMotorKw, largestMotorKw) : null;
-  const fallbackRating = catalogMainRating;
+  const fallbackRating = mixedLoadCurrent > 0 ? null : catalogMainRating;
 
   useEffect(() => {
     if (!compact || !manufacturerId || compactTotal <= 0) {
@@ -122,13 +123,12 @@ export function MainBreakerSelectionView({ caseId, compact = false }: Props) {
     return (
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="grid content-start gap-3 sm:grid-cols-2">
-          <label><span className="field-label">追加回路・制御回路 合計 (A)</span><input className="field-input font-mono" type="number" min={0} step="any" value={additionalCurrentRaw} onChange={(e) => setAdditionalCurrentRaw(e.target.value)} placeholder="例）12.5" /></label>
           <div><label className="field-label">{t("motorSelection.manufacturerLabel")}</label><select value={manufacturerId} onChange={(e) => setManufacturerId(e.target.value)} className="field-input"><option value="">{t("common.unsetManufacturer")}</option>{manufacturers.map((m) => <option key={m.id} value={m.id}>{locale === "vi" && m.nameVi ? m.nameVi : m.name}</option>)}</select></div>
           <div><label className="field-label">{t("motorSelection.voltageClassLabel")}</label><select value={voltageClass} onChange={(e) => setVoltageClass(e.target.value as SelectionVoltageClass)} className="field-input">{VOLTAGE_CLASSES.map((v) => <option key={v} value={v}>{v}</option>)}</select></div>
-          <div className="rounded-md border border-border bg-background/60 px-3 py-2 text-[11px]"><span className="text-muted">分岐電流合計：</span><span className="font-mono font-bold">{compactTotal.toFixed(1)} A</span></div>
+          <div className="rounded-md border border-border bg-background/60 px-3 py-2 text-[11px]"><span className="text-muted">全分岐電流合計：</span><span className="font-mono font-bold">{compactTotal.toFixed(1)} A</span>{mixedLoadCurrent > 0 && <div className="mt-1 text-warning">うち制御・その他 {mixedLoadCurrent.toFixed(1)} A</div>}</div>
         </div>
         <div className="flex min-h-36 items-center justify-center rounded-xl border-2 border-accent bg-accent/10 px-6 py-5 text-center">
-          <div><div className="text-[15px] font-extrabold text-muted">主幹選定電流</div><div className="mt-2 font-mono text-[38px] font-black text-accent">{fallbackRating ? `${fallbackRating} A` : "—"}</div>{fallbackRating ? <div className="mt-2 text-[11px] text-muted">三菱 表4-9/4-10：合計 {totalMotorKw} kW・最大 {largestMotorKw} kW</div> : <div className="mt-2 text-[11px] text-warning">分岐回路を追加してください</div>}{additionalCurrent > 0 && <div className="mt-1 text-[10px] text-warning">追加負荷 {additionalCurrent} A は混在負荷条件の確認が必要</div>}</div>
+          <div><div className="text-[15px] font-extrabold text-muted">主幹選定電流</div><div className="mt-2 font-mono text-[38px] font-black text-accent">{fallbackRating ? `${fallbackRating} A` : "—"}</div>{fallbackRating ? <div className="mt-2 text-[11px] text-muted">三菱 表4-9/4-10：合計 {totalMotorKw} kW・最大 {largestMotorKw} kW</div> : mixedLoadCurrent > 0 ? <div className="mt-2 text-[11px] font-semibold text-warning">混在負荷のため自動選定停止：制御・その他負荷を含む確認済み選定基準が必要</div> : <div className="mt-2 text-[11px] text-warning">分岐回路を追加してください</div>}</div>
         </div>
       </div>
     );
