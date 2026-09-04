@@ -1,6 +1,7 @@
 import { requireSupabase } from "@/lib/supabase/client";
 
 export type TerminalBlockBasisKind = "reference" | "company";
+export type TerminalBlockSeries = "CT" | "PT";
 
 export interface TerminalBlockSelectionRow {
   id: string;
@@ -20,7 +21,7 @@ export interface TerminalBlockSelectionRow {
 
 export interface TerminalBlockSelectionDraft {
   manufacturer?: string;
-  series?: string;
+  series?: TerminalBlockSeries;
   model: string;
   ratedCurrentA: number;
   maxWireMm2: number;
@@ -67,10 +68,16 @@ export function pickTerminalBlock(
   rows: TerminalBlockSelectionRow[],
   currentA: number,
   basisKind: TerminalBlockBasisKind,
+  series?: TerminalBlockSeries,
 ): TerminalBlockSelectionRow | null {
   return (
     rows
-      .filter((row) => row.basisKind === basisKind && row.ratedCurrentA >= currentA)
+      .filter(
+        (row) =>
+          row.basisKind === basisKind &&
+          row.ratedCurrentA >= currentA &&
+          (!series || row.series === series),
+      )
       .sort((a, b) => a.ratedCurrentA - b.ratedCurrentA || a.sortOrder - b.sortOrder)[0] ?? null
   );
 }
@@ -81,6 +88,7 @@ export const terminalBlockSelectionService = {
       .from("terminal_block_selections")
       .select("*")
       .order("basis_kind", { ascending: false })
+      .order("series", { ascending: true })
       .order("rated_current_a", { ascending: true })
       .order("sort_order", { ascending: true });
     if (error) throw error;
@@ -102,7 +110,7 @@ export const terminalBlockSelectionService = {
       .insert({
         basis_kind: "company",
         manufacturer: draft.manufacturer?.trim() || "東洋技研",
-        series: draft.series?.trim() || "AT",
+        series: draft.series || "CT",
         model: draft.model.trim(),
         rated_current_a: draft.ratedCurrentA,
         max_wire_mm2: draft.maxWireMm2,
@@ -125,7 +133,7 @@ export const terminalBlockSelectionService = {
       .from("terminal_block_selections")
       .update({
         manufacturer: draft.manufacturer?.trim() || "東洋技研",
-        series: draft.series?.trim() || "AT",
+        series: draft.series || "CT",
         model: draft.model.trim(),
         rated_current_a: draft.ratedCurrentA,
         max_wire_mm2: draft.maxWireMm2,
