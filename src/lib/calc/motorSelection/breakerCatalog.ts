@@ -46,9 +46,13 @@ const MAIN_400 = [
   [63.7,[150,150,150,150,150,150,150,150,150,150,150,150,150,150]],
 ] as const;
 
-export function mitsubishiMainMotorRating(voltage: "200V" | "400V", totalKw: number, largestKw: number): number | null {
+export function mitsubishiMainMotorRating(voltage: "200V" | "400V", totalKw: number, largestKw: number, totalCurrentA?: number): number | null {
   const column = MOTOR_KW.findIndex((kw) => kw >= largestKw);
   if (column < 0) return null;
-  const row = (voltage === "200V" ? MAIN_200 : MAIN_400).find(([maxKw]) => totalKw <= maxKw);
+  const table = voltage === "200V" ? MAIN_200 : MAIN_400;
+  const maxCurrents = voltage === "200V"
+    ? [15, 20, 30, 40, 50, 75, 90, 100, 125, 150, 175, 200, 250]
+    : [7.5, 10, 15, 20, 25, 38, 45, 50, 63, 75, 88, 100, 125];
+  const row = table.find(([maxKw], index) => totalKw <= maxKw && (totalCurrentA == null || totalCurrentA <= maxCurrents[index]));
   return row?.[1][column] ?? null;
 }
