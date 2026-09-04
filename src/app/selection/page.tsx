@@ -11,11 +11,17 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { LegacySelectionView } from "@/components/selection/LegacySelectionView";
 import { WireConductorSelectionView } from "@/components/selection/WireConductorSelectionView";
 import { FlexibleMotorBranchSelectionView } from "@/components/selection/FlexibleMotorBranchSelectionView";
+import { GroundingSelectionView } from "@/components/selection/GroundingSelectionView";
+import { TerminalBlockSelectionView } from "@/components/selection/TerminalBlockSelectionView";
 import { WireConductorSelectionSettings } from "@/components/settings/WireConductorSelectionSettings";
 import { FlexibleMotorSelectionSettings } from "@/components/settings/FlexibleMotorSelectionSettings";
+import { BusbarSizeSettings } from "@/components/settings/BusbarSizeSettings";
+import { EarthWireSizeSettings } from "@/components/settings/EarthWireSizeSettings";
+import { EarthBarSizeSettings } from "@/components/settings/EarthBarSizeSettings";
+import { TerminalBlockSelectionSettings } from "@/components/settings/TerminalBlockSelectionSettings";
 
-type SelectionTab = "branch" | "main" | "highVoltage" | "legacy";
-const TABS: SelectionTab[] = ["branch", "main", "highVoltage", "legacy"];
+type SelectionTab = "branch" | "main" | "earth" | "terminal" | "highVoltage" | "legacy";
+const TABS: SelectionTab[] = ["branch", "main", "earth", "terminal", "highVoltage", "legacy"];
 
 function SelectionPageView() {
   const { t, locale } = useTranslation();
@@ -27,8 +33,42 @@ function SelectionPageView() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const needsCase = activeTab === "branch";
-  const wireTabLabel = locale === "vi" ? "Dây dẫn & thanh đồng" : "電線・銅帯選定";
-  const motorSettingsLabel = locale === "vi" ? "Thiết kế chọn kW/A dạng xương cá" : "kW/A xương cá選定デザイナー";
+  const hasSettings = activeTab === "branch" || activeTab === "main" || activeTab === "earth" || activeTab === "terminal";
+
+  const labels = locale === "vi"
+    ? {
+        wire: "Dây dẫn & thanh đồng",
+        earth: "Tiếp địa",
+        terminal: "TB",
+        branchSettings: "Cài đặt chọn kW/A",
+        wireSettings: "Cài đặt dây dẫn & thanh đồng",
+        earthSettings: "Cài đặt tiếp địa",
+        terminalSettings: "Cài đặt TB",
+      }
+    : {
+        wire: "電線・銅帯",
+        earth: "接地線・アースバー",
+        terminal: "TB",
+        branchSettings: "kW/A選定設定",
+        wireSettings: "電線・銅帯選定設定",
+        earthSettings: "接地線・アースバー選定設定",
+        terminalSettings: "TB選定設定",
+      };
+
+  function tabLabel(tab: SelectionTab): string {
+    if (tab === "main") return labels.wire;
+    if (tab === "earth") return labels.earth;
+    if (tab === "terminal") return labels.terminal;
+    return t(`motorSelection.tabs.${tab}`);
+  }
+
+  function settingsTitle(): string {
+    if (activeTab === "branch") return labels.branchSettings;
+    if (activeTab === "main") return labels.wireSettings;
+    if (activeTab === "earth") return labels.earthSettings;
+    if (activeTab === "terminal") return labels.terminalSettings;
+    return t("common.settings");
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -36,28 +76,33 @@ function SelectionPageView() {
         title={t("selection.title")}
         description={t("selection.description")}
         actions={
-          <button onClick={() => setSettingsOpen(true)} className="btn-secondary">
-            <Settings className="h-3.5 w-3.5" />
-            {t("common.settings")}
-          </button>
+          hasSettings ? (
+            <button onClick={() => setSettingsOpen(true)} className="btn-secondary">
+              <Settings className="h-3.5 w-3.5" />
+              {t("common.settings")}
+            </button>
+          ) : undefined
         }
       />
 
       <div className="panel">
-        <div className="panel-header">
-          <div className="flex items-center gap-1">
+        <div className="panel-header overflow-x-auto">
+          <div className="flex min-w-max items-center gap-1">
             {TABS.map((tab) => (
               <button
                 key={tab}
                 type="button"
-                onClick={() => setActiveTab(tab)}
+                onClick={() => {
+                  setActiveTab(tab);
+                  setSettingsOpen(false);
+                }}
                 className={
                   activeTab === tab
                     ? "rounded-md bg-accent px-3 py-1.5 text-[12.5px] font-bold text-accent-foreground"
                     : "rounded-md px-3 py-1.5 text-[12.5px] font-semibold text-muted hover:text-foreground"
                 }
               >
-                {tab === "main" ? wireTabLabel : t(`motorSelection.tabs.${tab}`)}
+                {tabLabel(tab)}
               </button>
             ))}
           </div>
@@ -73,6 +118,8 @@ function SelectionPageView() {
 
           {activeTab === "branch" && <FlexibleMotorBranchSelectionView caseId={caseId} />}
           {activeTab === "main" && <WireConductorSelectionView caseId={caseId} />}
+          {activeTab === "earth" && <GroundingSelectionView />}
+          {activeTab === "terminal" && <TerminalBlockSelectionView />}
           {activeTab === "highVoltage" && (
             <div className="py-12 text-center text-[13px] text-muted-2">{t("motorSelection.highVoltagePlaceholder")}</div>
           )}
@@ -80,18 +127,22 @@ function SelectionPageView() {
         </div>
       </div>
 
-      {settingsOpen && (
-        <Modal title={t("common.settings")} onClose={() => setSettingsOpen(false)} widthClassName="max-w-7xl">
-          <div className="flex flex-col gap-7">
-            <div className="flex flex-col gap-2">
-              <span className="panel-title">{motorSettingsLabel}</span>
-              <FlexibleMotorSelectionSettings />
-            </div>
-            <div className="flex flex-col gap-2 border-t border-border pt-6">
-              <span className="panel-title">{wireTabLabel}</span>
+      {settingsOpen && hasSettings && (
+        <Modal title={settingsTitle()} onClose={() => setSettingsOpen(false)} widthClassName="max-w-7xl">
+          {activeTab === "branch" && <FlexibleMotorSelectionSettings />}
+          {activeTab === "main" && (
+            <div className="flex flex-col gap-7">
               <WireConductorSelectionSettings />
+              <div className="border-t border-border pt-6"><BusbarSizeSettings /></div>
             </div>
-          </div>
+          )}
+          {activeTab === "earth" && (
+            <div className="flex flex-col gap-7">
+              <EarthWireSizeSettings />
+              <div className="border-t border-border pt-6"><EarthBarSizeSettings /></div>
+            </div>
+          )}
+          {activeTab === "terminal" && <TerminalBlockSelectionSettings />}
         </Modal>
       )}
     </div>
