@@ -220,14 +220,10 @@ export function MotorKwSelectionView({ caseId }: Props) {
   }
 
   function emphasizedAmps(value: unknown) {
-    let emphasized = false;
-    return String(value).split(/(\d+(?:\.\d+)?\s*A)/g).map((part, index) => {
-      if (!emphasized && /^\d/.test(part) && /A$/.test(part.trim())) {
-        emphasized = true;
-        return <strong key={index} className="font-mono text-[13px] font-extrabold text-accent">{part}</strong>;
-      }
-      return part;
-    });
+    const text = String(value);
+    const match = text.match(/^(\d+(?:\.\d+)?\s*A)(?=$|[（\n])/);
+    if (!match) return text;
+    return <><strong className="font-mono text-[13px] font-extrabold">{match[1]}</strong>{text.slice(match[1].length)}</>;
   }
 
   useEffect(() => {
@@ -368,11 +364,11 @@ export function MotorKwSelectionView({ caseId }: Props) {
         ) : (
           <div className="data-table-wrap mt-3">
             <table className="data-table table-fixed" style={{ minWidth: 900 }}>
-              <thead><tr><th className="w-32" /><th>{copy.naisenColumn}</th><th>{copy.company}</th><th className="text-accent">三菱電機</th><th>富士電機</th></tr></thead>
+              <thead><tr><th className="w-32" /><th>{copy.naisenColumn}</th><th>{copy.company}</th><th>三菱電機</th><th>富士電機</th></tr></thead>
               <tbody>
                 {[
                   [copy.rated, "JEAC原本確認待ち", rowByBasis.company?.ratedCurrentA != null ? `${rowByBasis.company.ratedCurrentA} A` : "—", rowByBasis.mitsubishi?.ratedCurrentA != null ? `${rowByBasis.mitsubishi.ratedCurrentA} A` : "—", rowByBasis.fuji?.ratedCurrentA != null ? `${rowByBasis.fuji.ratedCurrentA} A` : "—"],
-                  [copy.starting, "JEAC原本確認待ち", rowByBasis.company?.startingCurrentA != null ? `${rowByBasis.company.startingCurrentA} A` : "—", rowByBasis.mitsubishi?.startingCurrentA != null ? `${rowByBasis.mitsubishi.startingCurrentA} A` : "—", rowByBasis.fuji?.startingCurrentA != null ? `${rowByBasis.fuji.startingCurrentA} A` : "—"],
+                  [copy.starting, "JEAC原本確認待ち", rowByBasis.company?.startingCurrentA != null ? `${rowByBasis.company.startingCurrentA} A` : "—", isDirect200FiveFive ? "267.6 A（選定条件：全負荷電流×12）" : rowByBasis.mitsubishi?.startingCurrentA != null ? `${rowByBasis.mitsubishi.startingCurrentA} A` : "メーカー表の選定条件を確認", rowByBasis.fuji?.startingCurrentA != null ? `${rowByBasis.fuji.startingCurrentA} A` : "—"],
                   ["定格電流", "JEAC原本確認待ち", rowByBasis.company?.breakerRatedA != null ? `${rowByBasis.company.breakerRatedA} A\nMCCB: ${rowByBasis.company.breakerModel ?? "型番未登録"}\nELCB: 型番未登録` : "未登録", method === "inverter" ? "インバータ入力側機器表を参照" : mitsuMccb && mitsuElcb && tableRatedA ? `${tableRatedA} A\nMCCB: ${mitsuMccb.model}\nELCB: ${mitsuElcb.model}` : rowByBasis.mitsubishi?.breakerModel ?? "メーカー表を確認", method === "inverter" ? "インバータ入力側機器表を参照" : isDirect200FiveFive ? "60 A\nMCCB: BW63SAG-3P 060\nELCB: EW63SAG-3P 060" : isStar200FiveFive ? "50 A\nMCCB: BW50SAG-3P 050\nELCB: EW50SAG-3P 050" : "SC-NEXT公式表を確認"],
                   [method === "starDelta" ? "電磁接触器 MC-M / MC-S / MC-Δ" : "電磁接触器", "JIS C 8201-4-1", "—", method === "inverter" ? "—（入力側MCは運用条件による）" : isDirect200FiveFive ? "26 A\nS-T25" : (rowByBasis.mitsubishi?.contactorModel ?? "要確認"), method === "inverter" ? "—（入力側MCは運用条件による）" : isDirect200FiveFive ? "26 A\nSC-NEXT（SW26XA構成）" : isStar200FiveFive ? "MC-M: SC18XA\nMC-S: SC09XA / SC12XA\nMC-Δ: SC18XA" : "SC-NEXT公式表を確認"],
                   ["電磁開閉器", "JIS C 8201-4-1", rowByBasis.company?.contactorModel ?? "—", method === "starDelta" ? "—（3接触器＋OLR構成）" : method === "inverter" ? "—" : isDirect200FiveFive ? "22 A（18～26 A）\nMSO-T25" : (rowByBasis.mitsubishi?.contactorModel ?? "要確認"), method === "starDelta" ? "—（3接触器＋OLR構成）" : method === "inverter" ? "—" : isDirect200FiveFive ? "18～24 A\nSW26XA-□◇T018" : "SC-NEXT公式表を確認"],
