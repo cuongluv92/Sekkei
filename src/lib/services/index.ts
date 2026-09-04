@@ -14,6 +14,17 @@ export { earthWireSizeService } from "./earthWireSizeService";
 export { earthBarSizeService } from "./earthBarSizeService";
 export { motorStarterSelectionService } from "./motorStarterSelectionService";
 export type { MotorStarterSelectionDraft } from "./motorStarterSelectionService";
+export {
+  motorKwSelectionService,
+  matchMotorKwRows,
+} from "./motorKwSelectionService";
+export type {
+  MotorKwBasisKind,
+  MotorKwPhase,
+  MotorKwSelectionSource,
+  MotorKwSelectionRow,
+  MotorKwSelectionDraft,
+} from "./motorKwSelectionService";
 export { mainBreakerSelectionService } from "./mainBreakerSelectionService";
 export type { MainBreakerSelectionDraft } from "./mainBreakerSelectionService";
 export {
