@@ -14,10 +14,11 @@ export const MOTOR_SELECTION_BRANCH_CALCULATION_TYPE = "motor-selection-branch";
 const VOLTAGE_CLASSES: SelectionVoltageClass[] = ["100V", "200V", "400V"];
 const CIRCUIT_TYPES: SelectionCircuitType[] = ["direct", "starDelta", "inverter"];
 
-/** A branch's contribution to 幹線 total current — its matched master row's rated current, or the raw input when the user entered A directly and nothing matched. null when neither is available (kW input with no match: nothing to sum safely). */
+/** A branch's contribution to 幹線 total current. Unknown/unchecked kW rows must never be treated as 0 A. */
 export function branchItemCurrentA(item: MotorSelectionBranchItem): number | null {
-  if (item.matchedRow) return item.matchedRow.ratedCurrent;
-  if (item.inputUnit === "A") return item.inputValue;
+  const rated = item.matchedRow?.ratedCurrent;
+  if (rated != null && Number.isFinite(rated) && rated > 0) return rated;
+  if (item.inputUnit === "A" && Number.isFinite(item.inputValue) && item.inputValue > 0) return item.inputValue;
   return null;
 }
 
