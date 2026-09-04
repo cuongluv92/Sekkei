@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { LegacySelectionView } from "@/components/selection/LegacySelectionView";
 import { WireConductorSelectionView } from "@/components/selection/WireConductorSelectionView";
 import { MotorKwSelectionView } from "@/components/selection/MotorKwSelectionView";
+import { MainBreakerSelectionView } from "@/components/selection/MainBreakerSelectionView";
 import { GroundingSelectionView } from "@/components/selection/GroundingSelectionView";
 import { TerminalBlockSelectionView } from "@/components/selection/TerminalBlockSelectionView";
 import { WireConductorSelectionSettings } from "@/components/settings/WireConductorSelectionSettings";
@@ -121,7 +122,15 @@ function SelectionPageView() {
             </>
           )}
 
-          {activeTab === "branch" && <MotorKwSelectionView caseId={caseId} />}
+          {activeTab === "branch" && (
+            <div className="flex flex-col gap-4">
+              <section className="rounded-lg border border-accent/30 bg-accent/5 p-3">
+                <div className="mb-2 text-[12px] font-bold">主幹ブレーカ（分岐合計から自動選定）</div>
+                <MainBreakerSelectionView caseId={caseId} compact />
+              </section>
+              <MotorKwSelectionView caseId={caseId} />
+            </div>
+          )}
           {activeTab === "main" && (
             <div className="flex flex-col gap-5">
               <section className="rounded-xl border border-accent/30 bg-accent/5 p-4">
