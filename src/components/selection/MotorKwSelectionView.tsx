@@ -218,6 +218,12 @@ export function MotorKwSelectionView({ caseId }: Props) {
     return locale === "vi" ? "Biến tần" : "インバータ";
   }
 
+  function emphasizedAmps(value: unknown) {
+    return String(value).split(/(\d+(?:\.\d+)?(?:～\d+(?:\.\d+)?)?\s*A)/g).map((part, index) =>
+      /A$/.test(part.trim()) ? <strong key={index} className="font-mono text-[13px] font-extrabold text-accent">{part}</strong> : part,
+    );
+  }
+
   useEffect(() => {
     preloadManufacturers().then(() => forceRerender((v) => v + 1));
     motorKwSelectionService.list().then(setRows).finally(() => setLoading(false));
@@ -359,16 +365,15 @@ export function MotorKwSelectionView({ caseId }: Props) {
               <thead><tr><th className="w-32" /><th>{copy.naisenColumn}</th><th>{copy.company}</th><th className="text-accent">三菱電機</th><th>富士電機</th></tr></thead>
               <tbody>
                 {[
-                  [copy.rated, naisen ? `${naisen.conventionalA} A（規約電流）` : "—", rowByBasis.company?.ratedCurrentA != null ? `${rowByBasis.company.ratedCurrentA} A` : "—", rowByBasis.mitsubishi?.ratedCurrentA != null ? `${rowByBasis.mitsubishi.ratedCurrentA} A` : "—", rowByBasis.fuji?.ratedCurrentA != null ? `${rowByBasis.fuji.ratedCurrentA} A` : "—"],
-                  [copy.starting, "始動条件確認", rowByBasis.company?.startingCurrentA != null ? `${rowByBasis.company.startingCurrentA} A` : "—", rowByBasis.mitsubishi?.startingCurrentA != null ? `${rowByBasis.mitsubishi.startingCurrentA} A` : "—", rowByBasis.fuji?.startingCurrentA != null ? `${rowByBasis.fuji.startingCurrentA} A` : "—"],
-                  ["MCCB", naisenBreakerA != null ? `${naisenBreakerA} A` : "—", rowByBasis.company?.breakerModel ?? "型番要確認", mitsuMccb && tableRatedA ? `${tableRatedA} A\n${mitsuMccb.model}\nIcu ${mitsuMccb.icu} kA` : "—", isDirect200FiveFive ? "60 A\nBW63SAG-3P 060\nIcu 10 kA" : "SC-NEXT公式表を確認"],
-                  ["ELCB", naisenBreakerA != null ? `${naisenBreakerA} A` : "—", "型番要確認", mitsuElcb && tableRatedA ? `${tableRatedA} A\n${mitsuElcb.model}\nIcu ${mitsuElcb.icu} kA` : "—", isDirect200FiveFive ? "60 A\nEW63SAG-3P 060\nIcu 10 kA" : "SC-NEXT公式表を確認"],
+                  [copy.rated, "JEAC原本確認待ち", rowByBasis.company?.ratedCurrentA != null ? `${rowByBasis.company.ratedCurrentA} A` : "—", rowByBasis.mitsubishi?.ratedCurrentA != null ? `${rowByBasis.mitsubishi.ratedCurrentA} A` : "—", rowByBasis.fuji?.ratedCurrentA != null ? `${rowByBasis.fuji.ratedCurrentA} A` : "—"],
+                  [copy.starting, "JEAC原本確認待ち", rowByBasis.company?.startingCurrentA != null ? `${rowByBasis.company.startingCurrentA} A` : "—", rowByBasis.mitsubishi?.startingCurrentA != null ? `${rowByBasis.mitsubishi.startingCurrentA} A` : "—", rowByBasis.fuji?.startingCurrentA != null ? `${rowByBasis.fuji.startingCurrentA} A` : "—"],
+                  ["定格電流", "JEAC原本確認待ち", rowByBasis.company?.breakerRatedA != null ? `${rowByBasis.company.breakerRatedA} A\nMCCB: ${rowByBasis.company.breakerModel ?? "型番未登録"}\nELCB: 型番未登録` : "未登録", mitsuMccb && mitsuElcb && tableRatedA ? `${tableRatedA} A\nMCCB: ${mitsuMccb.model} / Icu ${mitsuMccb.icu} kA\nELCB: ${mitsuElcb.model} / Icu ${mitsuElcb.icu} kA` : "—", isDirect200FiveFive ? "60 A\nMCCB: BW63SAG-3P 060 / Icu 10 kA\nELCB: EW63SAG-3P 060 / Icu 10 kA" : "SC-NEXT公式表を確認"],
                   ["電磁接触器", "JIS C 8201-4-1", "—", isDirect200FiveFive ? "26 A\nS-T25" : (rowByBasis.mitsubishi?.contactorModel ?? "要確認"), isDirect200FiveFive ? "26 A\nSC-NEXT（SW26XA構成）" : "SC-NEXT公式表を確認"],
-                  ["電磁開閉器", "JIS C 8201-4-1", rowByBasis.company?.contactorModel ?? "—", isDirect200FiveFive ? "26 A\nMSO-T25" : (rowByBasis.mitsubishi?.contactorModel ?? "要確認"), isDirect200FiveFive ? "21 A 適用\nSW26XA-□◇T018" : "SC-NEXT公式表を確認"],
+                  ["電磁開閉器", "JIS C 8201-4-1", rowByBasis.company?.contactorModel ?? "—", isDirect200FiveFive ? "22 A（18～26 A）\nMSO-T25" : (rowByBasis.mitsubishi?.contactorModel ?? "要確認"), isDirect200FiveFive ? "18～24 A\nSW26XA-□◇T018" : "SC-NEXT公式表を確認"],
                   [copy.thermal, "JIS C 8201-4-1", rowByBasis.company?.thermalModel ?? "—", isDirect200FiveFive ? "22 A（18～26 A）\nTH-T25" : (rowByBasis.mitsubishi?.thermalModel ?? (rowByBasis.mitsubishi?.thermalSettingA != null ? `${rowByBasis.mitsubishi.thermalSettingA} A` : "要確認")), isDirect200FiveFive ? "18～24 A\nSW26XA内蔵ヒートエレメント T018" : "SC-NEXT公式表を確認"],
                   [copy.wire, "JEAC8001-2022", rowByBasis.company?.wireSize ?? "—", rowByBasis.mitsubishi?.wireSize ?? "要確認", rowByBasis.fuji?.wireSize ?? "要確認"],
                   [copy.source, "JEAC8001-2022 表3705-1 / 資料3-7-3（原本照合要）", rowByBasis.company?.remarks ?? copy.companyMissing, rowByBasis.mitsubishi?.source?.title ?? copy.noData, rowByBasis.fuji?.source?.title ?? copy.noData],
-                ].map(([title, ...values]) => <tr key={title}><th className="whitespace-normal text-left">{title}</th>{values.map((value, index) => <td key={index} className="whitespace-pre-line align-top text-[11px] leading-relaxed">{value}</td>)}</tr>)}
+                ].map(([title, ...values]) => <tr key={title}><th className="whitespace-normal text-left">{title}</th>{values.map((value, index) => <td key={index} className="whitespace-pre-line align-top text-[11px] leading-relaxed">{emphasizedAmps(value)}</td>)}</tr>)}
                 <tr><th /><td>{copy.standardsNote}</td>{(["company", "mitsubishi", "fuji"] as const).map((basis) => <td key={basis}>{rowByBasis[basis] ? <button type="button" className="btn-secondary w-full justify-center" onClick={() => adopt(rowByBasis[basis]!)} disabled={!rowByBasis[basis]?.manufacturerId}><Plus className="h-3.5 w-3.5" />{copy.adopt}</button> : <span className="text-warning">{basis === "company" ? copy.companyMissing : copy.noData}</span>}</td>)}</tr>
               </tbody>
             </table>
