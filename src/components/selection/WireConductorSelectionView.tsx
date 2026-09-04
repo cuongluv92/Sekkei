@@ -4,14 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import {
+  busbarSizeService,
   calculationRecordService,
   pickWireConductorSelection,
   wireConductorSelectionService,
   type WireConductorSelectionRow,
   type WireConductorWireType,
 } from "@/lib/services";
-import type { MotorSelectionBranchItem } from "@/lib/types";
+import type { BusbarSize, MotorSelectionBranchItem } from "@/lib/types";
 import { branchItemCurrentA, MOTOR_SELECTION_BRANCH_CALCULATION_TYPE } from "./MotorBranchSelectionView";
+import { requiredCrossSectionArea } from "@/lib/calc/busbar/currentDensityRule";
+import { findBusbarCandidates } from "@/lib/calc/busbar/candidateSearch";
 
 interface Props {
   caseId: string;
@@ -33,6 +36,7 @@ const TARGETS: ResultTarget[] = [
 export function WireConductorSelectionView({ caseId }: Props) {
   const { locale } = useTranslation();
   const [rows, setRows] = useState<WireConductorSelectionRow[]>([]);
+  const [busbarSizes, setBusbarSizes] = useState<BusbarSize[]>([]);
   const [loading, setLoading] = useState(true);
   const [branchTotal, setBranchTotal] = useState<number | null>(null);
   const [currentRaw, setCurrentRaw] = useState("");
@@ -41,7 +45,7 @@ export function WireConductorSelectionView({ caseId }: Props) {
   const copy = locale === "vi"
     ? {
         description:
-          "Nhập dòng điện A để chọn kích thước dây và thanh đồng. Cột trái là dữ liệu tham khảo có ghi rõ nguồn/điều kiện; cột phải là tiêu chuẩn nội bộ do công ty tự nhập.",
+          "Nhập dòng điện A để chọn dây và thanh đồng. IV/WL1 dùng bảng tham khảo có nguồn; thanh đồng dùng trực tiếp logic tính ở mục Tính toán rồi trả kết quả ngay tại đây. Cột công ty là dữ liệu nội bộ tự nhập.",
         autoSum: "Tổng dòng từ danh sách nhánh",
         autoHint: "Có thể dùng trực tiếp tổng dòng đã lưu ở tab Nhánh (mạch động cơ).",
         use: "Dùng giá trị này",
@@ -57,12 +61,15 @@ export function WireConductorSelectionView({ caseId }: Props) {
         noCompany: "Chưa nhập tiêu chuẩn công ty",
         maxCurrent: "đến {value} A",
         prompt: "Nhập A để xem kết quả.",
+        requiredArea: "Tiết diện yêu cầu",
+        outOfRange: "Ngoài phạm vi bảng tham khảo hiện tại (>630A), không tự ngoại suy.",
+        noBusbarSize: "Đã tính được tiết diện yêu cầu nhưng chưa có kích thước thanh đồng trong master để chọn kích thước thực.",
         note:
-          "IV và WL1 không có một giá trị A duy nhất dùng cho mọi điều kiện. Kết quả cột tham khảo chỉ áp dụng đúng điều kiện ghi bên cạnh; tiêu chuẩn công ty được quản lý riêng trong Cài đặt.",
+          "IV/WL1 phụ thuộc điều kiện lắp đặt và sản phẩm. Với thanh đồng, phần tính kỹ thuật được dùng chung từ mục Tính toán; master kích thước chỉ dùng ở bước chọn kích thước thực tế, không thay thế công thức kỹ thuật.",
       }
     : {
         description:
-          "電流(A)を入力して電線・銅帯を選定します。左列は根拠と適用条件を明記した公開参考値、右列は会社が設定する社内基準です。",
+          "電流(A)から電線・銅帯を選定します。IV/WL1は出典付き参考表、銅帯は「計算」側の技術ロジックをそのまま共用し、この画面内で自動結果を返します。社内基準は会社登録値です。",
         autoSum: "分岐リストからの合計電流",
         autoHint: "分岐（電動機回路）に保存した電流合計をそのまま利用できます。",
         use: "この値を使う",
@@ -78,16 +85,20 @@ export function WireConductorSelectionView({ caseId }: Props) {
         noCompany: "社内基準未登録",
         maxCurrent: "{value} Aまで",
         prompt: "電流(A)を入力して選定してください。",
+        requiredArea: "必要断面積",
+        outOfRange: "現在の参考計算範囲外（630A超）です。延長推定は行いません。",
+        noBusbarSize: "必要断面積は計算済みですが、実サイズを選ぶための銅帯サイズマスタが未登録です。",
         note:
-          "IV/WL1の許容電流は布設条件・周囲温度・製品メーカー等で変わります。左列は表示された条件に限った参考値で、社内採用値は設定画面の社内基準を優先して管理します。",
+          "IV/WL1の許容電流は布設条件・周囲温度・製品メーカー等で変わります。銅帯は「計算」側の技術ロジックを共用し、サイズマスタは技術条件を満たした後の実サイズ選定にだけ使います。",
       };
 
   useEffect(() => {
     let cancelled = false;
-    wireConductorSelectionService
-      .list()
-      .then((list) => {
-        if (!cancelled) setRows(list);
+    Promise.all([wireConductorSelectionService.list(), busbarSizeService.list()])
+      .then(([list, sizes]) => {
+        if (cancelled) return;
+        setRows(list);
+        setBusbarSizes(sizes);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -135,6 +146,19 @@ export function WireConductorSelectionView({ caseId }: Props) {
       ),
     }));
   }, [rows, selectedCurrent]);
+
+  const autoBusbar = useMemo(() => {
+    if (selectedCurrent == null) return null;
+    const required = requiredCrossSectionArea(selectedCurrent);
+    if (!required.inRange) return { inRange: false as const };
+    const candidate = findBusbarCandidates(
+      busbarSizes,
+      required.requiredAreaMm2,
+      selectedCurrent,
+      1,
+    )[0] ?? null;
+    return { inRange: true as const, required, candidate };
+  }, [selectedCurrent, busbarSizes]);
 
   function choose() {
     const value = Number(currentRaw);
@@ -214,61 +238,84 @@ export function WireConductorSelectionView({ caseId }: Props) {
               <thead>
                 <tr>
                   <th style={{ width: "100px" }}>{copy.item}</th>
-                  <th style={{ width: "230px" }}>{copy.reference}</th>
+                  <th style={{ width: "260px" }}>{copy.reference}</th>
                   <th style={{ width: "230px" }}>{copy.company}</th>
                   <th>{copy.basis}</th>
                 </tr>
               </thead>
               <tbody>
-                {results.map((row) => (
-                  <tr key={row.key}>
-                    <td className="font-semibold">{row.label}</td>
-                    <td>
-                      {row.reference ? (
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-mono font-semibold">{row.reference.resultValue}</span>
-                          <span className="text-[10.5px] text-muted">{maxCurrentText(row.reference.currentA)}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-2">{copy.noReference}</span>
-                      )}
-                    </td>
-                    <td>
-                      {row.company ? (
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-mono font-semibold">{row.company.resultValue}</span>
-                          <span className="text-[10.5px] text-muted">{maxCurrentText(row.company.currentA)}</span>
-                        </div>
-                      ) : (
-                        <span className="text-warning">{copy.noCompany}</span>
-                      )}
-                    </td>
-                    <td className="text-[11px]">
-                      {row.reference ? (
-                        <div className="flex flex-col gap-1">
-                          {row.reference.source?.url ? (
-                            <a
-                              href={row.reference.source.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 font-semibold text-accent hover:underline"
-                            >
-                              {row.reference.source.title}
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
+                {results.map((row) => {
+                  const isBusbar = row.key === "busbar";
+                  return (
+                    <tr key={row.key}>
+                      <td className="font-semibold">{row.label}</td>
+                      <td>
+                        {isBusbar ? (
+                          autoBusbar?.inRange ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-mono font-semibold">
+                                {autoBusbar.candidate
+                                  ? `${autoBusbar.candidate.thicknessMm} × ${autoBusbar.candidate.widthMm} mm × ${autoBusbar.candidate.barsPerPhase}`
+                                  : `${copy.requiredArea}: ${autoBusbar.required.requiredAreaMm2.toFixed(2)} mm²`}
+                              </span>
+                              {!autoBusbar.candidate && <span className="text-[10.5px] text-warning">{copy.noBusbarSize}</span>}
+                              <span className="text-[10.5px] text-muted">{copy.requiredArea}: {autoBusbar.required.requiredAreaMm2.toFixed(2)} mm²</span>
+                            </div>
                           ) : (
-                            <span className="font-semibold">{row.reference.source?.title ?? "—"}</span>
-                          )}
-                          {row.reference.conditionLabel && (
-                            <span className="text-muted">{row.reference.conditionLabel}</span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-muted-2">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                            <span className="text-warning">{copy.outOfRange}</span>
+                          )
+                        ) : row.reference ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-mono font-semibold">{row.reference.resultValue}</span>
+                            <span className="text-[10.5px] text-muted">{maxCurrentText(row.reference.currentA)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-2">{copy.noReference}</span>
+                        )}
+                      </td>
+                      <td>
+                        {row.company ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-mono font-semibold">{row.company.resultValue}</span>
+                            <span className="text-[10.5px] text-muted">{maxCurrentText(row.company.currentA)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-warning">{copy.noCompany}</span>
+                        )}
+                      </td>
+                      <td className="text-[11px]">
+                        {isBusbar && autoBusbar?.inRange ? (
+                          <div className="flex flex-col gap-1">
+                            <span className="font-semibold">{autoBusbar.required.source.standard} {autoBusbar.required.source.edition}</span>
+                            <span className="text-muted">{autoBusbar.required.source.reference}</span>
+                            {!autoBusbar.required.source.verified && <span className="text-warning">要確認 / 参考値</span>}
+                          </div>
+                        ) : row.reference ? (
+                          <div className="flex flex-col gap-1">
+                            {row.reference.source?.url ? (
+                              <a
+                                href={row.reference.source.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 font-semibold text-accent hover:underline"
+                              >
+                                {row.reference.source.title}
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            ) : (
+                              <span className="font-semibold">{row.reference.source?.title ?? "—"}</span>
+                            )}
+                            {row.reference.conditionLabel && (
+                              <span className="text-muted">{row.reference.conditionLabel}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-2">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
