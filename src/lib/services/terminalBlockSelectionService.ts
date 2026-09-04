@@ -11,6 +11,7 @@ export interface TerminalBlockSelectionRow {
   model: string;
   ratedCurrentA: number;
   maxWireMm2: number;
+  maxWireLabel?: string;
   screwSize: string;
   voltageLabel?: string;
   sourceTitle?: string;
@@ -25,6 +26,7 @@ export interface TerminalBlockSelectionDraft {
   model: string;
   ratedCurrentA: number;
   maxWireMm2: number;
+  maxWireLabel?: string;
   screwSize: string;
   voltageLabel?: string;
   remarks?: string;
@@ -38,6 +40,7 @@ interface Row {
   model: string;
   rated_current_a: number;
   max_wire_mm2: number;
+  max_wire_label: string | null;
   screw_size: string;
   voltage_label: string | null;
   source_title: string | null;
@@ -55,6 +58,7 @@ function fromRow(row: Row): TerminalBlockSelectionRow {
     model: row.model,
     ratedCurrentA: Number(row.rated_current_a),
     maxWireMm2: Number(row.max_wire_mm2),
+    maxWireLabel: row.max_wire_label ?? undefined,
     screwSize: row.screw_size,
     voltageLabel: row.voltage_label ?? undefined,
     sourceTitle: row.source_title ?? undefined,
@@ -64,6 +68,10 @@ function fromRow(row: Row): TerminalBlockSelectionRow {
   };
 }
 
+/**
+ * 入力電流以上の一般仕様(JIS電線側)定格通電電流を持つ機種から、
+ * 最小定格の候補を返す。同じ定格なら登録順を優先する。
+ */
 export function pickTerminalBlock(
   rows: TerminalBlockSelectionRow[],
   currentA: number,
@@ -114,6 +122,7 @@ export const terminalBlockSelectionService = {
         model: draft.model.trim(),
         rated_current_a: draft.ratedCurrentA,
         max_wire_mm2: draft.maxWireMm2,
+        max_wire_label: draft.maxWireLabel?.trim() || null,
         screw_size: draft.screwSize.trim(),
         voltage_label: draft.voltageLabel?.trim() || null,
         remarks: draft.remarks?.trim() || null,
@@ -137,6 +146,7 @@ export const terminalBlockSelectionService = {
         model: draft.model.trim(),
         rated_current_a: draft.ratedCurrentA,
         max_wire_mm2: draft.maxWireMm2,
+        max_wire_label: draft.maxWireLabel?.trim() || null,
         screw_size: draft.screwSize.trim(),
         voltage_label: draft.voltageLabel?.trim() || null,
         remarks: draft.remarks?.trim() || null,
