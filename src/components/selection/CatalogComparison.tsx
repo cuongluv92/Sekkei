@@ -1,0 +1,28 @@
+'use client';
+import { useEffect, useState } from 'react';
+import { catalogue, emptyValues, effectiveValues, FIELD_LABELS, FIELDS, keyOf, SOURCES, type Correction, type Method, type Voltage, type Maker, type Values } from '@/lib/calc/motorSelection/catalogSelection';
+import { selectionCorrectionService, changedFields } from '@/lib/services/selectionCorrectionService';
+import type { MotorKwSelectionRow } from '@/lib/services/motorKwSelectionService';
+import { SelectionCell } from './SelectionCell';
+
+export function CatalogComparison({kw,voltage,method,phase,company,makerId,onAdopt}:{kw:number;voltage:string;method:Method;phase:string;company:MotorKwSelectionRow|null;makerId:(maker:Maker)=>string|undefined;onAdopt:(row:MotorKwSelectionRow)=>void}) {
+  const [corrections,setCorrections]=useState<Correction[]>([]),[error,setError]=useState(''),[ready,setReady]=useState(false),[ka,setKa]=useState('');
+  useEffect(()=>{let active=true;const reload=async()=>{try{const data=await selectionCorrectionService.list();if(active){setCorrections(data);setError('');setReady(true);}}catch(e){if(active){setReady(false);setError('ユーザー修正値の読み込みに失敗しました。再読込してください。 '+String(e));}}};void reload();window.addEventListener('selection-corrections-updated',reload);window.addEventListener('focus',reload);return()=>{active=false;window.removeEventListener('selection-corrections-updated',reload);window.removeEventListener('focus',reload);};},[]);
+  const supported=phase==='three'&&(voltage==='200V'||voltage==='400V');
+  const kaNumber=ka.trim()!==''&&Number.isFinite(Number(ka))&&Number(ka)>=0?Number(ka):undefined;
+  const key=(maker:Maker)=>({maker,voltage:voltage as Voltage,method,kw});
+  const value=(maker:Maker)=>supported?effectiveValues(key(maker),corrections,kaNumber):emptyValues();
+  const m=value('mitsubishi'),f=value('fuji');
+  const c=emptyValues();
+  if(company){c.load.amps=company.ratedCurrentA??null;c.load.text='';c.starting.amps=company.startingCurrentA??null;c.starting.text='';c.breaker.amps=company.breakerRatedA??null;c.breaker.text=company.breakerModel??'要確認';c.ct.text=company.ctModel??'要確認';c.am.text=company.amRange??'要確認';c.mc.text=company.contactorModel??'要確認';c.thermal.amps=company.thermalSettingA??null;c.thermal.text=company.thermalModel??'要確認';c.inv.text=company.inverterModel??'要確認';}
+  function adopt(maker:Maker,values:Values){const id=makerId(maker);if(!id||!ready||values.load.amps===null)return;onAdopt({id:keyOf(key(maker)),basisKind:maker,manufacturerId:id,phase:'three',voltageClass:voltage as Voltage,startMethod:method,motorKw:kw,ratedCurrentA:values.load.amps,startingCurrentA:values.starting.amps??undefined,breakerRatedA:values.breaker.amps??undefined,breakerModel:values.breaker.text,contactorModel:values.mc.text,thermalModel:values.thermal.text,thermalSettingA:values.thermal.amps??undefined,ctModel:values.ct.text,amRange:values.am.text,inverterModel:values.inv.text,sortOrder:0,remarks:JSON.stringify(values),source:{id:'catalogue',title:corrections.some(x=>keyOf(x)===keyOf(key(maker)))?'ユーザー修正値':'カタログ選定値',url:values.load.source,remarks:values.load.note}});}
+  return <div className="space-y-3">
+    <label className="block max-w-sm text-xs">必要遮断容量（kA）<input className="field-input" type="number" min="0" step="any" value={ka} onChange={e=>setKa(e.target.value)} placeholder="未指定＝遮断器は要確認"/></label>
+    {!supported&&<p className="text-warning">要確認：公式表は三相200/400V用です。</p>}
+    {error&&<p role="alert" className="text-danger text-xs">{error}</p>}
+    {!ready&&<p className="text-warning text-xs">修正値未確認。表示はカタログ参考値、分岐への採用は停止中です。</p>}
+    <div className="data-table-wrap"><table className="data-table table-fixed" style={{minWidth:900}} aria-label="kW選定 比較結果"><thead><tr><th className="w-32">項目</th><th>内線基準</th><th>社内基準</th><th>三菱電機</th><th>富士電機</th></tr></thead><tbody>{FIELDS.map(field=><tr key={field}><th scope="row" className="text-left">{FIELD_LABELS[field]}</th><td><SelectionCell value={{amps:null,text:'要確認',source:SOURCES.jeac.url,note:'JEAC8001-2022 第14版・3705-1/3表 原本未照合。メーカー表の値をJEAC値として扱わない。過電流遮断器とMCCB/ELCBの区分は未確認'}}/></td><td><SelectionCell value={c[field]}/></td><td><SelectionCell value={m[field]}/></td><td><SelectionCell value={f[field]}/></td></tr>)}</tbody></table></div>
+    <div className="grid gap-3 md:grid-cols-2">{(['mitsubishi','fuji'] as Maker[]).map(maker=>{const k=key(maker),correction=corrections.find(x=>keyOf(x)===keyOf(k)),values=maker==='mitsubishi'?m:f;return <div key={maker} className="rounded border border-border p-3 space-y-2"><p className="text-xs">{maker==='mitsubishi'?'三菱電機':'富士電機'} {correction&&`・ユーザー修正値・修正済み ${new Date(correction.updated_at).toLocaleString('ja-JP')}`}</p><button type="button" className="btn-secondary" disabled={!supported||!ready||values.load.amps===null||!makerId(maker)} onClick={()=>adopt(maker,values)}>＋ 分岐回路を追加</button>{values.load.amps===null&&<p className="text-xs text-warning">負荷電流が要確認のため採用できません。</p>}{correction&&<details><summary className="text-xs cursor-pointer">変更前／変更後</summary>{changedFields(correction).map(field=><div key={field} className="border-t border-border py-2"><span>{FIELD_LABELS[field]}</span><div className="grid grid-cols-2 gap-3"><SelectionCell value={correction.before[field]}/><SelectionCell value={correction.values[field]}/></div></div>)}</details>}</div>;})}</div>
+    <details className="text-xs text-muted"><summary>参照資料・カタログ値の条件</summary><ul className="space-y-1 mt-2">{Object.values(SOURCES).map(s=><li key={s.url}><a className="text-accent underline" href={s.url} target="_blank" rel="noreferrer">{s.title}</a></li>)}</ul><p className="mt-2">未照合の値は要確認。MS-T/Nの標準モータ適用表とWS-VのSF-PR選定表は条件が異なります。CT/AMは測定条件、INVはND/HHD負荷定格を確認してください。</p></details>
+  </div>;
+}

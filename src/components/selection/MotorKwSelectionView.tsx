@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { listManufacturers, preloadManufacturers } from "@/lib/mock/manufacturers";
@@ -19,9 +19,9 @@ import type {
   SelectionVoltageClass,
 } from "@/lib/types";
 import { MOTOR_SELECTION_BRANCH_CALCULATION_TYPE } from "./MotorBranchSelectionView";
-import { breakerCandidate, mitsubishiMotorBranchRating } from "@/lib/calc/motorSelection/breakerCatalog";
-import { findFujiScNext } from "@/lib/calc/motorSelection/fujiScNext";
-import { findMitsubishiWsv } from "@/lib/calc/motorSelection/mitsubishiWsv";
+import { CatalogComparison } from "./CatalogComparison";
+import { STANDARD_KW } from "@/lib/calc/motorSelection/catalogSelection";
+import { CORRECTION_PREFIX } from "@/lib/services/selectionCorrectionService";
 
 interface Props { caseId: string; }
 
@@ -39,33 +39,6 @@ interface SavedMotorKwItem extends MotorSelectionBranchItem {
 
 const VOLTAGES: SelectionVoltageClass[] = ["100V", "200V", "400V"];
 const METHODS: SelectionCircuitType[] = ["direct", "starDelta", "inverter"];
-const STANDARD_LINKS = [
-  { label: "内線規程 第14版 JEAC8001-2022", url: "https://store.denki.or.jp/products/%E5%86%85%E7%B7%9A%E8%A6%8F%E7%A8%8B-%E7%AC%AC14%E7%89%88" },
-  { label: "JIS C 8201-1:2024", url: "https://webdesk.jsa.or.jp/books/W11M0090/index/?bunsyo_id=JIS+C+8201-1%3A2024" },
-  { label: "JIS C 8201-2-1:2021", url: "https://webdesk.jsa.or.jp/books/W11M0090/index/?bunsyo_id=JIS+C+8201-2-1%3A2021" },
-  { label: "JIS C 8201-4-1:2023", url: "https://webdesk.jsa.or.jp/books/W11M0090/index/?bunsyo_id=JIS+C+8201-4-1%3A2023" },
-  { label: "JSIA 210:2020", url: "https://www.jsia.or.jp/wp-content/uploads/jsia_admin/media/2023/02/JSIA-210-2020.03-%E9%96%8B%E6%94%BE%E5%BD%A2%E9%AB%98%E5%9C%A7%E5%8F%97%E9%9B%BB%E8%A8%AD%E5%82%99Rev1.pdf" },
-  { label: "JEM 1195:2018", url: "https://www.jema-net.or.jp/engineering/JEM_JEM-TR/JEM1195.html" },
-  { label: "富士 MSスケール SC-NEXT V20250331", url: "https://f-net.fujielectric.co.jp/Catalog/FCS_appli/MSScale_SC-NEXT/MSScale_SC-NEXT.html" },
-];
-
-const NAISEN_200V: Record<number, { conventionalA: number; directBreakerA: number; starDeltaBreakerA?: number }> = {
-  0.2: { conventionalA: 1.8, directBreakerA: 15 },
-  0.4: { conventionalA: 3.2, directBreakerA: 15 },
-  0.75: { conventionalA: 4.8, directBreakerA: 15 },
-  1.5: { conventionalA: 8, directBreakerA: 30 },
-  2.2: { conventionalA: 11.1, directBreakerA: 40 },
-  3.7: { conventionalA: 17.4, directBreakerA: 60 },
-  5.5: { conventionalA: 26, directBreakerA: 100, starDeltaBreakerA: 60 },
-  7.5: { conventionalA: 34, directBreakerA: 125, starDeltaBreakerA: 75 },
-  11: { conventionalA: 48, directBreakerA: 125, starDeltaBreakerA: 125 },
-  15: { conventionalA: 65, directBreakerA: 125, starDeltaBreakerA: 150 },
-  18.5: { conventionalA: 79, directBreakerA: 150, starDeltaBreakerA: 175 },
-  22: { conventionalA: 93, directBreakerA: 175, starDeltaBreakerA: 200 },
-  30: { conventionalA: 124, directBreakerA: 225, starDeltaBreakerA: 300 },
-  37: { conventionalA: 152, directBreakerA: 300, starDeltaBreakerA: 350 },
-};
-
 export function MotorKwSelectionView({ caseId }: Props) {
   const { locale } = useTranslation();
   const [, forceRerender] = useState(0);
@@ -87,7 +60,7 @@ export function MotorKwSelectionView({ caseId }: Props) {
 
   const copy = locale === "vi"
     ? {
-        description: "Nhập công suất kW rồi so sánh Mitsubishi → Fuji → tiêu chuẩn công ty. Mitsubishi được đặt ưu tiên vì là hãng dùng chính. Chỉ hiện dữ liệu có nguồn; ô chưa xác minh sẽ để trống, không suy đoán.",
+        description: "Nhập công suất kW rồi so sánh Mitsubishi → Fuji → tiêu chuẩn công ty. Mitsubishi được đặt ưu tiên vì là hãng dùng chính. Chỉ hiện dữ liệu có nguồn; ô chưa xác minh sẽ ghi 要確認, không suy đoán.",
         name: "Tên mạch / công dụng",
         phase: "Pha",
         voltage: "Điện áp",
@@ -134,7 +107,7 @@ export function MotorKwSelectionView({ caseId }: Props) {
         naisenColumn: "Tiêu chuẩn nội tuyến",
       }
     : {
-        description: "電動機kWから三菱 → 富士 → 社内基準を比較します。通常使用の多い三菱を先頭に表示します。公開一次資料で直接確認できない欄は推定せず空欄にします。",
+        description: "電動機kWから三菱 → 富士 → 社内基準を比較します。通常使用の多い三菱を先頭に表示します。公開一次資料で直接確認できない欄は推定せず要確認にします。",
         name: "回路名・用途",
         phase: "相数",
         voltage: "電圧",
@@ -189,20 +162,10 @@ export function MotorKwSelectionView({ caseId }: Props) {
   );
 
   const rowByBasis = useMemo(() => ({
-    company: matchedRows.find((row) => row.basisKind === "company") ?? null,
+    company: matchedRows.find((row) => row.basisKind === "company" && !row.remarks?.startsWith(CORRECTION_PREFIX)) ?? null,
     mitsubishi: matchedRows.find((row) => row.basisKind === "mitsubishi") ?? null,
     fuji: matchedRows.find((row) => row.basisKind === "fuji") ?? null,
   }), [matchedRows]);
-  const naisen = selectedKw != null && voltage === "200V" ? NAISEN_200V[selectedKw] : undefined;
-  const naisenBreakerA = method === "starDelta" ? naisen?.starDeltaBreakerA : method === "direct" ? naisen?.directBreakerA : undefined;
-  const tableRatedA = method === "direct" && selectedKw != null && (voltage === "200V" || voltage === "400V")
-    ? mitsubishiMotorBranchRating(voltage, selectedKw) : null;
-  const mitsuMccb = tableRatedA ? breakerCandidate(tableRatedA, "mitsubishi", "mccb") : null;
-  const mitsuElcb = tableRatedA ? breakerCandidate(tableRatedA, "mitsubishi", "elcb") : null;
-  const fuji = selectedKw != null && (voltage === "200V" || voltage === "400V") && method !== "inverter" ? findFujiScNext(method, voltage, selectedKw) : null;
-  const mitsu = selectedKw != null && (voltage === "200V" || voltage === "400V") && method !== "inverter" ? findMitsubishiWsv(method, voltage, selectedKw) : null;
-  const fujiThermalLabel = fuji ? method === "starDelta" ? fuji.olrModel : fuji.catalog === "SC-NEXT" ? `${fuji.switchModel?.match(/T\d+$/)?.[0] ?? "ヒートエレメント"}（MS内蔵）` : "MS内蔵ヒートエレメント" : "";
-
   function makerName(id?: string) {
     if (!id) return "—";
     const m = manufacturers.find((item) => item.id === id);
@@ -220,16 +183,9 @@ export function MotorKwSelectionView({ caseId }: Props) {
     return locale === "vi" ? "Biến tần" : "インバータ";
   }
 
-  function emphasizedAmps(value: unknown) {
-    const text = String(value);
-    const match = text.match(/^(\d+(?:\.\d+)?\s*A)(?=$|[（\n])/);
-    if (!match) return text;
-    return <><strong className="font-mono text-[13px] font-extrabold">{match[1]}</strong>{text.slice(match[1].length)}</>;
-  }
-
   useEffect(() => {
     preloadManufacturers().then(() => forceRerender((v) => v + 1));
-    motorKwSelectionService.list().then(setRows).finally(() => setLoading(false));
+    motorKwSelectionService.list().then(setRows).catch(() => setRows([])).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -263,7 +219,7 @@ export function MotorKwSelectionView({ caseId }: Props) {
 
   function choose() {
     const value = Number(kwRaw);
-    if (!Number.isFinite(value) || value <= 0) return;
+    if (!Number.isFinite(value) || value < 0.1) return;
     setSelectedKw(value);
   }
 
@@ -343,8 +299,8 @@ export function MotorKwSelectionView({ caseId }: Props) {
         <label><span className="field-label">{copy.phase}</span><select className="field-input" value={phase} onChange={(e) => { setPhase(e.target.value as MotorKwPhase); setSelectedKw(null); }}><option value="three">{locale === "vi" ? "3 pha" : "三相"}</option><option value="single">{locale === "vi" ? "1 pha" : "単相"}</option></select></label>
         <label><span className="field-label">{copy.voltage}</span><select className="field-input" value={voltage} onChange={(e) => { setVoltage(e.target.value as SelectionVoltageClass); setSelectedKw(null); }}>{VOLTAGES.map((v) => <option key={v} value={v}>{v}</option>)}</select></label>
         <label><span className="field-label">{copy.method}</span><select className="field-input" value={method} onChange={(e) => { setMethod(e.target.value as SelectionCircuitType); setSelectedKw(null); }}>{METHODS.map((m) => <option key={m} value={m}>{methodLabel(m)}</option>)}</select></label>
-        <label><span className="field-label">{copy.kw}</span><input className="field-input font-mono" type="number" min={0} step="any" value={kwRaw} onChange={(e) => setKwRaw(e.target.value)} onKeyDown={(e) => e.key === "Enter" && choose()} placeholder="例）5.5" /></label>
-        <button type="button" className="btn-primary" onClick={choose} disabled={Number(kwRaw) <= 0}>{copy.choose}</button>
+        <label><span className="field-label">{copy.kw}</span><input className="field-input font-mono" type="number" min={0.1} step="any" list="selection-kw" value={kwRaw} onChange={(e) => setKwRaw(e.target.value)} onKeyDown={(e) => e.key === "Enter" && choose()} placeholder="例）0.1" /><datalist id="selection-kw">{[...new Set([...STANDARD_KW, ...rows.map(r => r.motorKw)])].sort((a,b)=>a-b).map(n=><option key={n} value={n}/>)}</datalist></label>
+        <button type="button" className="btn-primary" onClick={choose} disabled={!Number.isFinite(Number(kwRaw)) || Number(kwRaw) < 0.1}>{copy.choose}</button>
       </div>
 
       <section className="rounded-lg border border-border bg-muted/5 p-3">
@@ -363,25 +319,7 @@ export function MotorKwSelectionView({ caseId }: Props) {
         {selectedKw == null ? (
           <p className="mt-2 text-[11px] text-muted-2">{locale === "vi" ? "Nhập kW và nhấn Tra chọn." : "kWを入力して「選定する」を押してください。"}</p>
         ) : (
-          <div className="data-table-wrap mt-3">
-            <table className="data-table table-fixed" style={{ minWidth: 900 }}>
-              <thead><tr><th className="w-32" /><th>{copy.naisenColumn}</th><th>{copy.company}</th><th>三菱電機</th><th>富士電機</th></tr></thead>
-              <tbody>
-                {[
-                  ["負荷電流", naisen ? `${naisen.conventionalA} A（公開資料の参考値・要原本照合）` : "対象値なし", rowByBasis.company?.ratedCurrentA != null ? `${rowByBasis.company.ratedCurrentA} A` : "—", mitsu ? `${mitsu.ratedCurrentA} A` : rowByBasis.mitsubishi?.ratedCurrentA != null ? `${rowByBasis.mitsubishi.ratedCurrentA} A` : "—", fuji ? `${fuji.ratedCurrentA} A` : rowByBasis.fuji?.ratedCurrentA != null ? `${rowByBasis.fuji.ratedCurrentA} A` : "—"],
-                  ["定格電流", naisenBreakerA ? `${naisenBreakerA} A（過電流遮断器の参考値・型式区分なし・要原本照合）` : "対象値なし", rowByBasis.company?.breakerRatedA != null ? `${rowByBasis.company.breakerRatedA} A\nMCCB: ${rowByBasis.company.breakerModel ?? "型番未登録"}\nELCB: 型番未登録` : "未登録", method === "inverter" ? "インバータ入力側機器表を参照" : mitsuMccb && mitsuElcb && tableRatedA ? `${tableRatedA} A\nMCCB: ${mitsuMccb.model}\nELCB: ${mitsuElcb.model}` : rowByBasis.mitsubishi?.breakerModel ?? "メーカー表を確認", method === "inverter" ? "インバータ入力側機器表を参照" : fuji?.mccb && fuji?.elcb ? `${fuji.mccb[1]}\nMCCB: ${fuji.mccb[0]}\nELCB: ${fuji.elcb[0]}` : "SC-NEXT適用外"],
-                  ["CT", "—", rowByBasis.company?.ctModel ?? "—", rowByBasis.mitsubishi?.ctModel ?? "—", rowByBasis.fuji?.ctModel ?? "—"],
-                  ["AM", "—", rowByBasis.company?.amRange ?? "—", rowByBasis.mitsubishi?.amRange ?? "—", rowByBasis.fuji?.amRange ?? "—"],
-                  ["MC", "JIS C 8201-4-1", rowByBasis.company?.contactorModel ?? "—", method === "inverter" ? "—（入力側MCは運用条件による）" : method === "starDelta" && mitsu ? `MC-M: ${mitsu.mainContactor}\nMC-S: ${mitsu.starContactor}\nMC-Δ: ${mitsu.deltaContactor}` : mitsu ? `${mitsu.ratedCurrentA} A\n${mitsu.contactorModel}` : "要確認", method === "inverter" ? "—（入力側MCは運用条件による）" : method === "starDelta" && fuji ? `MC-M: ${fuji.mainContactor}\nMC-S: ${fuji.starContactor}\nMC-Δ: ${fuji.deltaContactor}` : fuji ? `${fuji.ratedCurrentA} A\n${fuji.switchModel}` : "メーカー選定表に該当なし"],
-                  ["サーマル リレー", "JIS C 8201-4-1", rowByBasis.company?.thermalModel ?? "—", method === "inverter" ? "—（電子サーマル設定）" : mitsu ? `${mitsu.heaterA} A（${mitsu.heaterRange} A）\n${mitsu.thermalModel}` : "要確認", method === "inverter" ? "—（電子サーマル設定）" : fuji ? `${fuji.ratedCurrentA} A（${fuji.heatRange}）\n${fujiThermalLabel}` : "メーカー選定表に該当なし"],
-                ].map(([title, ...values]) => <tr key={title}><th className="whitespace-normal text-left">{title}</th>{values.map((value, index) => <td key={index} className="whitespace-pre-line align-top text-[11px] leading-relaxed">{emphasizedAmps(value)}</td>)}</tr>)}
-                <tr><th /><td>{copy.standardsNote}</td>{(["company", "mitsubishi", "fuji"] as const).map((basis) => <td key={basis}>{rowByBasis[basis] ? <button type="button" className="btn-secondary w-full justify-center" onClick={() => adopt(rowByBasis[basis]!)} disabled={!rowByBasis[basis]?.manufacturerId}><Plus className="h-3.5 w-3.5" />{copy.adopt}</button> : <span className="text-warning">{basis === "company" ? copy.companyMissing : copy.noData}</span>}</td>)}</tr>
-              </tbody>
-            </table>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 px-1">
-              {STANDARD_LINKS.map((item) => <a key={item.label} href={item.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-accent hover:underline">{item.label}<ExternalLink className="h-3 w-3" /></a>)}
-            </div>
-          </div>
+          <CatalogComparison kw={selectedKw} voltage={voltage} method={method} phase={phase} company={rowByBasis.company} makerId={maker=>manufacturers.find(m=>m.name===(maker==='mitsubishi'?'三菱電機':'富士電機'))?.id} onAdopt={adopt} />
         )}
       </section>
 

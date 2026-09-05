@@ -6,6 +6,7 @@ import { navItems } from "@/lib/nav";
 import { LanguageSwitcher } from "@/components/settings/LanguageSwitcher";
 import { BackupSettings } from "@/components/settings/BackupSettings";
 import { PageHeader } from "@/components/common/PageHeader";
+import { SelectionDataEditor } from '@/components/settings/SelectionDataEditor';
 
 /**
  * Every feature-specific settings that used to live here (設計管理設定,
@@ -37,6 +38,7 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("settings.title")} description={t("settings.description")} />
+      <details className="panel p-4"><summary className="cursor-pointer font-semibold">選定データ編集</summary><div className="mt-4"><SelectionDataEditor /></div></details>
 
       <div className="panel">
         <div className="panel-header">

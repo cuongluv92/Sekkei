@@ -2,6 +2,8 @@
 
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { SelectionDataEditor } from './SelectionDataEditor';
+import { CORRECTION_PREFIX } from '@/lib/services/selectionCorrectionService';
 import { useTranslation } from "@/lib/i18n";
 import { listManufacturers, preloadManufacturers } from "@/lib/mock/manufacturers";
 import {
@@ -105,7 +107,7 @@ export function MotorKwSelectionSettings() {
 
   async function reload() {
     const all = await motorKwSelectionService.list();
-    setRows(all.filter((row) => row.basisKind === "company"));
+    setRows(all.filter((row) => row.basisKind === "company" && !row.remarks?.startsWith(CORRECTION_PREFIX)));
   }
 
   useEffect(() => {
@@ -193,6 +195,7 @@ export function MotorKwSelectionSettings() {
 
   return (
     <div className="flex flex-col gap-4">
+      <SelectionDataEditor />
       <div>
         <div className="panel-title">{copy.title}</div>
         <p className="mt-1 text-[11px] text-muted">{copy.description}</p>
