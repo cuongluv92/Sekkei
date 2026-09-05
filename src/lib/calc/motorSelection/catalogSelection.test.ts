@@ -24,6 +24,10 @@ describe('catalogue selection across all powers',()=>{
     expect(catalogue({...base,voltage:'400V'},30).breaker.amps).toBeNull();
     expect(catalogue(base).breaker.amps).toBeNull();expect(catalogue(base,5).breaker.text).toContain('NF63-CV');
   });
+  it.each(['mitsubishi','fuji'] as const)('shows main, star and delta contactors separately for %s star-delta',maker=>{
+    for(const voltage of ['200V','400V'] as const){const mc=catalogue({...base,maker,voltage,method:'starDelta'}).mc.text;expect(mc).toMatch(/^MC-M:/m);expect(mc).toMatch(/^MC-S:/m);expect(mc).toMatch(/^MC-Δ:/m);}
+  });
+  it.each(['mitsubishi','fuji'] as const)('shows one MC above and two MCs below INV for star operation with %s',maker=>{const mc=catalogue({...base,maker,method:'inverter'}).mc;expect(mc.text.split('\n')).toEqual(['MC1（INV上流）: 要確認','MC1（INV下流・スター）: 要確認','MC2（INV下流・スター）: 要確認']);});
   it('uses exact relay call/range and does not relabel load current as a heater',()=>{
     const v=catalogue(base);expect(v.load.amps).toBe(22.3);expect(v.thermal).toMatchObject({amps:22,text:'（18～26 A）\nTH-T25'});
     expect(catalogue({...base,maker:'fuji'}).thermal.amps).toBeNull();

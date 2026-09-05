@@ -88,7 +88,7 @@ export function catalogue(k: SelectionKey, requiredKa?: number): Values {
     if(v.load.amps===null) v.load.note='インバータ入力/出力の測定位置とモータ銘板電流を確認';
     v.starting.note='加速時間・負荷トルク・電流制限による。直入始動の値を転用しない';
     v.breaker.note='INV入力側周辺機器表・DCR有無・必要遮断容量を確認';
-    v.mc.note='入力側MCは運転/停止方式と周辺機器表を確認';
+    v.mc=cell(null,'MC1（INV上流）: 要確認\nMC1（INV下流・スター）: 要確認\nMC2（INV下流・スター）: 要確認','', 'スター運転時はINV上流にMC1、INV下流にMC1とMC2を個別指定。運転/停止方式、商用切替、インターロック、メーカー周辺機器表を確認');
     v.thermal.note='電子サーマル設定・外付け保護要否を確認';
     return v;
   }
