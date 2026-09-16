@@ -52,14 +52,30 @@ import type { DesignCase } from "@/lib/types/design";
 export function CaseSelector({
   autoNumberDrawingNumber = false,
   suppress = true,
+  caseIdOverride,
 }: {
   autoNumberDrawingNumber?: boolean;
   /** Pass `false` to show the already-active 案件 immediately instead of forcing a fresh pick on every mount — see `useEffectiveCaseId`. Defaults to `true` (existing behavior) for every caller except 部品製作. */
   suppress?: boolean;
+  /**
+   * When provided, this exact value is shown/acted on instead of this
+   * component's own `useEffectiveCaseId(suppress)` result. For callers
+   * (currently only DesignView) that already compute their own
+   * URL-aware effective 案件 id and must keep this selector's display in
+   * lockstep with it — two independent `useEffectiveCaseId` instances
+   * mounted at the same time can settle on different suppression states
+   * for the same underlying 案件 (e.g. right after the async localStorage
+   * restore resolves to a value that happens to already match the URL,
+   * one instance can re-suppress a split second after the other reveals
+   * it), which made this selector flicker to "案件未選択"/lose its
+   * 選択解除 button even while the page below it kept showing a 案件.
+   */
+  caseIdOverride?: string;
 } = {}) {
   const { t } = useTranslation();
   const { setCaseId, dirty, runSaveHandler } = useActiveCase();
-  const caseId = useEffectiveCaseId(suppress);
+  const internalCaseId = useEffectiveCaseId(suppress);
+  const caseId = caseIdOverride !== undefined ? caseIdOverride : internalCaseId;
   const [options, setOptions] = useState<CaseOption[]>([]);
   const [loaded, setLoaded] = useState(false);
   // Always starts collapsed — even with no 案件 selected yet — so this

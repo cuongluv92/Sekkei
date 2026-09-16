@@ -45,7 +45,11 @@ export function DesignView() {
   const tab: DesignTopTab = isDesignTopTab(tabParam)
     ? tabParam
     : "designRequest";
-  const { caseId: activeCaseId, setCaseId: setActiveCaseId } = useActiveCase();
+  const {
+    caseId: activeCaseId,
+    setCaseId: setActiveCaseId,
+    loading: activeCaseLoading,
+  } = useActiveCase();
   const usesWorkspace = tab === "designRequest" || tab === "productionRequest";
   // 設計依頼書/製作依頼書 must never silently jump straight into whatever 案件
   // was left active elsewhere — opening either tab always starts at the
@@ -71,35 +75,48 @@ export function DesignView() {
     [router, searchParams, tab, caseId],
   );
 
-  // URLの`case`と、この画面が表示しているsuppression考慮済みの実質案件
-  // (effectiveActiveCaseId)を双方向で同期する。レンダー間で「どちらが
-  // 実際に変わったか」を見て向きを決める — 以前は常にURL→activeCaseIdの
-  // 一方向だったため、CaseSelectorの「選択解除」でactiveCaseIdを空にして
-  // もURLの`case`が古い値のまま残り、この効果が「URLの方が正しい」と
-  // 判断して即座に元の案件へ戻してしまい、選択解除が全く効かない不具合が
+  // URLの`case`と、生のactiveCaseId(抑制なし)を双方向で同期する。レンダー間
+  // で「どちらが実際に変わったか」を見て向きを決める — 以前は常にURL→
+  // activeCaseIdの一方向だったため、CaseSelectorの「選択解除」でactiveCaseId
+  // を空にしてもURLの`case`が古い値のまま残り、この効果が「URLの方が正しい」
+  // と判断して即座に元の案件へ戻してしまい、選択解除が全く効かない不具合が
   // あった(戻る際は必ずURLが変わる=urlChangedなので、通常のディープ
   // リンク/Global Searchの「この案件を開く」動作はそのまま壊れない)。
+  // 判定にsuppression考慮済みのeffectiveActiveCaseIdではなく生のactiveCaseId
+  // を使う — URLの案件がlocalStorageの復元値とたまたま一致した場合、
+  // useEffectiveCaseId側の抑制がずっと外れないままになり得るため、それを
+  // 「変化なし」と誤判定して選択解除がURLへ反映されない不具合があった。
+  // ActiveCaseProvider のlocalStorage復元(loading)が終わるまでは実行しない
+  // — 復元前に書き込むとuseEffectiveCaseId側の抑制判定と競合するため。
   const prevCaseIdParamRef = useRef(caseIdParam);
-  const prevEffectiveRef = useRef(effectiveActiveCaseId);
+  const prevActiveCaseIdRef = useRef(activeCaseId);
   const firstSyncRef = useRef(true);
   useEffect(() => {
+    if (activeCaseLoading) return;
     const first = firstSyncRef.current;
     firstSyncRef.current = false;
     const urlChanged = first
       ? Boolean(caseIdParam)
       : caseIdParam !== prevCaseIdParamRef.current;
-    const localChanged = !first && effectiveActiveCaseId !== prevEffectiveRef.current;
+    const localChanged = !first && activeCaseId !== prevActiveCaseIdRef.current;
     prevCaseIdParamRef.current = caseIdParam;
-    prevEffectiveRef.current = effectiveActiveCaseId;
+    prevActiveCaseIdRef.current = activeCaseId;
 
-    if (caseIdParam === effectiveActiveCaseId) return;
+    if (caseIdParam === activeCaseId) return;
 
     if (urlChanged) {
-      if (caseIdParam !== activeCaseId) setActiveCaseId(caseIdParam);
+      setActiveCaseId(caseIdParam);
     } else if (localChanged && usesWorkspace) {
-      setParams({ case: effectiveActiveCaseId });
+      setParams({ case: activeCaseId });
     }
-  }, [caseIdParam, effectiveActiveCaseId, activeCaseId, usesWorkspace, setActiveCaseId, setParams]);
+  }, [
+    caseIdParam,
+    activeCaseId,
+    activeCaseLoading,
+    usesWorkspace,
+    setActiveCaseId,
+    setParams,
+  ]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -127,7 +144,10 @@ export function DesignView() {
               {/* Only 設計依頼書 auto-numbers 図面番号 — 製作依頼書 shares this
                   same workspace bar but must require manual entry like every
                   other 案件-creation entry point in the app. */}
-              <CaseSelector autoNumberDrawingNumber={tab === "designRequest"} />
+              <CaseSelector
+                autoNumberDrawingNumber={tab === "designRequest"}
+                caseIdOverride={caseId}
+              />
             </div>
             <Link href="/design/search" className="btn-secondary shrink-0">
               <SearchIcon className="h-3.5 w-3.5" />
