@@ -41,6 +41,7 @@ import { Modal } from "@/components/common/Modal";
 import { Toast } from "@/components/common/Toast";
 import { PartTemplateSettings } from "@/components/settings/PartTemplateSettings";
 import type { PartAssemblyRow, SearchResultItem } from "@/lib/types";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 const BLANK_ROW: Omit<PartAssemblyRow, "id"> = {
   symbol: "",
@@ -457,7 +458,7 @@ function PartAssemblyView() {
 
             {activeTab === "list" && (
               <>
-            <div className="data-table-wrap">
+            <ScrollTopSync className="data-table-wrap">
               <table className="data-table" style={{ minWidth: 1260 }}>
                 <thead>
                   <tr>
@@ -658,7 +659,7 @@ function PartAssemblyView() {
                   )}
                 </tbody>
               </table>
-            </div>
+            </ScrollTopSync>
 
             <div className="flex items-center justify-between border-t border-border px-4 py-3">
               <span className="text-[11px] text-muted-2">

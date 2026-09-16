@@ -14,6 +14,7 @@ import {
   findEarthBarAutoCandidates,
 } from "@/lib/calc/earthBar/adiabaticSelection";
 import type { EarthBarSize, EarthWireSize } from "@/lib/types";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 interface Props {
   currentA?: number | null;
@@ -176,7 +177,7 @@ export function GroundingSelectionView({ currentA, hideCurrentInput = false }: P
 
           {wireResult ? (
             wireResult.required.applicable ? (
-              <div className="data-table-wrap">
+              <ScrollTopSync className="data-table-wrap">
                 <table className="data-table" style={{ minWidth: 620 }}>
                   <thead><tr><th>{copy.required}</th><th>{copy.adopted}</th><th>{copy.source}</th></tr></thead>
                   <tbody><tr>
@@ -194,7 +195,7 @@ export function GroundingSelectionView({ currentA, hideCurrentInput = false }: P
                     </td>
                   </tr></tbody>
                 </table>
-              </div>
+              </ScrollTopSync>
             ) : (
               <div className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2.5 text-[11px] text-muted">
                 <p>{unsupportedText}</p>
@@ -237,7 +238,7 @@ export function GroundingSelectionView({ currentA, hideCurrentInput = false }: P
           <div className="mt-3">
             <div className="mb-1 panel-title">{copy.result}</div>
             {barResult ? (
-              <div className="data-table-wrap">
+              <ScrollTopSync className="data-table-wrap">
                 <table className="data-table" style={{ minWidth: 720 }}>
                   <thead><tr><th>{copy.formula}</th><th>{copy.required}</th><th>{copy.candidate}</th><th>{copy.margin}</th></tr></thead>
                   <tbody><tr>
@@ -253,7 +254,7 @@ export function GroundingSelectionView({ currentA, hideCurrentInput = false }: P
                     </td>
                   </tr></tbody>
                 </table>
-              </div>
+              </ScrollTopSync>
             ) : (
               <p className="text-[11px] text-muted-2">{copy.needInputs}</p>
             )}

@@ -12,6 +12,7 @@ import {
 } from "@/lib/services/design";
 import { buildCaseDisplayLabel, buildProjectPanelLines } from "@/lib/utils/designNumbering";
 import { DateInput } from "@/components/common/DateInput";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 import {
   addMonths,
   buildDayColorLookupByRow,
@@ -612,7 +613,7 @@ export function ScheduleTimeline() {
             {t("design.ledger.empty")}
           </p>
         ) : (
-          <div ref={scrollContainerRef} className="overflow-x-auto">
+          <ScrollTopSync ref={scrollContainerRef} className="table-scroll-wrap overflow-x-auto">
             <table
               className="border-collapse text-[12px]"
               style={{ tableLayout: "fixed" }}
@@ -775,7 +776,7 @@ export function ScheduleTimeline() {
                 })}
               </tbody>
             </table>
-          </div>
+          </ScrollTopSync>
         )}
       </div>
       {message && <div className="text-[12px] text-success">{message}</div>}

@@ -3,6 +3,7 @@
 import { Check } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import type { HighCurrentBusbarCandidate } from "@/lib/calc/busbar/highCurrentCandidateSearch";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 interface HighCurrentBusbarCandidateListProps {
   candidates: HighCurrentBusbarCandidate[];
@@ -53,7 +54,7 @@ export function HighCurrentBusbarCandidateList({
       <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-[11.5px] text-warning">
         {t("busbarCalc.highCurrentCandidateDisclaimer")}
       </p>
-      <div className="data-table-wrap">
+      <ScrollTopSync className="data-table-wrap">
         <table className="data-table" style={{ minWidth: 680 }}>
           <thead>
             <tr>
@@ -115,7 +116,7 @@ export function HighCurrentBusbarCandidateList({
             })}
           </tbody>
         </table>
-      </div>
+      </ScrollTopSync>
     </div>
   );
 }

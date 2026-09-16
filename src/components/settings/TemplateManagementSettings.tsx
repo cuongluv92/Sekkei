@@ -7,6 +7,7 @@ import { designTemplateService } from "@/lib/services/design";
 import { getPublicUrl } from "@/lib/supabase/storage";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import { DESIGN_TEMPLATE_KINDS, type DesignTemplateKind, type DesignTemplateVersion } from "@/lib/types/design";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 const KIND_ACCEPT: Record<DesignTemplateKind, string> = {
   designRequestForm: ".xlsx",
@@ -107,7 +108,7 @@ export function TemplateManagementSettings({ kinds }: { kinds?: DesignTemplateKi
       <p className="text-[12px] text-muted">{t("settings.templateManagement.description")}</p>
       <p className="text-[11.5px] text-muted-2">{t("settings.templateManagement.dwgNote")}</p>
 
-      <div className="data-table-wrap">
+      <ScrollTopSync className="data-table-wrap">
         <table className="data-table" style={{ minWidth: 640 }}>
           <thead>
             <tr>
@@ -207,7 +208,7 @@ export function TemplateManagementSettings({ kinds }: { kinds?: DesignTemplateKi
             })}
           </tbody>
         </table>
-      </div>
+      </ScrollTopSync>
 
       {error && <p className="text-[12px] text-danger">{error}</p>}
       {message && <div className="text-[12px] text-success">{message}</div>}

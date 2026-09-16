@@ -7,7 +7,6 @@ import { ActiveCaseProvider } from "@/lib/store/ActiveCaseProvider";
 import { PartAssemblyProvider } from "@/lib/store/PartAssemblyProvider";
 import { AppShell } from "@/components/layout/AppShell";
 import { WelcomeIntro } from "@/components/layout/WelcomeIntro";
-import { TableTopScrollSync } from "@/components/common/TableTopScrollSync";
 
 // Primary UI font for Latin text/numbers — bolder, rounder letterforms.
 // Japanese glyphs (not covered by this font) fall through to Noto Sans JP
@@ -56,7 +55,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider>
           <LanguageProvider>
             <WelcomeIntro />
-            <TableTopScrollSync />
             <ActiveCaseProvider>
               <PartAssemblyProvider>
                 <AppShell>{children}</AppShell>

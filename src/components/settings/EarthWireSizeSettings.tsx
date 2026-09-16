@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { earthWireSizeService } from "@/lib/services";
 import type { EarthWireSize } from "@/lib/types";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 /** 接地線選定マスタ backing 接地線's candidate search — starts empty, entered only here (company-preferred sizes, never a technical/standard value). */
 export function EarthWireSizeSettings() {
@@ -48,7 +49,7 @@ export function EarthWireSizeSettings() {
         {t("earthWireSizeSettings.description")}
       </p>
 
-      <div className="data-table-wrap">
+      <ScrollTopSync className="data-table-wrap">
         <table className="data-table" style={{ minWidth: 260 }}>
           <thead>
             <tr>
@@ -96,7 +97,7 @@ export function EarthWireSizeSettings() {
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollTopSync>
 
       <div className="flex flex-wrap items-end gap-2.5 border-t border-border pt-3">
         <div>

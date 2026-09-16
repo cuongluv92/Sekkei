@@ -12,6 +12,7 @@ import {
   type MotorKwSelectionRow,
 } from "@/lib/services";
 import type { SelectionCircuitType, SelectionVoltageClass } from "@/lib/types";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 const EMPTY: MotorKwSelectionDraft = {
   manufacturerId: "",
@@ -258,7 +259,7 @@ export function MotorKwSelectionSettings() {
       {rows.length === 0 ? (
         <p className="text-[11px] text-muted-2">{copy.empty}</p>
       ) : (
-        <div className="data-table-wrap">
+        <ScrollTopSync className="data-table-wrap">
           <table className="data-table" style={{ minWidth: 1600 }}>
             <thead><tr><th>{copy.maker}</th><th>{copy.phase}</th><th>{copy.voltage}</th><th>{copy.method}</th><th>{copy.kw}</th><th>{copy.rated}</th><th>{copy.breaker}</th><th>{copy.contactor}</th><th>{copy.inverter}</th><th>{copy.wire}</th><th>{copy.ct}</th><th>{copy.am}</th><th>{copy.remarks}</th><th /></tr></thead>
             <tbody>{rows.map((row) => (
@@ -268,7 +269,7 @@ export function MotorKwSelectionSettings() {
               </tr>
             ))}</tbody>
           </table>
-        </div>
+        </ScrollTopSync>
       )}
     </div>
   );

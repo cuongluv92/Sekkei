@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { selectionRuleService } from "@/lib/services/selectionRuleService";
 import type { SelectionOutputKey, SelectionRule } from "@/lib/types";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 const OUTPUT_KEYS: SelectionOutputKey[] = [
   "breaker",
@@ -58,7 +59,7 @@ export function SelectionRuleSettings() {
     <div className="flex flex-col gap-3">
       <p className="text-[12px] text-muted">{t("selectionSettings.description")}</p>
 
-      <div className="data-table-wrap">
+      <ScrollTopSync className="data-table-wrap">
         <table className="data-table" style={{ minWidth: 900 }}>
           <thead>
             <tr>
@@ -111,7 +112,7 @@ export function SelectionRuleSettings() {
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollTopSync>
 
       <div className="grid grid-cols-2 gap-2.5 border-t border-border pt-3 sm:grid-cols-3 lg:grid-cols-7 lg:items-end">
         <div>

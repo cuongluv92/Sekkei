@@ -6,6 +6,7 @@ import { listManufacturers } from "@/lib/mock/manufacturers";
 import { findAllowablePulloutKn } from "@/lib/calc/seismic/anchorAllowableLookup";
 import { BOLT_SHANK_AREA_MM2, judgeAnchorBolt } from "@/lib/calc/seismic/boltStress";
 import type { BoltDiameter, BoltMaterial, SeismicAnchorAllowable } from "@/lib/types";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 const BOLT_DIAMETERS: BoltDiameter[] = ["M8", "M10", "M12", "M16", "M20", "M24"];
 const BOLT_MATERIALS: BoltMaterial[] = ["ss400", "stainless"];
@@ -156,7 +157,7 @@ export function AnchorBoltSection({ value, onChange, allowables, pulloutForceKn,
         <span className="text-[11px] text-muted-2">{t("seismicCalc.section3AutoHint")}</span>
       </div>
 
-      <div className="data-table-wrap">
+      <ScrollTopSync className="data-table-wrap">
         <table className="data-table" style={{ minWidth: 640 }}>
           <thead>
             <tr>
@@ -187,7 +188,7 @@ export function AnchorBoltSection({ value, onChange, allowables, pulloutForceKn,
             </tr>
           </tbody>
         </table>
-      </div>
+      </ScrollTopSync>
 
       {judgement && (
         <div className={judgement.overallOk ? "rounded-md border border-success/40 bg-success/10 px-3 py-2" : "rounded-md border border-danger/40 bg-danger/10 px-3 py-2"}>

@@ -7,6 +7,7 @@ import { calculationDefinitions } from "@/lib/mock/calculationDefinitions";
 import { calculationTemplateService } from "@/lib/services";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { CalculationTemplate } from "@/lib/types";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 interface CalculationTemplateSettingsProps {
   /** Which calculation keys to show a row for. Defaults to every registered calculation. */
@@ -53,7 +54,7 @@ export function CalculationTemplateSettings({
       <p className="text-[12px] text-muted">
         {t("settings.templateDescription")}
       </p>
-      <div className="data-table-wrap">
+      <ScrollTopSync className="data-table-wrap">
         <table className="data-table" style={{ minWidth: 560 }}>
           <thead>
             <tr>
@@ -100,7 +101,7 @@ export function CalculationTemplateSettings({
             })}
           </tbody>
         </table>
-      </div>
+      </ScrollTopSync>
       {message && <div className="text-[12px] text-success">{message}</div>}
     </div>
   );

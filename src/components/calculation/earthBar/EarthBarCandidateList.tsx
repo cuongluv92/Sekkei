@@ -4,6 +4,7 @@ import { Check, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import type { EarthBarCandidate } from "@/lib/calc/earthBar/candidateSearch";
 import type { AdoptedEarthBar } from "./EarthBarCalculationView";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 interface EarthBarCandidateListProps {
   candidates: EarthBarCandidate[];
@@ -44,7 +45,7 @@ export function EarthBarCandidateList({
   }
 
   return (
-    <div className="data-table-wrap">
+    <ScrollTopSync className="data-table-wrap">
       <table className="data-table" style={{ minWidth: 640 }}>
         <thead>
           <tr>
@@ -101,6 +102,6 @@ export function EarthBarCandidateList({
           })}
         </tbody>
       </table>
-    </div>
+    </ScrollTopSync>
   );
 }

@@ -19,6 +19,7 @@ import { EditCaseModal } from "@/components/common/EditCaseModal";
 import { Modal } from "@/components/common/Modal";
 import { LedgerImportModal } from "@/components/design/LedgerImportModal";
 import type { CaseStatus, DesignCase, DesignCaseWithPanels } from "@/lib/types/design";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 /** Row background per ②図面管理台帳 H1 legend — real colors from the template, not invented. */
 const CASE_STATUS_ROW_CLASS: Record<CaseStatus, string> = {
@@ -247,7 +248,7 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
           </div>
         </div>
       ) : (
-        <div className="flex items-start gap-3 overflow-x-auto pb-1">
+        <ScrollTopSync className="table-scroll-wrap flex items-start gap-3 overflow-x-auto pb-1">
           {yearBlocks.map(({ year, cases }) => (
             <div key={year} className="panel shrink-0" style={{ width: 1480 }}>
               <div className="panel-header-compact">
@@ -281,7 +282,7 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                   </button>
                 </div>
               </div>
-              <div className="data-table-wrap">
+              <ScrollTopSync className="data-table-wrap">
                 <table className="data-table" style={{ minWidth: 1440 }}>
                   <thead>
                     <tr>
@@ -379,10 +380,10 @@ export function CaseLedgerTable({ filter }: CaseLedgerTableProps) {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollTopSync>
             </div>
           ))}
-        </div>
+        </ScrollTopSync>
       )}
       {message && <div className="text-[12px] text-success">{message}</div>}
 

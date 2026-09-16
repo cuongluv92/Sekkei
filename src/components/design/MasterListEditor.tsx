@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { masterListService } from "@/lib/services/design";
 import type { MasterListItem } from "@/lib/types/design";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 const DESIGN_MASTER_LIST_KEYS = [
   "requestType",
@@ -117,7 +118,7 @@ export function MasterListEditor({ keys = DESIGN_MASTER_LIST_KEYS, namespace = "
         </select>
       </div>
 
-      <div className="data-table-wrap">
+      <ScrollTopSync className="data-table-wrap">
         <table className="data-table" style={{ minWidth: 480 }}>
           <thead>
             <tr>
@@ -214,7 +215,7 @@ export function MasterListEditor({ keys = DESIGN_MASTER_LIST_KEYS, namespace = "
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollTopSync>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
         <input

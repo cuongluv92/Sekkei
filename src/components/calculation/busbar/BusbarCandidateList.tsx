@@ -5,6 +5,7 @@ import { useTranslation } from "@/lib/i18n";
 import type { BusbarCandidate } from "@/lib/calc/busbar/candidateSearch";
 import { maxCurrentForArea } from "@/lib/calc/busbar/currentDensityRule";
 import type { AdoptedBusbar } from "./BusbarCalculationView";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 interface BusbarCandidateListProps {
   candidates: BusbarCandidate[];
@@ -54,7 +55,7 @@ export function BusbarCandidateList({
   }
 
   return (
-    <div className="data-table-wrap">
+    <ScrollTopSync className="data-table-wrap">
       <table className="data-table" style={{ minWidth: 850 }}>
         <thead>
           <tr>
@@ -158,6 +159,6 @@ export function BusbarCandidateList({
           })}
         </tbody>
       </table>
-    </div>
+    </ScrollTopSync>
   );
 }

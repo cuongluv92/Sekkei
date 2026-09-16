@@ -14,6 +14,7 @@ import { OutlineDrawingUpload, type OutlineDrawingRef } from "@/components/calcu
 import { FormulaBlock, SourceNote, WhyDisclosure } from "@/components/calculation/FormulaBlock";
 import { loadFromStorage, saveToStorage } from "@/lib/utils/localStore";
 import { HeatSourceList } from "./HeatSourceList";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 /** 地域未選択時のデフォルト — 社内選定マスタに常に存在する基準地域。 */
 const DEFAULT_REGION = "東京";
@@ -940,7 +941,7 @@ export function VentilationResultPanel({
           </div>
 
           {fanCount != null && (
-            <div className="data-table-wrap">
+            <ScrollTopSync className="data-table-wrap">
               <table className="data-table" style={{ minWidth: 480 }}>
                 <tbody>
                   <tr>
@@ -967,7 +968,7 @@ export function VentilationResultPanel({
                   </tr>
                 </tbody>
               </table>
-            </div>
+            </ScrollTopSync>
           )}
           {filterLimitedFanCount != null && (
             <WhyDisclosure label={t("ventilationCalc.whyFanCountLabel")} title={t("ventilationCalc.whyFanCountTitle")}>

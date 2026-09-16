@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { busbarSizeService } from "@/lib/services";
 import type { BusbarSize } from "@/lib/types";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 /** 銅帯選定マスタ backing 母線銅帯 > 自動選定's candidate search — starts empty, entered only here (company-preferred sizes, never a technical/standard value). */
 export function BusbarSizeSettings() {
@@ -61,7 +62,7 @@ export function BusbarSizeSettings() {
         {t("busbarSizeSettings.description")}
       </p>
 
-      <div className="data-table-wrap">
+      <ScrollTopSync className="data-table-wrap">
         <table className="data-table" style={{ minWidth: 420 }}>
           <thead>
             <tr>
@@ -125,7 +126,7 @@ export function BusbarSizeSettings() {
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollTopSync>
 
       <div className="flex flex-wrap items-end gap-2.5 border-t border-border pt-3">
         <div>

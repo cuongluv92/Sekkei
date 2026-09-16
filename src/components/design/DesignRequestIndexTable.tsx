@@ -12,6 +12,7 @@ import {
 } from "@/lib/services/design";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { DesignCaseWithPanels } from "@/lib/types/design";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 interface DesignRequestIndexTableProps {
   /** Which real template (③京王 / ④その他) this list exports against. */
@@ -148,7 +149,7 @@ export function DesignRequestIndexTable({
           </div>
         </div>
       ) : (
-        <div className="flex items-start gap-3 overflow-x-auto pb-1">
+        <ScrollTopSync className="table-scroll-wrap flex items-start gap-3 overflow-x-auto pb-1">
           {yearBlocks.map(({ year, cases }) => (
             <div key={year} className="panel shrink-0" style={{ width: 680 }}>
               <div className="panel-header-compact">
@@ -182,7 +183,7 @@ export function DesignRequestIndexTable({
                   </button>
                 </div>
               </div>
-              <div className="data-table-wrap">
+              <ScrollTopSync className="data-table-wrap">
                 <table className="data-table" style={{ minWidth: 660 }}>
                   <thead>
                     <tr>
@@ -238,10 +239,10 @@ export function DesignRequestIndexTable({
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollTopSync>
             </div>
           ))}
-        </div>
+        </ScrollTopSync>
       )}
       {message && <div className="text-[12px] text-success">{message}</div>}
     </div>

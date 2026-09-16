@@ -15,6 +15,7 @@ import { SpecCombobox } from "@/components/design/SpecCombobox";
 import { DateInput } from "@/components/common/DateInput";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { CasePanel, CaseSchedule, DesignCase, ProductionRequest } from "@/lib/types/design";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 type ScheduleDateKey =
   | "boxDeliveryDate"
@@ -269,7 +270,7 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
         <div className="panel-header-compact">
           <span className="panel-title">{t("design.production.panelsTitle")}</span>
         </div>
-        <div className="data-table-wrap">
+        <ScrollTopSync className="data-table-wrap">
           <table className="data-table" style={{ minWidth: 1380 }}>
             <thead>
               <tr>
@@ -334,7 +335,7 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollTopSync>
       </div>
 
       <div className="panel">

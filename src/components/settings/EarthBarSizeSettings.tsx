@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { earthBarSizeService } from "@/lib/services";
 import type { EarthBarSize } from "@/lib/types";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 /** アースバー選定マスタ backing アースバー's candidate search — starts empty, entered only here. Separate from busbar_sizes even though the shape (t×W) is the same (spec: never reuse the main-bus busbar master for this). */
 export function EarthBarSizeSettings() {
@@ -61,7 +62,7 @@ export function EarthBarSizeSettings() {
         {t("earthBarSizeSettings.description")}
       </p>
 
-      <div className="data-table-wrap">
+      <ScrollTopSync className="data-table-wrap">
         <table className="data-table" style={{ minWidth: 420 }}>
           <thead>
             <tr>
@@ -125,7 +126,7 @@ export function EarthBarSizeSettings() {
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollTopSync>
 
       <div className="flex flex-wrap items-end gap-2.5 border-t border-border pt-3">
         <div>

@@ -3,6 +3,7 @@
 import { ExternalLink, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 import {
   pickTerminalBlock,
   terminalBlockSelectionService,
@@ -141,7 +142,7 @@ export function TerminalBlockSelectionView({ currentA, hideInput = false }: Prop
       {effectiveCurrent == null ? (
         <p className="text-[11px] text-muted-2">{copy.prompt}</p>
       ) : (
-        <div className="data-table-wrap">
+        <ScrollTopSync className="data-table-wrap">
           <table className="data-table" style={{ minWidth: 1080 }}>
             <thead>
               <tr>
@@ -187,7 +188,7 @@ export function TerminalBlockSelectionView({ currentA, hideInput = false }: Prop
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollTopSync>
       )}
     </div>
   );

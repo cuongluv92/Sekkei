@@ -3,6 +3,7 @@
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 import {
   terminalBlockSelectionService,
   type TerminalBlockSelectionDraft,
@@ -153,7 +154,7 @@ export function TerminalBlockSelectionSettings() {
       {rows.length === 0 ? (
         <p className="text-[11px] text-muted-2">{copy.empty}</p>
       ) : (
-        <div className="data-table-wrap">
+        <ScrollTopSync className="data-table-wrap">
           <table className="data-table" style={{ minWidth: 820 }}>
             <thead><tr><th>{copy.maker}</th><th>{copy.series}</th><th>{copy.model}</th><th>{copy.current}</th><th>{copy.wire}</th><th>{copy.screw}</th><th /></tr></thead>
             <tbody>
@@ -165,7 +166,7 @@ export function TerminalBlockSelectionSettings() {
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollTopSync>
       )}
     </div>
   );

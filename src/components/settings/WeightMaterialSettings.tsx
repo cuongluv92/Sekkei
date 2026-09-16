@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { weightMaterialService } from "@/lib/services";
 import type { WeightMaterial } from "@/lib/types";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 /** 材質 master backing 重量計算 > 基本重量計算's 材質 dropdown — starts empty, entered only here (never seeded with an invented 比重). */
 export function WeightMaterialSettings() {
@@ -48,7 +49,7 @@ export function WeightMaterialSettings() {
     <div className="flex flex-col gap-3">
       <p className="text-[12px] text-muted">{t("weightMaterialSettings.description")}</p>
 
-      <div className="data-table-wrap">
+      <ScrollTopSync className="data-table-wrap">
         <table className="data-table" style={{ minWidth: 460 }}>
           <thead>
             <tr>
@@ -96,7 +97,7 @@ export function WeightMaterialSettings() {
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollTopSync>
 
       <div className="flex flex-wrap items-end gap-2.5 border-t border-border pt-3">
         <div>

@@ -4,6 +4,7 @@ import { Check, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import type { EarthWireCandidate } from "@/lib/calc/earthWire/candidateSearch";
 import type { AdoptedEarthWire } from "./EarthWireCalculationView";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 interface EarthWireCandidateListProps {
   candidates: EarthWireCandidate[];
@@ -46,7 +47,7 @@ export function EarthWireCandidateList({
   }
 
   return (
-    <div className="data-table-wrap">
+    <ScrollTopSync className="data-table-wrap">
       <table className="data-table" style={{ minWidth: 560 }}>
         <thead>
           <tr>
@@ -123,6 +124,6 @@ export function EarthWireCandidateList({
           })}
         </tbody>
       </table>
-    </div>
+    </ScrollTopSync>
   );
 }

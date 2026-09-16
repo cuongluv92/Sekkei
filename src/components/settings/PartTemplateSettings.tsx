@@ -7,6 +7,7 @@ import { partTemplateService } from "@/lib/services";
 import { getPublicUrl } from "@/lib/supabase/storage";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
 import type { PartTemplate, PartTemplateKind } from "@/lib/types";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 const PART_TEMPLATE_KINDS: { kind: PartTemplateKind; accept: string }[] = [
   { kind: "excel", accept: ".xlsx,.xls" },
@@ -48,7 +49,7 @@ export function PartTemplateSettings() {
       <p className="text-[11px] text-muted-2">
         {t("settings.dxfPlaceholderHint")}
       </p>
-      <div className="data-table-wrap">
+      <ScrollTopSync className="data-table-wrap">
         <table className="data-table" style={{ minWidth: 480 }}>
           <thead>
             <tr>
@@ -106,7 +107,7 @@ export function PartTemplateSettings() {
             })}
           </tbody>
         </table>
-      </div>
+      </ScrollTopSync>
       {message && <div className="text-[12px] text-success">{message}</div>}
     </div>
   );

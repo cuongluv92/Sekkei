@@ -16,6 +16,7 @@ import { buildProjectPanelLines } from "@/lib/utils/designNumbering";
 import { computeMilestones, SCREEN_PROCESS_ROWS } from "@/lib/utils/scheduleColoring";
 import { DateInput } from "@/components/common/DateInput";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 import type {
   CaseIdentitySnapshot,
   CaseSchedule,
@@ -376,7 +377,7 @@ export function ScheduleQuickOverview() {
         ) : quickTableCases.length === 0 ? (
           <p className="p-8 text-center text-[13px] text-muted-2">{t("design.ledger.empty")}</p>
         ) : (
-          <div className="overflow-x-auto">
+          <ScrollTopSync className="table-scroll-wrap overflow-x-auto">
             <table className="border-collapse text-[12px]" style={{ tableLayout: "fixed" }}>
               <colgroup>
                 <col style={{ width: DRAWING_COL_WIDTH }} />
@@ -523,7 +524,7 @@ export function ScheduleQuickOverview() {
                 })}
               </tbody>
             </table>
-          </div>
+          </ScrollTopSync>
         )}
       </div>
 
@@ -606,7 +607,7 @@ export function ScheduleQuickOverview() {
         ) : entries.length === 0 ? (
           <p className="p-8 text-center text-[13px] text-muted-2">{t("design.scheduleQuick.constructionEmpty")}</p>
         ) : (
-          <div className="overflow-x-auto">
+          <ScrollTopSync className="table-scroll-wrap overflow-x-auto">
             <table className="border-collapse text-[12px]" style={{ tableLayout: "fixed" }}>
               <colgroup>
                 <col style={{ width: DRAWING_COL_WIDTH }} />
@@ -747,7 +748,7 @@ export function ScheduleQuickOverview() {
                 })}
               </tbody>
             </table>
-          </div>
+          </ScrollTopSync>
         )}
       </div>
     </div>

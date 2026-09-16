@@ -6,6 +6,7 @@ import { useTranslation } from "@/lib/i18n";
 import { partDataService } from "@/lib/services";
 import { sumHeatSourcesW, type HeatSourceItem } from "@/lib/calc/ventilation/heatBalance";
 import type { PartData } from "@/lib/types";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 /** 負荷率(%)は実運用でほぼ100%のため、既定値として初期表示する — 実際と異なる機器のみ手入力で上書きする。 */
 export function blankHeatSourceItem(): HeatSourceItem {
@@ -141,7 +142,7 @@ export function HeatSourceList({ value, onChange }: Props) {
       </div>
       <p className="text-[12px] text-muted">{t("ventilationCalc.heatSourceHint")}</p>
 
-      <div className="data-table-wrap">
+      <ScrollTopSync className="data-table-wrap">
         <table className="data-table" style={{ minWidth: 780 }}>
           <thead>
             <tr>
@@ -227,7 +228,7 @@ export function HeatSourceList({ value, onChange }: Props) {
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollTopSync>
 
       <div className="flex items-center gap-2">
         <button onClick={addItem} className="btn-secondary">

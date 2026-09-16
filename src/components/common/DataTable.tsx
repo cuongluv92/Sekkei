@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "@/lib/i18n";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 
 export interface DataTableColumn<T> {
   key: string;
@@ -43,7 +44,7 @@ export function DataTable<T>({
   const minWidth = columns.reduce((sum, col) => sum + (parseInt(col.width ?? "", 10) || 180), 0);
 
   return (
-    <div className="data-table-wrap">
+    <ScrollTopSync className="data-table-wrap">
       <table className="data-table" style={{ minWidth }}>
         <thead>
           <tr>
@@ -93,7 +94,7 @@ export function DataTable<T>({
           )}
         </tbody>
       </table>
-    </div>
+    </ScrollTopSync>
   );
 }
 

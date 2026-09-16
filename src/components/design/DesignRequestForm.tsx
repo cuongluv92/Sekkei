@@ -12,6 +12,7 @@ import {
 import { SpecCombobox } from "@/components/design/SpecCombobox";
 import { DateInput } from "@/components/common/DateInput";
 import { useMockFeedback } from "@/lib/hooks/useMockFeedback";
+import { ScrollTopSync } from "@/components/common/ScrollTopSync";
 import {
   CASE_STATUS_VALUES,
   INDEX_CATEGORY_VALUES,
@@ -92,7 +93,7 @@ function SpecFieldTable({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="data-table-wrap">
+    <ScrollTopSync className="data-table-wrap">
       <table className="data-table" style={{ minWidth }}>
         <thead>
           <tr>
@@ -128,7 +129,7 @@ function SpecFieldTable({
           })}
         </tbody>
       </table>
-    </div>
+    </ScrollTopSync>
   );
 }
 
@@ -471,7 +472,7 @@ export function DesignRequestForm({ caseId }: { caseId: string }) {
             {t("design.panels.addPanel")}
           </button>
         </div>
-        <div className="data-table-wrap">
+        <ScrollTopSync className="data-table-wrap">
           <table className="data-table" style={{ minWidth: 900 }}>
             <thead>
               <tr>
@@ -596,7 +597,7 @@ export function DesignRequestForm({ caseId }: { caseId: string }) {
               )}
             </tbody>
           </table>
-        </div>
+        </ScrollTopSync>
       </div>
 
       <div className="panel">
