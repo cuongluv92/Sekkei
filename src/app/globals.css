@@ -227,6 +227,19 @@ body {
   .data-table-wrap {
     @apply w-full overflow-x-auto;
   }
+  /* 表の下までスクロールしないと横スクロールバーが見えないという指摘を受け、
+     TableTopScrollSyncが表の直上に複製したこの薄いバーを自動挿入する
+     (アプリ全体の.data-table-wrapが対象、個々の表コンポーネント側の変更は
+     不要)。 */
+  .table-top-scroll-container {
+    @apply w-full;
+  }
+  .table-top-scroll {
+    @apply w-full;
+    height: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
   .data-table {
     @apply w-full table-fixed border-collapse text-[14px];
   }
