@@ -1,0 +1,325 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { ExternalLink, Loader2 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
+import {
+  calculationRecordService,
+  pickWireConductorSelection,
+  wireConductorSelectionService,
+  type WireConductorSelectionRow,
+  type WireConductorWireType,
+} from "@/lib/services";
+import type { MotorSelectionBranchItem } from "@/lib/types";
+import { branchItemCurrentA, MOTOR_SELECTION_BRANCH_CALCULATION_TYPE } from "./MotorBranchSelectionView";
+import {
+  JSIA_210_BUS_BAR_SOURCE,
+  JSIA_210_BUS_BAR_URL,
+  pickJsia210SingleBusbar,
+} from "@/lib/calc/busbar/jsia210Reference";
+
+interface Props {
+  caseId: string;
+  currentA?: number | null;
+  hideInput?: boolean;
+}
+
+interface ResultTarget {
+  key: string;
+  label: string;
+  itemKind: "wire" | "busbar";
+  wireType?: WireConductorWireType;
+}
+
+const TARGETS: ResultTarget[] = [
+  { key: "iv", label: "IV", itemKind: "wire", wireType: "IV" },
+  { key: "wl1", label: "WL1", itemKind: "wire", wireType: "WL1" },
+  { key: "busbar", label: "銅帯", itemKind: "busbar" },
+];
+
+export function WireConductorSelectionView({ caseId, currentA, hideInput = false }: Props) {
+  const { locale } = useTranslation();
+  const [rows, setRows] = useState<WireConductorSelectionRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [branchTotal, setBranchTotal] = useState<number | null>(null);
+  const [currentRaw, setCurrentRaw] = useState("");
+  const [selectedCurrent, setSelectedCurrent] = useState<number | null>(null);
+
+  const copy = locale === "vi"
+    ? {
+        description: "Dòng điện chung được dùng để chọn IV, WL1 và thanh đồng. Nguồn tham khảo chỉ dùng tài liệu chính thức Nhật Bản.",
+        autoSum: "Tổng dòng từ danh sách nhánh",
+        autoHint: "Có thể dùng trực tiếp tổng dòng đã lưu ở tab Nhánh.",
+        use: "Dùng giá trị này",
+        current: "Dòng điện chọn (A)",
+        placeholder: "Ví dụ: 150",
+        calculate: "Chọn",
+        result: "Kết quả chọn dây / thanh đồng",
+        item: "Loại",
+        reference: "Tiêu chuẩn / dữ liệu tham khảo",
+        company: "Tiêu chuẩn công ty",
+        basis: "Nguồn và điều kiện",
+        noReference: "Chưa có dữ liệu tham khảo",
+        noCompany: "Chưa nhập tiêu chuẩn công ty",
+        maxCurrent: "đến {value} A",
+        prompt: "Nhập A ở đầu tab để xem kết quả.",
+        busbarScope: "Tham khảo JSIA 210:2020 cho thiết bị nhận điện cao áp kiểu hở; không hiển thị như giá trị JIS chung cho mọi tủ.",
+        note: "IV/WL1 phụ thuộc điều kiện lắp đặt và sản phẩm. Dữ liệu nguồn và tiêu chuẩn công ty được quản lý tách biệt.",
+      }
+    : {
+        description: "上部の共通選定電流(A)からIV・WL1・銅帯を同時に選定します。基準・参考には国内公式資料だけを使用します。",
+        autoSum: "分岐リストからの合計電流",
+        autoHint: "分岐（電動機回路）に保存した電流合計をそのまま利用できます。",
+        use: "この値を使う",
+        current: "選定電流 (A)",
+        placeholder: "例）150",
+        calculate: "選定する",
+        result: "電線・銅帯 選定結果",
+        item: "種類",
+        reference: "基準・参考選定",
+        company: "社内基準",
+        basis: "根拠・適用条件",
+        noReference: "参考基準データ未登録",
+        noCompany: "社内基準未登録",
+        maxCurrent: "{value} Aまで",
+        prompt: "タブ上部の選定電流(A)を入力してください。",
+        busbarScope: "JSIA 210:2020「開放形高圧受電設備」表B.2の参考値です。一般の低圧盤に対するJIS値としては扱いません。",
+        note: "IV/WL1の許容電流は布設条件・周囲温度・製品メーカー等で変わります。公開参考値と社内採用値は分離して管理します。",
+      };
+
+  const externalCurrent =
+    currentA != null && Number.isFinite(currentA) && currentA > 0 ? currentA : null;
+  const effectiveCurrent = externalCurrent ?? selectedCurrent;
+
+  useEffect(() => {
+    let cancelled = false;
+    wireConductorSelectionService
+      .list()
+      .then((list) => {
+        if (!cancelled) setRows(list);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setBranchTotal(null);
+    if (!caseId) return;
+    let cancelled = false;
+    calculationRecordService.get(caseId, MOTOR_SELECTION_BRANCH_CALCULATION_TYPE).then((record) => {
+      if (cancelled) return;
+      const items = (record?.result.items as MotorSelectionBranchItem[] | undefined) ?? [];
+      const sum = items.reduce((total, item) => {
+        const current = branchItemCurrentA(item);
+        return current == null ? total : total + current;
+      }, 0);
+      setBranchTotal(sum);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [caseId]);
+
+  const results = useMemo(() => {
+    if (effectiveCurrent == null) return [];
+    return TARGETS.map((target) => ({
+      ...target,
+      reference: pickWireConductorSelection(
+        rows,
+        effectiveCurrent,
+        "reference",
+        target.itemKind,
+        target.wireType,
+      ),
+      company: pickWireConductorSelection(
+        rows,
+        effectiveCurrent,
+        "company",
+        target.itemKind,
+        target.wireType,
+      ),
+    }));
+  }, [rows, effectiveCurrent]);
+
+  const busbarReference = useMemo(
+    () => (effectiveCurrent == null ? null : pickJsia210SingleBusbar(effectiveCurrent)),
+    [effectiveCurrent],
+  );
+
+  function choose() {
+    const value = Number(currentRaw);
+    if (!Number.isFinite(value) || value <= 0) return;
+    setSelectedCurrent(value);
+  }
+
+  function useBranchTotal() {
+    if (branchTotal == null || branchTotal <= 0) return;
+    setCurrentRaw(String(Number(branchTotal.toFixed(2))));
+    setSelectedCurrent(branchTotal);
+  }
+
+  function maxCurrentText(value: number): string {
+    return copy.maxCurrent.replace("{value}", String(value));
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-[12px] text-muted">{copy.description}</p>
+
+      {!hideInput && caseId && branchTotal !== null && (
+        <div className="flex flex-col gap-1 rounded-md border border-border bg-muted/10 px-3 py-2">
+          <div className="flex items-center gap-2 text-[12px]">
+            <span className="text-muted">{copy.autoSum}</span>
+            <span className="font-mono font-semibold">{branchTotal.toFixed(1)} A</span>
+            <button type="button" onClick={useBranchTotal} className="btn-ghost ml-auto">
+              {copy.use}
+            </button>
+          </div>
+          <p className="text-[11px] text-muted-2">{copy.autoHint}</p>
+        </div>
+      )}
+
+      {!hideInput && (
+        <div className="grid grid-cols-[minmax(180px,320px)_auto] items-end gap-2.5">
+          <div>
+            <label className="field-label">{copy.current}</label>
+            <input
+              type="number"
+              min={0}
+              step="any"
+              value={currentRaw}
+              onChange={(e) => setCurrentRaw(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") choose();
+              }}
+              placeholder={copy.placeholder}
+              className="field-input"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={choose}
+            disabled={!currentRaw.trim() || Number(currentRaw) <= 0}
+            className="btn-primary"
+          >
+            {copy.calculate}
+          </button>
+        </div>
+      )}
+
+      <div>
+        <div className="flex items-center gap-2">
+          <span className="panel-title">{copy.result}</span>
+          {loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-2" />}
+          {effectiveCurrent != null && (
+            <span className="rounded bg-accent/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-accent">
+              {effectiveCurrent} A
+            </span>
+          )}
+        </div>
+
+        {effectiveCurrent == null ? (
+          <p className="mt-2 text-[12px] text-muted-2">{copy.prompt}</p>
+        ) : (
+          <div className="data-table-wrap mt-2">
+            <table className="data-table" style={{ minWidth: 980 }}>
+              <thead>
+                <tr>
+                  <th style={{ width: "100px" }}>{copy.item}</th>
+                  <th style={{ width: "260px" }}>{copy.reference}</th>
+                  <th style={{ width: "230px" }}>{copy.company}</th>
+                  <th>{copy.basis}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {results.map((row) => {
+                  const isBusbar = row.key === "busbar";
+                  return (
+                    <tr key={row.key}>
+                      <td className="font-semibold">{row.label}</td>
+                      <td>
+                        {isBusbar ? (
+                          busbarReference ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-mono font-semibold">
+                                {busbarReference.thicknessMm} × {busbarReference.widthMm} mm
+                              </span>
+                              <span className="text-[10.5px] text-muted">許容電流 {busbarReference.allowableCurrentA} A</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-2">{copy.noReference}</span>
+                          )
+                        ) : row.reference ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-mono font-semibold">{row.reference.resultValue}</span>
+                            <span className="text-[10.5px] text-muted">{maxCurrentText(row.reference.currentA)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-2">{copy.noReference}</span>
+                        )}
+                      </td>
+                      <td>
+                        {row.company ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-mono font-semibold">{row.company.resultValue}</span>
+                            <span className="text-[10.5px] text-muted">{maxCurrentText(row.company.currentA)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-warning">{copy.noCompany}</span>
+                        )}
+                      </td>
+                      <td className="text-[11px]">
+                        {isBusbar && busbarReference ? (
+                          <div className="flex flex-col gap-1">
+                            <a
+                              href={JSIA_210_BUS_BAR_URL}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 font-semibold text-accent hover:underline"
+                            >
+                              {JSIA_210_BUS_BAR_SOURCE.standard} {JSIA_210_BUS_BAR_SOURCE.reference}
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                            <span className="text-muted">{JSIA_210_BUS_BAR_SOURCE.condition}</span>
+                            <span className="text-warning">{copy.busbarScope}</span>
+                          </div>
+                        ) : row.reference ? (
+                          <div className="flex flex-col gap-1">
+                            {row.reference.source?.url ? (
+                              <a
+                                href={row.reference.source.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 font-semibold text-accent hover:underline"
+                              >
+                                {row.reference.source.title}
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            ) : (
+                              <span className="font-semibold">{row.reference.source?.title ?? "—"}</span>
+                            )}
+                            {row.reference.conditionLabel && <span className="text-muted">{row.reference.conditionLabel}</span>}
+                          </div>
+                        ) : (
+                          <span className="text-muted-2">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <p className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-[11px] text-muted">
+        {copy.note}
+      </p>
+    </div>
+  );
+}

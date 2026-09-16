@@ -14,8 +14,56 @@ export { earthWireSizeService } from "./earthWireSizeService";
 export { earthBarSizeService } from "./earthBarSizeService";
 export { motorStarterSelectionService } from "./motorStarterSelectionService";
 export type { MotorStarterSelectionDraft } from "./motorStarterSelectionService";
+export {
+  motorKwSelectionService,
+  matchMotorKwRows,
+} from "./motorKwSelectionService";
+export type {
+  MotorKwBasisKind,
+  MotorKwPhase,
+  MotorKwSelectionSource,
+  MotorKwSelectionRow,
+  MotorKwSelectionDraft,
+} from "./motorKwSelectionService";
 export { mainBreakerSelectionService } from "./mainBreakerSelectionService";
 export type { MainBreakerSelectionDraft } from "./mainBreakerSelectionService";
+export {
+  wireConductorSelectionService,
+  pickWireConductorSelection,
+} from "./wireConductorSelectionService";
+export type {
+  WireConductorBasisKind,
+  WireConductorItemKind,
+  WireConductorWireType,
+  WireConductorSource,
+  WireConductorSelectionRow,
+  WireConductorSelectionDraft,
+} from "./wireConductorSelectionService";
+export {
+  terminalBlockSelectionService,
+  pickTerminalBlock,
+} from "./terminalBlockSelectionService";
+export type {
+  TerminalBlockBasisKind,
+  TerminalBlockSeries,
+  TerminalBlockSelectionRow,
+  TerminalBlockSelectionDraft,
+} from "./terminalBlockSelectionService";
+export {
+  flexibleSelectionService,
+  matchFlexibleSelectionRule,
+} from "./flexibleSelectionService";
+export type {
+  FlexibleSelectionScope,
+  FlexibleSelectionNodeRole,
+  FlexibleSelectionValueType,
+  FlexibleSelectionTemplate,
+  FlexibleSelectionNode,
+  FlexibleSelectionRuleRow,
+  FlexibleSelectionTemplateDraft,
+  FlexibleSelectionNodeDraft,
+  FlexibleSelectionRuleDraft,
+} from "./flexibleSelectionService";
 export { seismicAnchorBoltService } from "./seismicAnchorBoltService";
 export type { SeismicAnchorAllowableDraft } from "./seismicAnchorBoltService";
 export { ventilationClimateProfileService } from "./ventilationClimateProfileService";
