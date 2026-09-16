@@ -3,7 +3,7 @@
 import { Search as SearchIcon, Settings } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { useActiveCase, useEffectiveCaseId } from "@/lib/store/ActiveCaseProvider";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -71,11 +71,35 @@ export function DesignView() {
     [router, searchParams, tab, caseId],
   );
 
-  // Broadcast the effective 案件 (URL-provided or restored) upward so it
-  // stays active when the user leaves 設計管理 for another module.
+  // URLの`case`と、この画面が表示しているsuppression考慮済みの実質案件
+  // (effectiveActiveCaseId)を双方向で同期する。レンダー間で「どちらが
+  // 実際に変わったか」を見て向きを決める — 以前は常にURL→activeCaseIdの
+  // 一方向だったため、CaseSelectorの「選択解除」でactiveCaseIdを空にして
+  // もURLの`case`が古い値のまま残り、この効果が「URLの方が正しい」と
+  // 判断して即座に元の案件へ戻してしまい、選択解除が全く効かない不具合が
+  // あった(戻る際は必ずURLが変わる=urlChangedなので、通常のディープ
+  // リンク/Global Searchの「この案件を開く」動作はそのまま壊れない)。
+  const prevCaseIdParamRef = useRef(caseIdParam);
+  const prevEffectiveRef = useRef(effectiveActiveCaseId);
+  const firstSyncRef = useRef(true);
   useEffect(() => {
-    if (caseId && caseId !== activeCaseId) setActiveCaseId(caseId);
-  }, [caseId, activeCaseId, setActiveCaseId]);
+    const first = firstSyncRef.current;
+    firstSyncRef.current = false;
+    const urlChanged = first
+      ? Boolean(caseIdParam)
+      : caseIdParam !== prevCaseIdParamRef.current;
+    const localChanged = !first && effectiveActiveCaseId !== prevEffectiveRef.current;
+    prevCaseIdParamRef.current = caseIdParam;
+    prevEffectiveRef.current = effectiveActiveCaseId;
+
+    if (caseIdParam === effectiveActiveCaseId) return;
+
+    if (urlChanged) {
+      if (caseIdParam !== activeCaseId) setActiveCaseId(caseIdParam);
+    } else if (localChanged && usesWorkspace) {
+      setParams({ case: effectiveActiveCaseId });
+    }
+  }, [caseIdParam, effectiveActiveCaseId, activeCaseId, usesWorkspace, setActiveCaseId, setParams]);
 
   return (
     <div className="flex flex-col gap-3">
