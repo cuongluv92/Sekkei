@@ -1031,6 +1031,7 @@ const ja: Dictionary = {
       drawingNumberPreview: "図面番号（自動採番）",
       drawingNumberManualLabel: "図面番号（手入力）",
       submitButton: "作成する",
+      submitError: "作成に失敗しました。時間をおいて再度お試しください。",
     },
     fields: {
       year: "年",

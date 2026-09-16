@@ -1060,6 +1060,7 @@ const vi: Dictionary = {
       drawingNumberPreview: "図面番号 (tự động cấp số)",
       drawingNumberManualLabel: "図面番号（手入力）",
       submitButton: "Tạo案件",
+      submitError: "Tạo thất bại. Vui lòng thử lại sau.",
     },
     fields: {
       year: "Năm",

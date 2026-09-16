@@ -953,6 +953,7 @@ export interface Dictionary {
       drawingNumberPreview: string;
       drawingNumberManualLabel: string;
       submitButton: string;
+      submitError: string;
     };
     fields: {
       year: string;

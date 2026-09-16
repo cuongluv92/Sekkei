@@ -56,6 +56,7 @@ export function NewCaseModal({
   const [projectName, setProjectName] = useState("");
   const [indexCategory, setIndexCategory] = useState<IndexCategory>("other");
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!autoNumberDrawingNumber) return;
@@ -70,21 +71,30 @@ export function NewCaseModal({
   async function handleSubmit() {
     if (submitting) return;
     setSubmitting(true);
-    const created = await designCaseService.create({
-      year,
-      requestType: "", // 新規作成時点では常に空 — 設計依頼書タブで後から編集可能
-      managementNumber,
-      constructionNumber,
-      orderer,
-      customerContact,
-      projectName,
-      indexCategory,
-      drawingNumber: autoNumberDrawingNumber
-        ? undefined
-        : drawingNumberManual.trim(),
-    });
-    setSubmitting(false);
-    onCreated(created);
+    setSubmitError(null);
+    try {
+      const created = await designCaseService.create({
+        year,
+        requestType: "", // 新規作成時点では常に空 — 設計依頼書タブで後から編集可能
+        managementNumber,
+        constructionNumber,
+        orderer,
+        customerContact,
+        projectName,
+        indexCategory,
+        drawingNumber: autoNumberDrawingNumber
+          ? undefined
+          : drawingNumberManual.trim(),
+      });
+      onCreated(created);
+    } catch {
+      // サーバー側エラー(例: 図面番号の重複)が起きた際、ボタンの読込中
+      // 表示が止まらないまま固まって見えていた不具合の修正 — 失敗を必ず
+      // 画面に出し、再試行できる状態に戻す。
+      setSubmitError(t("design.newCaseForm.submitError"));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -200,6 +210,9 @@ export function NewCaseModal({
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-border pt-3">
+          {submitError && (
+            <p className="mr-auto text-[12.5px] text-danger">{submitError}</p>
+          )}
           <button onClick={onClose} className="btn-secondary">
             {t("common.cancel")}
           </button>

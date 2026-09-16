@@ -128,3 +128,26 @@ describe("NewCaseModal — 図面番号 auto-numbering is 設計依頼-only (spe
     });
   });
 });
+
+describe("NewCaseModal — 作成 failure never leaves the button spinning forever", () => {
+  it("stops the loading spinner and shows an error message when create() rejects (e.g. a duplicate 図面番号/sequence_no from the server)", async () => {
+    const user = userEvent.setup();
+    mockCreate.mockRejectedValueOnce(
+      new Error('duplicate key value violates unique constraint "design_cases_year_sequence_no_key"'),
+    );
+    const { onCreated } = renderModal(true);
+
+    const submitButton = await screen.findByRole("button", {
+      name: /作成|Tạo/i,
+    });
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(submitButton).not.toBeDisabled();
+    });
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("作成に失敗しました。時間をおいて再度お試しください。"),
+    ).toBeInTheDocument();
+  });
+});
