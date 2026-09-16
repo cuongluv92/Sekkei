@@ -325,7 +325,8 @@ export const designCaseService = {
     const { data, error } = await requireSupabase()
       .from("design_cases")
       .select("sequence_no")
-      .eq("year", year);
+      .eq("year", year)
+      .is("deleted_at", null);
     if (error) throw error;
     const cases = (data ?? []).map((r) => ({
       year,

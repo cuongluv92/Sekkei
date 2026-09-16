@@ -136,10 +136,7 @@ export function ProductionRequestForm({ caseId }: { caseId: string }) {
   }
 
   async function handleSave() {
-    if (!designCase || !request || !schedule || panels.length === 0) {
-      setSaveError(t("design.panels.empty"));
-      return;
-    }
+    if (!designCase || !request || !schedule) return;
     setSaving(true);
     setSaveError(null);
     try {
