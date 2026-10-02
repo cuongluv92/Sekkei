@@ -2,11 +2,14 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "@/lib/i18n";
 import { partDataService } from "@/lib/services";
 import { sumHeatSourcesW, type HeatSourceItem } from "@/lib/calc/ventilation/heatBalance";
 import type { PartData } from "@/lib/types";
 import { ScrollTopSync } from "@/components/common/ScrollTopSync";
+import { useFloatingPopupPosition } from "@/lib/hooks/useFloatingPopupPosition";
+import { useCloseOnOutsideClick } from "@/lib/hooks/useCloseOnOutsideClick";
 
 /** 負荷率(%)は実運用でほぼ100%のため、既定値として初期表示する — 実際と異なる機器のみ手入力で上書きする。 */
 export function blankHeatSourceItem(): HeatSourceItem {
@@ -38,14 +41,10 @@ function PartModelCell({
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<PartData[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLUListElement>(null);
+  const position = useFloatingPopupPosition(open, containerRef, 220);
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  useCloseOnOutsideClick(open, [containerRef, popupRef], setOpen);
 
   useEffect(() => {
     const query = value.trim();
@@ -81,30 +80,39 @@ function PartModelCell({
         placeholder={t("ventilationCalc.heatSourceColumns.modelPlaceholder")}
         className="field-input font-mono"
       />
-      {open && value.trim() !== "" && (loading || results.length > 0) && (
-        <ul className="absolute z-20 mt-1 max-h-48 w-[26rem] max-w-[80vw] overflow-y-auto rounded-md border border-border-strong bg-surface-2 shadow-lg">
-          {loading && <li className="px-2.5 py-1.5 text-[12px] text-muted-2">{t("common.loading")}</li>}
-          {!loading &&
-            results.map((p) => (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    onSelect(p);
-                    setOpen(false);
-                  }}
-                  className="flex w-full flex-col items-start gap-0.5 px-2.5 py-1.5 text-left hover:bg-surface-hover"
-                >
-                  <span className="font-mono text-[12.5px] text-foreground">{p.model}</span>
-                  <span className="truncate text-[11px] text-muted-2">
-                    {[p.category, p.specification].filter(Boolean).join(" / ") || "—"}
-                  </span>
-                </button>
-              </li>
-            ))}
-        </ul>
-      )}
+      {open &&
+        value.trim() !== "" &&
+        (loading || results.length > 0) &&
+        position &&
+        createPortal(
+          <ul
+            ref={popupRef}
+            className="fixed z-50 max-h-48 w-[26rem] max-w-[80vw] overflow-y-auto rounded-md border border-border-strong bg-surface-2 shadow-lg"
+            style={{ top: position.top, left: position.left }}
+          >
+            {loading && <li className="px-2.5 py-1.5 text-[12px] text-muted-2">{t("common.loading")}</li>}
+            {!loading &&
+              results.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      onSelect(p);
+                      setOpen(false);
+                    }}
+                    className="flex w-full flex-col items-start gap-0.5 px-2.5 py-1.5 text-left hover:bg-surface-hover"
+                  >
+                    <span className="font-mono text-[12.5px] text-foreground">{p.model}</span>
+                    <span className="truncate text-[11px] text-muted-2">
+                      {[p.category, p.specification].filter(Boolean).join(" / ") || "—"}
+                    </span>
+                  </button>
+                </li>
+              ))}
+          </ul>,
+          document.body,
+        )}
     </div>
   );
 }

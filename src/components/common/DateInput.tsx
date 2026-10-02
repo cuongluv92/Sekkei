@@ -4,6 +4,8 @@ import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { isIsoDate } from "@/lib/utils/schedule";
+import { useFloatingPopupPosition } from "@/lib/hooks/useFloatingPopupPosition";
+import { useCloseOnOutsideClick } from "@/lib/hooks/useCloseOnOutsideClick";
 
 interface DateInputProps {
   /**
@@ -81,56 +83,13 @@ export function DateInput({ value, onChange, className }: DateInputProps) {
   // 以前はposition:absoluteが祖先要素のoverflowに切り取られて途中までしか
   // 見えなかった — document.bodyへポータルでfixed配置することで、どの
   // 祖先のoverflow/スクロールにも影響されず常に手前に浮かせて表示する。
-  const [popupPos, setPopupPos] = useState<{ top: number; left: number } | null>(null);
+  const popupPos = useFloatingPopupPosition(open, rootRef, 300);
 
   useEffect(() => {
     setText(isIsoDate(value) ? formatJa(value) : (value ?? ""));
   }, [value]);
 
-  useEffect(() => {
-    if (!open) return;
-    function onDocMouseDown(e: MouseEvent) {
-      const target = e.target as Node;
-      if (
-        rootRef.current &&
-        !rootRef.current.contains(target) &&
-        !(popupRef.current && popupRef.current.contains(target))
-      ) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", onDocMouseDown);
-    return () => document.removeEventListener("mousedown", onDocMouseDown);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const POPUP_WIDTH = 256; // w-64
-    const POPUP_HEIGHT_ESTIMATE = 300;
-    const MARGIN = 8;
-    function updatePosition() {
-      const rect = rootRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      let left = rect.left;
-      if (left + POPUP_WIDTH > window.innerWidth - MARGIN) {
-        left = Math.max(MARGIN, window.innerWidth - POPUP_WIDTH - MARGIN);
-      }
-      const fitsBelow = rect.bottom + POPUP_HEIGHT_ESTIMATE <= window.innerHeight - MARGIN;
-      const top = fitsBelow
-        ? rect.bottom + 4
-        : Math.max(MARGIN, rect.top - POPUP_HEIGHT_ESTIMATE - 4);
-      setPopupPos({ top, left });
-    }
-    updatePosition();
-    // scrollイベントはバブリングしないため、横スクロールする表などネスト
-    // したスクロールコンテナの操作も拾えるようキャプチャフェーズで監視する。
-    window.addEventListener("scroll", updatePosition, true);
-    window.addEventListener("resize", updatePosition);
-    return () => {
-      window.removeEventListener("scroll", updatePosition, true);
-      window.removeEventListener("resize", updatePosition);
-    };
-  }, [open]);
+  useCloseOnOutsideClick(open, [rootRef, popupRef], setOpen);
 
   function openPicker() {
     setView(parseIso(value) ?? view);

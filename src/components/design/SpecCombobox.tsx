@@ -2,7 +2,10 @@
 
 import { Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { masterListService } from "@/lib/services/design";
+import { useFloatingPopupPosition } from "@/lib/hooks/useFloatingPopupPosition";
+import { useCloseOnOutsideClick } from "@/lib/hooks/useCloseOnOutsideClick";
 
 interface SpecComboboxProps {
   /** Master list key (spec field key, or any other master-list-backed field such as requestType/panelStructure). */
@@ -22,6 +25,8 @@ export function SpecCombobox({ listKey, value, onChange }: SpecComboboxProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
   const containerRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLUListElement>(null);
+  const position = useFloatingPopupPosition(open, containerRef);
 
   useEffect(() => {
     setDraft(value);
@@ -31,15 +36,7 @@ export function SpecCombobox({ listKey, value, onChange }: SpecComboboxProps) {
     masterListService.listByKey(listKey).then((items) => setOptions(items.map((i) => i.value)));
   }, [listKey]);
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  useCloseOnOutsideClick(open, [containerRef, popupRef], setOpen);
 
   const filtered = options.filter((o) => o.toLowerCase().includes(draft.trim().toLowerCase()));
 
@@ -71,23 +68,31 @@ export function SpecCombobox({ listKey, value, onChange }: SpecComboboxProps) {
         }}
         className="field-input py-1.5 text-[13.5px]"
       />
-      {open && filtered.length > 0 && (
-        <ul className="absolute z-20 mt-1 max-h-40 w-full min-w-[140px] overflow-y-auto rounded-md border border-border-strong bg-surface-2 shadow-lg">
-          {filtered.map((opt) => (
-            <li key={opt}>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => commit(opt)}
-                className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-[13.5px] text-foreground hover:bg-surface-hover"
-              >
-                {opt === draft && <Check className="h-3 w-3 shrink-0 text-accent" />}
-                <span className="truncate">{opt}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      {open &&
+        filtered.length > 0 &&
+        position &&
+        createPortal(
+          <ul
+            ref={popupRef}
+            className="fixed z-50 max-h-40 min-w-[140px] overflow-y-auto rounded-md border border-border-strong bg-surface-2 shadow-lg"
+            style={{ top: position.top, left: position.left, width: position.width }}
+          >
+            {filtered.map((opt) => (
+              <li key={opt}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => commit(opt)}
+                  className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-[13.5px] text-foreground hover:bg-surface-hover"
+                >
+                  {opt === draft && <Check className="h-3 w-3 shrink-0 text-accent" />}
+                  <span className="truncate">{opt}</span>
+                </button>
+              </li>
+            ))}
+          </ul>,
+          document.body,
+        )}
     </div>
   );
 }
