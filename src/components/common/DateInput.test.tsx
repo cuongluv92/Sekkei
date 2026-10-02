@@ -59,4 +59,25 @@ describe("DateInput", () => {
 
     expect(onChange).toHaveBeenCalledWith(null);
   });
+
+  // Regression: inside a horizontally-scrolling table wrap
+  // (.data-table-wrap/.table-scroll-wrap use overflow-x: auto), the popup
+  // used to be position: absolute relative to the field itself, so an
+  // ancestor's overflow clipped it to a thin sliver — only the top edge of
+  // the calendar was visible, with no way to actually pick a day.
+  it("renders the calendar popup outside any clipping ancestor (overflow-x: auto container)", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { container } = render(
+      <div style={{ overflow: "hidden", width: 100, height: 50 }} data-testid="clipping-ancestor">
+        <DateInput value="2026-09-10" onChange={onChange} />
+      </div>,
+    );
+
+    await user.click(screen.getByTitle("カレンダーから選択"));
+
+    const popupHeading = await screen.findByText("2026年9月");
+    const clippingAncestor = container.querySelector('[data-testid="clipping-ancestor"]');
+    expect(clippingAncestor?.contains(popupHeading)).toBe(false);
+  });
 });

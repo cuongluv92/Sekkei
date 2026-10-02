@@ -2,6 +2,7 @@
 
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { isIsoDate } from "@/lib/utils/schedule";
 
 interface DateInputProps {
@@ -75,6 +76,12 @@ export function DateInput({ value, onChange, className }: DateInputProps) {
     return parsed ?? { year: now.getFullYear(), month0: now.getMonth() };
   });
   const rootRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  // 横スクロールする表(.data-table-wrap等)の中でカレンダーを開くと、
+  // 以前はposition:absoluteが祖先要素のoverflowに切り取られて途中までしか
+  // 見えなかった — document.bodyへポータルでfixed配置することで、どの
+  // 祖先のoverflow/スクロールにも影響されず常に手前に浮かせて表示する。
+  const [popupPos, setPopupPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     setText(isIsoDate(value) ? formatJa(value) : (value ?? ""));
@@ -83,12 +90,46 @@ export function DateInput({ value, onChange, className }: DateInputProps) {
   useEffect(() => {
     if (!open) return;
     function onDocMouseDown(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        rootRef.current &&
+        !rootRef.current.contains(target) &&
+        !(popupRef.current && popupRef.current.contains(target))
+      ) {
         setOpen(false);
       }
     }
     document.addEventListener("mousedown", onDocMouseDown);
     return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const POPUP_WIDTH = 256; // w-64
+    const POPUP_HEIGHT_ESTIMATE = 300;
+    const MARGIN = 8;
+    function updatePosition() {
+      const rect = rootRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      let left = rect.left;
+      if (left + POPUP_WIDTH > window.innerWidth - MARGIN) {
+        left = Math.max(MARGIN, window.innerWidth - POPUP_WIDTH - MARGIN);
+      }
+      const fitsBelow = rect.bottom + POPUP_HEIGHT_ESTIMATE <= window.innerHeight - MARGIN;
+      const top = fitsBelow
+        ? rect.bottom + 4
+        : Math.max(MARGIN, rect.top - POPUP_HEIGHT_ESTIMATE - 4);
+      setPopupPos({ top, left });
+    }
+    updatePosition();
+    // scrollイベントはバブリングしないため、横スクロールする表などネスト
+    // したスクロールコンテナの操作も拾えるようキャプチャフェーズで監視する。
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
   }, [open]);
 
   function openPicker() {
@@ -142,86 +183,93 @@ export function DateInput({ value, onChange, className }: DateInputProps) {
       >
         <CalendarDays className="h-3.5 w-3.5" />
       </button>
-      {open && (
-        <div className="absolute z-20 mt-1 w-64 rounded-md border border-border-strong bg-surface-2 p-2.5 shadow-lg">
-          <div className="mb-2 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => shiftMonth(-1)}
-              className="rounded p-1 text-muted hover:bg-surface-hover hover:text-foreground"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-            </button>
-            <span className="text-[13px] font-bold tabular-nums text-foreground">
-              {view.year}年{view.month0 + 1}月
-            </span>
-            <button
-              type="button"
-              onClick={() => shiftMonth(1)}
-              className="rounded p-1 text-muted hover:bg-surface-hover hover:text-foreground"
-            >
-              <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <div className="grid grid-cols-7 gap-0.5 text-center text-[11px] text-muted-2">
-            {WEEKDAYS_JA.map((w) => (
-              <span key={w} className="py-0.5">
-                {w}
+      {open &&
+        popupPos &&
+        createPortal(
+          <div
+            ref={popupRef}
+            className="fixed z-50 w-64 rounded-md border border-border-strong bg-surface-2 p-2.5 shadow-lg"
+            style={{ top: popupPos.top, left: popupPos.left }}
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => shiftMonth(-1)}
+                className="rounded p-1 text-muted hover:bg-surface-hover hover:text-foreground"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+              <span className="text-[13px] font-bold tabular-nums text-foreground">
+                {view.year}年{view.month0 + 1}月
               </span>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-0.5 text-center text-[12px]">
-            {cells.map((d, i) => {
-              if (d === null) return <span key={i} />;
-              const isSelected =
-                selected?.year === view.year &&
-                selected.month0 === view.month0 &&
-                selected.day === d;
-              return (
-                <button
-                  type="button"
-                  key={i}
-                  onClick={() => {
-                    onChange(toIso(view.year, view.month0, d));
-                    setOpen(false);
-                  }}
-                  className={
-                    isSelected
-                      ? "rounded bg-accent py-1 font-bold text-white"
-                      : "rounded py-1 text-foreground hover:bg-surface-hover"
-                  }
-                >
-                  {d}
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                onChange(null);
-                setOpen(false);
-              }}
-              className="text-[11px] text-muted-2 hover:text-foreground"
-            >
-              クリア
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const now = new Date();
-                onChange(toIso(now.getFullYear(), now.getMonth(), now.getDate()));
-                setView({ year: now.getFullYear(), month0: now.getMonth() });
-                setOpen(false);
-              }}
-              className="text-[11px] font-semibold text-accent hover:underline"
-            >
-              今日
-            </button>
-          </div>
-        </div>
-      )}
+              <button
+                type="button"
+                onClick={() => shiftMonth(1)}
+                className="rounded p-1 text-muted hover:bg-surface-hover hover:text-foreground"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-7 gap-0.5 text-center text-[11px] text-muted-2">
+              {WEEKDAYS_JA.map((w) => (
+                <span key={w} className="py-0.5">
+                  {w}
+                </span>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-0.5 text-center text-[12px]">
+              {cells.map((d, i) => {
+                if (d === null) return <span key={i} />;
+                const isSelected =
+                  selected?.year === view.year &&
+                  selected.month0 === view.month0 &&
+                  selected.day === d;
+                return (
+                  <button
+                    type="button"
+                    key={i}
+                    onClick={() => {
+                      onChange(toIso(view.year, view.month0, d));
+                      setOpen(false);
+                    }}
+                    className={
+                      isSelected
+                        ? "rounded bg-accent py-1 font-bold text-white"
+                        : "rounded py-1 text-foreground hover:bg-surface-hover"
+                    }
+                  >
+                    {d}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(null);
+                  setOpen(false);
+                }}
+                className="text-[11px] text-muted-2 hover:text-foreground"
+              >
+                クリア
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const now = new Date();
+                  onChange(toIso(now.getFullYear(), now.getMonth(), now.getDate()));
+                  setView({ year: now.getFullYear(), month0: now.getMonth() });
+                  setOpen(false);
+                }}
+                className="text-[11px] font-semibold text-accent hover:underline"
+              >
+                今日
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
